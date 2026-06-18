@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """test_e2e_mail_auth.py — Step 8 SMTP/IMAP 로그인만 검사 (메일 발송·수신 없음)
 
-GC1 장비 env: Desktop\\박은규\\gc_automation.env  (SMTP)
-데이터 PC env: Desktop\\.cursor\\gc_automation.env (IMAP)
+PC 명칭: docs/PC_NAMING.md
+  GC1 **장비** PC env: Desktop\\박은규\\gc_automation.env  (SMTP 발송)
+  **은규 PC** env:     Desktop\\.cursor\\gc_automation.env (IMAP 수신)
+  (차헌: GC2/GC3 장비 = Desktop\\KCH, 차헌 PC = Desktop\\.cursor)
 
 Usage:
   python scripts/test_e2e_mail_auth.py

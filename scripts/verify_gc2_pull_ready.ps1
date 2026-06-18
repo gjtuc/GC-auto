@@ -1,4 +1,6 @@
-# verify_gc2_pull_ready.ps1 - GC1 PC: repo ready for Chaheon GC2 pull
+# verify_gc2_pull_ready.ps1
+# 실행 위치: **GC1 장비 PC** (은규) — 차헌에게 GC2/GC3 **장비** PC 인수인계 전 점검
+# 차헌 PC / GC2 장비 PC 에서는 불필요. PC 명칭: docs/PC_NAMING.md
 # Usage: powershell -File scripts/verify_gc2_pull_ready.ps1
 
 $ErrorActionPreference = 'Continue'
@@ -12,7 +14,7 @@ function Write-Check($label, $ok, $detail) {
 }
 
 Write-Host ""
-Write-Host "=== Step 9 prep (GC1 PC) - handoff to Chaheon ===" -ForegroundColor Cyan
+Write-Host "=== Step 9 prep (GC1 장비 PC) - handoff to Chaheon ===" -ForegroundColor Cyan
 Write-Host ""
 
 $required = @(

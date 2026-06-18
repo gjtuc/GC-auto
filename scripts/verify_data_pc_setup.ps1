@@ -1,4 +1,6 @@
-# verify_data_pc_setup.ps1 - Step 6 install check (read-only)
+# verify_data_pc_setup.ps1 - Step 6: **은규 PC** 또는 **차헌 PC** 설치 점검
+# (GC1/GC2/GC3 **장비** PC에서는 실행하지 않음 — verify_gc2_setup.ps1 사용)
+# PC 명칭: docs/PC_NAMING.md
 # Usage: powershell -File scripts/verify_data_pc_setup.ps1
 
 $ErrorActionPreference = 'Continue'
@@ -26,7 +28,7 @@ $rows = @(
 )
 
 Write-Host ''
-Write-Host '=== Step 6 - Desktop\.cursor setup ===' -ForegroundColor Cyan
+Write-Host '=== Step 6 - 은규 PC / 차헌 PC (Desktop\.cursor) ===' -ForegroundColor Cyan
 $rows | Format-Table -AutoSize
 
 if (Test-Path -LiteralPath $envFile) {

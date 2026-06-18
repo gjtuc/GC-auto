@@ -1,4 +1,5 @@
 @echo off
+REM GC1 **장비 PC** 초기 설치 (은규). 「은규 PC」= Desktop\.cursor 는 deploy/STEP6 참고.
 chcp 949 >nul
 setlocal
 cd /d "%~dp0"
@@ -9,7 +10,8 @@ set "GC_ENV=%GC_OUT%\gc_automation.env"
 
 echo.
 echo  ========================================
-echo   GC1 PC 설치 (박은규)
+echo   GC1 장비 PC 설치 (은규 — Autochro 옆)
+echo   ※ 수율/Origin 은 은규 PC(Desktop\.cursor) 에서 별도 세팅
 echo  ========================================
 echo.
 

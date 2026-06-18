@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """extract_gc1_rt_from_xlsx.py — GC1 KCH xlsx 에서 피크 RT(분) 요약 (Step 7.2)
 
-GC1 장비 PC에서 gc_automation.py 가 만든 FID/TCD 2시트 xlsx 를 읽어
-각 성분 RT 분포를 출력합니다. gc_gc1.DEFAULT_*_WINDOWS 와 비교해 TIME 구간을 조정하세요.
+**GC1 장비 PC**에서 gc_automation.py 가 만든 FID/TCD 2시트 xlsx 를 읽습니다.
+결과로 맞춘 TIME/CALIB 는 **은규 PC** 의 촉매 반응 계산.py USER SETTINGS 에 반영.
+
+PC 명칭: docs/PC_NAMING.md
 
 Usage:
   python scripts/extract_gc1_rt_from_xlsx.py "path\\to\\file.xlsx"

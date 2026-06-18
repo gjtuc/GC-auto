@@ -89,6 +89,7 @@ function Get-PcIdentity {
             $j = Get-Content -LiteralPath $mp -Raw -Encoding UTF8 | ConvertFrom-Json
             if ($j.role) { $role = [string]$j.role }
             if ($j.label) { $label = [string]$j.label }
+            elseif ($role -and $role -ne 'unknown') { $label = ('{0} ({1})' -f $computer, $role) }
             if ($j.gc_assignment.operator) { $operator = [string]$j.gc_assignment.operator }
         } catch {}
     }

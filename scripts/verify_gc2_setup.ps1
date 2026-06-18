@@ -1,5 +1,6 @@
-# verify_gc2_setup.ps1 - Step 9 GC2/GC3 equipment PC setup check
-# Run ON Chaheon GC2/GC3 PC after git pull
+# verify_gc2_setup.ps1 - Step 9: **GC2/GC3 장비 PC** (차헌) 설치 점검
+# 차헌 PC(DESKTOP-BFMLJ9J)에서는 verify_data_pc_setup.ps1 사용 — 본 스크립트 아님
+# PC 명칭: docs/PC_NAMING.md
 # Usage: powershell -File scripts/verify_gc2_setup.ps1
 
 $ErrorActionPreference = 'Continue'
@@ -20,7 +21,7 @@ function Write-Check($label, $ok, $detail) {
 }
 
 Write-Host ""
-Write-Host "=== Step 9 - GC2/GC3 equipment PC setup ===" -ForegroundColor Cyan
+Write-Host '=== Step 9 - GC2/GC3 equipment PC (Desktop\KCH) ===' -ForegroundColor Cyan
 Write-Host ""
 
 Write-Check "repo gc_automation.py" (Test-Path (Join-Path $repo 'gc_automation.py')) $repo
