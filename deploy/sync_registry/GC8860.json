@@ -1,8 +1,8 @@
 {
     "pc_id":  "GC8860",
-    "label":  "GC8860 (gc2_pc)",
+    "label":  "차헌 — GC2/GC3 장비 PC",
     "role":  "gc2_pc",
-    "operator":  "User",
+    "operator":  "차헌",
     "identifiers":  {
                         "smbios_uuid":  "ECF325B5-7661-4452-9CAE-EDEF864D833A",
                         "computer_name":  "GC8860",
@@ -13,12 +13,20 @@
                  "last_push_at":  null,
                  "last_push_commit":  null,
                  "last_push_by":  null,
-                 "last_pull_at":  "2026-06-18T16:10:34+09:00",
-                 "last_pull_commit":  "1c0640a",
-                 "last_pull_by":  "GC8860\\User",
+                 "last_pull_at":  "2026-06-18T16:11:53+09:00",
+                 "last_pull_commit":  "a5663e9",
+                 "last_pull_by":  "GC8860\\차헌",
                  "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
              },
     "history":  [
+                    {
+                        "event":  "pull",
+                        "at":  "2026-06-18T16:11:53+09:00",
+                        "commit":  "a5663e9",
+                        "subject":  "sync: registry GC8860 pull (first registration on GC2 equipment PC)",
+                        "by":  "GC8860\\차헌",
+                        "triggered_by":  "gc8860:label-fix"
+                    },
                     {
                         "event":  "pull",
                         "at":  "2026-06-18T16:10:34+09:00",

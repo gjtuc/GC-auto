@@ -98,9 +98,9 @@ function Get-PcIdentity {
 
     return @{
         pc_id = $computer
-        label = ('{0} ({1})' -f $computer, $role)
+        label = $label
         role = $role
-        operator = $user
+        operator = $operator
         identifiers = @{
             computer_name = $computer
             windows_user = $user

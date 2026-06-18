@@ -1,6 +1,6 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-06-18 16:10:34 | HEAD: `1c0640a` | scripts: verify/setup scripts and bats use equipment vs data PC labels
+> Updated: 2026-06-18 16:11:53 | HEAD: `a5663e9` | sync: registry GC8860 pull (first registration on GC2 equipment PC)
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
@@ -9,7 +9,7 @@
 | `DESKTOP-BFMLJ9J` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
 | `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\User @ 2026-06-18T15:30:02+09:00 | `2fafb2d` | DESKTOP-MBGSSME\User @ 2026-06-18T14:46:21+09:00 | `dff49c2` | [WARN] need pull |
 | `DESKTOP-XXXXXXX` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
-| `GC8860` | gc2_pc | - @ - | `-` | GC8860\User @ 2026-06-18T16:10:34+09:00 | `1c0640a` | [OK] latest |
+| `GC8860` | gc2_pc | - @ - | `-` | GC8860\차헌 @ 2026-06-18T16:11:53+09:00 | `a5663e9` | [OK] latest |
 
 ## Commands
 - Start work: `gc_git_pull.bat`
