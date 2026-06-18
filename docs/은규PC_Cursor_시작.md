@@ -20,7 +20,7 @@
 
 - `gc_automation.py` 실행·수정·watch 설정 (GC1 **장비** PC 일)
 - 차헌 PC의 G: 폴더 경로를 확인 없이 그대로 사용
-- `Desktop\KCH\` (GC2 **장비** PC 출력)와 `Desktop\.cursor\KCH\` (은규 PC inbox) 혼동
+- `Desktop\KCH\` (GC2 **장비** PC 출력)와 `Desktop\.cursor\PEG\` (은규 PC inbox) 혼동
 
 ---
 
@@ -34,8 +34,8 @@
               ↓
 [은규 PC]  ← 지금 여기
     촉매 반응 계산.py
-    1) IMAP 수신 → Desktop\.cursor\KCH\inbox\
-    2) GC1 CALIB로 수율/전환율 → KCH\processed\
+    1) IMAP 수신 → Desktop\.cursor\PEG\inbox\
+    2) GC1 CALIB로 수율/전환율 → PEG\processed\
     3) G: 실험 폴더 생성·갱신 (은규 경로!)
     4) Origin .opju 새 시료 열
 ```
@@ -52,7 +52,7 @@
 |---|-----------|-----------|
 | A | `Test-Path "$env:USERPROFILE\Desktop\.cursor\촉매 반응 계산.py"` | 파일 있음 |
 | B | `Test-Path "$env:USERPROFILE\Desktop\.cursor\gc_automation.env"` | 있고 NAVER_* 채워짐 |
-| C | `Test-Path "$env:USERPROFILE\Desktop\.cursor\KCH\machine_profile.json"` | role=data_pc |
+| C | `Test-Path "$env:USERPROFILE\Desktop\.cursor\PEG\machine_profile.json"` | role=data_pc |
 | D | `python ...\촉매 반응 계산.py --help` | exit 0 |
 | E | GC1 xlsx로 `--no-archive` | `*_GC1_DRE_계산완료.xlsx` 생성 |
 | F | G: 탐색기 | 은규 DRE/DRM/DRME 루트 보임 |
@@ -88,8 +88,8 @@ git pull
 
 ```powershell
 $base = "$env:USERPROFILE\Desktop\.cursor"
-New-Item -ItemType Directory -Path "$base\KCH\inbox" -Force
-New-Item -ItemType Directory -Path "$base\KCH\processed" -Force
+New-Item -ItemType Directory -Path "$base\PEG\inbox" -Force
+New-Item -ItemType Directory -Path "$base\PEG\processed" -Force
 ```
 
 ### 4.2 스크립트 복사 (git pull 후마다)
@@ -151,7 +151,7 @@ python scripts\test_e2e_mail_auth.py
 
 ```powershell
 Copy-Item deploy\machine_profile.template.data_pc.json `
-  "$env:USERPROFILE\Desktop\.cursor\KCH\machine_profile.json"
+  "$env:USERPROFILE\Desktop\.cursor\PEG\machine_profile.json"
 ```
 
 채울 필드:
@@ -245,7 +245,7 @@ python "$env:USERPROFILE\Desktop\.cursor\촉매 반응 계산.py" --no-archive
 **PASS 기준:**
 
 - 장비 판별 `GC1` (GC2/GC3 혼동 없음)
-- `Desktop\.cursor\KCH\processed\*_GC1_DRE_계산완료.xlsx` (또는 DRM) 생성
+- `Desktop\.cursor\PEG\processed\*_GC1_DRE_계산완료.xlsx` (또는 DRM) 생성
 - 수율/전환율 수치가 수동 계산과 대략 일치
 
 **G: 없을 때:** 2단계까지는 됨. `processed\`에 사본 남음.
@@ -301,9 +301,9 @@ python "$env:USERPROFILE\Desktop\.cursor\촉매 반응 계산.py"
 |------|----------------|
 | 메인 스크립트 | `%USERPROFILE%\Desktop\.cursor\촉매 반응 계산.py` |
 | IMAP env | `%USERPROFILE%\Desktop\.cursor\gc_automation.env` |
-| 메일 xlsx 수신 | `%USERPROFILE%\Desktop\.cursor\KCH\inbox\` |
-| 계산 완료 사본 | `%USERPROFILE%\Desktop\.cursor\KCH\processed\` |
-| PC 식별 | `%USERPROFILE%\Desktop\.cursor\KCH\machine_profile.json` |
+| 메일 xlsx 수신 | `%USERPROFILE%\Desktop\.cursor\PEG\inbox\` |
+| 계산 완료 사본 | `%USERPROFILE%\Desktop\.cursor\PEG\processed\` |
+| PC 식별 | `%USERPROFILE%\Desktop\.cursor\PEG\machine_profile.json` |
 | Git repo | `%USERPROFILE%\chemstation-gc-automation\` |
 
 | 용도 | GC1 **장비** PC (참고만) |

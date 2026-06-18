@@ -48,8 +48,8 @@ from datetime import datetime, timedelta
   GC2/GC3 장비 PC (차헌): ChemStation → gc_automation.py → KCH 원본.xlsx → SMTP → **차헌 PC**
   GC1 장비 PC (은규): Autochro → gc_automation.py → KCH 원본.xlsx → SMTP → **은규 PC**
   은규 PC / 차헌 PC (본 스크립트):
-    1) IMAP 메일 수신 — 받은·보낸·내게쓴(미읽음) → KCH/inbox (오래된 순 전건 반영)
-    2) 수율/전환율 계산 → KCH/processed (검토용 사본)
+    1) IMAP 메일 수신 — 받은·보낸·내게쓴(미읽음) → {PEG|KCH}/inbox (오래된 순 전건 반영)
+    2) 수율/전환율 계산 → {PEG|KCH}/processed (검토용 사본)
     3) G: 실험 폴더 생성 (반응별 최신 폴더 복사 템플릿)
     4) Origin .opju 워크시트에 새 시료 열(Comments) 추가 (그래프 plot 은 수동)
 
@@ -198,9 +198,24 @@ NAVER_IMAP_HOST = "imap.naver.com"
 NAVER_IMAP_PORT = 993
 EMAIL_SUBJECT_KEYWORD = "GC 분석 결과"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-KCH_INBOX_DIR = os.path.join(SCRIPT_DIR, "KCH", "inbox")
-KCH_PROCESSED_DIR = os.path.join(SCRIPT_DIR, "KCH", "processed")
-PROCESSED_MAIL_LOG = os.path.join(KCH_INBOX_DIR, ".processed_mail_ids.txt")
+
+
+def _data_pc_work_subdir():
+    """
+    데이터 PC inbox/processed 상위 폴더명.
+    은규 PC: PEG (Park Eungyu Gyu) | 차헌 PC: KCH
+    Desktop\\.cursor\\ 아래 실제 존재하는 폴더를 우선 (PEG → KCH 순).
+    """
+    for name in ("PEG", "KCH"):
+        if os.path.isdir(os.path.join(SCRIPT_DIR, name)):
+            return name
+    return "KCH"
+
+
+_DATA_PC_WORK = _data_pc_work_subdir()
+DATA_PC_INBOX_DIR = os.path.join(SCRIPT_DIR, _DATA_PC_WORK, "inbox")
+DATA_PC_PROCESSED_DIR = os.path.join(SCRIPT_DIR, _DATA_PC_WORK, "processed")
+PROCESSED_MAIL_LOG = os.path.join(DATA_PC_INBOX_DIR, ".processed_mail_ids.txt")
 
 # ---------------------------------------------------------------------------
 # G: 드라이브 경로 (보안 USB 위 실험 데이터)
@@ -236,7 +251,7 @@ def _load_dotenv_files():
     except ImportError:
         return False
     for name in ENV_FILE_NAMES:
-        for base in (SCRIPT_DIR, os.path.join(SCRIPT_DIR, "KCH")):
+        for base in (SCRIPT_DIR, os.path.join(SCRIPT_DIR, _DATA_PC_WORK)):
             path = os.path.join(base, name)
             if os.path.isfile(path):
                 load_dotenv(path)
@@ -257,7 +272,7 @@ def _g_drive_unavailable_message():
         "       G:\\연구소\\실험\\실험데이터\\촉매 반응\\...",
         "  3. 이 스크립트를 다시 실행",
         "",
-        "※ 2단계 계산 결과는 Desktop\\KCH\\processed\\ 에 저장되어 있습니다.",
+        f"※ 2단계 계산 결과는 Desktop\\.cursor\\{_DATA_PC_WORK}\\processed\\ 에 저장되어 있습니다.",
         "   로그인 후 같은 메일/파일로 재실행하면 3~4단계(G: 폴더·Origin)를 이어갈 수 있습니다.",
     ])
 
@@ -578,13 +593,13 @@ def _format_kch_catalyst(catalyst_part):
     return _format_catalyst_string(_strip_catalyst_mass(catalyst_part))
 
 def _calc_output_path(input_file, suffix):
-    """inbox 원본은 KCH/processed/, 그 외는 입력 파일과 같은 폴더에 저장."""
+    """inbox 원본은 DATA_PC/processed/, 그 외는 입력 파일과 같은 폴더에 저장."""
     base = _normalize_input_basename(input_file)
     out_name = f"{base}{suffix}.xlsx"
     src_dir = os.path.normpath(os.path.dirname(os.path.abspath(input_file)))
-    if src_dir == os.path.normpath(KCH_INBOX_DIR):
-        os.makedirs(KCH_PROCESSED_DIR, exist_ok=True)
-        return os.path.join(KCH_PROCESSED_DIR, out_name)
+    if src_dir == os.path.normpath(DATA_PC_INBOX_DIR):
+        os.makedirs(DATA_PC_PROCESSED_DIR, exist_ok=True)
+        return os.path.join(DATA_PC_PROCESSED_DIR, out_name)
     return os.path.join(src_dir, out_name)
 
 def _strip_calc_suffix(name):
@@ -1547,14 +1562,14 @@ def _save_attachments_from_message(msg, save_dir):
 def _cleanup_inbox_duplicate_files(keep_path, identity_key):
     """inbox 에 남은 같은 시료·날짜 중복 xlsx 정리."""
     keep_name = os.path.basename(keep_path)
-    for fname in os.listdir(KCH_INBOX_DIR):
+    for fname in os.listdir(DATA_PC_INBOX_DIR):
         if fname == keep_name or fname.startswith("."):
             continue
         if not fname.lower().endswith((".xlsx", ".xls")):
             continue
         if _experiment_identity_key(fname) == identity_key:
             try:
-                os.remove(os.path.join(KCH_INBOX_DIR, fname))
+                os.remove(os.path.join(DATA_PC_INBOX_DIR, fname))
                 print(f"       → inbox 중복 파일 삭제: {fname}")
             except OSError:
                 pass
@@ -1597,7 +1612,7 @@ def _load_processed_mail_ids():
         return {line.strip() for line in f if line.strip()}
 
 def _append_processed_mail_id(mail_key):
-    os.makedirs(KCH_INBOX_DIR, exist_ok=True)
+    os.makedirs(DATA_PC_INBOX_DIR, exist_ok=True)
     with open(PROCESSED_MAIL_LOG, "a", encoding="utf-8") as f: f.write(mail_key + "\n")
 
 def _mail_unique_key(msg, msg_id):
@@ -1809,7 +1824,7 @@ def process_new_gc_emails(opju_path=None, auto_archive=True):
         print("       NAVER_EMAIL, NAVER_APP_PASSWORD 필요")
         return 0
 
-    os.makedirs(KCH_INBOX_DIR, exist_ok=True)
+    os.makedirs(DATA_PC_INBOX_DIR, exist_ok=True)
     print(f"\n[1단계] 네이버 메일 접속 — 받은·보낸·내게쓴 ({email_addr})")
 
     mail = imaplib.IMAP4_SSL(NAVER_IMAP_HOST, NAVER_IMAP_PORT)
@@ -1869,7 +1884,7 @@ def process_new_gc_emails(opju_path=None, auto_archive=True):
                 print(f"       → KCH 원본 저장: {filename}")
                 identity = _experiment_identity_key(filename)
                 excel_path = _save_attachment_bytes(
-                    KCH_INBOX_DIR, filename, payload
+                    DATA_PC_INBOX_DIR, filename, payload
                 )
                 _cleanup_inbox_duplicate_files(excel_path, identity)
 
@@ -1910,7 +1925,7 @@ def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True):
 
     opju_path 지정 시: G: 폴더 생성 없이 해당 .opju 만 _Updated.opju 로 저장 (--opju).
     auto_archive=False: 2단계 계산만 (--no-archive).
-    G: 없으면 GDriveUnavailableError → 안내 출력, saved_excel 경로는 KCH/processed.
+    G: 없으면 GDriveUnavailableError → 안내 출력, saved_excel 경로는 DATA_PC/processed.
     """
     if not os.path.exists(excel_path) or not excel_path.lower().endswith((".xlsx", ".xls")):
         print("❌ 올바른 엑셀 파일이 아닙니다.")
@@ -1929,8 +1944,8 @@ def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True):
         reaction_type = reaction_type_from_output_file(saved_excel)
         identity_key = _experiment_identity_key(excel_path)
         print(f" ✅ 엑셀 계산 완료: {os.path.basename(saved_excel)}")
-        if os.path.normpath(os.path.dirname(saved_excel)) == os.path.normpath(KCH_PROCESSED_DIR):
-            print(f"    검토용 사본: KCH\\processed\\")
+        if os.path.normpath(os.path.dirname(saved_excel)) == os.path.normpath(DATA_PC_PROCESSED_DIR):
+            print(f"    검토용 사본: {_DATA_PC_WORK}\\processed\\")
         print(f" 📊 Feed ppm 기준: {feed_source_desc}")
         print(f" 🏷️ Origin 시료명: {sample_name}")
         print(f" 📁 실험 폴더명: {experiment_base} ({reaction_type})")

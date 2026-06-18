@@ -55,7 +55,7 @@ gc_git_status.bat        # deploy\SYNC_STATUS.md — 내 PC [OK] latest
 |----|-----------------|-----|
 | GC1 장비 PC | `Desktop\박은규\machine_profile.json` | `Desktop\박은규\gc_automation.env` |
 | GC2/GC3 장비 PC | `Desktop\KCH\machine_profile.json` | `Desktop\KCH\gc_automation.env` |
-| 은규 PC / 차헌 PC | `Desktop\.cursor\KCH\machine_profile.json` | `Desktop\.cursor\gc_automation.env` |
+| 은규 PC / 차헌 PC | `Desktop\.cursor\PEG\` 또는 `Desktop\.cursor\KCH\machine_profile.json` | `Desktop\.cursor\gc_automation.env` |
 
 ---
 

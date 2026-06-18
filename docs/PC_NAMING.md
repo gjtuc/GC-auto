@@ -57,14 +57,15 @@
 
 ## 자주 헷갈리는 것 (코드·경로)
 
-### 1. `KCH` 폴더 이름이 두 군데
+### 1. `KCH` / `PEG` 폴더 이름
 
 | 경로 | PC | 용도 |
 |------|-----|------|
 | `Desktop\KCH\` | GC2/GC3 **장비** PC | gc_automation.py 출력 xlsx·watch 상태 |
-| `Desktop\.cursor\KCH\` | **은규 PC** 또는 **차헌 PC** | inbox/processed, machine_profile |
+| `Desktop\.cursor\KCH\` | **차헌 PC** (데이터) | inbox/processed, machine_profile |
+| `Desktop\.cursor\PEG\` | **은규 PC** (데이터) | inbox/processed, machine_profile — **PEG** = Park Eungyu Gyu |
 
-이름만 같을 뿐 **완전히 다른 PC·다른 스크립트**입니다.
+장비 PC `Desktop\KCH` 와 데이터 PC `Desktop\.cursor\KCH`·`PEG` 는 **완전히 다른 PC·다른 스크립트**입니다.
 
 ### 2. `gc_automation.env` 도 두 종류
 
