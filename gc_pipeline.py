@@ -34,7 +34,7 @@ gc_pipeline.py — 시퀀스 1건 처리 파이프라인 (엑셀 + 메일)
 =============================================================================
 
   1) ensure_gc1_pdf_exported() — Autochro UI PDF (config.force 시 재내보내기)
-  2) parse_gc1_pdf_path() — trim 포함
+  2) parse_gc1_pdf_path() — trim 포함 (GC1: 첫 반응 사이클 포함 / GC2·GC3 와 다름)
   3) write_gc1_excel() — FID/TCD 2시트
   4) send_email_via_smtp() — _try_auto_email()
      · force → 슬롯 검사 생략

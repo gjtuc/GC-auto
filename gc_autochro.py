@@ -323,15 +323,62 @@ def _require_pywinauto():
         raise ImportError("pywinauto 미설치 - pip install pywinauto") from exc
 
 
+def _score_autochro_window(win) -> int:
+    score = 0
+    try:
+        if win.is_visible():
+            score += 100
+    except Exception:
+        pass
+    try:
+        rect = win.rectangle()
+        score += min(rect.width() * rect.height() // 1000, 500)
+    except Exception:
+        pass
+    try:
+        if win.descendants(class_name="SysTreeView32"):
+            score += 200
+    except Exception:
+        pass
+    try:
+        if win.descendants(class_name="SysListView32"):
+            score += 100
+    except Exception:
+        pass
+    return score
+
+
 def connect_main_window(cfg: AutochroConfig):
     _require_pywinauto()
-    from pywinauto import Application
+    from pywinauto import Application, findwindows
 
     pattern = re.escape(cfg.window_title_pattern)
     title_re = f".*{pattern}.*"
     _log(f"창 연결: {title_re}")
-    app = Application(backend="win32").connect(title_re=title_re, timeout=cfg.dialog_wait_sec)
-    win = app.window(title_re=title_re)
+    handles = findwindows.find_windows(title_re=title_re)
+    if not handles:
+        raise RuntimeError(f"Autochro 창 없음 — {cfg.window_title_pattern}")
+    if len(handles) == 1:
+        app = Application(backend="win32").connect(handle=handles[0])
+        win = app.window(handle=handles[0])
+    else:
+        _log(f"Autochro 창 {len(handles)}개 — 메인 창 선택")
+        best = None
+        best_score = -1
+        for handle in handles:
+            try:
+                app = Application(backend="win32").connect(handle=handle)
+                candidate = app.window(handle=handle)
+                score = _score_autochro_window(candidate)
+                if score > best_score:
+                    best_score = score
+                    best = candidate
+            except Exception:
+                continue
+        if best is None:
+            raise RuntimeError(f"Autochro 창 연결 실패 — {cfg.window_title_pattern}")
+        app = Application(backend="win32").connect(handle=best.handle)
+        win = best
     _prepare_autochro_window(win, cfg)
     return app, win
 

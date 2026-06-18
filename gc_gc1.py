@@ -40,7 +40,7 @@ gc_gc1.py — GC1 YL6500GC PDF 보고서 파싱 · 엑셀 · trim · 정리
     · 사전 노이즈 제거
     · 환원 구간 제거 (GC1 환원은 엑셀에 넣지 않음)
     · 전환(환원→반응 사이) 1주입 제거
-    · **첫 반응 1주입 제거** — 반응 데이터는 두 번째 반응 주입부터
+    · **첫 반응 1주입 포함** — GC1 전용 (GC2/GC3 는 첫 반응 제외 규칙 유지)
 
   마지막 주입 incomplete:
     · 항상 제거하지 않음. YL6500GC B 페이지 벡터에서 **전압선 x축 끝(분)** 측정.
@@ -685,8 +685,8 @@ def parse_gc1_pdf_path(
         skipped_pre_reduction_count=skipped_pre,
         skipped_reduction_count=skipped_reduction,
         skipped_transition_count=skipped_transition,
-        skipped_first_reaction_count=1 if found_first else 0,
-        skipped_first_reaction=found_first,
+        skipped_first_reaction_count=skipped_first,
+        skipped_first_reaction=skipped_first > 0,
     )
 
 
@@ -1281,8 +1281,7 @@ def trim_reduction_and_first_reaction(
     H2 area 교차 검증으로 구간 분리:
       1) H2~20000 나오기 전 노이즈 + 환원(H2~20000) 제외
       2) 환원 직후 전환 1주입 제외 (CO 노이즈가 있어도 반응으로 보지 않음)
-      3) 첫 반응 주입(CO+H2 변동) 1회 제외 — GC2/GC3 와 동일
-      4) 그 다음 주입부터 엑셀 적재
+      3) 첫 반응 주입부터 엑셀 적재 — **GC1 전용** (GC2/GC3 는 첫 반응 1회 제외)
     """
     thresholds = load_gc1_phase_thresholds()
     count = max(len(fid_cycles), len(tcd_cycles))
@@ -1336,20 +1335,20 @@ def trim_reduction_and_first_reaction(
             )
         return [], [], skipped_pre, skipped_reduction, skipped_transition, 0, False
 
-    keep_from = reaction_start + 1
+    keep_from = reaction_start
     kept_count = count - keep_from
     if not quiet:
         print(
             f"\n[GC1] H2~{thresholds.reduction_h2_area:.0f} 기준 - "
             f"사전노이즈 {skipped_pre}, 환원 {skipped_reduction}, 전환 {skipped_transition}주입 제외, "
-            f"첫 반응(#{reaction_start + 1}) 제외 → 엑셀 {kept_count}주입"
+            f"첫 반응(#{reaction_start + 1}) 포함 → 엑셀 {kept_count}주입"
         )
     if kept_count <= 0:
-        return [], [], skipped_pre, skipped_reduction, skipped_transition, 1, True
+        return [], [], skipped_pre, skipped_reduction, skipped_transition, 0, False
 
     kept_fid = fid_cycles[keep_from:]
     kept_tcd = tcd_cycles[keep_from:]
-    return kept_fid, kept_tcd, skipped_pre, skipped_reduction, skipped_transition, 1, True
+    return kept_fid, kept_tcd, skipped_pre, skipped_reduction, skipped_transition, 0, True
 
 
 def summarize_assigned_compounds(report: Gc1PdfReport) -> None:
