@@ -1,5 +1,9 @@
 # GC1 Cursor AI 핸드오프 — chemstation-gc-automation (GC2 → GC1 forward)
 
+> **GitHub 업로드 출처: GC2 PC (kimcha) — 2026-06-18**  
+> Repo `https://github.com/gjtuc/GC-auto` 의 초기 push는 **GC2 PC**에서 수행 (`gjtuc` 계정).  
+> **GC1 PC에서 올린 것이 아님.** GC1은 이 repo를 clone/pull 하여 **통합·배포**합니다.
+
 > **용도**: 이 문서 전체를 **GC1 PC(박은규)** Cursor AI 채팅에 붙여넣기 하세요.  
 > **작성 시점**: 2026-06-18  
 > **작성 PC**: GC2 (kimcha) — GC1 baseline 수신·merge·운영 검증·추가 수정 후 GC1에 재배포
