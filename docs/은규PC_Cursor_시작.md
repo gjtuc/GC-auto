@@ -100,6 +100,7 @@ New-Item -ItemType Directory -Path "$base\PEG\processed" -Force
 cd $env:USERPROFILE\chemstation-gc-automation
 git pull
 Copy-Item -LiteralPath "data_pc\촉매 반응 계산.py" -Destination "$env:USERPROFILE\gc-data-pc\" -Force
+Copy-Item -LiteralPath "data_pc\runtime_paths.py" -Destination "$env:USERPROFILE\gc-data-pc\" -Force
 ```
 
 ### 4.3 Python 패키지

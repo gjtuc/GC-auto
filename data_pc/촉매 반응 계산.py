@@ -1,3 +1,5 @@
+import runtime_paths  # noqa: F401 — [LLM] .cursor\\gc-python-cache 로 __pycache__ 리다이렉트 (실험 폴더 오염 방지)
+
 import pandas as pd
 import numpy as np
 import os
@@ -31,7 +33,9 @@ from datetime import datetime, timedelta
   | 은규 PC   | %USERPROFILE%\\gc-data-pc\\              | 없음 (거슬리지 않음) |
   | 차헌 PC   | %USERPROFILE%\\Desktop\\.cursor\\       | 있음 (기존 관례) |
 
-  ⚠ C:\\Users\\User\\.cursor\\ 는 **Cursor IDE 설정 폴더** — GC 운영 파일 넣지 말 것.
+  ⚠ %USERPROFILE%\\.cursor\\gc-python-cache\\ — Python __pycache__ 전용 (runtime_paths.py)
+  ⚠ %USERPROFILE%\\.cursor\\gc-runtime-temp\\ — 스크립트 임시 파일 (실험 데이터 아님)
+  IDE 설정·확장과 섞이지 않도록 gc-* 접두사 하위에만 둠.
 
   하위 구조 (script_dir 기준, 연구원별 폴더명):
     gc_automation.env          — 네이버 IMAP (Git 제외)

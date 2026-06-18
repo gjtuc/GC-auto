@@ -44,6 +44,7 @@
     "pc_naming": "이 파일은 은규 PC 전용. GC1 장비 PC machine_profile 과 별개.",
     "experiment_folders": "2026-06 현재 DRE만 사용 중. DRM/DRME 폴더는 연구노트 아래 생성 예정 — 경로는 위와 동일 루트.",
     "git": "machine_profile.json 은 .gitignore — repo에는 deploy/machine_profile.eungyu.reference.json 만 참고용으로 유지.",
+    "runtime_cache": "Python __pycache__ → %USERPROFILE%\\.cursor\\gc-python-cache (runtime_paths.py). gc-data-pc 에 캐시 금지.",
     "do_not_run": "본 PC에서 gc_automation.py 실행 금지 (장비 PC 전용)"
   }
 }

@@ -1,7 +1,7 @@
 # 데이터 PC 운영 폴더 레이아웃 (LLM/에이전트 참고)
 
 > **목적:** `촉매 반응 계산.py` 가 **어느 로컬 폴더**에 설치되는지 PC별로 정리.  
-> Cursor IDE 설정 폴더(`%USERPROFILE%\.cursor\`)와 **혼동 금지**.
+> 실험 데이터는 `gc-data-pc` / `Desktop\.cursor`, **부가 파일(캐시·임시)** 은 `%USERPROFILE%\.cursor\gc-*` 아래.
 
 ---
 
@@ -11,7 +11,8 @@
 |------|---------|---------|
 | 바탕화면 정리 | 바탕화면에 폴더 안 보이게 | 기존 `Desktop\.cursor` 유지 가능 |
 | 사용자 혼동 방지 | `gc-data-pc` 이름으로 목적 명확 | — |
-| Cursor IDE | `%USERPROFILE%\.cursor\` 는 **IDE 전용** — GC 파일 넣지 않음 | 동일 |
+| Python 캐시·임시 | `%USERPROFILE%\.cursor\gc-python-cache` 등 | 동일 |
+| Cursor IDE | `.cursor\` 루트는 IDE 설정 — **gc-* 하위만** GC 부가 파일 |
 
 ---
 
@@ -32,11 +33,16 @@
 ```
 {script_dir}\
 ├── 촉매 반응 계산.py       ← repo data_pc/ 에서 Copy-Item (git pull 후 갱신)
+├── runtime_paths.py        ← 위와 함께 복사 (__pycache__ 리다이렉트)
 ├── gc_automation.env       ← 네이버 IMAP (Git 제외, .gitignore)
 └── PEG\  또는  KCH\        ← 연구원 이니셜 폴더 (둘 중 하나)
     ├── inbox\              ← [1단계] 메일 첨부 xlsx
     ├── processed\          ← [2단계] 계산 완료 사본
     └── machine_profile.json← PC 식별 + reaction_roots (Git 제외)
+
+%USERPROFILE%\.cursor\       ← [LLM] 실험과 무관한 부가 파일만 (IDE 설정과 gc-* 로 분리)
+├── gc-python-cache\        ← Python __pycache__ / .pyc (runtime_paths.py)
+└── gc-runtime-temp\        ← 스크립트 임시 파일 (필요 시)
 ```
 
 ### [LLM] 파일 역할
@@ -48,6 +54,8 @@
 | `PEG/inbox` | ❌ | GC1 등 장비 PC가 보낸 KCH **원본** xlsx |
 | `PEG/processed` | ❌ | 수율/전환율 계산 완료 xlsx (검토용) |
 | `machine_profile.json` | ❌ | `role=data_pc`, `reaction_roots`, `experiment_data_root` |
+| `.cursor/gc-python-cache` | ❌ | Python 캐시 — **gc-data-pc에 __pycache__ 생성 안 함** |
+| `.cursor/gc-runtime-temp` | ❌ | 런타임 임시 — 실험 데이터 아님 |
 
 ---
 
@@ -63,6 +71,7 @@ New-Item -ItemType Directory -Path "$home\PEG\processed" -Force
 cd $env:USERPROFILE\chemstation-gc-automation
 git pull
 Copy-Item -LiteralPath "data_pc\촉매 반응 계산.py" -Destination $home -Force
+Copy-Item -LiteralPath "data_pc\runtime_paths.py" -Destination $home -Force
 
 # 3) env — deploy 참고, 값은 로컬만
 Copy-Item "data_pc\gc_automation.env.example" "$home\gc_automation.env"

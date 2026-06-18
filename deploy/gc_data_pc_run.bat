@@ -12,6 +12,13 @@ REM 장비 PC gc_automation.py 와 혼동 금지.
 REM ============================================================================
 
 set "SCRIPT=%USERPROFILE%\gc-data-pc\촉매 반응 계산.py"
+set "SCRIPT_DIR=%USERPROFILE%\gc-data-pc"
+REM [LLM] Python __pycache__ → .cursor\gc-python-cache (gc-data-pc 오염 방지)
+set "PYTHONPYCACHEPREFIX=%USERPROFILE%\.cursor\gc-python-cache"
+if not exist "%PYTHONPYCACHEPREFIX%" mkdir "%PYTHONPYCACHEPREFIX%"
+if not exist "%USERPROFILE%\.cursor\gc-runtime-temp" mkdir "%USERPROFILE%\.cursor\gc-runtime-temp"
+set "GC_DATA_PC_RUNTIME=%USERPROFILE%\.cursor\gc-runtime-temp"
+
 if not exist "%SCRIPT%" (
     echo [오류] 스크립트 없음: %SCRIPT%
     echo         deploy\DATA_PC_HOME_LAYOUT.md 참고
@@ -19,5 +26,6 @@ if not exist "%SCRIPT%" (
 )
 
 echo [은규 PC] 촉매 반응 계산 — 메일 -^> 계산 -^> 연구노트 -^> Origin
+cd /d "%SCRIPT_DIR%"
 python "%SCRIPT%" %*
 exit /b %ERRORLEVEL%
