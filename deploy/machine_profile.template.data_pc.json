@@ -1,7 +1,7 @@
 {
   "role": "data_pc",
-  "label": "은규 — 데이터 PC (템플릿)",
-  "description": "촉매 반응 계산.py 실행 PC (메일 → 계산 → G: → Origin). GC 장비 PC 아님.",
+  "label": "은규 PC (템플릿)",
+  "description": "촉매 반응 계산.py 실행 PC (메일 → 계산 → G: → Origin). GC1 장비 PC 아님.",
   "gc_assignment": {
     "equipment": "GC1",
     "operator": "은규",
@@ -22,7 +22,10 @@
     "env_file": "C:\\Users\\User\\Desktop\\.cursor\\gc_automation.env"
   },
   "notes": {
-    "reference_chaheon": "deploy/machine_profile.reference.chaheon.json",
-    "setup": "Desktop\\.cursor\\KCH\\machine_profile.json 으로 저장"
+    "pc_naming": "이 파일은 **은규 PC**용. GC1 **장비** PC(DESKTOP-MBGSSME 등) machine_profile 과 별개.",
+    "do_not_run": "본 PC에서 gc_automation.py 실행 금지 (장비 PC 전용)",
+    "reference_chaheon": "차헌 PC 참고: deploy/machine_profile.reference.chaheon.json",
+    "setup": "Desktop\\.cursor\\KCH\\machine_profile.json 으로 저장",
+    "doc": "docs/PC_NAMING.md"
   }
 }

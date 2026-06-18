@@ -1,7 +1,7 @@
 {
   "role": "gc2_pc",
   "label": "차헌 — GC2/GC3 장비 PC (템플릿)",
-  "description": "ChemStation 8860 (GC2) 또는 Chem32 (GC3). gc_automation.py --watch. 데이터 PC 아님.",
+  "description": "ChemStation 8860 (GC2) 또는 Chem32 (GC3). gc_automation.py --watch. 차헌 PC(데이터) 아님.",
   "gc_assignment": {
     "equipment": "GC2",
     "operator": "차헌",
@@ -24,8 +24,11 @@
     "env_file": "C:\\Users\\User\\Desktop\\KCH\\gc_automation.env"
   },
   "notes": {
+    "pc_naming": "GC2/GC3 **장비** PC용. 「차헌 PC」= Desktop\\.cursor (role=data_pc, BFMLJ9J) 와 다름.",
+    "kch_folder": "Desktop\\KCH = 장비 출력. 차헌 PC의 inbox는 Desktop\\.cursor\\KCH — 경로만 비슷함.",
     "do_not_commit": "로컬 전용 — Git 제외",
     "setup": "Desktop\\KCH\\machine_profile.json 으로 저장",
-    "guide": "deploy/STEP9_gc2_pc.md"
+    "guide": "deploy/STEP9_gc2_pc.md",
+    "doc": "docs/PC_NAMING.md"
   }
 }

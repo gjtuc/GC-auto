@@ -1,6 +1,6 @@
 {
   "role": "gc1_pc",
-  "label": "은규 — GC1 PC (템플릿)",
+  "label": "은규 — GC1 장비 PC (템플릿)",
   "description": "GC1 Autochro→PDF→엑셀→메일. env=Desktop\\박은규.",
   "gc_assignment": {
     "equipment": "GC1",
@@ -23,7 +23,10 @@
     "env_file": "C:\\Users\\User\\Desktop\\박은규\\gc_automation.env"
   },
   "notes": {
+    "pc_naming": "이 파일은 GC1 **장비** PC용. 「은규 PC」= Desktop\\.cursor (role=data_pc) 와 다름.",
+    "not_this_pc": "촉매 반응 계산.py·Origin·G: 는 은규 PC에서 실행 — 본 PC에서는 gc_automation.py 만",
     "setup": "이 파일을 복사 → Desktop\\박은규\\machine_profile.json 작성 후 identifiers 채우기",
-    "best_id": "smbios_uuid 또는 machine_guid"
+    "best_id": "smbios_uuid 또는 machine_guid",
+    "doc": "docs/PC_NAMING.md"
   }
 }

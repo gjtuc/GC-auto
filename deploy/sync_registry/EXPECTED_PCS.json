@@ -1,26 +1,38 @@
 {
-  "_comment": "연구실에서 GitHub GC-auto 를 쓰는 PC 목록. 새 PC 추가 시 pcs 배열에 한 줄 추가.",
+  "_comment": "연구실 GitHub GC-auto PC 목록. 명칭·역할: docs/PC_NAMING.md",
+  "_roles": {
+    "gc1_pc": "GC1 장비 PC (은규) — gc_automation.py, Desktop\\박은규",
+    "gc2_pc": "GC2/GC3 장비 PC (차헌) — gc_automation.py, Desktop\\KCH",
+    "data_pc": "은규 PC 또는 차헌 PC — 촉매 반응 계산.py, Desktop\\.cursor"
+  },
   "pcs": [
     {
       "pc_id": "DESKTOP-MBGSSME",
-      "label": "은규 — GC1 PC",
+      "label": "은규 — GC1 장비 PC",
       "role": "gc1_pc",
       "operator": "은규",
-      "note": "Autochro, Desktop\\박은규"
-    },
-    {
-      "pc_id": "DESKTOP-BFMLJ9J",
-      "label": "차헌 — 데이터 PC (참고)",
-      "role": "data_pc",
-      "operator": "차헌",
-      "note": "machine_profile.reference.chaheon.json 기준"
+      "note": "Autochro, Desktop\\박은규, gc_automation.py"
     },
     {
       "pc_id": "DESKTOP-XXXXXXX",
-      "label": "차헌 — GC2/GC3 장비 PC (등록 필요)",
+      "label": "은규 PC",
+      "role": "data_pc",
+      "operator": "은규",
+      "note": "촉매 반응 계산.py, Desktop\\.cursor\\. GC1 장비 PC와 별개. 첫 pull 후 pc_id 등록"
+    },
+    {
+      "pc_id": "GC8860",
+      "label": "차헌 — GC2/GC3 장비 PC",
       "role": "gc2_pc",
       "operator": "차헌",
-      "note": "ChemStation PC. 첫 gc_git_pull.bat 후 pc_id를 실제 COMPUTERNAME으로 수정. STEP9_gc2_pc.md"
+      "note": "ChemStation 8860, Desktop\\KCH, gc_automation.py"
+    },
+    {
+      "pc_id": "DESKTOP-BFMLJ9J",
+      "label": "차헌 PC",
+      "role": "data_pc",
+      "operator": "차헌",
+      "note": "촉매 반응 계산.py, Desktop\\.cursor\\. deploy/machine_profile.reference.chaheon.json"
     }
   ]
 }

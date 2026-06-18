@@ -1,5 +1,11 @@
 {
-  "_comment": "이 PC 전용 동기화 기록 파일 템플릿. 복사 후 pc_id.json 으로 저장하지 말고 — sync_registry.ps1 이 자동 생성.",
+  "_comment": "본인 PC 동기화 기록. pc_id = $env:COMPUTERNAME. 명칭: docs/PC_NAMING.md",
+  "_role_help": {
+    "gc1_pc": "은규 — GC1 장비 PC (Autochro 옆)",
+    "gc2_pc": "차헌 — GC2/GC3 장비 PC (ChemStation 옆, 예 GC8860)",
+    "gc3_pc": "차헌 — GC3 장비 (gc2_pc 와 동일 물리 PC 가능)",
+    "data_pc": "은규 PC 또는 차헌 PC (Desktop\\.cursor, 촉매 반응 계산.py)"
+  },
   "pc_id": "DESKTOP-XXXXXXX",
   "label": "운영자 — PC 역할",
   "role": "gc1_pc | gc2_pc | gc3_pc | data_pc",

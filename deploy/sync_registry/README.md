@@ -50,8 +50,9 @@ pull 없이 push하면 **다른 PC 수정이 덮어씌워지거나 날아갈 수
 
 ## machine_profile 과의 관계
 
-- `Desktop\박은규\machine_profile.json` (장비 PC)
-- `Desktop\.cursor\KCH\machine_profile.json` (데이터 PC)
+- `Desktop\박은규\machine_profile.json` (GC1 장비 PC)
+- `Desktop\KCH\machine_profile.json` (GC2/GC3 장비 PC)
+- `Desktop\.cursor\KCH\machine_profile.json` (은규 PC / 차헌 PC)
 
 → sync_registry.ps1 이 있으면 operator/role 자동 채움.
 

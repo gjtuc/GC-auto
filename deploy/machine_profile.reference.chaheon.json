@@ -1,7 +1,7 @@
 {
   "role": "data_pc",
-  "label": "차헌 — 데이터 PC (참고)",
-  "description": "촉매 반응 계산.py 실행 PC (메일 → 계산 → G: → Origin). GC2/ChemStation 장비 PC 아님.",
+  "label": "차헌 PC (참고)",
+  "description": "촉매 반응 계산.py 실행 PC (메일 → 계산 → G: → Origin). GC2/GC3 장비 PC 아님.",
   "recorded_at": "2026-06-15",
   "identifiers": {
     "computer_name": "DESKTOP-BFMLJ9J",
@@ -11,7 +11,10 @@
     "cpu": "Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz"
   },
   "notes": {
-    "gc2_equipment_pc": "ChemStation + gc_automation.py — 별도 PC",
-    "best_id": "smbios_uuid 또는 machine_guid"
+    "pc_naming": "차헌 PC (role=data_pc). GC2/GC3 **장비** PC(GC8860 등)와 별개 물리 PC.",
+    "gc2_equipment_pc": "GC2/GC3 장비 PC — ChemStation + gc_automation.py (별도 PC, 예: GC8860)",
+    "env_location": "본 PC: Desktop\\.cursor\\gc_automation.env (IMAP). 장비: Desktop\\KCH\\",
+    "best_id": "smbios_uuid 또는 machine_guid",
+    "doc": "docs/PC_NAMING.md"
   }
 }
