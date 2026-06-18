@@ -157,8 +157,13 @@ def send_email_via_smtp(
     body_text: str,
     script_dir: str,
     excel_output_dir: str,
+    *,
+    smtp_wait_max_sec: Optional[int] = None,
+    smtp_send_retries: Optional[int] = None,
 ) -> bool:
     """엑셀 첨부 네이버 SMTP 발송 — DNS/SMTP 준비 대기 + 일시 오류 재시도."""
+    wait_max = smtp_wait_max_sec if smtp_wait_max_sec is not None else SMTP_INTERNET_WAIT_MAX_SEC
+    retries = smtp_send_retries if smtp_send_retries is not None else SMTP_SEND_RETRIES
     sender, app_password, recipient = get_smtp_credentials(script_dir, excel_output_dir)
     if not sender or not app_password:
         env_hint = os.path.join(excel_output_dir, "gc_automation.env")
@@ -184,12 +189,12 @@ def send_email_via_smtp(
     from gc_wifi import wait_for_smtp_internet
 
     print(f"\n[진행] 네이버 SMTP 발송 ({sender} → {recipient})...")
-    ready, reason = wait_for_smtp_internet()
+    ready, reason = wait_for_smtp_internet(max_wait_sec=wait_max)
     if not ready:
         print(f"[오류] SMTP 인터넷 미준비 — {reason}")
         return False
 
-    for attempt in range(1, SMTP_SEND_RETRIES + 1):
+    for attempt in range(1, retries + 1):
         try:
             _smtp_send_once(sender, app_password, recipient, msg)
             print(f"[성공] 이메일 발송 완료 → {recipient}")
@@ -198,10 +203,10 @@ def send_email_via_smtp(
             print("[오류] SMTP 인증 실패 — 앱 비밀번호·IMAP/SMTP 사용 여부 확인")
             return False
         except Exception as exc:
-            if attempt < SMTP_SEND_RETRIES and _is_transient_smtp_error(exc):
-                print(f"[경고] SMTP 일시 오류 ({attempt}/{SMTP_SEND_RETRIES}): {exc}")
+            if attempt < retries and _is_transient_smtp_error(exc):
+                print(f"[경고] SMTP 일시 오류 ({attempt}/{retries}): {exc}")
                 wait_for_smtp_internet(
-                    max_wait_sec=SMTP_SEND_RETRY_DELAY_SEC,
+                    max_wait_sec=min(SMTP_SEND_RETRY_DELAY_SEC, wait_max),
                     poll_sec=SMTP_INTERNET_POLL_SEC,
                 )
                 time.sleep(SMTP_SEND_RETRY_DELAY_SEC)

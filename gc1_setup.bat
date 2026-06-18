@@ -39,8 +39,8 @@ echo [3/5] 출력 폴더 확인...
 if not exist "%GC_OUT%" mkdir "%GC_OUT%"
 
 if not exist "%GC_ENV%" (
-    if exist "%GC_ROOT%deploy\gc_automation.env" (
-        copy /Y "%GC_ROOT%deploy\gc_automation.env" "%GC_ENV%" >nul
+    if exist "%GC_ROOT%deploy\gc_automation.env.gc1" (
+        copy /Y "%GC_ROOT%deploy\gc_automation.env.gc1" "%GC_ENV%" >nul
         echo        gc_automation.env 복사 완료
     ) else (
         echo [경고] gc_automation.env 없음 - Desktop\박은규 에 직접 만들어 주세요.

@@ -17,19 +17,20 @@ gc_state.py — 발송·처리 기록 JSON (.gc_send_state.json)
   last_processed_acam_mtime GC2 acam / GC1 PDF mtime — has_new_data_since_last_run
   last_processed_crm_mtime  GC1 처리 완료 시 CRM mtime (기록용)
   last_autochro_crm_mtime   Autochro export 가 마지막으로 본 CRM mtime
-  pending_email_retry       엑셀 OK · SMTP 실패 시 다음 핫스pot 연결에서 재시도
+  pending_email_retry       엑셀 OK · SMTP 실패 시 watch 가 성공까지 자동 재발송
   manual_send_log           force 발송 기록 (일일 슬롯 미포함)
+  one_shot_hotspot_process  이번만 — 핫스pot 재연결 시 새 acam 없어도 1회 처리 후 삭제
 
 =============================================================================
-[GC1 vs GC2 메일 한도]
+[GC1·GC2·GC3 메일 한도]
 =============================================================================
 
-  gc1_unlimited_auto_send('gc1') == True
-    → GC2 오전/오후 슬롯 검사 생략 (can_auto_send_for_mode)
-    → watch 는 **핫스pot 세션당 1회**만 pipeline 호출 (gc_watch._tick)
+  session_based_auto_send() == True (전 인스턴스)
+    → 오전/오후 슬롯 검사 생략 (can_auto_send_for_mode)
+    → watch 는 **핫스pot 세션당 1회** pipeline (gc_watch._tick)
     → force(config.force) 는 한도·핫스pot 모두 우회
 
-  GC2/GC3: can_auto_send_in_current_slot() — 슬롯당 1회
+  daily_send_count / am/pm 슬롯 — 레거시 기록용 (현재 자동 발송 한도에 사용 안 함)
 
 =============================================================================
 [has_new_data_since_last_run]
@@ -47,7 +48,12 @@ import os
 from datetime import datetime
 from typing import Optional, Tuple
 
-from gc_config import AFTERNOON_START_HOUR, DAILY_SEND_LIMIT
+from gc_config import (
+    AFTERNOON_START_HOUR,
+    DAILY_SEND_LIMIT,
+    PENDING_EMAIL_SEND_RETRIES,
+    PENDING_EMAIL_SMTP_WAIT_MAX_SEC,
+)
 from gc_chemstation import get_latest_injection_acam_mtime
 
 try:
@@ -70,6 +76,26 @@ def save_send_state(state_path: str, state: dict) -> None:
     os.makedirs(os.path.dirname(state_path) or ".", exist_ok=True)
     with open(state_path, "w", encoding="utf-8") as state_file:
         json.dump(state, state_file, ensure_ascii=False, indent=2)
+
+
+def log_gc_event(excel_output_dir: str, event_type: str, message: str, **extra) -> None:
+    """출력 폴더\\_system\\gc_events.jsonl — 오류·재시도 기록."""
+    if not excel_output_dir:
+        return
+    system_dir = os.path.join(excel_output_dir, "_system")
+    os.makedirs(system_dir, exist_ok=True)
+    path = os.path.join(system_dir, "gc_events.jsonl")
+    entry = {
+        "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "type": event_type,
+        "message": message,
+        **extra,
+    }
+    try:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
 
 
 def current_send_slot(dt: Optional[datetime] = None) -> str:
@@ -113,9 +139,26 @@ def is_slot_available(state: dict, today_str: str, slot: str) -> bool:
     return get_day_slots(state, today_str).get(slot, 0) < 1
 
 
+def session_based_auto_send(mode: str) -> bool:
+    """GC1·GC2·GC3 — 오전/오후 슬롯 없이 핫스pot 세션당 자동 처리·메일."""
+    return True
+
+
 def gc1_unlimited_auto_send(mode: str) -> bool:
-    """GC1 — GC2 오전/오후 슬롯 한도 미적용 (핫스pot 세션당 1회 발송)."""
-    return mode == "gc1"
+    """session_based_auto_send 와 동일 (GC1 호환 별칭)."""
+    return session_based_auto_send(mode)
+
+
+def get_today_session_send_count(state: dict, today_str: str) -> int:
+    from gc_work_job import get_today_session_send_count as _count
+
+    return _count(state, today_str)
+
+
+def format_today_session_send_status(state: dict, today_str: str) -> str:
+    from gc_work_job import format_today_session_send_status as _fmt
+
+    return _fmt(state, today_str)
 
 
 def resolve_gc1_crm_mtime(excel_output_dir: str) -> Optional[float]:
@@ -137,8 +180,8 @@ def can_auto_send_for_mode(
     mode: str = "auto",
     dt: Optional[datetime] = None,
 ) -> Tuple[bool, str]:
-    """GC1은 GC2 오전/오후 슬롯 한도 없음. GC2/GC3는 오전·오후 각 1회."""
-    if gc1_unlimited_auto_send(mode):
+    """전 인스턴스 session_based — 오전/오후 슬롯 한도 없음."""
+    if session_based_auto_send(mode):
         return True, ""
     return can_auto_send_in_current_slot(state_path, dt)
 
@@ -231,9 +274,11 @@ def set_pending_email_retry(
         "body_text": body_text,
         "sequence_folder": sequence_folder,
         "failed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "retry_count": 0,
     }
     save_send_state(state_path, state)
     print(f"[안내] 메일 재발송 대기 등록 — {os.path.basename(excel_path)}")
+    print(f"       watch가 핫스팟 연결 중 {os.getenv('PENDING_EMAIL_RETRY_INTERVAL_SEC', '60')}초마다 자동 재시도 (성공까지)")
 
 
 def clear_pending_email_retry(state_path: str) -> None:
@@ -242,6 +287,22 @@ def clear_pending_email_retry(state_path: str) -> None:
         return
     state.pop("pending_email_retry", None)
     save_send_state(state_path, state)
+
+
+def has_one_shot_hotspot_process(state_path: str) -> bool:
+    """이번만 핫스pot 재연결 시 새 acam 없이도 pipeline 1회."""
+    return bool(load_send_state(state_path).get("one_shot_hotspot_process"))
+
+
+def consume_one_shot_hotspot_process(state_path: str) -> bool:
+    """one_shot_hotspot_process 가 있으면 소비(삭제) 후 True."""
+    state = load_send_state(state_path)
+    if not state.get("one_shot_hotspot_process"):
+        return False
+    state.pop("one_shot_hotspot_process", None)
+    save_send_state(state_path, state)
+    print("[안내] one_shot_hotspot_process — 이번만 핫스팟 재연결 시 처리 (새 데이터 없어도 1회)")
+    return True
 
 
 def record_processing_result(
@@ -258,36 +319,25 @@ def record_processing_result(
     sample_name: Optional[str] = None,
     seq_date: Optional[str] = None,
     chemstation_mode: str = "auto",
+    prepare_done: bool = True,
 ) -> None:
-    """처리 후 상태 기록 — 메일 실패 시 pending 등록."""
-    excel_dir = os.path.dirname(state_path) if state_path else ""
-    crm_mtime = resolve_gc1_crm_mtime(excel_dir) if gc1_unlimited_auto_send(chemstation_mode) else None
-    mark_sequence_processed(
+    """처리 후 상태 기록 — 메일 성공 시에만 세션 1회 완료."""
+    from gc_work_job import apply_processing_result_to_job
+
+    apply_processing_result_to_job(
         state_path,
-        sequence_folder,
-        latest_mtime,
-        action_summary,
-        crm_mtime=crm_mtime,
+        sequence_folder=sequence_folder,
+        latest_mtime=latest_mtime,
+        action_summary=action_summary,
+        email_sent=email_sent,
+        send_email=send_email,
+        output_path=output_path,
+        email_body=email_body,
+        sample_name=sample_name,
+        seq_date=seq_date,
+        chemstation_mode=chemstation_mode,
+        prepare_done=prepare_done,
     )
-    if email_sent:
-        clear_pending_email_retry(state_path)
-        record_daily_send(state_path, count_toward_limit=count_email_toward_limit)
-    elif (
-        send_email
-        and output_path
-        and email_body
-        and sample_name
-        and seq_date
-        and os.path.isfile(output_path)
-    ):
-        set_pending_email_retry(
-            state_path,
-            excel_path=output_path,
-            sample_name=sample_name,
-            seq_date=seq_date,
-            body_text=email_body,
-            sequence_folder=sequence_folder,
-        )
 
 
 def try_pending_email_retry(
@@ -319,6 +369,7 @@ def try_pending_email_retry(
     from gc_mailer import send_email_via_smtp
 
     print(f"\n[진행] 미발송 메일 재시도 — {os.path.basename(excel_path)}")
+    attempts_before = int(pending.get("retry_count", 0))
     ok = send_email_via_smtp(
         excel_path,
         pending["sample_name"],
@@ -326,64 +377,43 @@ def try_pending_email_retry(
         pending["body_text"],
         script_dir,
         excel_output_dir,
+        smtp_wait_max_sec=PENDING_EMAIL_SMTP_WAIT_MAX_SEC,
+        smtp_send_retries=PENDING_EMAIL_SEND_RETRIES,
     )
     if ok:
-        clear_pending_email_retry(state_path)
-        record_daily_send(
-            state_path,
-            count_toward_limit=not gc1_unlimited_auto_send(chemstation_mode),
-        )
-        summary = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} — 메일 재발송"
-        state = load_send_state(state_path)
-        state["last_action_summary"] = summary
-        save_send_state(state_path, state)
-        return True, summary
+        from gc_work_job import record_session_mail_complete
 
-    return False, "미발송 메일 재시도 실패 — 핫스팟 재연결 후 다시 시도"
+        summary = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} — 메일 재발송"
+        record_session_mail_complete(state_path, excel_output_dir, summary)
+        log_gc_event(
+            excel_output_dir,
+            "mail_retry_ok",
+            summary,
+            excel=os.path.basename(excel_path),
+            attempts=attempts_before,
+        )
+        return True, summary
+    state = load_send_state(state_path)
+    pending = get_pending_email_retry(state)
+    if pending:
+        pending["retry_count"] = int(pending.get("retry_count", 0)) + 1
+        pending["last_retry_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        save_send_state(state_path, state)
+        log_gc_event(
+            excel_output_dir,
+            "mail_retry_fail",
+            "미발송 메일 재시도 실패 — watch 자동 재시도 계속",
+            excel=os.path.basename(excel_path),
+            attempts=pending["retry_count"],
+        )
+    return False, "미발송 메일 재시도 실패 — watch가 자동 재시도 (핫스팟·SMTP 준비 대기)"
 
 
 def recover_stale_pending_email(state_path: str, excel_output_dir: str) -> bool:
-    """이전 버전에서 엑셀만 성공한 기록이 있으면 pending 으로 복구."""
-    state = load_send_state(state_path)
-    if get_pending_email_retry(state):
-        return False
+    """이전 엑셀-only·pending 메일 기록을 active_work_job으로 복구."""
+    from gc_work_job import recover_stale_job_from_state
 
-    summary = state.get("last_action_summary") or ""
-    if "엑셀 저장" not in summary and "Chem32 엑셀" not in summary:
-        return False
-    if "메일 발송" in summary:
-        return False
-
-    sequence_folder = state.get("last_sequence_folder")
-    if not sequence_folder:
-        return False
-
-    import glob
-
-    files = glob.glob(os.path.join(excel_output_dir, "*.xlsx"))
-    if not files:
-        return False
-
-    excel_path = max(files, key=os.path.getmtime)
-    base = os.path.basename(excel_path)
-    stem = base[:-5] if base.lower().endswith(".xlsx") else base
-    parts = stem.split(" ", 1)
-    seq_date = parts[0] if parts and len(parts[0]) == 8 and parts[0].isdigit() else ""
-    sample_name = parts[1] if len(parts) > 1 else stem
-    body_text = (
-        "GC ChemStation 자동 정리 결과를 첨부합니다.\n"
-        "(이전 자동 처리에서 메일만 실패 — 재발송)\n\n"
-        f"첨부 파일: {base}\n"
-    )
-    set_pending_email_retry(
-        state_path,
-        excel_path=excel_path,
-        sample_name=sample_name,
-        seq_date=seq_date or datetime.now().strftime("%Y%m%d"),
-        body_text=body_text,
-        sequence_folder=sequence_folder,
-    )
-    return True
+    return recover_stale_job_from_state(state_path, excel_output_dir)
 
 
 def has_new_data_since_last_run(state_path: str, sequence_folder: str, data_path: str = "", mode: str = "auto") -> bool:

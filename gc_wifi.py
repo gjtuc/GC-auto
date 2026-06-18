@@ -3,17 +3,14 @@
 gc_wifi.py — Windows Wi-Fi SSID, SMTP 준비, 실행 허용 게이트
 
 check_runtime_gate():
-  · watch/일반 실행 전 — SSID 일치 + (GC2) 오전/오후 슬롯
+  · watch/일반 실행 전 — SSID 일치 (슬롯 한도 없음 — session_based)
   · force=True — SSID·슬롯 모두 생략 (개시 요청·--force)
-  · gc1 — 슬롯만 생략 (SSID 는 force 아닐 때 iPhone 등 확인)
 
 wait_for_smtp_internet(): Android/iPhone 핫스pot 직후 DNS 지연 대비
 """
 
 from __future__ import annotations
 
-import locale
-import re
 import socket
 import subprocess
 import sys
@@ -34,12 +31,6 @@ if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW"):
     _SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW
 
 
-def _netsh_text_encoding() -> str:
-    if sys.platform == "win32":
-        return locale.getpreferredencoding(False) or "cp949"
-    return "utf-8"
-
-
 def get_connected_wifi_ssid() -> str | None:
     """Windows netsh 로 현재 Wi-Fi SSID. 미연결·오류 시 None."""
     if sys.platform != "win32":
@@ -49,7 +40,7 @@ def get_connected_wifi_ssid() -> str | None:
             ["netsh", "wlan", "show", "interfaces"],
             capture_output=True,
             text=True,
-            encoding=_netsh_text_encoding(),
+            encoding="utf-8",
             errors="replace",
             timeout=15,
             creationflags=_SUBPROCESS_FLAGS,
@@ -59,37 +50,13 @@ def get_connected_wifi_ssid() -> str | None:
         return None
     if result.returncode != 0:
         return None
-
-    _CONNECTED_STATES = frozenset({"connected", "연결됨"})
-    _DISCONNECTED_HINTS = ("disconnect", "끊", "미연결", "안 됨", "안됨")
-
-    ssid: str | None = None
-    state: str | None = None
-    signal_pct: int | None = None
     for line in result.stdout.splitlines():
         stripped = line.strip()
-        if ":" not in stripped:
-            continue
-        key, _, value = stripped.partition(":")
-        key = key.strip()
-        value = value.strip()
-        if key == "SSID":
-            ssid = value or None
-        elif key in ("State", "상태"):
-            state = value
-        elif key == "신호" or "Signal" in key:
-            match = re.search(r"(\d+)\s*%", value)
-            if match:
-                signal_pct = int(match.group(1))
-
-    if state in _CONNECTED_STATES and ssid:
-        return ssid
-    if state:
-        lowered = state.lower()
-        if any(hint in lowered or hint in state for hint in _DISCONNECTED_HINTS):
-            return None
-    if ssid and signal_pct is not None and signal_pct > 0:
-        return ssid
+        if stripped.startswith("SSID") and not stripped.startswith("BSSID"):
+            _, _, value = stripped.partition(":")
+            ssid = value.strip()
+            if ssid:
+                return ssid
     return None
 
 
@@ -185,7 +152,7 @@ def check_runtime_gate(
     수동 실행 전 허용 여부.
 
     force=True: 핫스팟·일일 한도 모두 무시 (사용자 수동 요청).
-    gc1: GC2 오전/오후 슬롯 한도 없음. 핫스pot 세션당 1회는 gc_watch 가 담당.
+    watch 자동: session_based — 오전/오후 슬롯 없음, 핫스pot 세션당 1회는 gc_watch 가 담당.
     """
     if not skip_wifi_check and not force:
         connected = get_connected_wifi_ssid()

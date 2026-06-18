@@ -35,8 +35,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from gc_config import DAILY_SEND_LIMIT, DESKTOP_STOPPED_PREFIX, HEARTBEAT_TOLERANCE_MINUTES
-from gc_state import format_today_send_status, get_today_send_count, load_send_state
+from gc_config import DESKTOP_STOPPED_PREFIX, HEARTBEAT_TOLERANCE_MINUTES
+from gc_state import (
+    format_today_session_send_status,
+    get_today_session_send_count,
+    load_send_state,
+)
 
 DESKTOP_HEARTBEAT_RE = re.compile(r"^\d{8}\.txt$")
 _last_desktop_heartbeat_path: str | None = None
@@ -116,11 +120,11 @@ class StatusReporter:
 
     def _today_send_summary(self) -> str:
         today_str = datetime.now().strftime("%Y%m%d")
-        return format_today_send_status(load_send_state(self.send_state_path), today_str)
+        return format_today_session_send_status(load_send_state(self.send_state_path), today_str)
 
     def _today_send_count(self) -> int:
         today_str = datetime.now().strftime("%Y%m%d")
-        return get_today_send_count(load_send_state(self.send_state_path), today_str)
+        return get_today_session_send_count(load_send_state(self.send_state_path), today_str)
 
     def publish(
         self,
@@ -146,7 +150,7 @@ class StatusReporter:
             "wifi_ssid": wifi_ssid,
             "today_send_count": self._today_send_count(),
             "today_send_summary": self._today_send_summary(),
-            "daily_send_limit": DAILY_SEND_LIMIT,
+            "daily_send_limit": 0,
             "watch_interval_sec": self.watch_interval,
             "last_action": last_action,
             "sequence_folder": sequence_folder,
@@ -173,7 +177,7 @@ class StatusReporter:
             f"갱신: {heartbeat}",
             "",
             f"Wi-Fi: {wifi_line}",
-            f"오늘 자동 메일: {payload['today_send_summary']} (하루 최대 {DAILY_SEND_LIMIT}회)",
+            f"오늘 자동 메일: {payload['today_send_summary']}",
             f"감시 주기: {self.watch_interval}초",
             "",
             f"시작 시각: {self.started_at}",

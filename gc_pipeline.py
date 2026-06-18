@@ -20,8 +20,8 @@ gc_pipeline.py — 시퀀스 1건 처리 파이프라인 (엑셀 + 메일)
   2) parse_gc1_pdf_path() — trim 포함
   3) write_gc1_excel() — FID/TCD 2시트
   4) send_email_via_smtp() — _try_auto_email()
-     · force 또는 gc1 → 슬롯 검사 생략
-     · GC2 watch → 오전/오후 슬롯 확인
+     · force → 슬롯 검사 생략
+     · watch 자동 → session_based (슬롯 한도 없음)
   5) cleanup_superseded_gc1_files() — 잘못된/중복 PDF·xlsx 정리
 
   GC1_SKIP_AUTOCHRO_EXPORT=1 이면 watch 가 이미 export 한 경우 pipeline 중복 방지.
