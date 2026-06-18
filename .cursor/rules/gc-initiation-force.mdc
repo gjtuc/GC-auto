@@ -1,0 +1,35 @@
+---
+description: 맥락 없는 시작/진행/go → GC force 즉시 실행
+alwaysApply: true
+---
+
+# GC 개시 요청 → force
+
+사용자가 **맥락 없이** 진행만 요청하면 (코드 수정·설명·질문이 아님) **watch·핫스팟·일일 한도와 무관하게 force**로 전체 파이프라인을 실행한다.
+
+## 개시로 볼 문구 (예)
+
+- `시작`, `진행`, `go`, `동작`, `동작해`, `처리`, `처리해`, `작업해줘`, `실행`, `보내`, `start`, `run`, `force`
+- 짧은 조합: `처리해 진행`, `동작 go`, `시작 동작 go`
+
+## 개시가 **아닌** 경우
+
+- `코드 수정해줘`, `watch 재시작`, `설명해`, 경로·파일·에러 등 **기술 맥락**이 섞인 메시지
+- 판별: `gc_request.message_is_initiation()` / `python -c "from gc_request import message_is_initiation; print(...)"`
+
+## Cursor 에이전트 동작
+
+1. 사용자 메시지가 개시 문구면 **다른 작업보다 우선** force 실행.
+2. GC1(박은규 env): repo에서 아래 실행 (핫스팟·Autochro·엑셀·메일, force 규칙).
+   ```bat
+   cd %USERPROFILE%\chemstation-gc-automation
+   python gc_automation.py --user-message "<사용자 원문>"
+   ```
+   또는 바탕화면 `GC1_동작해줘.bat` (동일하게 `--request` → force).
+3. exit 0 → 완료 보고만. exit 1 → watch/heartbeat 수리. exit 2 → 개시 아님, 일반 대화 계속.
+4. 개시 요청에 **시료 지정**이 있으면: `gc_동작해줘.bat --sample-name "..."` 또는 메시지에 `sample-name=...` 줄 추가.
+
+## force 시 GC1
+
+- Autochro PDF 재내보내기 + 파싱 + 엑셀 + 메일 (env의 NAVER/핫스팟 설정 사용)
+- watch 세션·오전/오후 슬롯·CRM-only 규칙 **적용 안 함**
