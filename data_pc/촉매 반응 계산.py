@@ -9,6 +9,7 @@ import shutil
 import argparse
 import imaplib
 import email
+import json
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timedelta
@@ -20,7 +21,25 @@ from datetime import datetime, timedelta
 
 [GitHub repo 위치]
   data_pc/촉매 반응 계산.py  (통합 repo: https://github.com/gjtuc/GC-auto)
-  운영 설치: Desktop\\.cursor\\ 에 복사 후 실행 (deploy/STEP3_data_pc.md)
+
+[운영 설치 경로 — LLM/에이전트 필독]  deploy/DATA_PC_HOME_LAYOUT.md
+  이 파일(촉매 반응 계산.py)은 repo가 아니라 **사용자 PC 로컬**에 복사해 실행합니다.
+  SCRIPT_DIR = 이 .py 파일이 있는 폴더 (아래 둘 중 하나).
+
+  | PC 종류   | 권장 운영 폴더 (script_dir)              | 바탕화면 노출 |
+  |-----------|------------------------------------------|---------------|
+  | 은규 PC   | %USERPROFILE%\\gc-data-pc\\              | 없음 (거슬리지 않음) |
+  | 차헌 PC   | %USERPROFILE%\\Desktop\\.cursor\\       | 있음 (기존 관례) |
+
+  ⚠ C:\\Users\\User\\.cursor\\ 는 **Cursor IDE 설정 폴더** — GC 운영 파일 넣지 말 것.
+
+  하위 구조 (script_dir 기준, 연구원별 폴더명):
+    gc_automation.env          — 네이버 IMAP (Git 제외)
+    촉매 반응 계산.py          — 본 스크립트
+    PEG\\ 또는 KCH\\           — inbox/processed + machine_profile.json
+      inbox\\                  — 메일 첨부 xlsx 수신
+      processed\\              — 계산 완료 검토용 사본
+      machine_profile.json     — PC 식별 + reaction_roots 로컬 오버라이드 (Git 제외)
 
 [어느 PC에서 실행?]  docs/PC_NAMING.md
   **은규 PC** 또는 **차헌 PC** (업무·Origin·G: PC). GC **장비** PC에서 실행 금지.
@@ -30,9 +49,9 @@ from datetime import datetime, timedelta
   | 은규   | 은규 PC                 | GC1 장비 PC                  |
   | 차헌   | 차헌 PC                 | GC2/GC3 장비 PC              |
 
-  · Origin, G: 드라이브, IMAP 메일 계정은 데이터 PC(은규/차헌 PC)에 있음
-  · machine_profile.json role=data_pc, paths.script_dir=Desktop\\.cursor\\
-  · gc_automation.env 는 Desktop\\.cursor\\ 에 둠 (장비 PC의 박은규/KCH env 와 별개)
+  · Origin, 실험 저장 경로, IMAP 메일 계정은 데이터 PC(은규/차헌 PC)에 있음
+  · machine_profile.json: role=data_pc — paths·reaction_roots 는 **PC마다 다름**
+  · gc_automation.env 는 script_dir 에 둠 (장비 PC의 박은규/KCH env 와 별개)
 
 [장비 PC와의 관계]
   GC1/GC2/GC3 **장비 PC**: repo gc_automation.py → KCH 원본 xlsx → SMTP 발송
@@ -202,9 +221,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def _data_pc_work_subdir():
     """
-    데이터 PC inbox/processed 상위 폴더명.
-    은규 PC: PEG (Park Eungyu Gyu) | 차헌 PC: KCH
-    Desktop\\.cursor\\ 아래 실제 존재하는 폴더를 우선 (PEG → KCH 순).
+    [LLM] 데이터 PC inbox/processed 상위 폴더명 (script_dir 직하위).
+
+    은규 PC: PEG = Park Eungyu Gyu (박은규 이니셜)
+    차헌 PC: KCH = Kim Chaheon (차헌 이니셜, 장비 PC Desktop\\KCH 와 **다른 PC**)
+
+    PEG → KCH 순으로 존재하는 폴더를 탐색. 없으면 KCH 기본(차헌 호환).
     """
     for name in ("PEG", "KCH"):
         if os.path.isdir(os.path.join(SCRIPT_DIR, name)):
@@ -217,23 +239,86 @@ DATA_PC_INBOX_DIR = os.path.join(SCRIPT_DIR, _DATA_PC_WORK, "inbox")
 DATA_PC_PROCESSED_DIR = os.path.join(SCRIPT_DIR, _DATA_PC_WORK, "processed")
 PROCESSED_MAIL_LOG = os.path.join(DATA_PC_INBOX_DIR, ".processed_mail_ids.txt")
 
+
+def _machine_profile_path():
+    """[LLM] 로컬 PC 식별 파일. Git 미포함 (.gitignore). 장비 PC profile 과 별개."""
+    return os.path.join(SCRIPT_DIR, _DATA_PC_WORK, "machine_profile.json")
+
+
+def _load_machine_profile():
+    """
+    [LLM] machine_profile.json 로드.
+    포함 가능: role, operator, reaction_roots, experiment_data_root, paths.*
+  은규 PC 예: reaction_roots → Desktop\\새 폴더\\연구노트\\DRE (G: 미사용)
+    """
+    path = _machine_profile_path()
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def _paths_from_machine_profile():
+    """
+    [LLM] machine_profile 에서 실험 저장 경로 오버라이드.
+    repo REACTION_ROOTS 기본값(G:) 은 차헌 PC 예시 — 은규 PC는 profile 우선.
+    """
+    prof = _load_machine_profile()
+    roots = {}
+
+    raw_roots = prof.get("reaction_roots")
+    if isinstance(raw_roots, dict):
+        roots = {str(k).upper(): str(v).strip() for k, v in raw_roots.items() if v}
+
+    if not roots:
+        paths = prof.get("paths") or {}
+        for rt_key, path_key in (
+            ("DRE", "reaction_roots_dre"),
+            ("DRM", "reaction_roots_drm"),
+            ("DRME", "reaction_roots_drme"),
+        ):
+            val = str(paths.get(path_key, "")).strip()
+            if val and "..." not in val:
+                roots[rt_key] = val
+
+    exp_root = prof.get("experiment_data_root")
+    if not exp_root:
+        exp_root = (prof.get("paths") or {}).get("experiment_data_root", "")
+    exp_root = str(exp_root or "").strip()
+    if "..." in exp_root:
+        exp_root = ""
+
+    return roots, exp_root or None
+
+
 # ---------------------------------------------------------------------------
-# G: 드라이브 경로 (보안 USB 위 실험 데이터)
+# 실험 데이터 저장 경로 (3~4단계: 폴더 생성 · Origin)
 # ---------------------------------------------------------------------------
-# REACTION_ROOTS: 반응별 실험 폴더 **루트** — 3단계에서 최신 폴더 복사·신규 생성 시 사용.
-# EXPERIMENT_DATA_ROOT: G: USB 로그인 여부 판별용 (이 경로가 보여야 3~4단계 진행).
+# [LLM] REACTION_ROOTS: 반응별 실험 폴더 **루트** — 그 안에 날짜별 하위 폴더 생성.
+# EXPERIMENT_DATA_ROOT: 3~4단계 진입 전 이 경로가 os.path.isdir 이면 진행.
 #
-# *** 연구원마다 경로가 다를 수 있음 (차헌 PC ≠ 은규 PC) ***
-#   아래 기본값은 연구실/차헌 쪽 예시. 은규 PC에서는 탐색기로 실제 저장 위치 확인 후
-#   Desktop\.cursor\ 촉매 반응 계산.py 의 REACTION_ROOTS 를 맞출 것.
-#   Cursor 에이전트: docs/DATA_PC_PATHS.md, .cursor/rules/data-pc-custom-paths.mdc
-#   개인별 경로만 다르면 repo push 전 사용자(은규)에게 확인 — 무단 push 금지.
+# 우선순위: machine_profile.json > 아래 repo 기본값
+#   · 차헌 PC: G:\\연구소\\... (SecuYouSB 보안 USB)
+#   · 은규 PC: C:\\Users\\User\\Desktop\\새 폴더\\연구노트\\DRE 등 (로컬, G: 없음)
+#   · DRM/DRME 폴더는 은규 PC에서 아직 없을 수 있음 — 생성 후 profile 에 경로 유지
+#
+# 상세: docs/DATA_PC_PATHS.md, deploy/DATA_PC_HOME_LAYOUT.md
 REACTION_ROOTS = {
     "DRE": r"G:\연구소\실험\실험데이터\촉매 반응\DRE 반응(C2H6)",
     "DRM": r"G:\연구소\실험\실험데이터\촉매 반응\DRM 반응 (CH4)",
     "DRME": r"G:\연구소\실험\실험데이터\촉매 반응\DRME 반응 (C2H6+CH4)",
 }
 EXPERIMENT_DATA_ROOT = r"G:\연구소\실험\실험데이터"
+
+_profile_roots, _profile_exp_root = _paths_from_machine_profile()
+if _profile_roots:
+    REACTION_ROOTS = _profile_roots
+if _profile_exp_root:
+    EXPERIMENT_DATA_ROOT = _profile_exp_root
 ENV_FILE_NAMES = (".env", "gc_automation.env")
 
 
@@ -245,7 +330,7 @@ _INVALID_FOLDER_CHARS = re.compile(r'[<>:"/\\|?*]')
 
 
 def _load_dotenv_files():
-    """Desktop\\gc_automation.env 에서 네이버 IMAP 계정만 로드 (NAVER_EMAIL, NAVER_APP_PASSWORD)."""
+    """script_dir\\gc_automation.env 에서 네이버 IMAP 계정 로드 (NAVER_EMAIL, NAVER_APP_PASSWORD)."""
     try:
         from dotenv import load_dotenv
     except ImportError:
@@ -260,20 +345,20 @@ def _load_dotenv_files():
 
 def _g_drive_unavailable_message():
     """
-    G: 경로가 보이지 않을 때 출력할 안내.
-    USB 잠금 해제는 SecuYouSB GUI에서 사용자가 직접 수행 (스크립트 개입 없음).
+    [LLM] 3~4단계 불가 시 안내. EXPERIMENT_DATA_ROOT 가 보이지 않을 때.
+    은규 PC: 연구노트 로컬 경로 확인 | 차헌 PC: SecuYouSB G: 로그인.
     """
     return "\n".join([
-        "❌ [G: 드라이브] 실험데이터 경로에 접근할 수 없습니다.",
+        "❌ [실험데이터] EXPERIMENT_DATA_ROOT 경로에 접근할 수 없습니다.",
         "",
-        "보안 USB(SecuYouSB) 세션이 만료되었거나 잠긴 상태일 수 있습니다.",
-        "  1. SecuYouSB 프로그램에서 직접 로그인(잠금 해제)",
-        "  2. 탐색기에서 아래 경로가 보이는지 확인",
-        "       G:\\연구소\\실험\\실험데이터\\촉매 반응\\...",
-        "  3. 이 스크립트를 다시 실행",
+        f"  현재 설정: {EXPERIMENT_DATA_ROOT}",
         "",
-        f"※ 2단계 계산 결과는 Desktop\\.cursor\\{_DATA_PC_WORK}\\processed\\ 에 저장되어 있습니다.",
-        "   로그인 후 같은 메일/파일로 재실행하면 3~4단계(G: 폴더·Origin)를 이어갈 수 있습니다.",
+        "차헌 PC(SecuYouSB): SecuYouSB 로그인 → G:\\연구소\\실험\\... 탐색기 확인",
+        "은규 PC(로컬):     연구노트 등 실제 폴더가 있는지 탐색기에서 확인",
+        "  machine_profile.json 의 experiment_data_root / reaction_roots 점검",
+        "",
+        f"※ 2단계 계산 결과는 이미 저장됨: {DATA_PC_PROCESSED_DIR}",
+        "   경로 수정 후 같은 메일/파일로 재실행하면 3~4단계를 이어갈 수 있습니다.",
     ])
 
 

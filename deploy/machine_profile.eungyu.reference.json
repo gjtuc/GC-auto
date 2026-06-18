@@ -1,0 +1,49 @@
+{
+  "_comment_for_llm": "은규 PC 참고용 machine_profile. PEG\\machine_profile.json 으로 복사 후 로컬만 사용. Git commit 금지.",
+  "role": "data_pc",
+  "label": "은규 PC",
+  "description": "촉매 반응 계산.py 실행 PC (메일 → 계산 → 연구노트 → Origin). GC1 장비 PC 아님.",
+  "gc_assignment": {
+    "equipment": "GC1",
+    "operator": "은규",
+    "note": "GC1 장비 PC(Desktop\\박은규)와 별개. 본 PC에서 gc_automation.py 실행 금지."
+  },
+  "recorded_at": "YYYY-MM-DD",
+  "identifiers": {
+    "computer_name": "DESKTOP-7BEO3FH",
+    "windows_user": "User",
+    "smbios_uuid": "장치 ID (설정→시스템→정보)",
+    "cpu": "CPU 모델 (선택)"
+  },
+  "data_pc_home": {
+    "layout": "gc-data-pc",
+    "script_dir": "C:\\Users\\User\\gc-data-pc",
+    "comment_for_llm": "은규 PC는 바탕화면 대신 %USERPROFILE%\\gc-data-pc 사용. Cursor IDE .cursor 폴더와 별개."
+  },
+  "storage_folder": {
+    "name": "PEG",
+    "meaning": "Park Eungyu Gyu (박은규). 차헌 데이터 PC의 KCH·장비 PC Desktop\\KCH 와 혼동 금지."
+  },
+  "paths": {
+    "repo": "C:\\Users\\User\\chemstation-gc-automation",
+    "script_dir": "C:\\Users\\User\\gc-data-pc",
+    "peg_dir": "C:\\Users\\User\\gc-data-pc\\PEG",
+    "env_file": "C:\\Users\\User\\gc-data-pc\\gc_automation.env",
+    "reaction_roots_dre": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트\\DRE",
+    "reaction_roots_drm": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트\\DRM",
+    "reaction_roots_drme": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트\\DRME",
+    "experiment_data_root": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트"
+  },
+  "reaction_roots": {
+    "DRE": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트\\DRE",
+    "DRM": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트\\DRM",
+    "DRME": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트\\DRME"
+  },
+  "experiment_data_root": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트",
+  "notes": {
+    "pc_naming": "이 파일은 은규 PC 전용. GC1 장비 PC machine_profile 과 별개.",
+    "experiment_folders": "2026-06 현재 DRE만 사용 중. DRM/DRME 폴더는 연구노트 아래 생성 예정 — 경로는 위와 동일 루트.",
+    "git": "machine_profile.json 은 .gitignore — repo에는 deploy/machine_profile.eungyu.reference.json 만 참고용으로 유지.",
+    "do_not_run": "본 PC에서 gc_automation.py 실행 금지 (장비 PC 전용)"
+  }
+}

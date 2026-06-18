@@ -12,20 +12,21 @@ alwaysApply: true
 
 | 구분 | 규칙 |
 |------|------|
-| **은규 PC** | `Desktop\.cursor\촉매 반응 계산.py` 실행. G: `REACTION_ROOTS`는 **은규 PC 탐색기에서 확인한 경로**로 맞출 것 |
-| **차헌 PC** | 동일 스크립트, **차헌의 G: 경로** (repo 기본값이 차헌 쪽일 수 있음) |
+| **은규 PC** | script_dir=`%USERPROFILE%\gc-data-pc\`. `PEG\machine_profile.json` 의 `reaction_roots` 로 연구노트 경로 지정 |
+| **차헌 PC** | script_dir=`Desktop\.cursor\`. G: `REACTION_ROOTS` (repo 기본값이 차헌 쪽일 수 있음) |
 | **공통 금지** | 상대방 PC의 실험 폴더 경로를 확인 없이 코드에 박아 넣기 |
 
 ## 에이전트가 할 일
 
-1. G:·3~4단계(아카이브·Origin) 작업 전 → **`docs/DATA_PC_PATHS.md`** 확인  
-2. `촉매 반응 계산.py` 의 `REACTION_ROOTS` / `EXPERIMENT_DATA_ROOT` 가 **현재 PC 사용자의 실제 경로**인지 확인  
-3. 경로 불명이면 사용자(은규)에게 **DRE/DRM/DRME 각각 탐색기 경로**를 물어본 뒤 수정  
-4. 은규 전용 경로 변경을 repo에 push할지는 사용자에게 확인 (팀 공용 트리가 아니면 로컬 운영본만 수정)
+1. 3~4단계(아카이브·Origin) 작업 전 → **`docs/DATA_PC_PATHS.md`**, **`deploy/DATA_PC_HOME_LAYOUT.md`** 확인
+2. `촉매 반응 계산.py` 는 시작 시 `machine_profile.json` 경로를 **자동 로드** — profile 없으면 repo G: 기본값
+3. 경로 불명이면 사용자(은규)에게 **DRE/DRM/DRME 각각 탐색기 경로**를 물어본 뒤 profile 수정
+4. 은규 전용 경로는 `deploy/machine_profile.eungyu.reference.json` 참고 (로컬 profile, Git 제외)
+5. **코드·문서 수정 후 git push** (팀 동기화 기본)
 
 ## 차헌 PC와 혼동하지 말 것
 
-- `Desktop\KCH\` (GC2 **장비** PC) ≠ `Desktop\.cursor\KCH\` (**데이터** PC inbox)  
-- repo `REACTION_ROOTS` 기본 문자열 = **연구실 공통일 수도, 차헌 예시일 수도** — 은규 PC에서는 **실측 우선**
+- `Desktop\KCH\` (GC2 **장비** PC) ≠ `gc-data-pc\PEG\` (**은규** 데이터 PC) ≠ `Desktop\.cursor\KCH\` (**차헌** 데이터 PC)
+- repo `REACTION_ROOTS` 기본 문자열 = **차헌 G: 예시** — 은규 PC에서는 **machine_profile 우선**
 
-상세: `docs/DATA_PC_PATHS.md`, `deploy/STEP6_data_pc_setup.md` §6.8
+상세: `docs/DATA_PC_PATHS.md`, `deploy/DATA_PC_HOME_LAYOUT.md`, `deploy/STEP6_data_pc_setup.md`

@@ -17,10 +17,10 @@
   },
   "paths": {
     "repo": "C:\\Users\\User\\chemstation-gc-automation",
-    "script_dir": "C:\\Users\\User\\Desktop\\.cursor",
+    "script_dir": "C:\\Users\\User\\gc-data-pc",
     "kch_dir": "C:\\Users\\User\\Desktop\\.cursor\\KCH",
-    "peg_dir": "C:\\Users\\User\\Desktop\\.cursor\\PEG",
-    "env_file": "C:\\Users\\User\\Desktop\\.cursor\\gc_automation.env",
+    "peg_dir": "C:\\Users\\User\\gc-data-pc\\PEG",
+    "env_file": "C:\\Users\\User\\gc-data-pc\\gc_automation.env",
     "reaction_roots_dre": "G:\\... (은규 PC 탐색기 확인 → 촉매 반응 계산.py REACTION_ROOTS 와 동기화)",
     "reaction_roots_drm": "G:\\...",
     "reaction_roots_drme": "G:\\...",
@@ -31,8 +31,9 @@
     "path_customization": "차헌 PC와 G: 실험 폴더 위치·이름이 다를 수 있음. repo 기본 REACTION_ROOTS 를 무조건 따르지 말 것 — docs/DATA_PC_PATHS.md",
     "do_not_run": "본 PC에서 gc_automation.py 실행 금지 (장비 PC 전용)",
     "reference_chaheon": "차헌 PC 참고: deploy/machine_profile.reference.chaheon.json",
-    "setup": "은규 PC: Desktop\\.cursor\\PEG\\machine_profile.json | 차헌 PC: Desktop\\.cursor\\KCH\\machine_profile.json",
-    "storage_folder": "은규 PC=PEG (Park Eungyu Gyu), 차헌 PC=KCH. 장비 PC Desktop\\KCH 와 별개.",
+    "setup": "은규 PC: %USERPROFILE%\\gc-data-pc\\PEG\\machine_profile.json | 차헌 PC: Desktop\\.cursor\\KCH\\machine_profile.json",
+    "storage_folder": "은규 PC=PEG (gc-data-pc), 차헌 PC=KCH (Desktop\\.cursor). 장비 PC Desktop\\KCH 와 별개.",
+    "layout_doc": "deploy/DATA_PC_HOME_LAYOUT.md",
     "doc": "docs/PC_NAMING.md"
   }
 }

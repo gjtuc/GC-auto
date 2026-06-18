@@ -10,22 +10,35 @@ alwaysApply: true
 다음 **어느 하나**에 해당하면 **은규 PC 데이터 파이프라인** 세션으로 간주합니다.
 
 - 사용자가 「은규 PC」「은규 PC야」「깃허브 자료 줄게」「깃허브 줄게」 등 **은규·데이터 PC** 맥락을 밝힘
-- `Desktop\.cursor\KCH\machine_profile.json` 이 있고 `role`=`data_pc`, operator=은규
+- `gc-data-pc\PEG\machine_profile.json` 이 있고 `role`=`data_pc`, operator=은규
 - 사용자가 `gjtuc/GC-auto` clone 후 **은규 PC 세팅**을 요청
 
 ## 즉시 할 일 (되묻지 말 것)
 
 1. **전문 읽기:** `docs/은규PC_Cursor_시작.md` — 은규 PC **마스터 체크리스트**
-2. 문서 **§2 진행 상태 판별**로 어디까지 됐는지 확인
-3. 첫 미완료 **Phase**부터 순서대로 실행 (터미널·파일·검증)
-4. G: 경로 — `docs/DATA_PC_PATHS.md` (차헌 경로 무단 가정 금지)
-5. 이 PC에서 **`gc_automation.py` 실행·설정 금지** (GC1 **장비** PC 전용)
+2. **레이아웃:** `deploy/DATA_PC_HOME_LAYOUT.md` — script_dir=`%USERPROFILE%\gc-data-pc\`
+3. 문서 **§2 진행 상태 판별**로 어디까지 됐는지 확인
+4. 첫 미완료 **Phase**부터 순서대로 실행 (터미널·파일·검증)
+5. 실험 경로 — `PEG\machine_profile.json` 의 `reaction_roots` (연구노트, G: 아님)
+6. 이 PC에서 **`gc_automation.py` 실행·설정 금지** (GC1 **장비** PC 전용)
+7. 수정 후 **git commit + push** (동기화 기본)
 
 ## 정체성 (한 줄)
 
-**은규 PC** = GC1 장비가 보낸 KCH 메일 → `Desktop\.cursor\촉매 반응 계산.py` → G: → Origin  
+**은규 PC** = GC1 장비가 보낸 KCH 메일 → `gc-data-pc\촉매 반응 계산.py` → 연구노트 → Origin  
 **GC1 장비 PC** = Autochro PDF → `Desktop\박은규\` → 메일 발송 — **별도 PC**
+
+## 운영 경로 (LLM)
+
+| 항목 | 은규 PC 경로 |
+|------|----------------|
+| script_dir | `%USERPROFILE%\gc-data-pc\` |
+| storage | `PEG\inbox`, `PEG\processed` |
+| env | `gc-data-pc\gc_automation.env` |
+| profile | `gc-data-pc\PEG\machine_profile.json` |
+
+⚠ `%USERPROFILE%\.cursor\` = Cursor IDE 설정 — GC 운영 파일과 **별개**
 
 ## GitHub
 
-https://github.com/gjtuc/GC-auto — `data_pc/`, `deploy/STEP6`~`STEP8`, `docs/은규PC_Cursor_시작.md`
+https://github.com/gjtuc/GC-auto — `data_pc/`, `deploy/DATA_PC_HOME_LAYOUT.md`, `docs/은규PC_Cursor_시작.md`

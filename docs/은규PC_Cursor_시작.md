@@ -50,9 +50,9 @@
 
 | # | 확인 방법 | 완료 기준 |
 |---|-----------|-----------|
-| A | `Test-Path "$env:USERPROFILE\Desktop\.cursor\촉매 반응 계산.py"` | 파일 있음 |
-| B | `Test-Path "$env:USERPROFILE\Desktop\.cursor\gc_automation.env"` | 있고 NAVER_* 채워짐 |
-| C | `Test-Path "$env:USERPROFILE\Desktop\.cursor\PEG\machine_profile.json"` | role=data_pc |
+| A | `Test-Path "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"` | 파일 있음 |
+| B | `Test-Path "$env:USERPROFILE\gc-data-pc\gc_automation.env"` | 있고 NAVER_* 채워짐 |
+| C | `Test-Path "$env:USERPROFILE\gc-data-pc\PEG\machine_profile.json"` | role=data_pc |
 | D | `python ...\촉매 반응 계산.py --help` | exit 0 |
 | E | GC1 xlsx로 `--no-archive` | `*_GC1_DRE_계산완료.xlsx` 생성 |
 | F | G: 탐색기 | 은규 DRE/DRM/DRME 루트 보임 |
@@ -80,14 +80,16 @@ git pull
 
 ---
 
-## 4. Phase 2 — `Desktop\.cursor\` 운영 폴더 (Step 6)
+## 4. Phase 2 — `gc-data-pc\` 운영 폴더 (Step 6)
+
+> **은규 PC:** 바탕화면 대신 `%USERPROFILE%\gc-data-pc\` 사용 — [`deploy/DATA_PC_HOME_LAYOUT.md`](../deploy/DATA_PC_HOME_LAYOUT.md)
 
 상세: [`deploy/STEP6_data_pc_setup.md`](../deploy/STEP6_data_pc_setup.md)
 
 ### 4.1 폴더 생성
 
 ```powershell
-$base = "$env:USERPROFILE\Desktop\.cursor"
+$base = "$env:USERPROFILE\gc-data-pc"
 New-Item -ItemType Directory -Path "$base\PEG\inbox" -Force
 New-Item -ItemType Directory -Path "$base\PEG\processed" -Force
 ```
@@ -97,7 +99,7 @@ New-Item -ItemType Directory -Path "$base\PEG\processed" -Force
 ```powershell
 cd $env:USERPROFILE\chemstation-gc-automation
 git pull
-Copy-Item -LiteralPath "data_pc\촉매 반응 계산.py" -Destination "$env:USERPROFILE\Desktop\.cursor\" -Force
+Copy-Item -LiteralPath "data_pc\촉매 반응 계산.py" -Destination "$env:USERPROFILE\gc-data-pc\" -Force
 ```
 
 ### 4.3 Python 패키지
@@ -110,7 +112,7 @@ python -c "import pandas, numpy, dotenv; print('core OK')"
 **완료 기준:** `--help` 성공.
 
 ```powershell
-python "$env:USERPROFILE\Desktop\.cursor\촉매 반응 계산.py" --help
+python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py" --help
 ```
 
 ---
@@ -151,7 +153,7 @@ python scripts\test_e2e_mail_auth.py
 
 ```powershell
 Copy-Item deploy\machine_profile.template.data_pc.json `
-  "$env:USERPROFILE\Desktop\.cursor\PEG\machine_profile.json"
+  "$env:USERPROFILE\gc-data-pc\PEG\machine_profile.json"
 ```
 
 채울 필드:
@@ -235,11 +237,11 @@ G:·Origin 없이 2단계만:
 
 ```powershell
 # GC1 KCH xlsx를 inbox에 넣거나
-python "$env:USERPROFILE\Desktop\.cursor\촉매 반응 계산.py" --manual
+python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py" --manual
 # 경로 입력
 
 # 또는 inbox에 xlsx + 메일 연동 테스트
-python "$env:USERPROFILE\Desktop\.cursor\촉매 반응 계산.py" --no-archive
+python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py" --no-archive
 ```
 
 **PASS 기준:**
@@ -272,7 +274,7 @@ powershell -File scripts\verify_e2e_prerequisites.ps1
 ### 10.2 전체 실행
 
 ```powershell
-python "$env:USERPROFILE\Desktop\.cursor\촉매 반응 계산.py"
+python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"
 ```
 
 또는 Cursor 규칙: 「작업해」「시작해」「진행」→ 위 스크립트 실행 (차헌 PC와 동일 트리거).
