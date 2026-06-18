@@ -1,13 +1,13 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-06-18 14:46:21 | HEAD: `dff49c2` | docs: add cross-PC comments and CODEBASE_GUIDE
+> Updated: 2026-06-18 14:47:21 | HEAD: `e5d3c5c` | feat: PC sync tracking ??who pushed/pulled and who is behind
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
 | PC | role | last push (who @ when) | push | last pull (who @ when) | pull | status |
 |----|------|-------------------------|------|-------------------------|------|--------|
 | `DESKTOP-BFMLJ9J` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
-| `DESKTOP-MBGSSME` | gc1_pc | - @ - | `-` | DESKTOP-MBGSSME\User @ 2026-06-18T14:46:21+09:00 | `dff49c2` | [OK] latest |
+| `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\User @ 2026-06-18T14:47:20+09:00 | `e5d3c5c` | DESKTOP-MBGSSME\User @ 2026-06-18T14:46:21+09:00 | `dff49c2` | [WARN] need pull |
 | `DESKTOP-XXXXXXX` | gc2_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
 
 ## Commands
