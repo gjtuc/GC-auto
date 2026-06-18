@@ -1,0 +1,39 @@
+{
+    "pc_id":  "GC8860",
+    "label":  "GC8860 (gc2_pc)",
+    "role":  "gc2_pc",
+    "operator":  "User",
+    "identifiers":  {
+                        "smbios_uuid":  "ECF325B5-7661-4452-9CAE-EDEF864D833A",
+                        "computer_name":  "GC8860",
+                        "machine_guid":  "e015c21c-c5c1-4e75-bb08-9ca3cd4be017",
+                        "windows_user":  "User"
+                    },
+    "sync":  {
+                 "last_push_at":  null,
+                 "last_push_commit":  null,
+                 "last_push_by":  null,
+                 "last_pull_at":  "2026-06-18T16:10:34+09:00",
+                 "last_pull_commit":  "1c0640a",
+                 "last_pull_by":  "GC8860\\User",
+                 "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
+             },
+    "history":  [
+                    {
+                        "event":  "pull",
+                        "at":  "2026-06-18T16:10:34+09:00",
+                        "commit":  "1c0640a",
+                        "subject":  "scripts: verify/setup scripts and bats use equipment vs data PC labels",
+                        "by":  "GC8860\\User",
+                        "triggered_by":  "gc8860:pre-push-pull"
+                    },
+                    {
+                        "event":  "pull",
+                        "at":  "2026-06-18T16:08:54+09:00",
+                        "commit":  "9246bbf",
+                        "subject":  "sync: registry DESKTOP-MBGSSME push Steps 6-9",
+                        "by":  "GC8860\\User",
+                        "triggered_by":  "setup:GC8860-first-pull"
+                    }
+                ]
+}
