@@ -2,6 +2,14 @@
 """
 gc_error_handler.py — GC 오류 로그 · watch 재시작 · Cursor SDK 복구
 
+=============================================================================
+[어느 PC — GC1 (은규) 에서 추가]
+=============================================================================
+
+  GC1 PC merge 시 추가. GC2 PC에도 코드는 있으나 env 로 비활성 가능.
+
+  GitHub push 후 다른 PC: git pull. GC_ERROR_HANDLER_ENABLED=0 이면 GC2에서 무시.
+
 흐름:
   1) watch/poll 이 error·stale heartbeat 감지 → enqueue_and_recover()
   2) 오류 JSONL + GC_오류_최근.txt 저장

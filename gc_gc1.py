@@ -9,6 +9,8 @@ gc_gc1.py — GC1 YL6500GC PDF 보고서 파싱 · 엑셀 · trim · 정리
   GC2/GC3: ChemStation injection 폴더의 .D / .ch / acam / Report
   GC1:     Autochro 가 만든 **PDF** (주입당 보통 3페이지)
 
+  **장비 PC(GC1) 전용.** 계산·Origin → data_pc/촉매 반응 계산.py (데이터 PC)
+
     페이지 1 — YL6500GC A (FID)  → CH4, C2H6, C2H4
     페이지 2 — YL6500GC B (크로마만, 피크 표 없음 — 마지막 주입 완료 판별용)
     페이지 3 — YL6500GC C (TCD)  → H2, CO, CO2

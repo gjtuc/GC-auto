@@ -111,6 +111,60 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
 
   GC2 Cursor 핸드오프: deploy\\GC2_Cursor_핸드오프.md
 
+=============================================================================
+[GitHub 통합 repo — gjtuc/GC-auto]
+=============================================================================
+
+  모든 PC가 **같은 repo** 를 clone/pull 합니다. 코드는 클라우드, 설정은 로컬.
+
+  git pull  … 작업 시작 (다른 PC 변경 반영)
+  git push  … 작업 끝 (또는 .cursor/hooks/auto_git_sync.ps1 자동)
+
+  Git에 **넣지 않음**: gc_automation.env, machine_profile.json, KCH/inbox xlsx
+
+  상세: docs/CODEBASE_GUIDE.md, deploy/ROADMAP.md
+
+=============================================================================
+[데이터 PC — data_pc/촉매 반응 계산.py]  (장비 PC와 별개)
+=============================================================================
+
+  장비 PC gc_automation.py 가 보낸 **KCH 원본** 메일을 데이터 PC가 수신·계산.
+
+  1) IMAP → KCH/inbox
+  2) Area → 수율/전환율 → KCH/processed
+  3) G: 실험 폴더
+  4) Origin .opju
+
+  GC2/GC3 교정: USER SETTINGS (차헌 실측)
+  GC1 교정:     USER SETTINGS GC1 블록 — **아직 실측 필요**
+
+  설치: deploy/STEP3_data_pc.md
+
+=============================================================================
+[PC 식별 — machine_profile.json]
+=============================================================================
+
+  Cursor/에이전트가 「이 PC가 장비인지 데이터 PC인지」 구분할 때 참고.
+
+  GC1 장비: Desktop\\박은규\\machine_profile.json  (로컬, Git 제외)
+  템플릿:   deploy/machine_profile.template.gc1.json
+
+  데이터 PC: Desktop\\.cursor\\KCH\\machine_profile.json
+  템플릿:    data_pc/KCH/machine_profile.template.json
+
+=============================================================================
+[GC2 추가 모듈 — 2026-06 merge]
+=============================================================================
+
+  gc_work_job.py   … 핫스팟 끊김 시 prepare→excel→mail 단계별 재개
+  gc_watchdog.py   … watch heartbeat stale 시 watch 자동 재시작
+
+=============================================================================
+[GC1 추가 모듈]
+=============================================================================
+
+  gc_error_handler.py … watch 오류·stale heartbeat → 재시작, (선택) Cursor SDK
+
 """
 
 # 이 모듈은 문서 전용입니다. 실행할 함수가 없습니다.

@@ -1,4 +1,7 @@
-# 데이터 PC-은규 — `촉매 반응 계산.py` 안내
+# 데이터 PC — `촉매 반응 계산.py` 안내
+
+> **GitHub:** https://github.com/gjtuc/GC-auto/tree/main/data_pc  
+> **전체 맥락:** [`docs/CODEBASE_GUIDE.md`](../docs/CODEBASE_GUIDE.md)
 
 ## 이 PC의 역할
 

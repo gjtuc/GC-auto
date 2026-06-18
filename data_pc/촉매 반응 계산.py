@@ -18,6 +18,19 @@ from datetime import datetime, timedelta
 촉매 반응 계산.py — GC 데이터 자동 계산 · G: 아카이브 · Origin 연동
 =============================================================================
 
+[GitHub repo 위치]
+  data_pc/촉매 반응 계산.py  (통합 repo: https://github.com/gjtuc/GC-auto)
+  운영 설치: Desktop\\.cursor\\ 에 복사 후 실행 (deploy/STEP3_data_pc.md)
+
+[어느 PC에서 실행?]
+  **데이터 PC만** (은규 또는 차헌 업무 PC). GC 장비 PC에서 실행 금지.
+  · Origin, G: 드라이브, IMAP 메일 계정이 데이터 PC에 있음
+  · machine_profile.json role=data_pc 로 PC 구분 (로컬, Git 제외)
+
+[장비 PC와의 관계]
+  GC1/GC2/GC3 장비 PC: repo gc_automation.py → KCH 원본 xlsx → SMTP 발송
+  데이터 PC (본 스크립트): IMAP 수신 → 계산 → G: → Origin
+
 [사용자가 이 스크립트를 만든 목적]
   연구실 GC(Agilent) 분석 후 반복되는 수작업을 줄이기 위함:
   · KCH 원본 엑셀에서 Area → 수율/전환율 계산
@@ -100,13 +113,15 @@ def _get_originpro():
 # ==========================================
 # ⚙️ 사용자 설정 (USER SETTINGS)
 # ==========================================
+# *** 다른 PC/장비에서 값 복사 금지 — CALIB·TIME 은 GC 실측값 ***
+#
 # feed 초기 ppm — 파일명에 농도(%)가 없을 때만 사용 (fallback).
 # 파일명에 (x)% 가 있으면 화공 양론으로 ppm 을 자동 산출 (resolve_feed_ppm 참고):
 #   DRME x% → C2H6 x%, CH4 x%, CO2 3x%
 #   DRE  x% → C2H6 x%, CO2 2x%
 #   DRM  x% → CH4 x%, CO2 x%
 #
-# [1] GC2 장비 설정 (DRE 반응용) — 기본 1.5% 가정
+# [1] GC2 장비 설정 (DRE 반응용) — 차헌 PC 실측. 기본 1.5% 가정
 GC2_INITIAL_C2H6 = 15000
 GC2_INITIAL_CO2  = 30000
 
@@ -129,6 +144,13 @@ CONV_OVER_H2_TOLERANCE = 40.0      # 주반응물 전환율 >> H2 수율 — fee
 GC3_CALIB = {'H2': 0.12736, 'CO': 0.01504, 'CH4': 0.03004, 'CO2': 0.01839, 'C2H4': 0.18072, 'C2H6': 0.05911}
 GC3_TIME_TCD = {'H2': (0.6, 0.8), 'CO': (1.8, 2.2), 'CO2': (6.0, 6.6)}
 GC3_TIME_FID = {'CH4': (3.0, 3.8), 'C2H4': (5.0, 5.25), 'C2H6': (5.26, 5.6)}
+
+# [3] GC1 장비 설정 — 은규 PC: **아직 미입력**. GC1 크로마토그램 실측 후 아래 채우기.
+#     GC2/GC3 숫자를 그대로 쓰면 수율·전환율이 틀립니다.
+# GC1_INITIAL_C2H6 = ...
+# GC1_CALIB = {'H2': ..., 'CO': ..., ...}
+# GC1_TIME = {'H2': (rt_min, rt_max), ...}
+# detect_gc_type() 등에 GC1 RT 구간 분기 추가 필요 — docs/00_인수인계_설명.md §5
 
 ORIGIN_MAPPING = {
     'C2H6 Conversion (%)': 'C2H6 conversion',

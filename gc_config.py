@@ -2,12 +2,27 @@
 """
 gc_config.py — 경로·상수·실행 설정(AppConfig)
 
-AppConfig: gc_automation CLI 인자 + gc_automation.env 가 합쳐진 **한 번의 실행** 설정.
+=============================================================================
+[다른 PC에서 — env vs 코드]
+=============================================================================
 
-핫스pot / 메일:
-  REQUIRED_HOTSPOT_SSID — gc2 기본값; GC1 env 에서 iPhone 으로 덮어씀
-  DAILY_SEND_LIMIT=2    — 레거시(am/pm); 현재는 session_based_auto_send 로 슬롯 미사용
-  hotspot_reconnect_min_sec(mode) — watch 순간 끊김 vs 재연결 구분 (GC1 90s)
+  이 파일의 **기본값**은 GC2/KCH 쪽(AndroidHotspot5841, kimcha 메일)에 가깝습니다.
+  GC1 PC는 Desktop\\박은규\\gc_automation.env 가 로드되면 덮어씁니다:
+
+    REQUIRED_HOTSPOT=iPhone
+    CHEMSTATION_MODE=gc1
+    MAIL_TO, NAVER_EMAIL … 은규 계정
+
+  **TARGET_EMAIL 아래 상수**는 레거시 기본값 — 실제 발송은 env 우선.
+
+=============================================================================
+[AppConfig]
+=============================================================================
+
+  gc_automation CLI 인자 + gc_automation.env 가 합쳐진 **한 번의 실행** 설정.
+
+  hotspot_reconnect_min_sec:
+    GC1 90s / GC2·3 45s — 순간 끊김 vs 재연결 구분 (gc_watch.py)
 """
 
 from __future__ import annotations
@@ -21,10 +36,10 @@ from typing import Optional
 # ChemStation / KCH 경로
 # ---------------------------------------------------------------------------
 
-# Agilent ChemStation 기본 Data 루트 (Public Documents 설치 경로)
+# Agilent ChemStation 기본 Data 루트 — GC2/GC3 장비 PC. GC1은 Autochro(PDF)라 거의 미사용.
 DEFAULT_CHEMSTATION_DATA = r"C:\Users\Public\Documents\ChemStation\1\Data"
 
-# KCH 엑셀·상태 파일 보관 폴더 (현재 Windows 사용자 바탕화면 기준)
+# KCH 엑셀·상태 파일 — GC2/GC3 기본. GC1은 Desktop\박은규 (env EXCEL_OUTPUT_DIR).
 EXCEL_OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "Desktop", "KCH")
 
 
@@ -45,7 +60,7 @@ def default_watch_status_txt() -> str:
 # GC2 핫스팟 / 자동 메일 한도
 # ---------------------------------------------------------------------------
 
-# GC2는 Android 핫스팟에 붙을 때만 네이버 SMTP 사용
+# GC2/GC3 장비 PC 핫스팟 SSID. GC1 env에서 iPhone으로 덮어씀.
 REQUIRED_HOTSPOT_SSID = "AndroidHotspot5841"
 
 # GC2/GC3 — 레거시 상수 (am/pm 슬롯; 현재는 session_based_auto_send 로 한도 미사용)
@@ -79,6 +94,7 @@ def hotspot_reconnect_min_sec(chemstation_mode: str = "auto") -> int:
 # 메일 (네이버 SMTP)
 # ---------------------------------------------------------------------------
 
+# 레거시 기본 수신 주소 — 실제 값은 gc_automation.env 의 MAIL_TO (PC마다 다름)
 TARGET_EMAIL = "kimcha0809@naver.com"
 NAVER_SMTP_HOST = "smtp.naver.com"
 NAVER_SMTP_PORT = 587

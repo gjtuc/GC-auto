@@ -2,16 +2,34 @@
 """
 gc_profiles.py — GC1 / GC2 / GC3 PC별 출력 폴더·핫스팟·모드
 
-한 repo, PC마다 Desktop\\{박은규|KCH}\\gc_automation.env 로 분기.
+=============================================================================
+[다른 PC에서 읽을 때 — 핵심]
+=============================================================================
 
-  GC1  resolve_profile → gc1, iPhone, gc_autochro + gc_gc1
-  GC2  gc2, AndroidHotspot5841, gc_chemstation (8860)
-  GC3  gc3, AndroidHotspot5841, gc_chem32
+  **한 repo, PC마다 env 파일만 다름.** 코드 수정은 GitHub push, env는 각 PC 로컬.
 
-resolve_profile() 탐색 순서:
-  1) env GC_INSTANCE / EXCEL_OUTPUT_DIR
+  | PC   | env 경로                    | GC_INSTANCE | 핫스팟              |
+  |------|-----------------------------|-------------|---------------------|
+  | GC1  | Desktop\\박은규\\gc_automation.env | gc1         | iPhone              |
+  | GC2  | Desktop\\KCH\\gc_automation.env    | gc2         | AndroidHotspot5841  |
+  | GC3  | Desktop\\KCH\\gc_automation.env    | gc3         | AndroidHotspot5841  |
+
+  GC1 → gc_autochro + gc_gc1 (PDF)
+  GC2 → gc_chemstation (8860 acam)
+  GC3 → gc_chem32 (Report.txt)
+
+=============================================================================
+[resolve_profile() 탐색 순서]
+=============================================================================
+
+  1) 환경변수 GC_INSTANCE / EXCEL_OUTPUT_DIR (env 로드 후)
   2) Desktop\\박은규\\gc_automation.env 존재 → GC1
-  3) Desktop\\KCH\\gc_automation.env → GC2/GC3
+  3) Desktop\\KCH\\gc_automation.env 존재 → GC2 또는 GC3 (env의 GC_INSTANCE)
+  4) PROFILE_DEFAULTS 기본값
+
+  확인: python gc_automation.py --show-profile
+
+  PC 식별 JSON (선택): Desktop\\...\\machine_profile.json — docs/CODEBASE_GUIDE.md
 """
 
 from __future__ import annotations
@@ -28,16 +46,19 @@ DEFAULT_GC1_OUTPUT = os.path.join(DESKTOP, "박은규")
 DEFAULT_GC2_OUTPUT = EXCEL_OUTPUT_DIR
 
 PROFILE_DEFAULTS = {
+    # gc1 — 은규 PC (DESKTOP-MBGSSME 등). Autochro PDF 파이프라인.
     "gc1": {
         "output_dir": DEFAULT_GC1_OUTPUT,
         "hotspot": "iPhone",
         "chemstation_mode": "gc1",
     },
+    # gc2 — 차헌 PC. Agilent 8860 ChemStation acam.
     "gc2": {
         "output_dir": DEFAULT_GC2_OUTPUT,
         "hotspot": REQUIRED_HOTSPOT_SSID,
         "chemstation_mode": "8860",
     },
+    # gc3 — 차헌 PC. Chem32 Report.txt. env에서 GC_INSTANCE=gc3.
     "gc3": {
         "output_dir": DEFAULT_GC2_OUTPUT,
         "hotspot": REQUIRED_HOTSPOT_SSID,
@@ -71,7 +92,7 @@ def _dedupe_paths(paths: Iterable[str]) -> List[str]:
 
 
 def candidate_env_dirs(base_script_dir: str) -> List[str]:
-    """gc_automation.env 탐색 순서."""
+    """gc_automation.env 탐색 순서 (첫 번째로 찾은 파일을 bootstrap_env 가 로드)."""
     dirs: List[str] = []
 
     explicit = os.getenv("EXCEL_OUTPUT_DIR", "").strip()

@@ -84,7 +84,8 @@ git push
 
 | 파일 | 용도 |
 |------|------|
-| `gc_architecture.py` | 코드 맵 (실행 없음) |
+| **`docs/CODEBASE_GUIDE.md`** | **다른 PC에서 처음 읽을 때 (PC·파일·Git)** |
+| `gc_architecture.py` | 장비 PC 코드 맵 (실행 없음) |
 | `deploy/GC1_Cursor_핸드오프.md` | GC1 통합 체크리스트 |
 | `deploy/GC2_Cursor_핸드오프.md` | GC2 역배포 |
 | `docs/00_인수인계_설명.md` | 2-PC 파이프라인 전체 설명 |

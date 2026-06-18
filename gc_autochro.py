@@ -10,6 +10,8 @@ GC2/GC3는 Agilent ChemStation sequence.acam_ / Report 를 파싱합니다.
 GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI** 에서
 「인쇄 → Hancom PDF」로 보고서를 만든 뒤, gc_gc1.py 가 PDF 텍스트를 파싱합니다.
 
+  Repo: data_pc/ 와 별개. **장비 PC만** 실행. GitHub: gjtuc/GC-auto
+
 본 모듈은 **PDF 파일을 Autochro 화면 조작으로 생성**하는 단계만 담당합니다.
 
 =============================================================================

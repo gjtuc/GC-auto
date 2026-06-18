@@ -2,6 +2,15 @@
 """
 gc_watchdog.py — GC watch 감시·멈춤 시 자동 재시작
 
+=============================================================================
+[어느 PC — 주로 GC2/GC3]
+=============================================================================
+
+  차헌 PC 운영 안정화용. gc_start_watch.bat 과 별도로 watchdog 실행 시
+  heartbeat stale → watch 프로세스 kill + 재spawn.
+
+  GC1 PC: gc_error_handler.py 도 watch 재시작 담당 (중복 가능 — env로 조절).
+
 heartbeat(.gc_watch_status.json / MMDDHHmm.txt)가 WATCH_HEARTBEAT_STALE_SEC 이상
 갱신되지 않으면 watch 프로세스를 종료하고 다시 시작합니다.
 

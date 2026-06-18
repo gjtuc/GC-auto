@@ -2,10 +2,17 @@
 """
 gc_chem32.py — Chem32 / GC7890 (GC3) Data 경로·Report 파싱
 
-GC3 구조:
+=============================================================================
+[어느 PC / GC]
+=============================================================================
+
+  **GC3 (차헌) 장비 PC 전용.** env: GC_INSTANCE=gc3, CHEMSTATION_MODE=chem32.
+
+GC3 폴더 구조:
   DATA / {시료 폴더} / {REACTION 시퀀스} / 001F0101.D / Report.TXT, REPORT01/02.CSV
 
 피크 개수는 가변 — FID·TCD 각각 Report 에 있는 만큼만 사용.
+출력·메일 흐름은 GC2와 동일 (Desktop\\KCH).
 """
 
 from __future__ import annotations

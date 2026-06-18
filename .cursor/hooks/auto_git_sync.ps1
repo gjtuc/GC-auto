@@ -1,5 +1,15 @@
-# Auto commit + push after Cursor agent finishes (stop hook).
-# Skips when there are no changes or when not inside the GC-auto repo.
+# =============================================================================
+# Cursor Agent 종료 시 GitHub 자동 동기화 (stop hook)
+# =============================================================================
+#
+# 트리거: Cursor Agent 작업이 끝날 때 (.cursor/hooks.json → stop)
+# 동작:   변경 있으면 git add → commit → push origin main
+#
+# 다른 PC: git pull 로 동일 hook 수신. 로그인은 각 PC Git Credential Manager.
+# 로그:   .cursor/hooks/auto_git_sync.log (Git 제외)
+#
+# 올리지 않음: gc_automation.env, machine_profile.json (.gitignore)
+# =============================================================================
 
 $ErrorActionPreference = 'SilentlyContinue'
 
@@ -16,6 +26,7 @@ if ($inside -ne 'true') {
     exit 0
 }
 
+# GC-auto repo 가 아니면 실행 안 함 (다른 프로젝트 보호)
 $remote = & $git remote get-url origin 2>$null
 if ($remote -notmatch 'GC-auto') {
     exit 0
@@ -41,7 +52,7 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -eq 0) {
     "[${stamp}] pushed: $commitMsg" | Out-File -FilePath $logFile -Append -Encoding utf8
 } else {
-    "[${stamp}] push failed" | Out-File -FilePath $logFile -Append -Encoding utf8
+    "[${stamp}] push failed — GitHub 로그인 확인" | Out-File -FilePath $logFile -Append -Encoding utf8
 }
 
 exit 0
