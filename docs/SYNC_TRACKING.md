@@ -81,9 +81,12 @@ scripts/sync_registry.ps1       ← 기록 + SYNC_STATUS 갱신 엔진
 
 | 시점 | 명령 | 기록 |
 |------|------|------|
-| **작업 시작** | `gc_git_pull.bat` | `last_pull_*` 갱신 → GitHub push |
-| **작업 종료** | Commit/Push 또는 Agent auto hook | `last_push_*` 갱신 |
+| **작업 시작** | `gc_git_begin.bat` 또는 `gc_git_pull.bat` | `last_pull_*` 갱신 |
+| **Cursor Agent** | sessionStart hook (자동 pull) | 동일 |
+| **작업 종료** | Agent stop hook (자동 push) 또는 `gc_git_push.bat` | `last_push_*` 갱신 |
 | **현황만** | `gc_git_status.bat` | SYNC_STATUS.md 출력 |
+
+상세: [`GIT_AUTO_SYNC.md`](GIT_AUTO_SYNC.md)
 
 ---
 

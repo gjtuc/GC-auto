@@ -51,6 +51,8 @@
 - **장비 PC** → KCH 원본 엑셀 → 메일 **발송** (수신: 본인 **데이터 PC**)
 - **은규 PC** / **차헌 PC** → 메일 **수신** → 계산 → G: → Origin
 
+**GitHub:** 코드 수정 후 자동 push — [`GIT_AUTO_SYNC.md`](GIT_AUTO_SYNC.md)
+
 ---
 
 ## 자주 헷갈리는 것 (코드·경로)

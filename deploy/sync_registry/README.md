@@ -25,8 +25,8 @@ pull 없이 push하면 **다른 PC 수정이 덮어씌워지거나 날아갈 수
 
 | 이벤트 | 스크립트 |
 |--------|----------|
-| **push** (코드 올림) | `.cursor/hooks/auto_git_sync.ps1` → `scripts/sync_registry.ps1 -Event push` |
-| **pull** (코드 받음) | `gc_git_pull.bat` 또는 git `post-merge` hook |
+| **push** (코드 올림) | `.cursor/hooks` stop → `scripts/git_auto_sync.ps1 -Mode stop` |
+| **pull** (코드 받음) | `gc_git_begin.bat` / `gc_git_pull.bat` / Cursor sessionStart |
 
 ## PC에서 할 일
 

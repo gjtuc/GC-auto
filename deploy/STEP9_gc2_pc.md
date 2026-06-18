@@ -6,6 +6,20 @@
 
 ---
 
+## 9.0a — Git 자동 동기화 (PC당 1회)
+
+> [`docs/GIT_AUTO_SYNC.md`](../docs/GIT_AUTO_SYNC.md)
+
+```powershell
+cd C:\Users\User\chemstation-gc-automation
+gc_git_init.bat       # .githooks
+gc_git_begin.bat      # pull + SYNC_STATUS 확인
+```
+
+이후 Cursor Agent 사용 시: **시작=pull · 종료=push** 자동.
+
+---
+
 ## 9.0 — 역할 구분 (오해 방지)
 
 | PC | role | env | 스크립트 |

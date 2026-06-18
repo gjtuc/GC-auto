@@ -105,6 +105,25 @@ data_pc/
 
 ## 6. GitHub 동기화
 
+> **전체 파이프라인:** [`GIT_AUTO_SYNC.md`](GIT_AUTO_SYNC.md)
+
+### 자동 (Cursor)
+
+| 시점 | 동작 |
+|------|------|
+| 채팅/Agent **시작** | `sessionStart` → `git_auto_sync.ps1 -Mode ensure-latest` |
+| Agent **종료** | `stop` → commit + pull + push + `SYNC_STATUS.md` |
+
+### 수동
+
+```powershell
+.\gc_git_begin.bat     # 작업 시작 (pull + status)
+.\gc_git_pull.bat      # pull 만
+# ... 수정 ...
+.\gc_git_push.bat      # push (뒤처지면 차단)
+.\gc_git_status.bat
+```
+
 ### 필수: pull → 수정 → push
 
 **다른 PC가 이미 push 했다면, 이 PC는 `gc_git_pull.bat`으로 최신본을 받은 뒤에만 수정·push 합니다.**  
@@ -119,7 +138,9 @@ pull 없이 push하면 다른 PC의 최신 수정이 **덮어씌워지거나 유
 
 - **현황 표:** [`deploy/SYNC_STATUS.md`](../deploy/SYNC_STATUS.md)
 - **상세:** [`docs/SYNC_TRACKING.md`](SYNC_TRACKING.md)
-- `.cursor/hooks/auto_git_sync.ps1` — Agent 종료 시 commit+push+registry
+- **자동 파이프라인:** [`docs/GIT_AUTO_SYNC.md`](GIT_AUTO_SYNC.md)
+- `scripts/git_auto_sync.ps1` — 공통 엔진
+- `.cursor/hooks/` — sessionStart(pull) + stop(push)
 
 ---
 

@@ -29,14 +29,15 @@ GitHub GC-auto (클라우드 — 모든 코드·문서)
 
 ## PC 간 Git 필수 규칙
 
-**어느 PC든 GitHub에 최신본을 올린 뒤, 다른 PC는 반드시 `pull` 받고 나서 수정·`push` 하세요.**  
-pull 없이 push하면 **다른 PC에서 올린 수정이 덮어씌워지거나 날아갈 수 있습니다.**
+**어느 PC든 GitHub에 최신본을 올린 뒤, 다른 PC는 반드시 `pull` 받고 나서 수정·`push` 하세요.**
+
+**자동 파이프라인:** [`docs/GIT_AUTO_SYNC.md`](docs/GIT_AUTO_SYNC.md) — Cursor 시작=pull · Agent 종료=push
 
 ```powershell
-.\gc_git_pull.bat      # 1. 작업 시작 — 항상 먼저
-# ... 수정 ...
-git commit / Agent 종료  # 2. 올리기
-.\gc_git_status.bat      # 3. 다른 PC도 [OK] latest 인지 확인
+.\gc_git_begin.bat     # 작업 시작 (pull + 현황) — 권장
+.\gc_git_pull.bat      # pull 만
+# ... 수정 ... (Cursor Agent 종료 시 auto push)
+.\gc_git_status.bat    # 다른 PC도 [OK] latest 인지 확인
 ```
 
 - 현황: [`deploy/SYNC_STATUS.md`](deploy/SYNC_STATUS.md) — `[WARN] need pull` 이면 **push 금지**, pull 먼저  
@@ -53,7 +54,7 @@ git commit / Agent 종료  # 2. 올리기
 | `data_pc/` | **은규 PC / 차헌 PC** — 촉매 반응 계산, KCH inbox/processed |
 | `deploy/` | env 템플릿, PC별 핸드오프, Step 가이드 |
 | `docs/` | 인수인계 설명 (차헌→은규) |
-| `.cursor/hooks/` | Agent 종료 시 auto commit+push |
+| `.cursor/hooks/` | Agent **시작=pull** · **종료=push** (`docs/GIT_AUTO_SYNC.md`) |
 
 ---
 
@@ -106,6 +107,7 @@ git push
 
 | 파일 | 용도 |
 |------|------|
+| **`docs/GIT_AUTO_SYNC.md`** | **GitHub 자동 동기화 (모든 PC)** |
 | **`docs/PC_NAMING.md`** | **PC 명칭 규칙 (은규 PC / 차헌 PC / 장비 PC)** |
 | **`docs/CODEBASE_GUIDE.md`** | **다른 PC에서 처음 읽을 때 (PC·파일·Git)** |
 | `gc_architecture.py` | 장비 PC 코드 맵 (실행 없음) |

@@ -117,8 +117,10 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
 
   모든 PC가 **같은 repo** 를 clone/pull 합니다. 코드는 클라우드, 설정은 로컬.
 
-  git pull  … 작업 시작 (다른 PC 변경 반영)
-  git push  … 작업 끝 (또는 .cursor/hooks/auto_git_sync.ps1 자동)
+  git pull  … 작업 시작 (다른 PC 변경 반영) — Cursor sessionStart / gc_git_begin.bat
+  git push  … 작업 끝 — Cursor stop hook / gc_git_push.bat
+
+  자동 파이프라인: docs/GIT_AUTO_SYNC.md
 
   Git에 **넣지 않음**: gc_automation.env, machine_profile.json, KCH/inbox xlsx
 
