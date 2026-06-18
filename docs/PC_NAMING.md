@@ -62,17 +62,18 @@
 | 경로 | PC | 용도 |
 |------|-----|------|
 | `Desktop\KCH\` | GC2/GC3 **장비** PC | gc_automation.py 출력 xlsx·watch 상태 |
+| `gc-data-pc\PEG\` | **은규 PC** (데이터) | inbox/processed, machine_profile — **PEG** = Park Eungyu Gyu |
 | `Desktop\.cursor\KCH\` | **차헌 PC** (데이터) | inbox/processed, machine_profile |
-| `Desktop\.cursor\PEG\` | **은규 PC** (데이터) | inbox/processed, machine_profile — **PEG** = Park Eungyu Gyu |
 
-장비 PC `Desktop\KCH` 와 데이터 PC `Desktop\.cursor\KCH`·`PEG` 는 **완전히 다른 PC·다른 스크립트**입니다.
+은규 PC는 바탕화면 대신 `%USERPROFILE%\gc-data-pc\` 사용 (`deploy/DATA_PC_HOME_LAYOUT.md`).  
+장비 PC `Desktop\KCH` 와 데이터 PC `gc-data-pc\PEG`·`Desktop\.cursor\KCH` 는 **완전히 다른 PC·다른 스크립트**입니다.
 
 ### 2. `gc_automation.env` 도 두 종류
 
 | 경로 | 실행 스크립트 |
 |------|----------------|
 | `Desktop\박은규\` 또는 `Desktop\KCH\` | `gc_automation.py` (**장비**) |
-| `Desktop\.cursor\` | `촉매 반응 계산.py` (**은규/차헌 PC**) |
+| `gc-data-pc\` (은규) 또는 `Desktop\.cursor\` (차헌) | `촉매 반응 계산.py` (**데이터 PC**) |
 
 `gc_profiles.candidate_env_dirs()` 는 **장비 쪽만** 탐색합니다 (`.cursor` 는 보지 않음).
 
