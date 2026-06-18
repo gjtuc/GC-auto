@@ -1,13 +1,13 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-06-18 14:55:05 | HEAD: `ac4b0d4` | sync: registry DESKTOP-MBGSSME push after sync tracking feature
+> Updated: 2026-06-18 15:30:02 | HEAD: `2fafb2d` | feat: Steps 6-9 guides, GC1 calib scaffolding, pull-before-push rules
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
 | PC | role | last push (who @ when) | push | last pull (who @ when) | pull | status |
 |----|------|-------------------------|------|-------------------------|------|--------|
 | `DESKTOP-BFMLJ9J` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
-| `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\User @ 2026-06-18T14:47:20+09:00 | `e5d3c5c` | DESKTOP-MBGSSME\User @ 2026-06-18T14:46:21+09:00 | `dff49c2` | [WARN] need pull |
+| `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\User @ 2026-06-18T15:30:02+09:00 | `2fafb2d` | DESKTOP-MBGSSME\User @ 2026-06-18T14:46:21+09:00 | `dff49c2` | [WARN] need pull |
 | `DESKTOP-XXXXXXX` | gc2_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
 
 ## Commands
