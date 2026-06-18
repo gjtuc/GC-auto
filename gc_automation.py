@@ -125,7 +125,10 @@ def apply_env_overrides(config: AppConfig, script_dir: str) -> AppConfig:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="ChemStation sequence.acam_ → KCH 엑셀 자동 정리",
+        description=(
+            "GC 장비 PC 자동화 CLI — GC1: Autochro PDF→KCH xlsx / "
+            "GC2: ChemStation acam / GC3: Chem32 Report"
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 예시:

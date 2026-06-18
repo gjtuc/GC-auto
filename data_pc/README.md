@@ -92,6 +92,11 @@ G:가 없으면 SecuYouSB 로그인 후 재실행.
 
 ## 주의
 
-- 이 PC에서 **gc_automation.py 를 실행하지 마세요** (ChemStation·장비 PC 전용)
-- 차헌 `gc_automation.env` 비밀번호는 패키지에 **포함되지 않음**
-- Origin·G: 는 은규 PC 환경에서 직접 확인
+- 이 PC에서 **gc_automation.py 를 실행하지 마세요**
+  - GC1 장비 PC = Autochro PDF (`gc_autochro`, `gc_gc1`)
+  - GC2/GC3 장비 PC = ChemStation (`gc_chemstation`, `gc_chem32`)
+  - 둘 다 **장비 PC 전용** — 은규 PC/차헌 PC는 본 `촉매 반응 계산.py` 만
+- `Desktop\.cursor\gc_automation.env` = **IMAP 수신**용  
+  `Desktop\박은규\` 또는 `Desktop\KCH\` env = **SMTP 발송**용 (장비 PC)
+- 차헌 비밀번호는 repo에 **포함되지 않음**
+- Origin·G: 는 은규 PC/차헌 PC 환경에서 직접 확인

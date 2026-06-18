@@ -16,12 +16,12 @@ GitHub GC-auto (클라우드 — 모든 코드·문서)
         └── 차헌 PC                data_pc/촉매 반응 계산.py — 메일→G:→Origin
 ```
 
-| PC | `machine_profile` / env | 실행 |
-|----|-------------------------|------|
-| GC1 장비 PC | `Desktop\박은규\gc_automation.env` | repo `gc_automation.py --watch` |
-| GC2/GC3 장비 PC | `Desktop\KCH\gc_automation.env` | repo `gc_automation.py --watch` |
-| 은규 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` |
-| 차헌 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` |
+| PC | `machine_profile` / env | 실행 | 비고 |
+|----|-------------------------|------|------|
+| GC1 장비 PC | `Desktop\박은규\gc_automation.env` | repo `gc_automation.py --watch` | **Autochro→PDF** (ChemStation 아님) |
+| GC2/GC3 장비 PC | `Desktop\KCH\gc_automation.env` | repo `gc_automation.py --watch` | ChemStation acam / Chem32 Report |
+| 은규 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` | IMAP **수신** (장비 env 와 별개) |
+| 차헌 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` | 동일 |
 
 **비밀번호·machine_profile.json 실본은 Git에 없음** — 템플릿만 repo.
 
@@ -112,8 +112,8 @@ git push
 | **`docs/CODEBASE_GUIDE.md`** | **다른 PC에서 처음 읽을 때 (PC·파일·Git)** |
 | `gc_architecture.py` | 장비 PC 코드 맵 (실행 없음) |
 | `deploy/GC1_Cursor_핸드오프.md` | GC1 통합 체크리스트 |
-| `deploy/GC2_Cursor_핸드오프.md` | GC2 역배포 |
 | `docs/00_인수인계_설명.md` | 2-PC 파이프라인 전체 설명 |
+| `docs/GC1_장비PC_README.md` | GC1 장비 PC — Autochro PDF (ChemStation 아님) |
 
 ---
 

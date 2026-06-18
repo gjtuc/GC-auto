@@ -1184,6 +1184,11 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
 # GC2 곱셈 교정(DRE/DRM), GC3/GC1 나눗셈 교정(DRME / GC1 DRE·DRM).
 # GC1: FID+TCD 2시트, H2 RT ~2분 (GC2 ~0.5분, GC3 ~0.7분 과 구분).
 def _gc1_calib_ready():
+    """GC1 CALIB 미입력 시 계산 중단 — GC2 숫자를 GC1에 쓰는 실수 방지.
+
+    True 조건: GC1_CALIB_READY=True 이고 GC1_CALIB 모든 값이 양수.
+    절차: deploy/STEP7_gc1_calib.md, scripts/suggest_gc1_calib.py
+    """
     if not GC1_CALIB_READY:
         return False
     for val in GC1_CALIB.values():
@@ -1200,6 +1205,9 @@ def process_excel(input_file):
 
     reaction_target = get_reaction_type_from_filename(input_file)
 
+    # 장비 자동 판별: 시트별 H2 RT 구간으로 GC2 → GC3 → GC1 순 검사.
+    # GC2 H2 ~0.5분, GC3 ~0.7분, GC1 ~2.0분 — 구간이 겹치지 않도록 설계됨.
+    # GC1 xlsx는 FID+TCD 2시트이므로 루프에서 tcd/fid 각각 채움.
     for sn in xls.sheet_names:
         df = pd.read_excel(xls, sheet_name=sn)
         if df.empty and len(df.columns) == 0:
