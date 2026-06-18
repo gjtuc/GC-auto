@@ -1,0 +1,28 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+gc_automation.env
+**/gc_automation.env
+
+# Runtime state (Desktop\KCH mirrors)
+.gc_send_state.json
+.gc_watch_status.json
+GC_감시_상태.txt
+GC_중지_*.txt
+MMDDHHmm.txt
+MMDDHHmm_screener.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
