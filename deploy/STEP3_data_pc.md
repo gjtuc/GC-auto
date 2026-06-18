@@ -1,0 +1,68 @@
+# Step 3 — 데이터 PC (`data_pc/`)
+
+## 역할
+
+GC **장비 PC**가 보낸 KCH 원본 메일을 받아:
+
+1. IMAP 수신 → `KCH/inbox/`
+2. 수율·전환율 계산 → `KCH/processed/`
+3. G: 실험 폴더
+4. Origin `.opju` 업데이트
+
+## repo 구조
+
+```
+data_pc/
+├── 촉매 반응 계산.py          ← 메인 스크립트
+├── gc_automation.env.example
+├── README.md
+└── KCH/
+    ├── inbox/               ← 메일 수신 xlsx
+    ├── processed/           ← 계산 완료 사본
+    └── machine_profile.template.json
+```
+
+## 은규 PC 설치 (한 번)
+
+### A) repo에서 복사 (권장)
+
+```powershell
+cd C:\Users\User\chemstation-gc-automation
+git pull
+
+# Desktop\.cursor 에 배치 (차헌 운용과 동일)
+mkdir "$env:USERPROFILE\Desktop\.cursor\KCH\inbox" -Force
+mkdir "$env:USERPROFILE\Desktop\.cursor\KCH\processed" -Force
+Copy-Item data_pc\촉매` 반응` 계산.py "$env:USERPROFILE\Desktop\.cursor\"
+Copy-Item data_pc\gc_automation.env.example "$env:USERPROFILE\Desktop\.cursor\gc_automation.env"
+Copy-Item data_pc\KCH\machine_profile.template.json "$env:USERPROFILE\Desktop\.cursor\KCH\machine_profile.json"
+# machine_profile.json identifiers 채우기
+# gc_automation.env 에 은규 네이버 앱비밀번호 입력
+```
+
+### B) 실행
+
+```powershell
+python "$env:USERPROFILE\Desktop\.cursor\촉매 반응 계산.py"
+```
+
+G: 없으면 SecuYouSB 로그인 후 재실행.
+
+## GC1 vs GC2/GC3 교정
+
+`촉매 반응 계산.py` USER SETTINGS:
+
+| | GC2 | GC3 | GC1 (은규) |
+|---|-----|-----|------------|
+| CALIB/TIME | 차헌 실측값 | 차헌 실측값 | **실측 후 추가 필요** |
+
+zip 인수인계 문서: `docs/00_인수인계_설명.md` §5
+
+## 장비 PC와 구분
+
+| PC | 실행 스크립트 |
+|----|---------------|
+| GC1 장비 (Autochro) | repo 루트 `gc_automation.py --watch` |
+| 데이터 PC | `data_pc/촉매 반응 계산.py` |
+
+**장비 PC에서 촉매 반응 계산.py 실행 금지** (Origin·G: 환경 다름)

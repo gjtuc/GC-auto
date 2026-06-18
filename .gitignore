@@ -4,6 +4,10 @@
 !.env.example
 gc_automation.env
 **/gc_automation.env
+machine_profile.json
+**/machine_profile.json
+!deploy/machine_profile.template*.json
+!deploy/machine_profile.reference*.json
 
 # Runtime state (Desktop\KCH mirrors)
 .gc_send_state.json
@@ -12,6 +16,13 @@ GC_감시_상태.txt
 GC_중지_*.txt
 MMDDHHmm.txt
 MMDDHHmm_screener.txt
+
+# data_pc runtime (if run from repo copy)
+data_pc/KCH/inbox/*
+!data_pc/KCH/inbox/.gitkeep
+data_pc/KCH/processed/*
+!data_pc/KCH/processed/.gitkeep
+data_pc/gc_automation.env
 
 # Python
 __pycache__/

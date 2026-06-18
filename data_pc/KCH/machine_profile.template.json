@@ -1,0 +1,22 @@
+{
+  "role": "data_pc",
+  "label": "은규 — 데이터 PC",
+  "description": "촉매 반응 계산.py 실행 PC (메일 → 계산 → G: → Origin). GC1 장비 PC 아님.",
+  "gc_assignment": {
+    "equipment": "GC1",
+    "operator": "은규",
+    "note": "GC1 장비 PC와 별개. 계산·Origin·G: 는 이 PC에서만 실행."
+  },
+  "recorded_at": "YYYY-MM-DD",
+  "identifiers": {
+    "computer_name": "DESKTOP-XXXXXXX",
+    "windows_user": "은규_윈도우계정",
+    "smbios_uuid": "Get-CimInstance Win32_ComputerSystemProduct UUID",
+    "machine_guid": "HKLM Cryptography MachineGuid",
+    "cpu": "CPU 모델명 (선택)"
+  },
+  "notes": {
+    "reference_chaheon": "deploy/machine_profile.reference.chaheon.json",
+    "best_id": "smbios_uuid 또는 machine_guid"
+  }
+}

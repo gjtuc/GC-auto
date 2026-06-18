@@ -1,0 +1,29 @@
+{
+  "role": "gc1_pc",
+  "label": "은규 — GC1 PC (템플릿)",
+  "description": "GC1 Autochro→PDF→엑셀→메일. env=Desktop\\박은규.",
+  "gc_assignment": {
+    "equipment": "GC1",
+    "operator": "은규",
+    "chemstation_mode": "gc1",
+    "output_dir": "Desktop\\박은규",
+    "required_hotspot": "iPhone"
+  },
+  "recorded_at": "YYYY-MM-DD",
+  "identifiers": {
+    "computer_name": "DESKTOP-XXXXXXX",
+    "windows_user": "윈도우_계정명",
+    "smbios_uuid": "Get-CimInstance Win32_ComputerSystemProduct | Select UUID",
+    "machine_guid": "HKLM\\SOFTWARE\\Microsoft\\Cryptography MachineGuid",
+    "cpu": "CPU 모델 (선택)"
+  },
+  "paths": {
+    "repo": "C:\\Users\\User\\chemstation-gc-automation",
+    "github": "https://github.com/gjtuc/GC-auto",
+    "env_file": "C:\\Users\\User\\Desktop\\박은규\\gc_automation.env"
+  },
+  "notes": {
+    "setup": "이 파일을 복사 → Desktop\\박은규\\machine_profile.json 작성 후 identifiers 채우기",
+    "best_id": "smbios_uuid 또는 machine_guid"
+  }
+}

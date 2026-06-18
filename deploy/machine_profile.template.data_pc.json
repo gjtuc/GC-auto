@@ -1,0 +1,28 @@
+{
+  "role": "data_pc",
+  "label": "은규 — 데이터 PC (템플릿)",
+  "description": "촉매 반응 계산.py 실행 PC (메일 → 계산 → G: → Origin). GC 장비 PC 아님.",
+  "gc_assignment": {
+    "equipment": "GC1",
+    "operator": "은규",
+    "note": "GC1 장비 PC와 별개. 계산·Origin·G: 는 이 PC에서만 실행."
+  },
+  "recorded_at": "YYYY-MM-DD",
+  "identifiers": {
+    "computer_name": "DESKTOP-XXXXXXX",
+    "windows_user": "윈도우_계정명",
+    "smbios_uuid": "Get-CimInstance Win32_ComputerSystemProduct | Select UUID",
+    "machine_guid": "HKLM\\SOFTWARE\\Microsoft\\Cryptography MachineGuid",
+    "cpu": "CPU 모델 (선택)"
+  },
+  "paths": {
+    "repo": "C:\\Users\\User\\chemstation-gc-automation",
+    "script_dir": "C:\\Users\\User\\Desktop\\.cursor",
+    "kch_dir": "C:\\Users\\User\\Desktop\\.cursor\\KCH",
+    "env_file": "C:\\Users\\User\\Desktop\\.cursor\\gc_automation.env"
+  },
+  "notes": {
+    "reference_chaheon": "deploy/machine_profile.reference.chaheon.json",
+    "setup": "Desktop\\.cursor\\KCH\\machine_profile.json 으로 저장"
+  }
+}

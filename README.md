@@ -1,53 +1,71 @@
-# chemstation-gc-automation
+# GC-auto (chemstation-gc-automation)
 
-> **GitHub 업로드 출처: GC2 PC (kimcha)** — 2026-06-18  
-> 계정 `gjtuc` · push는 **GC2 PC**에서 수행. **GC1 PC에서 올린 것이 아님.**
-
-GC1(박은규) PC는 이 repo를 **받아서 통합·배포**하는 쪽입니다.
+> **통합 GitHub:** https://github.com/gjtuc/GC-auto  
+> GC1·GC2·GC3 **장비 PC 코드** + **데이터 PC 계산** + 문서를 **한 repo**에 모읍니다.
 
 ---
 
-## 이 repo에 들어 있는 것
+## 전체 그림
 
-| 구분 | 내용 |
-|------|------|
-| **GC1 원본** | Autochro→PDF→엑셀→메일 (`gc_autochro`, `gc_gc1`) — GC1에서 최적화·검증 완료 |
-| **GC2 추가** | merge 후 8860 회귀 테스트 + 운영 중 안정화 (`gc_work_job`, `gc_watchdog`, pending 메일 재시도 등) |
-| **공통** | `gc_watch`, `gc_state`, `gc_mailer`, `gc_profiles` — GC1/GC2/GC3 분기 |
-
----
-
-## PC별 역할
-
-| PC | 운영자 | 프로필 | 출력·env |
-|----|--------|--------|----------|
-| **GC1** | 박은규 | `gc1` | `Desktop\박은규`, iPhone, john3556 |
-| **GC2** | kimcha | `gc2` | `Desktop\KCH`, AndroidHotspot5841, 8860 |
-| **GC3** | kimcha | `gc3` | `Desktop\KCH`, Chem32 Report |
-
-한 repo, **PC마다 env만 다름** (`gc_profiles.py`).
-
----
-
-## GC1 PC — 처음 받을 때
-
-```powershell
-git clone https://github.com/gjtuc/GC-auto.git
-cd GC-auto
-# Desktop\박은규\gc_automation.env 는 기존 운영값 유지 (덮어쓰지 않음)
-gc1_setup.bat
-python gc_automation.py --show-profile   # gc1, iPhone 확인
+```
+GitHub GC-auto (클라우드 — 모든 코드·문서)
+        │
+        ├── GC1 장비 PC (은규)     gc_automation.py — Autochro→PDF→메일
+        ├── GC2/GC3 장비 PC (차헌) gc_automation.py — ChemStation→메일
+        └── 데이터 PC (은규/차헌)  data_pc/촉매 반응 계산.py — 메일→G:→Origin
 ```
 
-**상세 절차·체크리스트**: [`deploy/GC1_Cursor_핸드오프.md`](deploy/GC1_Cursor_핸드오프.md)  
-(GC1 Cursor 채팅에 전체 붙여넣기 가능)
+| PC | `machine_profile` / env | 실행 |
+|----|-------------------------|------|
+| GC1 장비 | `Desktop\박은규\gc_automation.env` | repo `gc_automation.py --watch` |
+| GC2/GC3 | `Desktop\KCH\gc_automation.env` | repo `gc_automation.py --watch` |
+| 데이터 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` |
+
+**비밀번호·machine_profile.json 실본은 Git에 없음** — 템플릿만 repo.
 
 ---
 
-## GC2 PC — 수정 후 올릴 때
+## repo 구조
+
+| 경로 | 내용 |
+|------|------|
+| `gc_*.py`, `gc_automation.py` | GC1/2/3 **장비 PC** 통합 CLI |
+| `data_pc/` | **데이터 PC** — 촉매 반응 계산, KCH inbox/processed |
+| `deploy/` | env 템플릿, PC별 핸드오프, Step 가이드 |
+| `docs/` | 인수인계 설명 (차헌→은규) |
+| `.cursor/hooks/` | Agent 종료 시 auto commit+push |
+
+---
+
+## 설정 진행 (Step)
+
+| Step | 내용 | 문서 |
+|------|------|------|
+| 1 | GitHub 연동 | ✅ 완료 |
+| 2 | PC 식별 `machine_profile` | [`deploy/STEP2_machine_profile.md`](deploy/STEP2_machine_profile.md) |
+| 3 | 데이터 PC `data_pc/` | [`deploy/STEP3_data_pc.md`](deploy/STEP3_data_pc.md) |
+| 4 | 인수인계·README | [`docs/00_인수인계_설명.md`](docs/00_인수인계_설명.md) |
+
+---
+
+## GC1 PC (은규) — 매일
 
 ```powershell
 cd C:\Users\User\chemstation-gc-automation
+git pull
+python gc_automation.py --show-profile   # gc1, iPhone
+```
+
+- env: `Desktop\박은규\gc_automation.env` (덮어쓰지 않음)
+- PC ID: `Desktop\박은규\machine_profile.json` (로컬)
+
+---
+
+## GC2 PC (차헌) — 수정 후
+
+```powershell
+git pull
+# ... 수정 ...
 git add .
 git commit -m "변경 요약"
 git push
@@ -55,22 +73,28 @@ git push
 
 ---
 
-## GC1 PC — 이후 업데이트
+## 자동 GitHub 업로드
 
-```powershell
-cd chemstation-gc-automation
-git pull
-```
+- Agent 작업 **종료 시** → `.cursor/hooks/auto_git_sync.ps1` (commit+push)
+- 수동 Commit → `.vscode/settings.json`에서 push 자동
 
 ---
 
-## 문서·구조
+## 문서
 
 | 파일 | 용도 |
 |------|------|
-| `gc_architecture.py` | 전체 맵·함정 (실행 코드 없음) |
-| `deploy/GC1_Cursor_핸드오프.md` | GC1 통합·배포 가이드 |
-| `deploy/GC2_Cursor_핸드오프.md` | GC2 역배포 참고 |
-| `.cursor/rules/gc-initiation-force.mdc` | Cursor 「진행」→ force |
+| `gc_architecture.py` | 코드 맵 (실행 없음) |
+| `deploy/GC1_Cursor_핸드오프.md` | GC1 통합 체크리스트 |
+| `deploy/GC2_Cursor_핸드오프.md` | GC2 역배포 |
+| `docs/00_인수인계_설명.md` | 2-PC 파이프라인 전체 설명 |
 
-**비밀번호 env는 Git에 없음** — 각 PC의 `gc_automation.env`만 로컬 유지.
+---
+
+## GC1 vs GC2/GC3 (장비)
+
+| | GC1 | GC2 | GC3 |
+|---|-----|-----|-----|
+| 데이터 | Autochro PDF | ChemStation acam | Chem32 Report |
+| 모듈 | `gc_autochro`, `gc_gc1` | `gc_chemstation` | `gc_chem32` |
+| 분기 | `gc_profiles.py` + env | 동일 | `GC_INSTANCE=gc3` |

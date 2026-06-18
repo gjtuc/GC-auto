@@ -1,0 +1,17 @@
+{
+  "role": "data_pc",
+  "label": "차헌 — 데이터 PC (참고)",
+  "description": "촉매 반응 계산.py 실행 PC (메일 → 계산 → G: → Origin). GC2/ChemStation 장비 PC 아님.",
+  "recorded_at": "2026-06-15",
+  "identifiers": {
+    "computer_name": "DESKTOP-BFMLJ9J",
+    "windows_user": "user",
+    "smbios_uuid": "21B87A06-5020-ECF1-197B-3497F6343042",
+    "machine_guid": "b4b91217-866e-454c-b791-65791162dffe",
+    "cpu": "Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz"
+  },
+  "notes": {
+    "gc2_equipment_pc": "ChemStation + gc_automation.py — 별도 PC",
+    "best_id": "smbios_uuid 또는 machine_guid"
+  }
+}
