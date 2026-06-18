@@ -157,7 +157,7 @@ GC3_TIME_FID = {'CH4': (3.0, 3.8), 'C2H4': (5.0, 5.25), 'C2H6': (5.26, 5.6)}
 
 # [3] GC1 **장비** 교정 (Autochro) — 은규 PC에서 사용. RT/CALIB는 GC1 장비 PC 실측.
 #     TIME 1차값: gc_gc1.py DEFAULT_*_WINDOWS 와 동기화 (Step 7.2 — extract_gc1_rt_from_xlsx.py 로 검증)
-#     CALIB: 표준가스 실측 전까지 계산 중단 (GC1_CALIB_READY=False)
+#     CALIB: GC1 표준가스 교정곡선 (GC1_CALIB_READY=True 시 계산 활성)
 GC1_INITIAL_C2H6 = 15000   # DRE fallback 1.5%
 GC1_INITIAL_CO2 = 30000
 GC1_DRM_INITIAL_CH4 = 50000
@@ -167,15 +167,20 @@ GC1_DRM_INITIAL_CO2 = 50000
 GC1_TIME_TCD = {'H2': (1.65, 2.35), 'CO': (5.8, 7.4), 'CO2': (15.0, 17.4)}
 GC1_TIME_FID = {'CH4': (1.05, 1.75), 'C2H6': (1.55, 2.25), 'C2H4': (1.95, 2.65)}
 
-# GC3 와 동일: ppm = Area / CALIB — scripts/suggest_gc1_calib.py 로 산출 후 채우기
-GC1_CALIB_READY = False
+# GC3 와 동일: ppm = Area / CALIB
+# 교정곡선 (GC1 표준가스, 2026-06 은규 제공): Area = k·ppm  →  CALIB[k] = k
+#   CO2: y=0.0168x   H2: y=0.20661x   CO: y=0.01334x
+#   CH4: y=0.14741x  C2H4: y=0.30084x  C2H6: y=0.29259x
+# (y=Area, x=ppm 기준 — suggest_gc1_calib.py 와 동일 규약)
+GC1_CALIB_READY = True
 GC1_CALIB = {
-    'H2': None, 'CO': None, 'CO2': None,
-    'CH4': None, 'C2H6': None, 'C2H4': None,
+    'H2': 0.20661,
+    'CO': 0.01334,
+    'CO2': 0.0168,
+    'CH4': 0.14741,
+    'C2H6': 0.29259,
+    'C2H4': 0.30084,
 }
-# 실측 후 예:
-# GC1_CALIB = {'H2': 0.12, 'CO': 0.015, ...}
-# GC1_CALIB_READY = True
 
 ORIGIN_MAPPING = {
     'C2H6 Conversion (%)': 'C2H6 conversion',

@@ -140,7 +140,7 @@ gc_git_push.bat
 - [x] 7.3 CALIB 제안 스크립트
 - [x] 7.4 `process_excel` GC1 분기 (CALIB 미완 시 안전 중단)
 - [ ] 7.5 GC1 KCH xlsx로 RT 실측 검증 (**GC1 장비 PC — 사용자**)
-- [ ] 7.6 표준가스로 CALIB 입력 + `GC1_CALIB_READY = True` (**사용자**)
+- [x] 7.6 표준가스로 CALIB 입력 + `GC1_CALIB_READY = True` (2026-06 은규: Area=k·ppm 기울기)
 - [ ] 7.7 `--no-archive` 계산 검증 (**은규 PC**)
 
 ---
