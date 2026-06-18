@@ -1,0 +1,28 @@
+---
+description: GitHub 자동 동기화 — 작업 시작 pull, Agent 종료 push (모든 PC)
+alwaysApply: true
+---
+
+# Git auto-sync (GC-auto)
+
+전체 가이드: `docs/GIT_AUTO_SYNC.md` · PC 명칭: `docs/PC_NAMING.md`
+
+## Agent/코드 수정 전 (필수)
+
+1. 이 PC가 **최신본**인지 확인: `deploy/SYNC_STATUS.md` 또는 `gc_git_status.bat`
+2. `[WARN] need pull` 또는 `behind origin/main` 이면 **먼저** `gc_git_pull.bat` (또는 sessionStart hook이 이미 pull 했는지 확인)
+3. **pull 없이 push·대량 수정 금지** — 다른 PC 작업 유실
+
+## Agent/코드 수정 후
+
+- Cursor **stop hook**이 `scripts/git_auto_sync.ps1 -Mode stop` 으로 commit+push 함
+- 수동 종료 시: `gc_git_push.bat` (원격보다 뒤처지면 push 차단)
+
+## commit 금지
+
+- `gc_automation.env`, `machine_profile.json`, 비밀번호 — `.gitignore` 준수
+
+## PC 구분
+
+- 장비 PC: `gc_automation.py` 수정 → `Desktop\박은규` 또는 `Desktop\KCH` env
+- 은규 PC / 차헌 PC: `data_pc/촉매 반응 계산.py` — 장비 PC에서 실행 금지

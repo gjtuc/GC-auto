@@ -11,6 +11,8 @@ if not exist "%GIT%" set "GIT=git"
 
 "%GIT%" config core.hooksPath .githooks
 echo [OK] core.hooksPath = .githooks
-echo pull 후 post-merge 에서 sync_registry 가 동작합니다.
-echo 작업 시작은 gc_git_pull.bat 사용을 권장합니다.
+echo.
+echo Cursor 자동 동기화: .cursor/hooks.json (sessionStart=pull, stop=push)
+echo 수동 작업 시작: gc_git_begin.bat 또는 gc_git_pull.bat
+echo 가이드: docs\GIT_AUTO_SYNC.md
 pause

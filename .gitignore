@@ -39,3 +39,4 @@ Desktop.ini
 
 # Cursor auto-sync log (hook)
 .cursor/hooks/auto_git_sync.log
+.cursor/hooks/session_start_git.log
