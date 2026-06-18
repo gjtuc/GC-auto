@@ -1,0 +1,23 @@
+{
+  "_comment": "이 PC 전용 동기화 기록 파일 템플릿. 복사 후 pc_id.json 으로 저장하지 말고 — sync_registry.ps1 이 자동 생성.",
+  "pc_id": "DESKTOP-XXXXXXX",
+  "label": "운영자 — PC 역할",
+  "role": "gc1_pc | gc2_pc | gc3_pc | data_pc",
+  "operator": "은규 | 차헌",
+  "identifiers": {
+    "computer_name": "DESKTOP-XXXXXXX",
+    "windows_user": "User",
+    "smbios_uuid": "optional",
+    "machine_guid": "optional"
+  },
+  "sync": {
+    "last_push_at": null,
+    "last_push_commit": null,
+    "last_push_by": null,
+    "last_pull_at": null,
+    "last_pull_commit": null,
+    "last_pull_by": null,
+    "repo_remote": "https://github.com/gjtuc/GC-auto.git"
+  },
+  "history": []
+}

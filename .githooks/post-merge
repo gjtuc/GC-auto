@@ -1,0 +1,12 @@
+#!/bin/sh
+# Git pull/merge 후 이 PC의 pull 시각을 sync_registry에 기록합니다.
+# Windows: Git for Windows 가 sh 로 실행.
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+case "$ROOT" in
+  *GC-auto*|*chemstation-gc-automation*) ;;
+  *) exit 0 ;;
+esac
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$ROOT/scripts/sync_registry.ps1" -Event pull -TriggeredBy git-post-merge 2>/dev/null || true
+exit 0

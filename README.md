@@ -75,8 +75,10 @@ git push
 
 ## 자동 GitHub 업로드
 
-- Agent 작업 **종료 시** → `.cursor/hooks/auto_git_sync.ps1` (commit+push)
-- 수동 Commit → `.vscode/settings.json`에서 push 자동
+- Agent 작업 **종료 시** → auto commit + push + **PC 동기화 기록**
+- **`deploy/SYNC_STATUS.md`** — 어느 PC가 pull/push 했는지 표
+- 작업 시작: **`gc_git_pull.bat`** | 현황: **`gc_git_status.bat`**
+- 상세: [`docs/SYNC_TRACKING.md`](docs/SYNC_TRACKING.md)
 
 ---
 

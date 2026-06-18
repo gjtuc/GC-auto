@@ -102,14 +102,15 @@ data_pc/
 ## 6. GitHub 동기화
 
 ```powershell
-git pull    # 작업 시작
+.\gc_git_pull.bat    # 작업 시작 (pull + 동기화 기록)
 # ... 수정 ...
-git push    # 작업 끝 (또는 Agent stop hook 자동)
+# Agent 종료 시 auto push 또는 gc_git_push.bat
+.\gc_git_status.bat  # 누가 최신인지 확인
 ```
 
-- `.cursor/hooks/auto_git_sync.ps1` — Agent 종료 시 auto commit+push
-- `.vscode/settings.json` — 수동 Commit 후 auto push
-- **올리면 안 되는 것:** `gc_automation.env`, `machine_profile.json`, inbox xlsx
+- **현황 표:** [`deploy/SYNC_STATUS.md`](../deploy/SYNC_STATUS.md)
+- **상세:** [`docs/SYNC_TRACKING.md`](SYNC_TRACKING.md)
+- `.cursor/hooks/auto_git_sync.ps1` — Agent 종료 시 commit+push+registry
 
 ---
 

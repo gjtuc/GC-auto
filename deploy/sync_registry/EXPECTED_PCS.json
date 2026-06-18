@@ -1,0 +1,26 @@
+{
+  "_comment": "연구실에서 GitHub GC-auto 를 쓰는 PC 목록. 새 PC 추가 시 pcs 배열에 한 줄 추가.",
+  "pcs": [
+    {
+      "pc_id": "DESKTOP-MBGSSME",
+      "label": "은규 — GC1 PC",
+      "role": "gc1_pc",
+      "operator": "은규",
+      "note": "Autochro, Desktop\\박은규"
+    },
+    {
+      "pc_id": "DESKTOP-BFMLJ9J",
+      "label": "차헌 — 데이터 PC (참고)",
+      "role": "data_pc",
+      "operator": "차헌",
+      "note": "machine_profile.reference.chaheon.json 기준"
+    },
+    {
+      "pc_id": "DESKTOP-XXXXXXX",
+      "label": "차헌 — GC2/GC3 장비 PC (등록 필요)",
+      "role": "gc2_pc",
+      "operator": "차헌",
+      "note": "첫 git pull/push 후 pc_id 를 실제 컴퓨터 이름으로 수정"
+    }
+  ]
+}
