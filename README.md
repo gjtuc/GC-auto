@@ -109,6 +109,7 @@ git push
 |------|------|
 | **`docs/GIT_AUTO_SYNC.md`** | **GitHub 자동 동기화 (모든 PC)** |
 | **`docs/PC_NAMING.md`** | **PC 명칭 규칙 (은규 PC / 차헌 PC / 장비 PC)** |
+| **`docs/DATA_PC_PATHS.md`** | **연구원별 G:·실험 폴더 경로 (은규 PC 필독)** |
 | **`docs/CODEBASE_GUIDE.md`** | **다른 PC에서 처음 읽을 때 (PC·파일·Git)** |
 | `gc_architecture.py` | 장비 PC 코드 맵 (실행 없음) |
 | `deploy/GC1_Cursor_핸드오프.md` | GC1 통합 체크리스트 |

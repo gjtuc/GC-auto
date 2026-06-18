@@ -104,10 +104,19 @@ powershell -File C:\Users\User\chemstation-gc-automation\scripts\verify_data_pc_
 
 ---
 
-## 6.6 — repo 스크립트·문서 (선택)
+## 6.8 — G: 실험 폴더 경로 (은규 PC — 차헌과 다를 수 있음)
 
-- `scripts/verify_data_pc_setup.ps1` — 위 점검 자동화
-- `deploy/ROADMAP.md` Step 6 체크
+> **차헌 → 은규 전달 사항:** 실험 파일을 저장해 둔 **폴더 위치는 연구원마다 다릅니다.**  
+> repo `REACTION_ROOTS` 는 차헌 PC·연구실 예시일 수 있으므로, 은규 PC Cursor는 **탐색기로 확인한 경로**로 맞춥니다.
+
+1. SecuYouSB 로그인 후 G: 에서 은규가 쓰는 DRE / DRM / DRME 루트 확인  
+2. `Desktop\.cursor\촉매 반응 계산.py` 의 `REACTION_ROOTS`, `EXPERIMENT_DATA_ROOT` 수정  
+3. (권장) `KCH\machine_profile.json` `notes.g_drive_layout` 에 실제 경로 메모  
+4. 상세: **`docs/DATA_PC_PATHS.md`**, Cursor 규칙 **`.cursor/rules/data-pc-custom-paths.mdc`**
+
+**완료 기준:** `--no-archive` 계산 후, G: 로그인 상태에서 3단계가 **은규 경로**에 폴더를 만들 수 있음 (또는 경로 확인 전까지 2단계만 PASS).
+
+선택: `scripts/verify_data_pc_setup.ps1`, `deploy/ROADMAP.md` Step 6 체크
 
 ---
 
@@ -121,7 +130,7 @@ gc_git_status.bat  # deploy/SYNC_STATUS.md
 ```
 
 동일 물리 PC(`DESKTOP-MBGSSME`)는 sync json 하나(`gc1_pc`)로 추적.  
-차헌 PC 등 차헌 PC 등 별도 데이터 PC가 생기면 그 PC에서 `gc_git_pull.bat` 1회 → `DESKTOP-XXXX.json` 생성.
+차헌 PC 등 별도 데이터 PC가 생기면 그 PC에서 `gc_git_pull.bat` 1회 → `DESKTOP-XXXX.json` 생성.
 
 ---
 
@@ -132,6 +141,7 @@ gc_git_status.bat  # deploy/SYNC_STATUS.md
 - [x] `Desktop\.cursor\KCH\machine_profile.json` (`data_pc`)
 - [x] `Desktop\.cursor\KCH\inbox\`, `processed\`
 - [x] `python ... --help` 성공
+- [ ] G: `REACTION_ROOTS` 은규 PC 실측 경로 반영 (`docs/DATA_PC_PATHS.md`)
 - [ ] G: + originpro (Step 8)
 - [ ] GC1 CALIB/TIME (Step 7)
 

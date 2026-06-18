@@ -92,6 +92,7 @@ G:가 없으면 SecuYouSB 로그인 후 재실행.
 
 ## 주의
 
+- **G: 실험 폴더 경로**는 차헌 PC와 **다를 수 있음** → [`docs/DATA_PC_PATHS.md`](../docs/DATA_PC_PATHS.md) 필독
 - 이 PC에서 **gc_automation.py 를 실행하지 마세요**
   - GC1 장비 PC = Autochro PDF (`gc_autochro`, `gc_gc1`)
   - GC2/GC3 장비 PC = ChemStation (`gc_chemstation`, `gc_chem32`)

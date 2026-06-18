@@ -205,8 +205,14 @@ PROCESSED_MAIL_LOG = os.path.join(KCH_INBOX_DIR, ".processed_mail_ids.txt")
 # ---------------------------------------------------------------------------
 # G: 드라이브 경로 (보안 USB 위 실험 데이터)
 # ---------------------------------------------------------------------------
-# REACTION_ROOTS: GC2→DRE/DRM, GC3→DRME 별 저장 루트 (사용자 지정 경로).
-# EXPERIMENT_DATA_ROOT: G: 접근 가능 여부 판별용 (USB 로그인 후 이 경로가 보여야 함).
+# REACTION_ROOTS: 반응별 실험 폴더 **루트** — 3단계에서 최신 폴더 복사·신규 생성 시 사용.
+# EXPERIMENT_DATA_ROOT: G: USB 로그인 여부 판별용 (이 경로가 보여야 3~4단계 진행).
+#
+# *** 연구원마다 경로가 다를 수 있음 (차헌 PC ≠ 은규 PC) ***
+#   아래 기본값은 연구실/차헌 쪽 예시. 은규 PC에서는 탐색기로 실제 저장 위치 확인 후
+#   Desktop\.cursor\ 촉매 반응 계산.py 의 REACTION_ROOTS 를 맞출 것.
+#   Cursor 에이전트: docs/DATA_PC_PATHS.md, .cursor/rules/data-pc-custom-paths.mdc
+#   개인별 경로만 다르면 repo push 전 사용자(은규)에게 확인 — 무단 push 금지.
 REACTION_ROOTS = {
     "DRE": r"G:\연구소\실험\실험데이터\촉매 반응\DRE 반응(C2H6)",
     "DRM": r"G:\연구소\실험\실험데이터\촉매 반응\DRM 반응 (CH4)",
