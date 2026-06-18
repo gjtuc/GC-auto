@@ -24,5 +24,7 @@ __pycache__/
 # OS / editor
 Thumbs.db
 Desktop.ini
-.vscode/
 .idea/
+
+# Cursor auto-sync log (hook)
+.cursor/hooks/auto_git_sync.log
