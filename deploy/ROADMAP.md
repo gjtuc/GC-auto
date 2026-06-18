@@ -7,9 +7,9 @@
 - [x] **Step 3** — `data_pc/` (촉매 반응 계산.py, KCH, env 예시)
 - [x] **Step 4** — README·docs·Step 가이드 통합
 - [x] **Step 5** — `.gitignore` 점검, auto-sync hook
-- [x] **Step 6** — 은규 PC: `Desktop\.cursor\` 배치 + env + machine_profile (GC1 장비 PC에서 세팅, 2026-06-18)
-- [x] **Step 7 (코드)** — GC1 TIME·판별·계산 분기 + 측정 스크립트 (`deploy/STEP7_gc1_calib.md`)
-- [ ] **Step 7 (실측)** — GC1 CALIB 표준가스 실측 + `GC1_CALIB_READY=True` + `--no-archive` 검증
+- [ ] **Step 6 (은규 PC)** — [`docs/은규PC_Cursor_시작.md`](../docs/은규PC_Cursor_시작.md) Phase 1~8
+- [x] **Step 7 (CALIB)** — GC1 표준가스 CALIB repo 반영 (`GC1_CALIB_READY=True`, 2026-06 은규)
+- [ ] **Step 7 (실측)** — RT 검증 + 은규 PC `--no-archive` ([`deploy/STEP7_gc1_calib.md`](STEP7_gc1_calib.md))
 
 ## 다음 (운영)
 

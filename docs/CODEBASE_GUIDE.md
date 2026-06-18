@@ -1,8 +1,8 @@
 # 코드베이스 가이드 — 다른 PC에서 처음 열 때
 
 > **GitHub:** https://github.com/gjtuc/GC-auto  
-> **로컬 clone 예:** `C:\Users\User\chemstation-gc-automation`  
-> **Cursor/에이전트:** 이 문서 + `gc_architecture.py` + 해당 PC의 `machine_profile.json` 먼저 읽기
+> **은규 PC 처음:** [`docs/은규PC_Cursor_시작.md`](은규PC_Cursor_시작.md)  
+> **로컬 clone 예:** `C:\Users\User\chemstation-gc-automation`
 
 ---
 

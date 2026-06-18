@@ -5,6 +5,19 @@
 
 ---
 
+## 은규 PC — Cursor 처음 오셨나요?
+
+**「안녕, 너는 은규 PC야. 깃허브 자료 줄게」** 만 말해도 Cursor가 진행할 수 있도록:
+
+| 문서 | 용도 |
+|------|------|
+| **[`docs/은규PC_Cursor_시작.md`](docs/은규PC_Cursor_시작.md)** | **은규 PC 마스터 체크리스트 (필독)** |
+| [`.cursor/rules/eungyu-pc-entry.mdc`](.cursor/rules/eungyu-pc-entry.mdc) | Cursor 자동 진입 규칙 |
+
+clone → `docs/은규PC_Cursor_시작.md` Phase 1부터 순서대로.
+
+---
+
 ## 전체 그림
 
 ```
@@ -109,6 +122,7 @@ git push
 |------|------|
 | **`docs/GIT_AUTO_SYNC.md`** | **GitHub 자동 동기화 (모든 PC)** |
 | **`docs/PC_NAMING.md`** | **PC 명칭 규칙 (은규 PC / 차헌 PC / 장비 PC)** |
+| **`docs/은규PC_Cursor_시작.md`** | **은규 PC Cursor 온보딩 (마스터 체크리스트)** |
 | **`docs/DATA_PC_PATHS.md`** | **연구원별 G:·실험 폴더 경로 (은규 PC 필독)** |
 | **`docs/CODEBASE_GUIDE.md`** | **다른 PC에서 처음 읽을 때 (PC·파일·Git)** |
 | `gc_architecture.py` | 장비 PC 코드 맵 (실행 없음) |
