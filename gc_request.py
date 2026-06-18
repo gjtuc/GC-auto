@@ -12,10 +12,13 @@ gc_request.py — 사용자 개시 요청 판별 (--user-message / --request)
   · "동작해줘" 같은 **고정 명령어 하나**가 아닙니다.
   · "코드 수정해줘", "watch 재시작" 처럼 **다른 맥락**이 섞이면 force 아님.
 
-  force 는 --watch 규칙과 **무관**. GC1 force 시 Autochro PDF 포함 전체 pipeline.
+  force 는 --watch 규칙과 **무관**. GC1 **장비** PC force 시 Autochro PDF 포함 전체 pipeline.
+
+  실행 위치: **장비 PC** 만 (GC1 장비 / GC2·GC3 장비). 은규 PC·차헌 PC 아님.
+  PC 명칭: docs/PC_NAMING.md
 
   GC1 Cursor 예: python gc_automation.py --user-message "진행"
-  GC1 bat 예:     Desktop\\박은규\\GC1_동작해줘.bat
+  GC1 bat 예:     Desktop\\박은규\\GC1_동작해줘.bat  (GC1 **장비** PC)
 
 =============================================================================
 [Cursor 종료 코드] (gc_automation.handle_user_message)

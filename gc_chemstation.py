@@ -6,14 +6,14 @@ gc_chemstation.py — ChemStation Data 폴더 탐색 및 sequence.acam_ 파싱
 [어느 PC / GC]
 =============================================================================
 
-  **GC2 (차헌) 장비 PC 전용.** GC1은 Autochro PDF(gc_autochro/gc_gc1), GC3은 gc_chem32.
+  **GC2/GC3 장비 PC (차헌) 전용.** GC1은 Autochro PDF(gc_autochro/gc_gc1), GC3은 gc_chem32.
 
 [데이터 소스]
   ChemStation 8860: .D 주입 폴더 안 ACAML XML `sequence.acam_` 에 통합 피크.
   Report.txt 는 사용하지 않습니다.
 
   Data 루트: gc_config.DEFAULT_CHEMSTATION_DATA (보통 Public\\Documents\\ChemStation\\1\\Data)
-  출력: Desktop\\KCH\\YYYYMMDD 시료.xlsx → gc_mailer → 데이터 PC 메일
+  출력: Desktop\\KCH\\YYYYMMDD 시료.xlsx → gc_mailer → 차헌 PC 메일
 """
 
 from __future__ import annotations

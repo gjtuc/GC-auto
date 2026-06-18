@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-gc_mailer.py — 네이버 SMTP 메일 발송
+gc_mailer.py — 네이버 SMTP 메일 발송 (장비 PC → 데이터 PC)
 
-[설정]  gc_automation.env — NAVER_EMAIL, NAVER_APP_PASSWORD, MAIL_TO
-  GC1 운영: john3556@naver.com / iPhone 핫스pot
-  GC2 테스트: kimcha0809 / AndroidHotspot5841
+[PC·메일 흐름]  docs/PC_NAMING.md
+  장비 PC gc_automation.py 가 KCH 원본 xlsx 를 **데이터 PC** 로 보냄.
+    GC1 장비 PC → MAIL_TO = **은규 PC** 네이버
+    GC2/GC3 장비 PC → MAIL_TO = **차헌 PC** 네이버 (kimcha0809)
+
+[설정]  gc_automation.env (장비 PC의 Desktop\\박은규 또는 KCH)
+  NAVER_EMAIL, NAVER_APP_PASSWORD — 발송 계정 (장비 PC 또는 공용)
+  MAIL_TO — 수신 = 상대방 **데이터 PC** 주소
 
 [호출 경로]
   gc_pipeline._try_auto_email() — force 또는 GC1 은 슬롯 검사 생략

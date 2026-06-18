@@ -6,7 +6,8 @@ gc_chem32.py — Chem32 / GC7890 (GC3) Data 경로·Report 파싱
 [어느 PC / GC]
 =============================================================================
 
-  **GC3 (차헌) 장비 PC 전용.** env: GC_INSTANCE=gc3, CHEMSTATION_MODE=chem32.
+  **GC3 장비 PC (차헌) 전용.** env: GC_INSTANCE=gc3, CHEMSTATION_MODE=chem32.
+  계산·Origin은 **차헌 PC** (Desktop\\.cursor). 본 PC는 gc_automation.py 만.
 
 GC3 폴더 구조:
   DATA / {시료 폴더} / {REACTION 시퀀스} / 001F0101.D / Report.TXT, REPORT01/02.CSV

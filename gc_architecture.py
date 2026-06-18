@@ -104,10 +104,10 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
   GC2 역배포 (통합 repo — GC1+GC2 코드 공존, GC1 삭제 금지):
     deploy\\GC2_baseline_chemstation-gc-automation.zip
     gc2_make_deploy_zip.bat
-    deploy\\gc_automation.env.gc2  → Desktop\\KCH\\gc_automation.env (GC2 PC)
-    deploy\\gc_automation.env.gc1  → Desktop\\박은규\\... (GC1 PC만)
+    deploy\\gc_automation.env.gc2  → Desktop\\KCH\\gc_automation.env (GC2/GC3 장비 PC)
+    deploy\\gc_automation.env.gc1  → Desktop\\박은규\\... (GC1 장비 PC만)
 
-  GC1 PC 설치: 동일 zip 또는 gc1_make_deploy_zip.bat, 32-bit Python 권장
+  GC1 장비 PC 설치: 동일 zip 또는 gc1_make_deploy_zip.bat, 32-bit Python 권장
 
   GC2 Cursor 핸드오프: deploy\\GC2_Cursor_핸드오프.md
 
@@ -125,10 +125,10 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
   상세: docs/CODEBASE_GUIDE.md, deploy/ROADMAP.md
 
 =============================================================================
-[데이터 PC — data_pc/촉매 반응 계산.py]  (장비 PC와 별개)
+[은규 PC / 차헌 PC — data_pc/촉매 반응 계산.py]  (장비 PC와 별개)
 =============================================================================
 
-  장비 PC gc_automation.py 가 보낸 **KCH 원본** 메일을 데이터 PC가 수신·계산.
+  장비 PC gc_automation.py 가 보낸 **KCH 원본** 메일을 은규 PC 또는 차헌 PC가 수신·계산.
 
   1) IMAP → KCH/inbox
   2) Area → 수율/전환율 → KCH/processed
@@ -144,13 +144,17 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
 [PC 식별 — machine_profile.json]
 =============================================================================
 
-  Cursor/에이전트가 「이 PC가 장비인지 데이터 PC인지」 구분할 때 참고.
+  Cursor/에이전트가 「장비 PC vs 은규 PC/차헌 PC」 구분할 때 참고.
 
   GC1 장비: Desktop\\박은규\\machine_profile.json  (로컬, Git 제외)
   템플릿:   deploy/machine_profile.template.gc1.json
 
-  데이터 PC: Desktop\\.cursor\\KCH\\machine_profile.json
-  템플릿:    data_pc/KCH/machine_profile.template.json
+  GC2/GC3 장비: Desktop\\KCH\\machine_profile.json
+  템플릿:       deploy/machine_profile.template.gc2.json
+
+  은규 PC / 차헌 PC: Desktop\\.cursor\\KCH\\machine_profile.json
+  템플릿:            data_pc/KCH/machine_profile.template.json
+  차헌 PC 참고:      deploy/machine_profile.reference.chaheon.json
 
 =============================================================================
 [GC2 추가 모듈 — 2026-06 merge]

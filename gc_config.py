@@ -3,11 +3,23 @@
 gc_config.py — 경로·상수·실행 설정(AppConfig)
 
 =============================================================================
-[다른 PC에서 — env vs 코드]
+[PC 명칭 — 오해 금지]  docs/PC_NAMING.md
 =============================================================================
 
-  이 파일의 **기본값**은 GC2/KCH 쪽(AndroidHotspot5841, kimcha 메일)에 가깝습니다.
-  GC1 PC는 Desktop\\박은규\\gc_automation.env 가 로드되면 덮어씁니다:
+  이 파일 기본값은 **차헌의 GC2/GC3 장비 PC** 쪽(Desktop\\KCH, AndroidHotspot5841)입니다.
+  **은규 PC / 차헌 PC** 에서는 gc_automation.py 를 돌리지 않으므로 이 기본값과 무관합니다.
+
+  | PC 종류              | env 위치              | 이 파일 기본값 덮어씀? |
+  |----------------------|-----------------------|------------------------|
+  | GC1 장비 PC (은규)   | Desktop\\박은규\\...  | 예 (iPhone, gc1)       |
+  | GC2/GC3 장비 (차헌)  | Desktop\\KCH\\...   | env 없으면 기본값 사용 |
+  | 은규 PC / 차헌 PC    | Desktop\\.cursor\\... | (본 모듈 미사용)       |
+
+=============================================================================
+[env vs 코드]
+=============================================================================
+
+  GC1 장비 PC는 Desktop\\박은규\\gc_automation.env 가 로드되면 덮어씁니다:
 
     REQUIRED_HOTSPOT=iPhone
     CHEMSTATION_MODE=gc1
@@ -39,7 +51,9 @@ from typing import Optional
 # Agilent ChemStation 기본 Data 루트 — GC2/GC3 장비 PC. GC1은 Autochro(PDF)라 거의 미사용.
 DEFAULT_CHEMSTATION_DATA = r"C:\Users\Public\Documents\ChemStation\1\Data"
 
-# KCH 엑셀·상태 파일 — GC2/GC3 기본. GC1은 Desktop\박은규 (env EXCEL_OUTPUT_DIR).
+# KCH 엑셀·상태 파일 — GC2/GC3 **장비** PC 기본 (Desktop\KCH).
+# GC1 **장비** PC는 Desktop\박은규 (env EXCEL_OUTPUT_DIR).
+# 「차헌 PC」데이터 PC도 inbox 경로에 KCH 라는 이름을 쓰지만 Desktop\.cursor\KCH 이며 별개.
 EXCEL_OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "Desktop", "KCH")
 
 
@@ -94,7 +108,8 @@ def hotspot_reconnect_min_sec(chemstation_mode: str = "auto") -> int:
 # 메일 (네이버 SMTP)
 # ---------------------------------------------------------------------------
 
-# 레거시 기본 수신 주소 — 실제 값은 gc_automation.env 의 MAIL_TO (PC마다 다름)
+# 레거시 기본 수신 주소 — **차헌 PC** 메일(kimcha). 실제 발송은 env MAIL_TO 우선.
+# GC1 장비 PC 운영 시 MAIL_TO 는 **은규 PC** 네이버 주소로 바꿀 것 (장비 env에서 설정).
 TARGET_EMAIL = "kimcha0809@naver.com"
 NAVER_SMTP_HOST = "smtp.naver.com"
 NAVER_SMTP_PORT = 587

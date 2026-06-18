@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""GC --watch 단일 실행 보장 (중복 콘솔 자동 정리)."""
+"""GC --watch 단일 실행 보장 (중복 콘솔 자동 정리).
+
+장비 PC(gc_automation.py --watch) 전용. lock·pid 파일은 EXCEL_OUTPUT_DIR
+(Desktop\\박은규 또는 Desktop\\KCH) 아래에 생성. 은규 PC/차헌 PC와 무관.
+"""
 
 from __future__ import annotations
 

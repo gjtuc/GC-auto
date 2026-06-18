@@ -8,9 +8,15 @@ gc_automation.py — ChemStation / GC1 자동 정리 (CLI 진입점)
 =============================================================================
 
   Repo: https://github.com/gjtuc/GC-auto
-  이 파일은 **장비 PC** 전용. 데이터 PC는 data_pc/촉매 반응 계산.py.
+  이 파일은 **장비 PC 전용** (GC1 장비 PC / GC2·GC3 장비 PC).
+  은규 PC·차헌 PC에서는 data_pc/촉매 반응 계산.py 를 실행하세요.
 
-  clone → Desktop\\{박은규|KCH}\\gc_automation.env 유지 → git pull 로 코드만 갱신
+  PC 명칭: docs/PC_NAMING.md
+    · GC1 장비 PC (은규)  → Desktop\\박은규\\gc_automation.env
+    · GC2/GC3 장비 PC (차헌) → Desktop\\KCH\\gc_automation.env
+    · 은규 PC / 차헌 PC → Desktop\\.cursor\\ (본 스크립트 실행 금지)
+
+  clone → 해당 장비 PC의 env 유지 → git pull 로 코드만 갱신
   가이드: docs/CODEBASE_GUIDE.md
 
 =============================================================================
@@ -22,8 +28,9 @@ gc_automation.py — ChemStation / GC1 자동 정리 (CLI 진입점)
 
   (A)와 (B)는 **독립**. 상세 아키텍처: gc_architecture.py (문서 전용)
 
-  GC1 (박은규): gc_autochro → gc_gc1 → gc_mailer, env=Desktop\\박은규
-  GC2/GC3 (KCH): gc_chemstation / gc_chem32, env=Desktop\\KCH
+  GC1 장비 PC (은규): gc_autochro → gc_gc1 → gc_mailer, env=Desktop\\박은규
+  GC2/GC3 장비 PC (차헌): gc_chemstation / gc_chem32, env=Desktop\\KCH
+  메일 수신·계산은 각 연구원의 데이터 PC (은규 PC / 차헌 PC) 에서 처리.
 
 =============================================================================
 [GC1 vs GC2 watch 차이 — 요약]

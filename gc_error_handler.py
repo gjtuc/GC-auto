@@ -3,10 +3,11 @@
 gc_error_handler.py — GC 오류 로그 · watch 재시작 · Cursor SDK 복구
 
 =============================================================================
-[어느 PC — GC1 (은규) 에서 추가]
+[어느 PC — 주로 GC1 장비 PC (은규)]
 =============================================================================
 
-  GC1 PC merge 시 추가. GC2 PC에도 코드는 있으나 env 로 비활성 가능.
+  GC1 **장비** PC merge 시 추가. GC2/GC3 **장비** PC에도 코드는 있으나 env 로 비활성 가능.
+  은규 PC / 차헌 PC에서는 gc_automation.py 자체를 실행하지 않으므로 무관.
 
   GitHub push 후 다른 PC: git pull. GC_ERROR_HANDLER_ENABLED=0 이면 GC2에서 무시.
 

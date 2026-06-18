@@ -3,15 +3,21 @@
 gc_pipeline.py — 시퀀스 1건 처리 파이프라인 (엑셀 + 메일)
 
 =============================================================================
-[다른 PC — chemstation_mode 분기만 기억]
+[PC 명칭]  docs/PC_NAMING.md
 =============================================================================
 
-  gc1     … GC1 은규 Autochro PDF (run_processing_gc1)
-  8860    … GC2 차헌 ChemStation acam
-  chem32  … GC3 차헌 Report.txt
+  본 모듈은 **장비 PC** (GC1 / GC2 / GC3 장비 PC) 전용.
+  은규 PC·차헌 PC에서의 수율/전환율 계산은 data_pc/촉매 반응 계산.py — 여기 **없음**.
 
-  mode 는 gc_profiles.resolve_profile() + env. 데이터 PC 계산은 여기 **없음**
-  → data_pc/촉매 반응 계산.py
+=============================================================================
+[chemstation_mode 분기]
+=============================================================================
+
+  gc1     … GC1 **장비** PC — 은규 Autochro PDF (run_processing_gc1)
+  8860    … GC2 **장비** PC — 차헌 ChemStation acam
+  chem32  … GC3 **장비** PC — 차헌 Report.txt
+
+  mode 는 gc_profiles.resolve_profile() + env.
 
 =============================================================================
 [진입점]  run_processing(config, script_dir)

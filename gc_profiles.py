@@ -1,18 +1,36 @@
 # -*- coding: utf-8 -*-
 """
-gc_profiles.py — GC1 / GC2 / GC3 PC별 출력 폴더·핫스팟·모드
+gc_profiles.py — GC1 / GC2 / GC3 **장비 PC**별 출력 폴더·핫스팟·모드
 
 =============================================================================
-[다른 PC에서 읽을 때 — 핵심]
+[PC 명칭 — 오해 금지]  docs/PC_NAMING.md
 =============================================================================
 
-  **한 repo, PC마다 env 파일만 다름.** 코드 수정은 GitHub push, env는 각 PC 로컬.
+  이 모듈은 **장비 PC에서만** gc_automation.py 가 사용합니다.
+  은규 PC / 차헌 PC(데이터 PC)에서는 import 되지 않습니다.
 
-  | PC   | env 경로                    | GC_INSTANCE | 핫스팟              |
-  |------|-----------------------------|-------------|---------------------|
-  | GC1  | Desktop\\박은규\\gc_automation.env | gc1         | iPhone              |
-  | GC2  | Desktop\\KCH\\gc_automation.env    | gc2         | AndroidHotspot5841  |
-  | GC3  | Desktop\\KCH\\gc_automation.env    | gc3         | AndroidHotspot5841  |
+  | 연구원 | 장비 PC (본 모듈)        | 데이터 PC (별도)     |
+  |--------|--------------------------|----------------------|
+  | 은규   | GC1 장비 PC              | 은규 PC              |
+  | 차헌   | GC2/GC3 장비 PC          | 차헌 PC              |
+
+  **폴더 이름만으로 PC 종류를 구분합니다 (machine_profile 과 무관):**
+    Desktop\\박은규\\  → GC1 **장비** (은규 PC 아님)
+    Desktop\\KCH\\     → GC2/GC3 **장비** (차헌 PC 아님)
+    Desktop\\.cursor\\ → 은규 PC 또는 차헌 PC (촉매 반응 계산.py)
+
+  같은 물리 PC에 박은규·KCH 폴더가 둘 다 있으면 **env 탐색 순서**에 따라
+  gc1/gc2가 달라질 수 있으므로, 장비 PC에는 해당 인스턴스 env 하나만 두세요.
+
+=============================================================================
+[env 경로 요약]
+=============================================================================
+
+  | 장비 | env 경로                         | GC_INSTANCE | 핫스팟             |
+  |------|----------------------------------|-------------|--------------------|
+  | GC1  | Desktop\\박은규\\gc_automation.env | gc1         | iPhone             |
+  | GC2  | Desktop\\KCH\\gc_automation.env    | gc2         | AndroidHotspot5841 |
+  | GC3  | Desktop\\KCH\\gc_automation.env    | gc3         | AndroidHotspot5841 |
 
   GC1 → gc_autochro + gc_gc1 (PDF)
   GC2 → gc_chemstation (8860 acam)
@@ -23,13 +41,13 @@ gc_profiles.py — GC1 / GC2 / GC3 PC별 출력 폴더·핫스팟·모드
 =============================================================================
 
   1) 환경변수 GC_INSTANCE / EXCEL_OUTPUT_DIR (env 로드 후)
-  2) Desktop\\박은규\\gc_automation.env 존재 → GC1
+  2) Desktop\\박은규\\gc_automation.env 존재 → GC1 장비
   3) Desktop\\KCH\\gc_automation.env 존재 → GC2 또는 GC3 (env의 GC_INSTANCE)
-  4) PROFILE_DEFAULTS 기본값
+  4) PROFILE_DEFAULTS 기본값 (gc2 쪽)
 
   확인: python gc_automation.py --show-profile
 
-  PC 식별 JSON (선택): Desktop\\...\\machine_profile.json — docs/CODEBASE_GUIDE.md
+  PC 식별 JSON (선택): Desktop\\박은규 또는 KCH\\machine_profile.json
 """
 
 from __future__ import annotations
@@ -42,23 +60,25 @@ from typing import Iterable, List, Optional
 from gc_config import DEFAULT_CHEMSTATION_DATA, EXCEL_OUTPUT_DIR, REQUIRED_HOTSPOT_SSID
 
 DESKTOP = os.path.join(os.path.expanduser("~"), "Desktop")
+# GC1 **장비** PC 기본 출력 (Autochro PDF·xlsx). 「은규 PC」= Desktop\.cursor 와 다름.
 DEFAULT_GC1_OUTPUT = os.path.join(DESKTOP, "박은규")
+# GC2/GC3 **장비** PC 기본 출력. 「차헌 PC」= Desktop\.cursor 와 다름.
 DEFAULT_GC2_OUTPUT = EXCEL_OUTPUT_DIR
 
 PROFILE_DEFAULTS = {
-    # gc1 — 은규 PC (DESKTOP-MBGSSME 등). Autochro PDF 파이프라인.
+    # gc1 — GC1 장비 PC (은규). Autochro PDF. 데이터 처리는 은규 PC.
     "gc1": {
         "output_dir": DEFAULT_GC1_OUTPUT,
         "hotspot": "iPhone",
         "chemstation_mode": "gc1",
     },
-    # gc2 — 차헌 PC. Agilent 8860 ChemStation acam.
+    # gc2 — GC2 장비 PC (차헌). acam. 계산·Origin은 차헌 PC.
     "gc2": {
         "output_dir": DEFAULT_GC2_OUTPUT,
         "hotspot": REQUIRED_HOTSPOT_SSID,
         "chemstation_mode": "8860",
     },
-    # gc3 — 차헌 PC. Chem32 Report.txt. env에서 GC_INSTANCE=gc3.
+    # gc3 — GC3 장비 PC (차헌). Chem32. env에서 GC_INSTANCE=gc3.
     "gc3": {
         "output_dir": DEFAULT_GC2_OUTPUT,
         "hotspot": REQUIRED_HOTSPOT_SSID,
@@ -92,7 +112,11 @@ def _dedupe_paths(paths: Iterable[str]) -> List[str]:
 
 
 def candidate_env_dirs(base_script_dir: str) -> List[str]:
-    """gc_automation.env 탐색 순서 (첫 번째로 찾은 파일을 bootstrap_env 가 로드)."""
+    """gc_automation.env 탐색 순서 (첫 번째로 찾은 파일을 bootstrap_env 가 로드).
+
+    박은규 → GC1 장비 PC, KCH → GC2/GC3 장비 PC.
+    Desktop\\.cursor\\gc_automation.env 는 **데이터 PC(은규/차헌 PC)** 용이므로 여기서는 찾지 않음.
+    """
     dirs: List[str] = []
 
     explicit = os.getenv("EXCEL_OUTPUT_DIR", "").strip()
@@ -100,6 +124,7 @@ def candidate_env_dirs(base_script_dir: str) -> List[str]:
         dirs.append(explicit)
 
     for folder_name in ("박은규", "KCH"):
+        # folder_name: 장비 PC 전용 Desktop 하위 폴더 (데이터 PC의 .cursor 아님)
         path = os.path.join(DESKTOP, folder_name)
         env_path = os.path.join(path, "gc_automation.env")
         if os.path.isfile(env_path):
@@ -147,6 +172,10 @@ def resolve_excel_output_dir(base_script_dir: str, loaded_env_file: Optional[str
 
 
 def resolve_gc_instance() -> str:
+    """GC_INSTANCE 미설정 시 출력 폴더 basename 으로 gc1/gc2 추정.
+
+    basename 이 '박은규' 이면 GC1 **장비** PC. 'KCH' 이면 GC2/GC3 **장비** PC.
+  """
     instance = os.getenv("GC_INSTANCE", "").strip().lower()
     if instance in PROFILE_DEFAULTS:
         return instance
