@@ -19,7 +19,7 @@ alwaysApply: true
 2. **레이아웃:** `deploy/DATA_PC_HOME_LAYOUT.md` — script_dir=`%USERPROFILE%\gc-data-pc\`
 3. 문서 **§2 진행 상태 판별**로 어디까지 됐는지 확인
 4. 첫 미완료 **Phase**부터 순서대로 실행 (터미널·파일·검증)
-5. 실험 경로 — `PEG\machine_profile.json` 의 `reaction_roots` (연구노트, G: 아님)
+5. 실험 경로 — `PEG\machine_profile.json` **연구노트** (G: **금지**)
 6. 이 PC에서 **`gc_automation.py` 실행·설정 금지** (GC1 **장비** PC 전용)
 7. 수정 후 **git commit + push** (동기화 기본)
 

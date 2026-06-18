@@ -12,7 +12,7 @@ alwaysApply: true
 
 | 구분 | 규칙 |
 |------|------|
-| **은규 PC** | script_dir=`%USERPROFILE%\gc-data-pc\`. `PEG\machine_profile.json` 의 `reaction_roots` 로 연구노트 경로 지정 |
+| **은규 PC** | script_dir=`%USERPROFILE%\gc-data-pc\`. **`uses_g_drive: false`** — 실험=`Desktop\새 폴더\연구노트` |
 | **차헌 PC** | script_dir=`Desktop\.cursor\`. G: `REACTION_ROOTS` (repo 기본값이 차헌 쪽일 수 있음) |
 | **공통 금지** | 상대방 PC의 실험 폴더 경로를 확인 없이 코드에 박아 넣기 |
 

@@ -40,6 +40,10 @@
     "DRME": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트\\DRME"
   },
   "experiment_data_root": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트",
+  "uses_g_drive": false,
+  "storage_layout": {
+    "comment_for_llm": "은규 PC는 G: 미사용. SecuYouSB 불필요. 실험 결과는 Desktop\\새 폴더\\연구노트 아래 DRE/DRM/DRME."
+  },
   "notes": {
     "pc_naming": "이 파일은 은규 PC 전용. GC1 장비 PC machine_profile 과 별개.",
     "experiment_folders": "2026-06 현재 DRE만 사용 중. DRM/DRME 폴더는 연구노트 아래 생성 예정 — 경로는 위와 동일 루트.",

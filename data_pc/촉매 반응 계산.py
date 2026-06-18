@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 
 '''
 =============================================================================
-촉매 반응 계산.py — GC 데이터 자동 계산 · G: 아카이브 · Origin 연동
+촉매 반응 계산.py — GC 데이터 자동 계산 · 실험 폴더 아카이브 · Origin 연동
 =============================================================================
 
 [GitHub repo 위치]
@@ -46,7 +46,12 @@ from datetime import datetime, timedelta
       machine_profile.json     — PC 식별 + reaction_roots 로컬 오버라이드 (Git 제외)
 
 [어느 PC에서 실행?]  docs/PC_NAMING.md
-  **은규 PC** 또는 **차헌 PC** (업무·Origin·G: PC). GC **장비** PC에서 실행 금지.
+  **은규 PC** 또는 **차헌 PC** (업무·Origin PC). GC **장비** PC에서 실행 금지.
+
+  [LLM] 실험 저장 위치 — PC마다 다름:
+    · 은규 PC: C:\\Users\\User\\Desktop\\새 폴더\\연구노트\\DRE 등 (G: **없음**)
+    · 차헌 PC: G:\\연구소\\실험\\... (SecuYouSB 보안 USB)
+  경로는 PEG/KCH\\machine_profile.json 이 repo 기본값보다 우선.
 
   | 연구원 | 이 스크립트를 돌리는 PC | 메일을 보내는 장비 PC        |
   |--------|-------------------------|------------------------------|
@@ -59,13 +64,13 @@ from datetime import datetime, timedelta
 
 [장비 PC와의 관계]
   GC1/GC2/GC3 **장비 PC**: repo gc_automation.py → KCH 원본 xlsx → SMTP 발송
-  **은규 PC / 차헌 PC** (본 스크립트): IMAP 수신 → 계산 → G: → Origin
+  **은규 PC / 차헌 PC** (본 스크립트): IMAP 수신 → 계산 → 실험 폴더 → Origin
 
 [사용자가 이 스크립트를 만든 목적]
   연구실 GC(Agilent) 분석 후 반복되는 수작업을 줄이기 위함:
   · KCH 원본 엑셀에서 Area → 수율/전환율 계산
   · Origin .opju 워크시트에 시료 열 자동 추가
-  · G: 드라이브 실험 폴더에 .opju / .pptx / .xlsx 정리
+  · 실험 폴더(연구노트 또는 G:)에 .opju / .pptx / .xlsx 정리
 
 [전체 파이프라인 — 두 대 PC]
   GC2/GC3 장비 PC (차헌): ChemStation → gc_automation.py → KCH 원본.xlsx → SMTP → **차헌 PC**
@@ -73,15 +78,16 @@ from datetime import datetime, timedelta
   은규 PC / 차헌 PC (본 스크립트):
     1) IMAP 메일 수신 — 받은·보낸·내게쓴(미읽음) → {PEG|KCH}/inbox (오래된 순 전건 반영)
     2) 수율/전환율 계산 → {PEG|KCH}/processed (검토용 사본)
-    3) G: 실험 폴더 생성 (반응별 최신 폴더 복사 템플릿)
+    3) 실험 폴더 생성 (반응별 최신 폴더 복사 템플릿) — 은규: 연구노트, 차헌: G:
     4) Origin .opju 워크시트에 새 시료 열(Comments) 추가 (그래프 plot 은 수동)
 
 [gc_automation.env 용도]
   네이버 메일(IMAP) 계정만 저장: NAVER_EMAIL, NAVER_APP_PASSWORD
   보안 USB 비밀번호 등은 env에 넣지 않음 — G: 잠금 해제는 사용자가 GUI에서 직접.
 
-[G: 드라이브 / SecuYouSB — 중요]
-  실험 데이터는 G:\\연구소\\실험\\실험데이터\\... (보안 USB) 위에 있음.
+[G: 드라이브 / SecuYouSB — 차헌 PC 위주]
+  [LLM] 은규 PC는 G: 를 쓰지 않음 — machine_profile → 연구노트 로컬 경로.
+  차헌 PC: 실험 데이터는 G:\\연구소\\실험\\실험데이터\\... (보안 USB) 위에 있음.
   USB 세션 만료 시 G: 경로가 탐색기에서 사라짐.
   · 이 스크립트는 G:를 "열"거나 USB에 로그인하지 않음 (공식 API 없음).
   · os.path.isdir() 로 경로 존재만 확인 → 없으면 안내 후 중단.
