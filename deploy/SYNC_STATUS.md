@@ -1,6 +1,6 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-06-18 16:12:28 | HEAD: `40a4deb` | sync: registry GC8860 push
+> Updated: 2026-06-18 16:18:24 | HEAD: `b08387e` | docs: GIT_AUTO_SYNC guide for all PCs
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
@@ -9,7 +9,7 @@
 | `DESKTOP-BFMLJ9J` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
 | `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\User @ 2026-06-18T15:30:02+09:00 | `2fafb2d` | DESKTOP-MBGSSME\User @ 2026-06-18T14:46:21+09:00 | `dff49c2` | [WARN] need pull |
 | `DESKTOP-XXXXXXX` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
-| `GC8860` | gc2_pc | GC8860\차헌 @ 2026-06-18T16:12:10+09:00 | `b843694` | GC8860\차헌 @ 2026-06-18T16:12:28+09:00 | `40a4deb` | [OK] latest |
+| `GC8860` | gc2_pc | GC8860\차헌 @ 2026-06-18T16:18:24+09:00 | `b08387e` | GC8860\차헌 @ 2026-06-18T16:12:28+09:00 | `40a4deb` | [WARN] need pull |
 
 ## Commands
 - Start work: `gc_git_pull.bat`
