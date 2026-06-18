@@ -1,13 +1,13 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-06-18 20:15:51 | HEAD: `15e186c` | Merge branch 'main' of https://github.com/gjtuc/GC-auto
+> Updated: 2026-06-18 20:15:59 | HEAD: `9ee9665` | auto: sync DESKTOP-MBGSSME @ 2026-06-18 20:15:56
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
 | PC | role | last push (who @ when) | push | last pull (who @ when) | pull | status |
 |----|------|-------------------------|------|-------------------------|------|--------|
 | `DESKTOP-BFMLJ9J` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
-| `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\User @ 2026-06-18T15:30:02+09:00 | `2fafb2d` | DESKTOP-MBGSSME\은규 @ 2026-06-18T20:15:51+09:00 | `15e186c` | [OK] latest |
+| `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\은규 @ 2026-06-18T20:15:59+09:00 | `9ee9665` | DESKTOP-MBGSSME\은규 @ 2026-06-18T20:15:51+09:00 | `15e186c` | [WARN] need pull |
 | `DESKTOP-XXXXXXX` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
 | `GC8860` | gc2_pc | GC8860\차헌 @ 2026-06-18T16:18:24+09:00 | `b08387e` | GC8860\차헌 @ 2026-06-18T16:12:28+09:00 | `40a4deb` | [WARN] need pull |
 
