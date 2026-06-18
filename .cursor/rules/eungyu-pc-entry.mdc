@@ -42,3 +42,8 @@ alwaysApply: true
 ## GitHub
 
 https://github.com/gjtuc/GC-auto — `data_pc/`, `deploy/DATA_PC_HOME_LAYOUT.md`, `docs/은규PC_Cursor_시작.md`
+
+## 일상 작업 개시 (은규 사용자 말버릇)
+
+은규 사용자는 **「시작」「진행」「해봐」「작업」** 등 짧은 말만 함 → **작업 시작**으로 해석.  
+상세: **`.cursor/rules/eungyu-pc-initiation.mdc`** — `촉매 반응 계산.py` 전체 파이프라인 즉시 실행.

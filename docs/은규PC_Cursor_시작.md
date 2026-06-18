@@ -12,15 +12,15 @@
 |--|--------------------------|---------------------------|
 | **누가** | 은규 (연구원) | 은규 (같은 사람, **다른 컴퓨터**) |
 | **역할** | 데이터 PC — 계산·G:·Origin | 장비 PC — Autochro→PDF→메일 |
-| **실행 스크립트** | `Desktop\.cursor\촉매 반응 계산.py` | repo `gc_automation.py` |
-| **env** | `Desktop\.cursor\gc_automation.env` (IMAP **수신**) | `Desktop\박은규\gc_automation.env` (SMTP **발송**) |
+| **실행 스크립트** | `gc-data-pc\촉매 반응 계산.py` | repo `gc_automation.py` |
+| **env** | `gc-data-pc\gc_automation.env` (IMAP **수신**) | `Desktop\박은규\gc_automation.env` (SMTP **발송**) |
 | **GC1 데이터** | ChemStation **아님** — GC1에서 온 **KCH xlsx 메일** 처리 | YL6500 **Autochro** PDF 파이프라인 |
 
 **절대 하지 말 것 (은규 PC):**
 
 - `gc_automation.py` 실행·수정·watch 설정 (GC1 **장비** PC 일)
 - 차헌 PC의 G: 폴더 경로를 확인 없이 그대로 사용
-- `Desktop\KCH\` (GC2 **장비** PC 출력)와 `Desktop\.cursor\PEG\` (은규 PC inbox) 혼동
+- `Desktop\KCH\` (GC2 **장비** PC 출력)와 `gc-data-pc\PEG\` (은규 PC inbox) 혼동
 
 ---
 
@@ -34,7 +34,7 @@
               ↓
 [은규 PC]  ← 지금 여기
     촉매 반응 계산.py
-    1) IMAP 수신 → Desktop\.cursor\PEG\inbox\
+    1) IMAP 수신 → gc-data-pc\PEG\inbox\
     2) GC1 CALIB로 수율/전환율 → PEG\processed\
     3) G: 실험 폴더 생성·갱신 (은규 경로!)
     4) Origin .opju 새 시료 열
@@ -119,7 +119,7 @@ python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py" --help
 
 ## 5. Phase 3 — 네이버 메일 env (IMAP, 은규 PC 전용)
 
-파일: **`Desktop\.cursor\gc_automation.env`** (Git에 **올리지 않음**)
+파일: **`gc-data-pc\gc_automation.env`** (Git에 **올리지 않음**)
 
 템플릿: `data_pc\gc_automation.env.example`
 
@@ -285,11 +285,34 @@ python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"
 
 ## 11. 일상 운영 (세팅 완료 후)
 
+### 11.1 은규 사용자 말버릇 → 작업 시작 (LLM/에이전트)
+
+은규 사용자는 기술 맥락 없이 **짧게만** 말함. 아래는 모두 **작업 시작**으로 해석:
+
+| 사용자가 말함 | 에이전트 동작 |
+|---------------|----------------|
+| `진행`, `시작`, `해봐`, `작업`, `돌려`, `go` … | **되묻지 않고** 전체 파이프라인 실행 |
+| (명시 없음) | 아래 python 명령과 동일 |
+
+판별: `data_pc/data_pc_request.py` · 규칙 `.cursor/rules/eungyu-pc-initiation.mdc`
+
+```powershell
+python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"
+```
+
+또는 `deploy\gc_data_pc_run.bat` (동일)
+
+**파이프라인:** 메일(IMAP) → 수율/전환율 계산 → 연구노트 실험 폴더 → Origin
+
+실증·세부 확인은 **사용자가 직접** 함. 에이전트는 실행 + 결과 요약만.
+
+### 11.2 기타 상황
+
 | 상황 | 은규 PC에서 |
 |------|-------------|
-| GC1 실험 후 데이터 반영 | GC1 장비가 메일 발송 → 은규 PC에서 `촉매 반응 계산.py` |
+| GC1 실험 후 데이터 반영 | GC1 장비가 메일 발송 → Cursor에 「진행」 등 또는 위 스크립트 |
 | 메일 없이 xlsx만 | `--manual` |
-| G: 없음 | SecuYouSB 로그인 후 재실행 |
+| 계산만 (Origin 건너뛰기) | `--no-archive` |
 | 코드 업데이트 | `git pull` → `Copy-Item` 운영본 |
 | repo 수정 후 | `git pull` 먼저 → 수정 → push |
 
@@ -301,11 +324,12 @@ python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"
 
 | 용도 | 은규 PC 경로 |
 |------|----------------|
-| 메인 스크립트 | `%USERPROFILE%\Desktop\.cursor\촉매 반응 계산.py` |
-| IMAP env | `%USERPROFILE%\Desktop\.cursor\gc_automation.env` |
-| 메일 xlsx 수신 | `%USERPROFILE%\Desktop\.cursor\PEG\inbox\` |
-| 계산 완료 사본 | `%USERPROFILE%\Desktop\.cursor\PEG\processed\` |
-| PC 식별 | `%USERPROFILE%\Desktop\.cursor\PEG\machine_profile.json` |
+| 메인 스크립트 | `%USERPROFILE%\gc-data-pc\촉매 반응 계산.py` |
+| IMAP env | `%USERPROFILE%\gc-data-pc\gc_automation.env` |
+| 메일 xlsx 수신 | `%USERPROFILE%\gc-data-pc\PEG\inbox\` |
+| 계산 완료 사본 | `%USERPROFILE%\gc-data-pc\PEG\processed\` |
+| PC 식별 | `%USERPROFILE%\gc-data-pc\PEG\machine_profile.json` |
+| 일상 시작 배치 | `deploy\gc_data_pc_run.bat` → gc-data-pc 에 복사 가능 |
 | Git repo | `%USERPROFILE%\chemstation-gc-automation\` |
 
 | 용도 | GC1 **장비** PC (참고만) |
@@ -317,6 +341,8 @@ python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"
 
 ## 13. 에이전트 행동 규칙 (요약)
 
+### 온보딩 (최초)
+
 사용자가 **「은규 PC야」「깃허브 줄게」** 만 말했을 때:
 
 1. **되묻지 말고** 본 문서 Phase 1부터 상태 확인  
@@ -325,6 +351,19 @@ python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"
 4. 비밀번호를 Git에 commit **금지**  
 5. `gc_automation.py` 는 이 PC에서 **실행·설정하지 않음**  
 6. 막히면 **어느 Phase 몇 번**인지 보고하고, 필요한 사용자 입력(경로·앱비밀번호)만 질문  
+
+### 일상 작업 (은규 사용자 말버릇)
+
+사용자가 **「진행」「시작」「해봐」「작업」「돌려」「go」** 등 **맥락 없는 짧은 말**만 할 때:
+
+1. **작업 시작**으로 해석 (`data_pc/data_pc_request.py`, `eungyu-pc-initiation.mdc`)  
+2. **되묻지 말고** 즉시 실행:
+   ```powershell
+   python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"
+   ```
+3. 메일 → 계산 → 연구노트 → Origin 결과만 요약 보고  
+4. 실증·세부 확인은 사용자가 직접 — 에이전트는 실행 담당
+7. **일상 개시** — 「진행」「시작」「해봐」 등 짧은 말 → `eungyu-pc-initiation.mdc` 즉시 실행  
 
 ---
 

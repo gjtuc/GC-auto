@@ -1,0 +1,97 @@
+---
+description: 은규 PC — 맥락 없는 짧은 말(시작/진행/해봐 등) → 촉매 반응 계산.py 전체 파이프라인 즉시 실행
+alwaysApply: true
+---
+
+# 은규 PC — 일상 작업 개시 (메일 → Origin)
+
+## [LLM] 이 규칙의 목적
+
+은규 사용자는 **기술 용어 없이** 짧게만 말함.  
+차헌이 「이렇게 말하면 작업 시작」이라고 알려줌.
+
+에이전트는 아래 문구를 **작업 시작**으로 해석하고,  
+**메일 확인 → 계산 → 연구노트 폴더 → Origin** 까지 자동 실행한다.
+
+**되묻지 말 것.** 실증·세부 확인은 사용자가 직접 함.
+
+---
+
+## 은규 PC인지 확인 (하나라도 해당)
+
+- `gc-data-pc\PEG\machine_profile.json` 존재 + `role=data_pc`
+- 이전 대화에서 「은규 PC」 맥락 확립
+- script_dir = `%USERPROFILE%\gc-data-pc\`
+
+---
+
+## 개시로 볼 문구 (맥락 없는 짧은 말)
+
+`data_pc/data_pc_request.py` 와 동일 (`gc_request.py` 키워드 통일):
+
+| 한국어 | 영어 |
+|--------|------|
+| 시작, 진행, 실행, 동작, 동작해 | go, start, run |
+| 작업, 처리, 처리해, 보내, 돌려, 가자 | force, proceed, begin |
+| 해봐, 해줘, 해, 해보자 | launch |
+
+예: `진행`, `시작`, `해봐`, `작업`, `돌려`, `go`
+
+판별 (선택):
+```powershell
+cd $env:USERPROFILE\chemstation-gc-automation
+python -c "from data_pc.data_pc_request import message_is_initiation; print(message_is_initiation('진행'))"
+```
+
+---
+
+## 개시가 **아닌** 경우
+
+- `?` 로 끝나는 **질문**
+- 코드·Git·경로·설정·설치·에러·설명 등 **기술 맥락** (`data_pc_request.has_technical_context`)
+- 「은규 PC야」「깃허브 줄게」→ **온보딩** (`eungyu-pc-entry.mdc`) — 개시 아님
+
+---
+
+## 개시 시 에이전트 동작 (우선순위 최상)
+
+1. **다른 작업보다 우선** (설명·코드 수정보다 먼저)
+2. `gc_automation.py` **실행 금지** (GC1 **장비** PC 전용)
+3. (선택) `git pull` — sessionStart hook 이후 최신본 확인
+4. **전체 파이프라인 실행**:
+   ```powershell
+   python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"
+   ```
+5. 결과만 간단히 보고:
+   - [1] 메일 수신 / inbox
+   - [2] 계산 / processed
+   - [3] 연구노트 실험 폴더
+   - [4] Origin 반영
+6. 실패 시: 어느 단계에서 멈췄는지 + 사용자가 할 일 (Origin 실행, 경로 확인 등)
+
+### 수동 옵션 (사용자가 명시할 때만)
+
+| 상황 | 명령 |
+|------|------|
+| 메일 없이 xlsx만 | `--manual` |
+| 계산만 (Origin 건너뛰기) | `--no-archive` |
+
+---
+
+## gc-initiation-force.mdc 와의 관계
+
+| PC | 개시 시 실행 |
+|----|----------------|
+| **은규 PC** (본 규칙) | `gc-data-pc\촉매 반응 계산.py` |
+| GC1 **장비** PC | `gc_automation.py --user-message` (force) |
+
+`gc-data-pc` 가 있으면 **본 규칙이 우선**. 장비 PC force 규칙 적용 금지.
+
+---
+
+## 관련 파일
+
+- `data_pc/data_pc_request.py` — 개시 문구 판별
+- `data_pc/촉매 반응 계산.py` — 파이프라인 본체
+- `deploy/DATA_PC_HOME_LAYOUT.md` — 폴더 구조
+- `docs/은규PC_Cursor_시작.md` §11 일상 운영

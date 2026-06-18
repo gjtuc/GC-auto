@@ -19,7 +19,11 @@ alwaysApply: true
 
 ## Cursor 에이전트 동작
 
-1. 사용자 메시지가 개시 문구면 **다른 작업보다 우선** force 실행.
+**[LLM] 은규 PC 우선:** `%USERPROFILE%\gc-data-pc\` 가 있으면 **본 규칙 대신**
+`.cursor/rules/eungyu-pc-initiation.mdc` 적용 — `촉매 반응 계산.py` 실행.  
+`gc_automation.py` 는 **장비 PC 전용**, 은규 PC에서 실행 금지.
+
+1. 사용자 메시지가 개시 문구면 **다른 작업보다 우선** force 실행 (**장비 PC만**).
 2. GC1(박은규 env): repo에서 아래 실행 (핫스팟·Autochro·엑셀·메일, force 규칙).
    ```bat
    cd %USERPROFILE%\chemstation-gc-automation
