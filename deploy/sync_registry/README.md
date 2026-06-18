@@ -4,6 +4,17 @@
 
 GitHub `GC-auto` repo를 **어느 PC가 언제 올렸고(pull/push), 누가 최신인지** 추적합니다.
 
+## 필수 규칙
+
+**한 PC가 GitHub에 최신본을 올렸다면, 다른 PC는 `gc_git_pull.bat`으로 받은 뒤에만 수정·push 합니다.**  
+pull 없이 push하면 **다른 PC 수정이 덮어씌워지거나 날아갈 수 있습니다.**
+
+| 순서 | 명령 |
+|------|------|
+| 작업 시작 | `gc_git_pull.bat` |
+| 현황 확인 | `gc_git_status.bat` → `SYNC_STATUS.md` |
+| `[WARN] need pull` | push/수정 **중단** → pull 먼저 |
+
 | 파일 | 설명 |
 |------|------|
 | `{COMPUTERNAME}.json` | **PC마다 1개** — 본인 PC만 갱신 (충돌 적음) |

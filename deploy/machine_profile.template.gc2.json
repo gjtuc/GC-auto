@@ -1,0 +1,31 @@
+{
+  "role": "gc2_pc",
+  "label": "차헌 — GC2/GC3 장비 PC (템플릿)",
+  "description": "ChemStation 8860 (GC2) 또는 Chem32 (GC3). gc_automation.py --watch. 데이터 PC 아님.",
+  "gc_assignment": {
+    "equipment": "GC2",
+    "operator": "차헌",
+    "chemstation_mode": "8860",
+    "output_dir": "Desktop\\KCH",
+    "required_hotspot": "AndroidHotspot5841",
+    "note": "GC3 이면 GC_INSTANCE=gc3, CHEMSTATION_MODE=chem32"
+  },
+  "recorded_at": "YYYY-MM-DD",
+  "identifiers": {
+    "computer_name": "DESKTOP-XXXXXXX",
+    "windows_user": "윈도우_계정명",
+    "smbios_uuid": "Get-CimInstance Win32_ComputerSystemProduct | Select UUID",
+    "machine_guid": "HKLM Cryptography MachineGuid",
+    "cpu": "CPU 모델 (선택)"
+  },
+  "paths": {
+    "repo": "C:\\Users\\User\\chemstation-gc-automation",
+    "github": "https://github.com/gjtuc/GC-auto",
+    "env_file": "C:\\Users\\User\\Desktop\\KCH\\gc_automation.env"
+  },
+  "notes": {
+    "do_not_commit": "로컬 전용 — Git 제외",
+    "setup": "Desktop\\KCH\\machine_profile.json 으로 저장",
+    "guide": "deploy/STEP9_gc2_pc.md"
+  }
+}

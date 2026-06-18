@@ -2,7 +2,10 @@
 chcp 65001 >nul
 setlocal
 REM gc_git_pull.bat — GitHub에서 최신 코드 받기 + PC 동기화 기록 갱신
-REM 작업 시작할 때마다 실행하세요. (누가 올렸는지 deploy\SYNC_STATUS.md 참고)
+REM
+REM [필수] 다른 PC가 push 한 최신본을 받은 뒤에만 이 PC에서 수정·push 하세요.
+REM       pull 없이 push 하면 다른 PC 수정이 덮어씌워지거나 날아갈 수 있습니다.
+REM 작업 시작할 때마다 실행. (누가 올렸는지 deploy\SYNC_STATUS.md 참고)
 
 set "ROOT=%~dp0"
 set "ROOT=%ROOT:~0,-1%"

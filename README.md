@@ -25,6 +25,24 @@ GitHub GC-auto (클라우드 — 모든 코드·문서)
 
 ---
 
+## PC 간 Git 필수 규칙
+
+**어느 PC든 GitHub에 최신본을 올린 뒤, 다른 PC는 반드시 `pull` 받고 나서 수정·`push` 하세요.**  
+pull 없이 push하면 **다른 PC에서 올린 수정이 덮어씌워지거나 날아갈 수 있습니다.**
+
+```powershell
+.\gc_git_pull.bat      # 1. 작업 시작 — 항상 먼저
+# ... 수정 ...
+git commit / Agent 종료  # 2. 올리기
+.\gc_git_status.bat      # 3. 다른 PC도 [OK] latest 인지 확인
+```
+
+- 현황: [`deploy/SYNC_STATUS.md`](deploy/SYNC_STATUS.md) — `[WARN] need pull` 이면 **push 금지**, pull 먼저  
+- 상세: [`docs/SYNC_TRACKING.md`](docs/SYNC_TRACKING.md)  
+- **E2E 테스트:** [`deploy/STEP8_e2e.md`](deploy/STEP8_e2e.md)
+
+---
+
 ## repo 구조
 
 | 경로 | 내용 |

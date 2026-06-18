@@ -20,7 +20,7 @@
       "label": "차헌 — GC2/GC3 장비 PC (등록 필요)",
       "role": "gc2_pc",
       "operator": "차헌",
-      "note": "첫 git pull/push 후 pc_id 를 실제 컴퓨터 이름으로 수정"
+      "note": "ChemStation PC. 첫 gc_git_pull.bat 후 pc_id를 실제 COMPUTERNAME으로 수정. STEP9_gc2_pc.md"
     }
   ]
 }

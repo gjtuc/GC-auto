@@ -145,12 +145,27 @@ GC3_CALIB = {'H2': 0.12736, 'CO': 0.01504, 'CH4': 0.03004, 'CO2': 0.01839, 'C2H4
 GC3_TIME_TCD = {'H2': (0.6, 0.8), 'CO': (1.8, 2.2), 'CO2': (6.0, 6.6)}
 GC3_TIME_FID = {'CH4': (3.0, 3.8), 'C2H4': (5.0, 5.25), 'C2H6': (5.26, 5.6)}
 
-# [3] GC1 장비 설정 — 은규 PC: **아직 미입력**. GC1 크로마토그램 실측 후 아래 채우기.
-#     GC2/GC3 숫자를 그대로 쓰면 수율·전환율이 틀립니다.
-# GC1_INITIAL_C2H6 = ...
-# GC1_CALIB = {'H2': ..., 'CO': ..., ...}
-# GC1_TIME = {'H2': (rt_min, rt_max), ...}
-# detect_gc_type() 등에 GC1 RT 구간 분기 추가 필요 — docs/00_인수인계_설명.md §5
+# [3] GC1 장비 설정 (YL6500 Autochro) — 은규 GC1 PC 실측
+#     TIME 1차값: gc_gc1.py DEFAULT_*_WINDOWS 와 동기화 (Step 7.2 — extract_gc1_rt_from_xlsx.py 로 검증)
+#     CALIB: 표준가스 실측 전까지 계산 중단 (GC1_CALIB_READY=False)
+GC1_INITIAL_C2H6 = 15000   # DRE fallback 1.5%
+GC1_INITIAL_CO2 = 30000
+GC1_DRM_INITIAL_CH4 = 50000
+GC1_DRM_INITIAL_CO2 = 50000
+
+# RT (분) — center ± half from gc_gc1.DEFAULT_FID/TCD_WINDOWS
+GC1_TIME_TCD = {'H2': (1.65, 2.35), 'CO': (5.8, 7.4), 'CO2': (15.0, 17.4)}
+GC1_TIME_FID = {'CH4': (1.05, 1.75), 'C2H6': (1.55, 2.25), 'C2H4': (1.95, 2.65)}
+
+# GC3 와 동일: ppm = Area / CALIB — scripts/suggest_gc1_calib.py 로 산출 후 채우기
+GC1_CALIB_READY = False
+GC1_CALIB = {
+    'H2': None, 'CO': None, 'CO2': None,
+    'CH4': None, 'C2H6': None, 'C2H4': None,
+}
+# 실측 후 예:
+# GC1_CALIB = {'H2': 0.12, 'CO': 0.015, ...}
+# GC1_CALIB_READY = True
 
 ORIGIN_MAPPING = {
     'C2H6 Conversion (%)': 'C2H6 conversion',
@@ -282,15 +297,35 @@ def _default_concentration(reaction):
     """
     파일명에 농도가 없을 때 Origin Comments (x) 기본값.
     (x) = 주반응물 feed 농도(%) — USER SETTINGS 의 ppm 초기값 ÷ 10000.
-      DRE:  GC2_INITIAL_C2H6      (15000 ppm → 1.5%)
+      DRE:  GC2/GC1_INITIAL_C2H6   (15000 ppm → 1.5%)
       DRME: GC3_INITIAL_C2H6      (15000 ppm → 1.5%)
-      DRM:  GC2_DRM_INITIAL_CH4   (50000 ppm → 5%)
+      DRM:  GC2/GC1_DRM_INITIAL_CH4 (50000 ppm → 5%)
     """
     if reaction == "DRM":
         return _ppm_to_concentration_label(GC2_DRM_INITIAL_CH4)
     if reaction == "DRME":
         return _ppm_to_concentration_label(GC3_INITIAL_C2H6)
     return _ppm_to_concentration_label(GC2_INITIAL_C2H6)
+
+def _default_feed_ppm_for_equipment(reaction, equipment):
+    """장비별 feed fallback — GC1 은 GC1_INITIAL_* 사용."""
+    if equipment == "GC1":
+        if reaction == "DRM":
+            return {
+                "CH4": GC1_DRM_INITIAL_CH4,
+                "CO2": GC1_DRM_INITIAL_CO2,
+                "H2_yield_base": GC1_DRM_INITIAL_CH4 * 2,
+                "CO_yield_base": GC1_DRM_INITIAL_CH4 + GC1_DRM_INITIAL_CO2,
+            }
+        if reaction == "DRME":
+            return _default_feed_ppm("DRME")
+        return {
+            "C2H6": GC1_INITIAL_C2H6,
+            "CO2": GC1_INITIAL_CO2,
+            "H2_yield_base": GC1_INITIAL_C2H6 * 3,
+            "CO_yield_base": GC1_INITIAL_C2H6 * 4,
+        }
+    return _default_feed_ppm(reaction)
 
 def _percent_to_ppm(percent):
     """파일명 농도(%) → ppm. 1% = 10000 ppm."""
@@ -369,10 +404,12 @@ def _format_feed_stoichiometry(reaction, conc_percent):
         return f"CH4 {pct:g}%, CO2 {pct:g}%"
     return ""
 
-def resolve_feed_ppm(input_file, reaction_type):
+def resolve_feed_ppm(input_file, reaction_type, equipment=None):
     """
     계산에 사용할 초기 feed ppm 결정.
     파일명 (x)% 우선 → 화공 양론 산출. 없으면 USER SETTINGS fallback.
+
+    equipment: 'GC1'|'GC2'|'GC3' — fallback ppm 장비별 분기 (GC1 → GC1_INITIAL_*)
 
     반환: (feed_ppm dict, conc_label str|None, feed_source_desc str)
     """
@@ -385,7 +422,10 @@ def resolve_feed_ppm(input_file, reaction_type):
             f"({_format_feed_stoichiometry(reaction_type, conc_str)})"
         )
         return feed, conc_str, desc
-    feed = _default_feed_ppm(reaction_type)
+    if equipment:
+        feed = _default_feed_ppm_for_equipment(reaction_type, equipment)
+    else:
+        feed = _default_feed_ppm(reaction_type)
     default_pct = _default_concentration(reaction_type)
     desc = (
         f"파일명에 농도 없음 — USER SETTINGS 기본 {default_pct}% "
@@ -527,7 +567,7 @@ def _calc_output_path(input_file, suffix):
     return os.path.join(src_dir, out_name)
 
 def _strip_calc_suffix(name):
-    return re.sub(r'_GC2_(DRE|DRM)_계산완료$|_GC3_DRME_계산완료$', '', name)
+    return re.sub(r'_GC2_(DRE|DRM)_계산완료$|_GC3_DRME_계산완료$|_GC1_(DRE|DRM)_계산완료$', '', name)
 
 def _strip_mail_dedup_suffix(name):
     """IMAP 첨부 중복 저장 시 붙는 _1781505851 같은 타임스탬프 접미사 제거."""
@@ -966,8 +1006,10 @@ def _build_experiment_basename(name, filename):
 def reaction_type_from_output_file(saved_excel):
     base = os.path.basename(saved_excel)
     if "_GC2_DRM_" in base: return "DRM"
+    if "_GC1_DRM_" in base: return "DRM"
     if "_GC3_DRME_" in base: return "DRME"
     if "_GC2_DRE_" in base: return "DRE"
+    if "_GC1_DRE_" in base: return "DRE"
     return get_reaction_type_from_filename(saved_excel)
 
 def _find_latest_experiment_folder(reaction_type):
@@ -1129,13 +1171,23 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
 # ==========================================
 # 기능 3: 수율/전환율 계산 · 물질수지 이상 감지
 # ==========================================
-# GC2 곱셈 교정(DRE/DRM), GC3 나눗셈 교정(DRME).
-# feed 초기 ppm: 파일명 (x)% → 화공 양론 자동 산출 (resolve_feed_ppm).
-# 수율/전환율 교차검증: 농도 오기재 시 이상 패턴 감지 (_validate_yield_conversion).
+# GC2 곱셈 교정(DRE/DRM), GC3/GC1 나눗셈 교정(DRME / GC1 DRE·DRM).
+# GC1: FID+TCD 2시트, H2 RT ~2분 (GC2 ~0.5분, GC3 ~0.7분 과 구분).
+def _gc1_calib_ready():
+    if not GC1_CALIB_READY:
+        return False
+    for val in GC1_CALIB.values():
+        if val is None or val <= 0:
+            return False
+    return True
+
 def process_excel(input_file):
     xls = pd.ExcelFile(input_file)
-    eq, df_gc2_raw, df_gc3_tcd, df_gc3_fid = None, pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-    
+    eq = None
+    df_gc2_raw = pd.DataFrame()
+    df_gc3_tcd, df_gc3_fid = pd.DataFrame(), pd.DataFrame()
+    df_gc1_tcd, df_gc1_fid = pd.DataFrame(), pd.DataFrame()
+
     reaction_target = get_reaction_type_from_filename(input_file)
 
     for sn in xls.sheet_names:
@@ -1143,15 +1195,33 @@ def process_excel(input_file):
         if df.empty and len(df.columns) == 0:
             continue
         df.columns = df.columns.astype(str).str.strip()
-        if 'Time' in df.columns:
-            times = pd.to_numeric(df['Time'], errors='coerce')
-            if ((times >= GC2_TIME['H2'][0]) & (times <= GC2_TIME['H2'][1])).any(): eq = 'GC2'; df_gc2_raw = df; break
-            elif ((times >= GC3_TIME_TCD['H2'][0]) & (times <= GC3_TIME_TCD['H2'][1])).any(): eq = 'GC3'; df_gc3_tcd = df
-            elif ((times >= GC3_TIME_FID['CH4'][0]) & (times <= GC3_TIME_FID['C2H6'][1])).any() and not ((times >= GC3_TIME_TCD['CO2'][0]) & (times <= GC3_TIME_TCD['CO2'][1])).any(): df_gc3_fid = df
+        if 'Time' not in df.columns:
+            continue
+        times = pd.to_numeric(df['Time'], errors='coerce')
+        if ((times >= GC2_TIME['H2'][0]) & (times <= GC2_TIME['H2'][1])).any():
+            eq = 'GC2'
+            df_gc2_raw = df
+            break
+        if ((times >= GC3_TIME_TCD['H2'][0]) & (times <= GC3_TIME_TCD['H2'][1])).any():
+            eq = 'GC3'
+            df_gc3_tcd = df
+        elif ((times >= GC1_TIME_TCD['H2'][0]) & (times <= GC1_TIME_TCD['H2'][1])).any():
+            eq = 'GC1'
+            df_gc1_tcd = df
+        elif ((times >= GC3_TIME_FID['CH4'][0]) & (times <= GC3_TIME_FID['C2H6'][1])).any() and not (
+            (times >= GC3_TIME_TCD['CO2'][0]) & (times <= GC3_TIME_TCD['CO2'][1])
+        ).any():
+            df_gc3_fid = df
+        elif ((times >= GC1_TIME_FID['CH4'][0]) & (times <= GC1_TIME_FID['C2H4'][1])).any():
+            if eq is None:
+                eq = 'GC1'
+            df_gc1_fid = df
 
-    if not eq: return None, None, [], ""
+    if not eq:
+        return None, None, [], ""
     df_result = pd.DataFrame()
     all_warnings = []
+    df_p = pd.DataFrame()
 
     # 🚨 [교차 검증 경고]
     if eq == 'GC2' and reaction_target == 'DRME':
@@ -1160,9 +1230,19 @@ def process_excel(input_file):
     elif eq == 'GC3' and reaction_target in ['DRM', 'DRE']:
         all_warnings.append(f"⚠️ [교차 검증 오류] 피크는 GC3인데 파일명은 {reaction_target}입니다. (일단 DRME로 간주하여 처리합니다)")
         reaction_target = 'DRME'
+    elif eq == 'GC1' and reaction_target == 'DRME':
+        all_warnings.append(f"⚠️ [교차 검증 오류] 피크는 GC1인데 파일명은 DRME입니다. (일단 DRE로 간주하여 처리합니다)")
+        reaction_target = 'DRE'
+
+    if eq == 'GC1' and not _gc1_calib_ready():
+        all_warnings.append(
+            "❌ [GC1] CALIB 미설정 — deploy/STEP7_gc1_calib.md Step 7.3 표준가스 실측 후 "
+            "GC1_CALIB 입력 및 GC1_CALIB_READY=True 설정 필요"
+        )
+        return None, None, all_warnings, ""
 
     # 파일명 농도(%) → 화공 양론 feed ppm (없으면 USER SETTINGS fallback)
-    feed_ppm, conc_label, feed_source_desc = resolve_feed_ppm(input_file, reaction_target)
+    feed_ppm, conc_label, feed_source_desc = resolve_feed_ppm(input_file, reaction_target, equipment=eq)
 
     # [수식 적용 단계: GC2 (DRE / DRM)]
     if eq == 'GC2':
@@ -1230,6 +1310,46 @@ def process_excel(input_file):
         cols = ['H2 Area', 'CO Area', 'CO2 Area', 'CH4 Area', 'C2H4 Area', 'C2H6 Area',
                 'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
         out_name = _calc_output_path(input_file, '_GC3_DRME_계산완료')
+
+    # [수식 적용 단계: GC1 (DRE / DRM) — GC3 와 동일 나눗셈 교정, FID+TCD 병합]
+    elif eq == 'GC1':
+        df_t, warn_t = parse_gc_sheet(df_gc1_tcd, 'TCD', 'GC1', GC1_TIME_TCD)
+        df_f, warn_f = parse_gc_sheet(df_gc1_fid, 'FID', 'GC1', GC1_TIME_FID)
+        all_warnings.extend(warn_t)
+        all_warnings.extend(warn_f)
+        df_p = pd.concat([df_t, df_f], axis=1).fillna(0)
+
+        for g in ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area']:
+            if g not in df_p.columns:
+                df_p[g] = 0
+
+        df_result['H2 ppm'] = df_p['H2 Area'] / GC1_CALIB['H2']
+        df_result['CO ppm'] = df_p['CO Area'] / GC1_CALIB['CO']
+        df_result['CO2 ppm'] = df_p['CO2 Area'] / GC1_CALIB['CO2']
+        df_result['C2H6 ppm'] = df_p['C2H6 Area'] / GC1_CALIB['C2H6']
+        df_result['CH4 ppm'] = df_p['CH4 Area'] / GC1_CALIB['CH4']
+        df_result['C2H4 ppm'] = df_p['C2H4 Area'] / GC1_CALIB['C2H4']
+
+        if reaction_target == 'DRM':
+            df_result['CH4 Conversion (%)'] = ((feed_ppm['CH4'] - df_result['CH4 ppm']) / feed_ppm['CH4']) * 100
+            df_result['CO2 Conversion (%)'] = ((feed_ppm['CO2'] - df_result['CO2 ppm']) / feed_ppm['CO2']) * 100
+            df_result['H2 Yield (%)'] = (df_result['H2 ppm'] / feed_ppm['H2_yield_base']) * 100
+            df_result['CO Yield (%)'] = (df_result['CO ppm'] / feed_ppm['CO_yield_base']) * 100
+            df_result['C2H6 (%)'] = df_result['C2H6 ppm'] / 10000
+            df_result['C2H4 (%)'] = df_result['C2H4 ppm'] / 10000
+            cols = ['H2 Area', 'CO Area', 'CO2 Area', 'CH4 Area', 'C2H4 Area', 'C2H6 Area',
+                    'CH4 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'C2H6 (%)', 'C2H4 (%)']
+            out_name = _calc_output_path(input_file, '_GC1_DRM_계산완료')
+        else:
+            df_result['C2H6 Conversion (%)'] = ((feed_ppm['C2H6'] - df_result['C2H6 ppm']) / feed_ppm['C2H6']) * 100
+            df_result['CO2 Conversion (%)'] = ((feed_ppm['CO2'] - df_result['CO2 ppm']) / feed_ppm['CO2']) * 100
+            df_result['H2 Yield (%)'] = (df_result['H2 ppm'] / feed_ppm['H2_yield_base']) * 100
+            df_result['CO Yield (%)'] = (df_result['CO ppm'] / feed_ppm['CO_yield_base']) * 100
+            df_result['CH4 (%)'] = df_result['CH4 ppm'] / 10000
+            df_result['C2H4 (%)'] = df_result['C2H4 ppm'] / 10000
+            cols = ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area',
+                    'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
+            out_name = _calc_output_path(input_file, '_GC1_DRE_계산완료')
 
     # 🚨 [검증 3] 수율/전환율 교차검증 — feed 농도(%) 오기재 패턴 감지
     all_warnings.extend(_validate_yield_conversion(df_result, reaction_target, feed_source_desc))

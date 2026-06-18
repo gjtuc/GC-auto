@@ -24,6 +24,8 @@ data_pc/
 
 ## 은규 PC 설치 (한 번)
 
+상세 micro-step: **`deploy/STEP6_data_pc_setup.md`**
+
 ### A) repo에서 복사 (권장)
 
 ```powershell

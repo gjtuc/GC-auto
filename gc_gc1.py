@@ -94,6 +94,7 @@ DEFAULT_TCD_WINDOWS: Tuple[Tuple[str, float, float], ...] = (
     ("CO", 6.6, 0.8),
     ("CO2", 16.2, 1.2),
 )
+# TIME 구간 변경 시 data_pc/촉매 반응 계산.py GC1_TIME_* 도 동기화 (deploy/STEP7_gc1_calib.md)
 
 # 엑셀에 포함할 검출 성분 (지정하지 않은 피크는 제외)
 GC1_FID_COMPOUNDS: Tuple[str, ...] = tuple(compound for compound, _, _ in DEFAULT_FID_WINDOWS)

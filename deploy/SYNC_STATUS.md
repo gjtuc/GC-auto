@@ -1,6 +1,6 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-06-18 14:47:21 | HEAD: `e5d3c5c` | feat: PC sync tracking ??who pushed/pulled and who is behind
+> Updated: 2026-06-18 14:55:05 | HEAD: `ac4b0d4` | sync: registry DESKTOP-MBGSSME push after sync tracking feature
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
@@ -15,6 +15,22 @@
 - Check only: `gc_git_status.bat`
 - Per-PC log: `deploy/sync_registry/COMPUTERNAME.json`
 
+
+## 필수 규칙 (모든 PC)
+
+**다른 PC가 GitHub에 최신본을 올렸다면, 이 PC는 반드시 `gc_git_pull.bat`으로 받은 뒤에만 수정·push 하세요.**
+
+| 순서 | 할 일 |
+|------|--------|
+| 1 | `gc_git_status.bat` 또는 `deploy/SYNC_STATUS.md` — 내 PC가 `[WARN] need pull` 인지 확인 |
+| 2 | **`gc_git_pull.bat`** — GitHub 최신본 받기 |
+| 3 | 코드 수정 |
+| 4 | commit → push (또는 Agent 종료 시 auto push) |
+
+**pull 없이 push하면:** 다른 PC에서 올린 수정이 **덮어씌워지거나** merge 충돌로 **최신 작업이 날아갈 수 있습니다.**  
+`gc_git_push.bat`은 원격보다 뒤처져 있으면 push를 막고 pull을 안내합니다.
+
+---
 
 ## 상태 표 (한글)
 

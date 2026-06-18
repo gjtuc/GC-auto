@@ -94,15 +94,20 @@ data_pc/
 ```
 
 - **설치:** `deploy/STEP3_data_pc.md`
-- **교정:** 파일 상단 `USER SETTINGS` — GC2/GC3는 차헌 실측값, **GC1은 실측 후 추가**
+- **교정:** 파일 상단 `USER SETTINGS` — GC2/GC3는 차헌 실측값, **GC1은 `deploy/STEP7_gc1_calib.md`**
 - **장비 PC에서 실행 금지** (Origin·G: 없음)
 
 ---
 
 ## 6. GitHub 동기화
 
+### 필수: pull → 수정 → push
+
+**다른 PC가 이미 push 했다면, 이 PC는 `gc_git_pull.bat`으로 최신본을 받은 뒤에만 수정·push 합니다.**  
+pull 없이 push하면 다른 PC의 최신 수정이 **덮어씌워지거나 유실**될 수 있습니다.
+
 ```powershell
-.\gc_git_pull.bat    # 작업 시작 (pull + 동기화 기록)
+.\gc_git_pull.bat    # 작업 시작 — 반드시 먼저 (SYNC_STATUS [WARN] 이면 특히)
 # ... 수정 ...
 # Agent 종료 시 auto push 또는 gc_git_push.bat
 .\gc_git_status.bat  # 누가 최신인지 확인
@@ -146,10 +151,11 @@ git pull
 
 | 실수 | 올바른 방법 |
 |------|-------------|
-| GC2 CALIB를 GC1에 복사 | GC1 실측 후 `촉매 반응 계산.py` GC1 블록 작성 |
+| GC2 CALIB를 GC1에 복사 | `deploy/STEP7_gc1_calib.md` — GC1 표준가스 실측 |
 | 장비 PC에서 촉매 반응 계산 실행 | 데이터 PC에서만 |
 | env를 GitHub에 commit | 절대 금지 |
 | zip만 배포 | `git pull` 로 통일 |
+| **pull 없이 push** | **`gc_git_pull.bat` 먼저** — 다른 PC 최신본 받은 뒤 수정·push |
 
 ---
 
@@ -161,3 +167,5 @@ git pull
 | `deploy/GC1_Cursor_핸드오프.md` | GC1 통합 체크리스트 |
 | `deploy/GC2_Cursor_핸드오프.md` | GC2 역배포 |
 | `deploy/ROADMAP.md` | Step 6~9 남은 일 |
+| `deploy/STEP8_e2e.md` | **E2E** GC1 메일 → 데이터 PC → G: → Origin |
+| `deploy/STEP9_gc2_pc.md` | **차헌 GC2** git pull + 회귀 테스트 |

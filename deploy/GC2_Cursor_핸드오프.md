@@ -165,7 +165,22 @@ gc_automation.py     ← CLI 진입, watch/force/user-message 분기
 
 ## 6. 역배포 절차 (GC2로)
 
-### 6.1 GC2 PC에서 baseline zip 받기
+> **2026-06 통합 이후 권장:** zip 대신 GitHub — [`deploy/STEP9_gc2_pc.md`](STEP9_gc2_pc.md)  
+> `git clone https://github.com/gjtuc/GC-auto.git` → `gc_git_pull.bat` → `verify_gc2_setup.ps1`
+
+### 6.0 GitHub pull (권장, Step 9)
+
+```powershell
+cd C:\Users\User\chemstation-gc-automation
+gc_git_pull.bat
+powershell -File scripts\verify_gc2_setup.ps1
+python gc_automation.py --show-profile
+python gc_automation.py --force --no-email
+```
+
+**다른 PC가 push 했으면 pull 없이 push 금지** — `deploy/SYNC_STATUS.md`
+
+### 6.1 GC2 PC에서 baseline zip 받기 (레거시)
 
 **ZIP 위치** (동일 파일 2곳):
 ```

@@ -16,6 +16,27 @@
 
 ---
 
+## 필수 규칙 — pull 먼저, push 나중
+
+> **한 PC가 GitHub에 최신본을 올렸다면, 다른 모든 PC는 그 최신본을 `pull` 받은 다음에만 수정하고 다시 `push` 해야 합니다.**
+
+```
+[PC A] 수정 → push (GitHub = 최신)
+[PC B] pull 안 함 → 구버전으로 수정 → push  ❌  → A의 수정이 사라지거나 충돌
+[PC B] gc_git_pull.bat → 최신 받음 → 수정 → push  ✅
+```
+
+| 하면 안 되는 것 | 이유 |
+|----------------|------|
+| `SYNC_STATUS.md`에 `[WARN] need pull` 인데 그냥 수정·push | 다른 PC 작업 덮어쓰기 |
+| zip/USB로 파일만 복사 | Git 이력·최신 commit 무시 |
+| Agent/수동 push 전에 pull 생략 | auto hook도 원칙 동일 — **작업 시작 시 pull** |
+
+**확인:** `gc_git_status.bat` 또는 [`deploy/SYNC_STATUS.md`](../deploy/SYNC_STATUS.md)  
+**받기:** `gc_git_pull.bat` (작업 시작마다)
+
+---
+
 ## 파일 구조
 
 ```

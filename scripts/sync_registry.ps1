@@ -1,5 +1,9 @@
 # sync_registry.ps1 - Record per-PC git push/pull + regenerate deploy/SYNC_STATUS.md
 # Docs (Korean): docs/SYNC_TRACKING.md
+#
+# RULE: If another PC pushed to GitHub, every other PC must run gc_git_pull.bat
+#       BEFORE editing and pushing again. Skipping pull can overwrite remote work.
+#
 # Usage:
 #   powershell -File scripts/sync_registry.ps1 -Event push
 #   powershell -File scripts/sync_registry.ps1 -Event pull

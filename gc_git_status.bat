@@ -2,6 +2,7 @@
 chcp 65001 >nul
 setlocal
 REM gc_git_status.bat — pull/push 없이 동기화 현황만 갱신·표시
+REM [WARN] need pull 이면 push/수정 전에 gc_git_pull.bat 필수 (다른 PC 최신본 먼저)
 
 set "ROOT=%~dp0"
 set "ROOT=%ROOT:~0,-1%"

@@ -3,11 +3,13 @@
 # =============================================================================
 #
 # 1) 변경 파일 commit
-# 2) scripts/sync_registry.ps1 -Event push  → PC별 기록 + deploy/SYNC_STATUS.md
-# 3) registry 파일 2차 commit
-# 4) push origin main
+# 2) git pull --rebase origin main  (다른 PC 최신본 반영 — 없으면 push 시 유실 위험)
+# 3) scripts/sync_registry.ps1 -Event push  → PC별 기록 + deploy/SYNC_STATUS.md
+# 4) registry 파일 2차 commit
+# 5) push origin main
 #
-# 다른 PC는 gc_git_pull.bat 으로 받고, deploy/SYNC_STATUS.md 에서 누가 최신인지 확인.
+# 다른 PC: 작업 시작 시 gc_git_pull.bat (필수). deploy/SYNC_STATUS.md 에서 [WARN] need pull 확인.
+# pull 없이 push 하면 다른 PC에서 올린 수정이 덮어씌워지거나 날아갈 수 있음.
 # =============================================================================
 
 $ErrorActionPreference = 'SilentlyContinue'
@@ -38,6 +40,14 @@ $commitMsg = "auto: sync ${pc} @ ${stamp}"
 & $git commit -m $commitMsg 2>> $logFile
 if ($LASTEXITCODE -ne 0) {
     "[${stamp}] commit skipped or failed" | Out-File -FilePath $logFile -Append -Encoding utf8
+    exit 0
+}
+
+# 다른 PC가 올린 최신본 반영 (push 전 pull — 유실 방지)
+& $git fetch origin main 2>> $logFile
+& $git pull --rebase origin main 2>> $logFile
+if ($LASTEXITCODE -ne 0) {
+    "[${stamp}] pull --rebase failed — gc_git_pull.bat 수동 실행 후 push" | Out-File -FilePath $logFile -Append -Encoding utf8
     exit 0
 }
 
