@@ -1,10 +1,10 @@
 # GC1 Cursor AI 핸드오프 — chemstation-gc-automation (GC2 → GC1 forward)
 
-> **GitHub 업로드 출처: GC2 PC (kimcha) — 2026-06-18**  
-> Repo `https://github.com/gjtuc/GC-auto` 의 초기 push는 **GC2 PC**에서 수행 (`gjtuc` 계정).  
-> **GC1 PC에서 올린 것이 아님.** GC1은 이 repo를 clone/pull 하여 **통합·배포**합니다.
+> **GitHub 업로드 출처: GC2/GC3 장비 PC (kimcha) — 2026-06-18**  
+> Repo `https://github.com/gjtuc/GC-auto` 의 초기 push는 **GC2/GC3 장비 PC**에서 수행 (`gjtuc` 계정).  
+> **GC1 장비 PC에서 올린 것이 아님.** GC1은 이 repo를 clone/pull 하여 **통합·배포**합니다.
 
-> **용도**: 이 문서 전체를 **GC1 PC(박은규)** Cursor AI 채팅에 붙여넣기 하세요.  
+> **용도**: 이 문서 전체를 **GC1 장비 PC(박은규)** Cursor AI 채팅에 붙여넣기 하세요.  
 > **작성 시점**: 2026-06-18  
 > **작성 PC**: GC2 (kimcha) — GC1 baseline 수신·merge·운영 검증·추가 수정 후 GC1에 재배포
 
@@ -15,7 +15,7 @@
 | 맞음 | 아님 |
 |------|------|
 | **같은 통합 repo** — GC1/GC2/GC3 코드가 한 폴더에 공존 | GC1 코드를 GC2 ChemStation으로 **교체**한 것 |
-| GC1 PC는 `GC_INSTANCE=gc1` + `Desktop\박은규` env만 사용 | GC2 PC 설정(AndroidHotspot, KCH)을 GC1에 넣는 것 |
+| GC1 장비 PC는 `GC_INSTANCE=gc1` + `Desktop\박은규` env만 사용 | GC2/GC3 장비 PC 설정(AndroidHotspot, KCH)을 GC1에 넣는 것 |
 | 이번 zip = **GC1이 보냈던 최적화 + GC2에서 검증·추가한 안정화** | GC1이 보낸 zip과 **완전 동일**한 스냅샷 |
 
 **GC1이 모르는 일 (요약)**  
@@ -45,7 +45,7 @@ GC1 Autochro→PDF→엑셀→메일 **핵심 로직(`gc_autochro`, `gc_gc1`)은
 
 ## 2. GC1 baseline (이미 GC1에서 완료·운영 검증된 것)
 
-아래는 **6/17 GC1 PC에서 끝낸 작업**입니다. 이번 zip에도 **그대로 포함**되어 있습니다.
+아래는 **6/17 GC1 장비 PC에서 끝낸 작업**입니다. 이번 zip에도 **그대로 포함**되어 있습니다.
 
 ### GC1 파이프라인
 - **Autochro UI** (`gc_autochro.py`): 제어목록 → Ctrl+A → 초기화+정량 → Hancom PDF
@@ -73,7 +73,7 @@ AUTOCHRO_ENABLED=1
 
 ## 3. GC2에서 추가·변경된 것 (이번 zip에 포함 — GC1에도 적용)
 
-GC2가 GC1 baseline을 merge한 뒤 **실운영·테스트**하면서 넣은 개선입니다. GC1 PC에도 **동일하게 동작**합니다.
+GC2가 GC1 baseline을 merge한 뒤 **실운영·테스트**하면서 넣은 개선입니다. GC1 장비 PC에도 **동일하게 동작**합니다.
 
 ### 3.1 작업 세션·단계별 재개 (`gc_work_job.py`) — **신규**
 - 핫스팟 끊김·SMTP 실패 시 **미완료 작업 유지** (`.gc_send_state.json`의 `active_work_job`)
@@ -125,7 +125,7 @@ GC2가 GC1 baseline을 merge한 뒤 **실운영·테스트**하면서 넣은 개
 
 ---
 
-## 5. GC1 PC 배포 절차
+## 5. GC1 장비 PC 배포 절차
 
 ### 5.1 사전 준비
 - Python 3.10+ (3.12 권장), PATH 등록
@@ -257,7 +257,7 @@ gc_automation.py     ← CLI
 ## 10. GC1 Cursor에 붙여넣을 짧은 버전
 
 ```
-chemstation-gc-automation 통합 repo — GC1 PC(박은규) forward 배포.
+chemstation-gc-automation 통합 repo — GC1 장비 PC(박은규) forward 배포.
 
 상황: GC1이 6/17 baseline을 GC2에 보냄 → GC2 merge·8860 회귀 OK → GC2 실운영 중
 watch/메일/작업재개 안정화 추가 → 이 zip이 그 결과물.
@@ -287,4 +287,4 @@ python gc_instance.py --stop-watch
 
 ---
 
-*이 문서와 `GC1_forward_chemstation-gc-automation.zip`을 GC1 PC로 전달하세요.*
+*이 문서와 `GC1_forward_chemstation-gc-automation.zip`을 GC1 장비 PC로 전달하세요.*

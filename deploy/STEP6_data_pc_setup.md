@@ -1,4 +1,6 @@
-# Step 6 — 데이터 PC `Desktop\.cursor\` 설치
+# Step 6 — 은규 PC `Desktop\.cursor\` 설치
+
+> PC 명칭: [`docs/PC_NAMING.md`](../docs/PC_NAMING.md) — **은규 PC** = 은규의 데이터 PC (GC1 장비 PC와 별개)
 
 > **목표:** `data_pc/` 내용을 운영 경로에 배치하고, env·machine_profile·KCH 폴더를 준비한다.  
 > **Step 6 범위:** 설치·검증까지만. CALIB/TIME(Step 7), E2E(Step 8)은 다음 단계.
@@ -10,7 +12,7 @@
 | 역할 | machine_profile | env | 실행 스크립트 |
 |------|-----------------|-----|---------------|
 | GC1 장비 | `Desktop\박은규\machine_profile.json` (`gc1_pc`) | `Desktop\박은규\gc_automation.env` | repo `gc_automation.py --watch` |
-| 데이터 PC | `Desktop\.cursor\KCH\machine_profile.json` (`data_pc`) | `Desktop\.cursor\gc_automation.env` | `Desktop\.cursor\촉매 반응 계산.py` |
+| 은규 PC | `Desktop\.cursor\KCH\machine_profile.json` (`data_pc`) | `Desktop\.cursor\gc_automation.env` | `Desktop\.cursor\촉매 반응 계산.py` |
 
 **GC1 장비 PC에서 `촉매 반응 계산.py` 실행 금지** (Origin·G: 환경 다름).
 
@@ -72,11 +74,11 @@ Copy-Item deploy\machine_profile.template.data_pc.json "$env:USERPROFILE\Desktop
 
 필수 필드:
 
-| 필드 | 값 예 (GC1 PC) |
+| 필드 | 값 예 (은규 PC) |
 |------|----------------|
 | `role` | `data_pc` |
-| `identifiers.computer_name` | `DESKTOP-MBGSSME` |
-| `identifiers.smbios_uuid` | GC1 profile 과 동일 |
+| `identifiers.computer_name` | 은규 PC의 COMPUTERNAME (GC1 장비 PC와 다름) |
+| `identifiers.smbios_uuid` | 은규 PC에서 조회한 UUID (GC1 장비 PC와 다름) |
 | `paths.script_dir` | `C:\Users\User\Desktop\.cursor` |
 
 **완료 기준:** `role` = `data_pc`, identifiers 채워짐.
@@ -98,7 +100,7 @@ powershell -File C:\Users\User\chemstation-gc-automation\scripts\verify_data_pc_
 | G: 드라이브 | — | SecuYouSB 로그인 |
 | originpro | — | Origin 연동 시 |
 
-**현재 GC1 PC (2026-06-18):** core PASS, G: 미연결, originpro 미설치 → Step 6 OK, Step 8 전 해결.
+**현재 GC1 장비 PC (2026-06-18):** core PASS, G: 미연결, originpro 미설치 → Step 6 OK, Step 8 전 해결.
 
 ---
 
@@ -111,7 +113,7 @@ powershell -File C:\Users\User\chemstation-gc-automation\scripts\verify_data_pc_
 
 ## 6.7 — sync registry
 
-데이터 PC에서 repo pull/push 시:
+은규 PC에서 repo pull/push 시:
 
 ```powershell
 gc_git_pull.bat    # 시작
@@ -119,7 +121,7 @@ gc_git_status.bat  # deploy/SYNC_STATUS.md
 ```
 
 동일 물리 PC(`DESKTOP-MBGSSME`)는 sync json 하나(`gc1_pc`)로 추적.  
-별도 데이터 PC가 생기면 그 PC에서 `gc_git_pull.bat` 1회 → `DESKTOP-XXXX.json` 생성.
+차헌 PC 등 차헌 PC 등 별도 데이터 PC가 생기면 그 PC에서 `gc_git_pull.bat` 1회 → `DESKTOP-XXXX.json` 생성.
 
 ---
 

@@ -1,5 +1,5 @@
 # GC2 역배포용 baseline zip
-# · GC2 PC에 풀어서 GC2/GC3가 동작하는 **통합 코드베이스** (GC1 모듈 포함, 삭제 금지)
+# · GC2/GC3 장비 PC에 풀어서 GC2/GC3가 동작하는 **통합 코드베이스** (GC1 모듈 포함, 삭제 금지)
 # · __pycache__, .git, 비밀번호 env 원본, 상태/PDF/엑셀 산출물 제외
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent

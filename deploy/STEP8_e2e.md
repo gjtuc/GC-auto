@@ -1,7 +1,9 @@
-# Step 8 — End-to-end (GC1 메일 → 데이터 PC 계산 → G: → Origin)
+# Step 8 — End-to-end (GC1 메일 → 은규 PC 계산 → G: → Origin)
+
+> PC 명칭: [`docs/PC_NAMING.md`](../docs/PC_NAMING.md)
 
 > **전제:** Step 7 실측 완료 (`GC1_CALIB_READY=True`)  
-> **역할:** GC1 장비 PC = 메일 **발송** / 데이터 PC = 메일 **수신**·계산·G:·Origin  
+> **역할:** GC1 장비 PC = 메일 **발송** / **은규 PC** = 메일 **수신**·계산·G:·Origin  
 > (같은 물리 PC여도 경로·스크립트는 역할별로 분리)
 
 ---
@@ -12,7 +14,7 @@
 [GC1 장비 PC]  gc_automation.py
     Autochro → PDF → KCH xlsx → SMTP 발송
               ↓ 네이버 메일
-[데이터 PC]    촉매 반응 계산.py
+[은규 PC]      촉매 반응 계산.py
     1) IMAP → KCH/inbox
     2) 수율/전환율 → KCH/processed
     3) G: 실험 폴더 복사·정리
@@ -42,7 +44,7 @@ python scripts\test_e2e_mail_auth.py
 
 ## 8.1 — G: 드라이브 (SecuYouSB)
 
-**데이터 PC에서만 필요** (3~4단계).
+**은규 PC에서만 필요** (3~4단계).
 
 1. SecuYouSB 실행 → 보안 USB **로그인(잠금 해제)**
 2. 탐색기에서 확인:
@@ -57,7 +59,7 @@ python scripts\test_e2e_mail_auth.py
 
 ---
 
-## 8.2 — Origin + originpro (데이터 PC)
+## 8.2 — Origin + originpro (은규 PC)
 
 1. Origin이 이 PC에 설치되어 있어야 함
 2. Python 패키지:
@@ -105,9 +107,9 @@ python gc_automation.py --watch
 
 ---
 
-## 8.4 — 데이터 PC: IMAP 수신 (1단계)
+## 8.4 — 은규 PC: IMAP 수신 (1단계)
 
-**데이터 PC** (`Desktop\.cursor\`):
+**은규 PC** (`Desktop\.cursor\`):
 
 ```powershell
 python scripts\test_e2e_mail_auth.py --imap-only
@@ -208,11 +210,11 @@ python "...\촉매 반응 계산.py" --manual --opju "G:\...\기존.opju"
 - [ ] 8.1 G: 접근
 - [ ] 8.2 originpro
 - [ ] 8.3 GC1 → 메일 발송 1건
-- [ ] 8.4~8.7 데이터 PC full pipeline 1건
+- [ ] 8.4~8.7 은규 PC full pipeline 1건
 - [ ] 8.8 체크리스트 전부 체크
 
 ---
 
 ## 다음: Step 9
 
-[`deploy/STEP9_gc2_pc.md`](STEP9_gc2_pc.md) — 차헌 GC2/GC3 장비 PC git pull + 회귀 (데이터 PC `BFMLJ9J` 와 별도)
+[`deploy/STEP9_gc2_pc.md`](STEP9_gc2_pc.md) — 차헌 GC2/GC3 장비 PC git pull + 회귀 (**차헌 PC** `BFMLJ9J` 와 별도)

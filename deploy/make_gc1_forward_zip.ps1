@@ -1,4 +1,4 @@
-# GC1 forward 배포 zip (GC2 PC → GC1 PC)
+# GC1 forward 배포 zip (GC2/GC3 장비 PC → GC1 장비 PC)
 # · GC1이 보냈던 baseline + GC2 운영 중 추가 수정이 모두 포함된 통합 코드베이스
 # · __pycache__, .git, 비밀번호 env 원본, 상태/PDF/엑셀 산출물 제외
 $ErrorActionPreference = 'Stop'

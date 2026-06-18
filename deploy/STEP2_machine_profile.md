@@ -2,17 +2,19 @@
 
 ## 목적
 
-Cursor/에이전트가 **「지금 이 PC가 GC1 장비인지, 데이터 PC인지」** 구분할 수 있게 합니다.
+Cursor/에이전트가 **「장비 PC vs 은규 PC/차헌 PC」** 구분할 수 있게 합니다.
+
+> PC 명칭: [`docs/PC_NAMING.md`](../docs/PC_NAMING.md)
 
 | 파일 | 위치 | GitHub |
 |------|------|--------|
 | **실제 프로필** | `Desktop\박은규\machine_profile.json` | ❌ 로컬 전용 |
 | **GC1 템플릿** | `deploy/machine_profile.template.gc1.json` | ✅ |
 | **GC2 템플릿** | `deploy/machine_profile.template.gc2.json` | ✅ |
-| **데이터 PC 템플릿** | `deploy/machine_profile.template.data_pc.json` | ✅ |
-| **차헌 참고** | `deploy/machine_profile.reference.chaheon.json` | ✅ |
+| **은규 PC 템플릿** | `deploy/machine_profile.template.data_pc.json` | ✅ |
+| **차헌 PC 참고** | `deploy/machine_profile.reference.chaheon.json` | ✅ |
 
-## GC1 PC (은규) — 완료 checklist
+## GC1 장비 PC (은규) — 완료 checklist
 
 - [x] `Desktop\박은규\machine_profile.json` 작성 (DESKTOP-MBGSSME)
 - [x] repo에 템플릿 추가

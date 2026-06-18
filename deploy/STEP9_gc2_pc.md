@@ -1,8 +1,8 @@
 # Step 9 — 차헌 GC2/GC3 장비 PC (git pull + 회귀 테스트)
 
-> **실행 위치:** 차헌 **장비 PC** (ChemStation / Chem32 옆) — **데이터 PC(`DESKTOP-BFMLJ9J`) 아님**  
+> **실행 위치:** **GC2/GC3 장비 PC** (ChemStation / Chem32 옆) — **차헌 PC(`DESKTOP-BFMLJ9J`) 아님**  
 > **목표:** GitHub `GC-auto` 최신본 받기 + GC2/GC3 `gc_automation.py` 기존과 동일 동작 확인  
-> **GC1 PC(은규)에서 할 일:** repo push 후 이 문서·`EXPECTED_PCS.json` 전달
+> **GC1 장비 PC(은규)에서 할 일:** repo push 후 이 문서·`EXPECTED_PCS.json` 전달
 
 ---
 
@@ -11,10 +11,10 @@
 | PC | role | env | 스크립트 |
 |----|------|-----|----------|
 | **GC2/GC3 장비** (Step 9) | `gc2_pc` / `gc3_pc` | `Desktop\KCH\gc_automation.env` | `gc_automation.py` |
-| 데이터 PC (`BFMLJ9J`) | `data_pc` | `Desktop\.cursor\` | `촉매 반응 계산.py` |
+| 차헌 PC (`BFMLJ9J`) | `data_pc` | `Desktop\.cursor\` | `촉매 반응 계산.py` |
 | GC1 장비 (은규) | `gc1_pc` | `Desktop\박은규\` | `gc_automation.py` |
 
-Step 9는 **8860/Chem32 장비 PC**만 해당. `BFMLJ9J`는 Step 6·8(데이터 PC) 별도.
+Step 9는 **8860/Chem32 장비 PC**만 해당. **차헌 PC**(`BFMLJ9J`)는 Step 6·8 별도.
 
 ---
 
@@ -114,7 +114,7 @@ powershell -File scripts\verify_gc2_setup.ps1
 
 `verify_gc2_setup.ps1` 이 다음을 **FAIL** 처리해야 함:
 
-| GC1 전용 | GC2 PC에 있으면 안 됨 |
+| GC1 전용 | GC2/GC3 장비 PC에 있으면 안 됨 |
 |----------|----------------------|
 | `REQUIRED_HOTSPOT=iPhone` | FAIL |
 | `john3556@naver.com` in env | FAIL |
@@ -182,7 +182,7 @@ gc_git_pull.bat
 gc_git_push.bat
 ```
 
-은규 GC1 PC는 **pull 후** 작업 (`SYNC_STATUS.md` 확인).
+은규 GC1 장비 PC는 **pull 후** 작업 (`SYNC_STATUS.md` 확인).
 
 ---
 
@@ -202,7 +202,7 @@ gc_git_push.bat
 
 ---
 
-## GC1 PC(은규) — 차헌에게 넘기기 전
+## GC1 장비 PC(은규) — 차헌에게 넘기기 전
 
 ```powershell
 gc_git_pull.bat
@@ -219,5 +219,5 @@ PASS 후 차헌에게 전달:
 
 ## 다음
 
-- 데이터 PC `BFMLJ9J`: Step 6 + Step 8 (별도)
+- **차헌 PC** `BFMLJ9J`: Step 6 + Step 8 (별도)
 - GC1: Step 7 CALIB + Step 8 E2E

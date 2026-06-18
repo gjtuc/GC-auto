@@ -1,4 +1,6 @@
-# Step 3 — 데이터 PC (`data_pc/`)
+# Step 3 — 은규 PC / 차헌 PC (`data_pc/`)
+
+> PC 명칭: [`docs/PC_NAMING.md`](../docs/PC_NAMING.md)
 
 ## 역할
 

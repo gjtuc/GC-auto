@@ -1,6 +1,6 @@
 # GC2 Cursor AI 핸드오프 — chemstation-gc-automation
 
-> **용도**: 이 문서 전체를 GC2 PC의 Cursor AI 채팅에 붙여넣기 하세요.  
+> **용도**: 이 문서 전체를 GC2/GC3 장비 PC의 Cursor AI 채팅에 붙여넣기 하세요.  
 > **작성 시점**: 2026-06-17 (GC1 최적화 baseline 기준)  
 > **작성 PC**: GC1 (박은규 운영 PC에서 작업 후 GC2로 역배포)
 
@@ -23,7 +23,7 @@
 
 ## 2. 지금까지 완료된 작업 (GC1)
 
-GC1 PC에서 아래 기능이 **운영 검증 완료** 상태입니다.
+GC1 장비 PC에서 아래 기능이 **운영 검증 완료** 상태입니다.
 
 ### 전체 파이프라인 (GC1)
 - **Autochro UI 자동화** (`gc_autochro.py`): 제어목록 → Ctrl+A → 초기화+정량 → Hancom PDF 저장
@@ -134,7 +134,7 @@ gc_automation.py     ← CLI 진입, watch/force/user-message 분기
 | `gc_kch.py` | GC2/GC3 시료명 사전 검사 |
 | `gc_instance.py` | watch PID lock |
 | `.cursor/rules/gc-initiation-force.mdc` | Cursor alwaysApply: 개시→force |
-| `deploy/gc_automation.env` | GC1 PC 배포용 env 템플릿 |
+| `deploy/gc_automation.env` | GC1 장비 PC 배포용 env 템플릿 |
 | `deploy/gc_automation.env.gc2` | GC2/GC3 env 템플릿 |
 | `deploy/gc_automation.env.gc1` | GC1 env 템플릿 (비밀번호 placeholder) |
 | `.env.example` | 전체 env 변수 설명 |
@@ -159,7 +159,7 @@ gc_automation.py     ← CLI 진입, watch/force/user-message 분기
 - `gc_gc1.py`, `gc_autochro.py` 변경은 GC2에 영향 없어야 함 (분기 유지)
 - `gc_watch.py`, `gc_pipeline.py`, `gc_state.py` 수정 시 **GC2 am/pm 슬롯 로직** regression 테스트 필수
 - `gc_profiles.py`의 GC2/GC3 기본값(`AndroidHotspot5841`, `Desktop\KCH`) 변경 금지
-- GC1 env (`iPhone`, `john3556`)가 GC2 PC의 `Desktop\KCH\gc_automation.env`에 섞이지 않게 할 것
+- GC1 env (`iPhone`, `john3556`)가 GC2/GC3 장비 PC의 `Desktop\KCH\gc_automation.env`에 섞이지 않게 할 것
 
 ---
 
@@ -180,7 +180,7 @@ python gc_automation.py --force --no-email
 
 **다른 PC가 push 했으면 pull 없이 push 금지** — `deploy/SYNC_STATUS.md`
 
-### 6.1 GC2 PC에서 baseline zip 받기 (레거시)
+### 6.1 GC2/GC3 장비 PC에서 baseline zip 받기 (레거시)
 
 **ZIP 위치** (동일 파일 2곳):
 ```
@@ -199,7 +199,7 @@ C:\Users\User\chemstation-gc-automation\deploy\GC1_baseline_chemstation-gc-autom
 
 **제외됨**: `__pycache__`, `.git`, `*.pyc`, `.gc_send_state.json`, Desktop 사용자 env, PDF/엑셀 산출물, venv, 중첩 baseline zip
 
-### 6.2 GC2 PC repo에 merge
+### 6.2 GC2/GC3 장비 PC repo에 merge
 
 ```powershell
 # 1) 기존 repo 백업 (GC2 동작 확인용)
@@ -209,7 +209,7 @@ Copy-Item -Recurse C:\Users\User\chemstation-gc-automation C:\Users\User\chemsta
 $tmp = "$env:TEMP\gc1_baseline_extract"
 Expand-Archive -Path "C:\Users\User\chemstation-gc-automation\deploy\GC1_baseline_chemstation-gc-automation.zip" -DestinationPath $tmp -Force
 
-# 3) merge — GC2 PC의 Desktop\KCH\gc_automation.env 는 덮어쓰지 말 것!
+# 3) merge — GC2/GC3 장비 PC의 Desktop\KCH\gc_automation.env 는 덮어쓰지 말 것!
 Copy-Item -Path "$tmp\*" -Destination "C:\Users\User\chemstation-gc-automation" -Recurse -Force
 # deploy\gc_automation.env (GC1용)는 repo에만 두고 Desktop에는 복사하지 않음
 ```
@@ -222,7 +222,7 @@ Copy-Item -Path "$tmp\*" -Destination "C:\Users\User\chemstation-gc-automation" 
 | GC1 | `Desktop\박은규\gc_automation.env` | `deploy\gc_automation.env` 또는 `.gc1` 템플릿 + 실제 비밀번호 |
 
 ```ini
-# GC2 운영 (Desktop\KCH\gc_automation.env) — 이 값을 GC2 PC에서 유지!
+# GC2 운영 (Desktop\KCH\gc_automation.env) — 이 값을 GC2/GC3 장비 PC에서 유지!
 GC_INSTANCE=gc2
 EXCEL_OUTPUT_DIR=C:\Users\User\Desktop\KCH
 CHEMSTATION_MODE=8860
@@ -233,7 +233,7 @@ MAIL_TO=kimcha0809@naver.com
 ```
 
 ```ini
-# GC1 운영 (Desktop\박은규\gc_automation.env) — GC1 PC에만 존재
+# GC1 운영 (Desktop\박은규\gc_automation.env) — GC1 장비 PC에만 존재
 GC_INSTANCE=gc1
 EXCEL_OUTPUT_DIR=C:\Users\User\Desktop\박은규
 CHEMSTATION_MODE=gc1
@@ -256,12 +256,12 @@ python gc_automation.py --verify
 - `GC_INSTANCE=gc2`, `Desktop\KCH`, `AndroidHotspot5841` 확인
 - GC2 watch가 기존처럼 acam mtime + am/pm 슬롯 동작하는지 확인
 
-### 6.5 GC1 PC로 forward deploy
+### 6.5 GC1 장비 PC로 forward deploy
 
-kimcha(GC2)가 merge·검증 후, **동일 baseline zip**을 GC1 PC(박은규)에 전달:
+kimcha(GC2)가 merge·검증 후, **동일 baseline zip**을 GC1 장비 PC(박은규)에 전달:
 
 ```powershell
-# GC1 PC에서
+# GC1 장비 PC에서
 Expand-Archive -Path "<zip경로>\GC1_baseline_chemstation-gc-automation.zip" -DestinationPath "$env:TEMP\gc1_deploy" -Force
 Copy-Item -Recurse "$env:TEMP\gc1_deploy\*" "C:\Users\User\chemstation-gc-automation" -Force
 
@@ -368,7 +368,7 @@ REQUIRED_HOTSPOT=AndroidHotspot5841
 - [ ] force (`gc_동작해줘.bat`) 정상 엑셀+메일
 - [ ] GC1 모듈(`gc_autochro`, `gc_gc1`)이 GC2 실행 경로에서 호출되지 않음
 
-### GC1 deploy verification (GC1 PC에 zip 설치 후)
+### GC1 deploy verification (GC1 장비 PC에 zip 설치 후)
 
 - [ ] `python gc_automation.py --show-profile` → gc1, 박은규, gc1, iPhone
 - [ ] `GC1_감시시작.bat` → iPhone 연결 시 세션 1회 처리
@@ -405,7 +405,7 @@ python -m pytest test_gc_sanitize.py test_gc_force_auth.py -q
 ## 11. 앞으로 GC2 Cursor가 해야 할 일
 
 1. **GC2/GC3 운영 유지** — merge 후 regression 체크리스트 통과 확인
-2. **GC1 baseline zip 관리** — `deploy\GC1_baseline_chemstation-gc-automation.zip`을 GC1 PC 배포 기준으로 사용
+2. **GC1 baseline zip 관리** — `deploy\GC1_baseline_chemstation-gc-automation.zip`을 GC1 장비 PC 배포 기준으로 사용
 3. **merge 전략** — GC1 전용 변경(`gc_autochro`, `gc_gc1`)과 GC2 공통 변경 분리 인지; 공통 모듈 수정 시 GC2 테스트 우선
 4. **env 분리** — `Desktop\KCH` (GC2) vs `Desktop\박은규` (GC1) 절대 혼동 금지
 5. **비밀번호** — env 비밀번호를 채팅/커밋에 붙이지 말 것; `deploy/*.env` 템플릿은 placeholder 사용
@@ -419,8 +419,8 @@ python -m pytest test_gc_sanitize.py test_gc_force_auth.py -q
 
 | 사람 | 역할 | PC |
 |------|------|-----|
-| **박은규** | GC1 운영자, YL6500GC 실험·메일 수신 | GC1 PC |
-| **kimcha** | GC2/GC3 설정·코드 merge·GC1 배포 지원 | GC2 PC |
+| **박은규** | GC1 운영자, YL6500GC 실험 | GC1 장비 PC (`gc_automation.py`) · 계산·Origin은 **은규 PC** |
+| **kimcha** | GC2/GC3 설정·코드 merge·GC1 배포 지원 | GC2/GC3 장비 PC (`gc_automation.py`) · 계산·Origin은 **차헌 PC** |
 
 ---
 
