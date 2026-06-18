@@ -12,14 +12,16 @@ GitHub GC-auto (클라우드 — 모든 코드·문서)
         │
         ├── GC1 장비 PC (은규)     gc_automation.py — Autochro→PDF→메일
         ├── GC2/GC3 장비 PC (차헌) gc_automation.py — ChemStation→메일
-        └── 데이터 PC (은규/차헌)  data_pc/촉매 반응 계산.py — 메일→G:→Origin
+        ├── 은규 PC                data_pc/촉매 반응 계산.py — 메일→G:→Origin
+        └── 차헌 PC                data_pc/촉매 반응 계산.py — 메일→G:→Origin
 ```
 
 | PC | `machine_profile` / env | 실행 |
 |----|-------------------------|------|
-| GC1 장비 | `Desktop\박은규\gc_automation.env` | repo `gc_automation.py --watch` |
-| GC2/GC3 | `Desktop\KCH\gc_automation.env` | repo `gc_automation.py --watch` |
-| 데이터 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` |
+| GC1 장비 PC | `Desktop\박은규\gc_automation.env` | repo `gc_automation.py --watch` |
+| GC2/GC3 장비 PC | `Desktop\KCH\gc_automation.env` | repo `gc_automation.py --watch` |
+| 은규 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` |
+| 차헌 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` |
 
 **비밀번호·machine_profile.json 실본은 Git에 없음** — 템플릿만 repo.
 
@@ -48,7 +50,7 @@ git commit / Agent 종료  # 2. 올리기
 | 경로 | 내용 |
 |------|------|
 | `gc_*.py`, `gc_automation.py` | GC1/2/3 **장비 PC** 통합 CLI |
-| `data_pc/` | **데이터 PC** — 촉매 반응 계산, KCH inbox/processed |
+| `data_pc/` | **은규 PC / 차헌 PC** — 촉매 반응 계산, KCH inbox/processed |
 | `deploy/` | env 템플릿, PC별 핸드오프, Step 가이드 |
 | `docs/` | 인수인계 설명 (차헌→은규) |
 | `.cursor/hooks/` | Agent 종료 시 auto commit+push |
@@ -66,7 +68,7 @@ git commit / Agent 종료  # 2. 올리기
 
 ---
 
-## GC1 PC (은규) — 매일
+## GC1 장비 PC (은규) — 매일
 
 ```powershell
 cd C:\Users\User\chemstation-gc-automation
@@ -79,7 +81,7 @@ python gc_automation.py --show-profile   # gc1, iPhone
 
 ---
 
-## GC2 PC (차헌) — 수정 후
+## GC2/GC3 장비 PC (차헌) — 수정 후
 
 ```powershell
 git pull
@@ -104,6 +106,7 @@ git push
 
 | 파일 | 용도 |
 |------|------|
+| **`docs/PC_NAMING.md`** | **PC 명칭 규칙 (은규 PC / 차헌 PC / 장비 PC)** |
 | **`docs/CODEBASE_GUIDE.md`** | **다른 PC에서 처음 읽을 때 (PC·파일·Git)** |
 | `gc_architecture.py` | 장비 PC 코드 맵 (실행 없음) |
 | `deploy/GC1_Cursor_핸드오프.md` | GC1 통합 체크리스트 |

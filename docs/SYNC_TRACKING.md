@@ -9,8 +9,10 @@
 
 코드가 **한 repo**로 통합되면:
 
-- 은규 PC(GC1)가 수정 → push  
-- 차헌 PC(GC2)가 아직 `pull` 안 함 → **구버전으로 작업** 위험  
+- GC1 장비 PC가 수정 → push  
+- GC2/GC3 장비 PC가 아직 `pull` 안 함 → **구버전으로 작업** 위험  
+
+PC 명칭: [`docs/PC_NAMING.md`](PC_NAMING.md)
 
 이를 막기 위해 **누가·언제·어떤 commit까지** 올리고 받았는지 repo 안에 기록합니다.
 
@@ -56,7 +58,7 @@ scripts/sync_registry.ps1       ← 기록 + SYNC_STATUS 갱신 엔진
 ```json
 {
   "pc_id": "DESKTOP-MBGSSME",
-  "label": "은규 — GC1 PC",
+  "label": "은규 — GC1 장비 PC",
   "role": "gc1_pc",
   "operator": "은규",
   "sync": {
@@ -96,7 +98,7 @@ scripts/sync_registry.ps1       ← 기록 + SYNC_STATUS 갱신 엔진
 
 ---
 
-## 새 PC 등록 (차헌 GC2 PC 등)
+## 새 PC 등록 (GC2/GC3 장비 PC 등)
 
 1. `git clone` 또는 `git pull`
 2. `Desktop\...\machine_profile.json` 작성 (Step 2)
