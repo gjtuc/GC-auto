@@ -101,6 +101,11 @@ from datetime import datetime, timedelta
   generate_sample_name() → Origin Comments (엄격, °C·슬래시·CVD 규칙)
     · 괄호 (x) = 주반응물 feed 농도(%): 파일명에서 추출 → 화공 양론으로 ppm 산출
       DRME x% → C2H6·CH4 각 x%, CO2 3x%   DRE x% → C2H6 x%, CO2 2x%   DRM x% → CH4·CO2 각 x%
+    · 파일명 농도 표기 (_extract_concentration 우선순위):
+        (1.5)% / 1.5%          — 명시적 퍼센트
+        dre@(3) / DRM@(5)      — gc_automation KCH·GC PDF stem (반응@(농도))
+        DRE(3) / DRE (3)       — 반응 바로 뒤 괄호 (예: DRE(3)@600 → C2H6 3%)
+        C2H6(1.5) / CH4(5)     — 레거시
     · 파일명에 농도 없으면 USER SETTINGS 기본 ppm (fallback)
     · 촉매 무게(0.25g 등)는 Origin Comments 에 넣지 않음 — DRE/DRME/DRM 공통
       (G: 폴더명에는 DRM 등에서 "촉매 0.25g" 유지)
@@ -413,11 +418,37 @@ def get_reaction_type_from_filename(filename):
     else: return "DRE" # 기본값은 DRE
 
 def _extract_concentration(name):
-    """파일명에서 농도(%) 추출. 없으면 None — Origin (x) 는 _default_concentration() 사용."""
+    """
+    파일명에서 주반응물 feed 농도(%) 추출. 없으면 None.
+
+    [LLM] Origin Comments (x) 및 resolve_feed_ppm 의 입력.
+    (x)는 사이클 번호가 아니라 주반응물 mol% — DRE/DRME 는 C2H6, DRM 은 CH4.
+
+    인식 순서 (먼저 매칭된 값 사용):
+      1. (1.5)% / 1.5%           — 명시적 %
+      2. dre@(3) / DRM@(5)        — gc_automation PDF·KCH stem: 반응@(농도)
+         예: 「20260616 dre@(3) ni-ce」 → 3 (C2H6 3%, CO2 6% by stoichiometry)
+      3. DRE(3) / DRE (3)        — 반응 토큰 바로 뒤 괄호 (온도 @600 과 별개)
+      4. C2H6(1.5) / CH4(5)      — 레거시 화학식 괄호
+
+    매칭 실패 시 _default_concentration() / USER SETTINGS fallback.
+    """
+    # 1) 명시적 %: (1.5)%, 1.5%
     conc_match = re.search(r'\(?(\d+\.?\d*)\)?\s*%', name)
-    if conc_match: return conc_match.group(1)
+    if conc_match:
+        return conc_match.group(1)
+    # 2) KCH/GC stem: dre@(3), DRM@(5) — @ 뒤 괄호 = 농도%, @650 처럼 숫자만 있으면 온도(여기서는 미매칭)
+    at_conc = re.search(r'(?:DRE|DRM|DRME)@\((\d+\.?\d*)\)', name, re.I)
+    if at_conc:
+        return at_conc.group(1)
+    # 3) 반응 바로 뒤: DRE(3), DRE (3), DRE(3)@600
+    react_conc = re.search(r'(?:DRE|DRM|DRME)\s*\((\d+\.?\d*)\)', name, re.I)
+    if react_conc:
+        return react_conc.group(1)
+    # 4) 레거시: C2H6(1.5), CH4(5)
     legacy = re.search(r'(?:C2H6|CH4)\((\d+\.?\d*)\)', name, re.I)
-    if legacy: return legacy.group(1)
+    if legacy:
+        return legacy.group(1)
     return None
 
 def _ppm_to_concentration_label(ppm):
@@ -644,10 +675,13 @@ def generate_sample_name(filename):
     temp = temp_match.group(1) if temp_match else "600"
 
     cat_str = re.sub(r'\d{8}', '', name)
-    cat_str = re.sub(r'DRME|DRM|DRE|_원본|_GC.*|계산완료|\.xlsx|\.xls|\(\d\)|C2H6|CH4', '', cat_str, flags=re.IGNORECASE)
+    # 반응·부가 접미사 제거 후 촉매 토큰만 남김 (Origin Comments 촉매부)
+    cat_str = re.sub(r'DRME|DRM|DRE|_원본|_GC.*|계산완료|\.xlsx|\.xls|C2H6|CH4', '', cat_str, flags=re.IGNORECASE)
+    # dre@(3) — 농도 표기는 촉매명이 아니므로 제거 (@650 온도는 아래 @\d+ 에서 제거)
+    cat_str = re.sub(r'@\([^)]*\)', '', cat_str)
     cat_str = re.sub(r'\(?\d+\.?\d*\)?\s*%', '', cat_str)
-    cat_str = re.sub(r'\(\d+\.?\d*\)', '', cat_str)
-    cat_str = re.sub(r'@\d+', '', cat_str)
+    cat_str = re.sub(r'\(\d+\.?\d*\)', '', cat_str)  # DRE(3) 농도 괄호
+    cat_str = re.sub(r'@\d+', '', cat_str)  # @600 온도
     cat_str = _strip_catalyst_mass(cat_str)  # 비-KCH 파일명 fallback 도 무게 제외
     cat_str = _format_catalyst_string(cat_str)
     return f"{date} {reaction}({conc})@{temp}°C {cat_str}"
