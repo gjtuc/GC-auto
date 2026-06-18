@@ -22,14 +22,21 @@ from datetime import datetime, timedelta
   data_pc/촉매 반응 계산.py  (통합 repo: https://github.com/gjtuc/GC-auto)
   운영 설치: Desktop\\.cursor\\ 에 복사 후 실행 (deploy/STEP3_data_pc.md)
 
-[어느 PC에서 실행?]
-  **데이터 PC만** (은규 또는 차헌 업무 PC). GC 장비 PC에서 실행 금지.
-  · Origin, G: 드라이브, IMAP 메일 계정이 데이터 PC에 있음
-  · machine_profile.json role=data_pc 로 PC 구분 (로컬, Git 제외)
+[어느 PC에서 실행?]  docs/PC_NAMING.md
+  **은규 PC** 또는 **차헌 PC** (업무·Origin·G: PC). GC **장비** PC에서 실행 금지.
+
+  | 연구원 | 이 스크립트를 돌리는 PC | 메일을 보내는 장비 PC        |
+  |--------|-------------------------|------------------------------|
+  | 은규   | 은규 PC                 | GC1 장비 PC                  |
+  | 차헌   | 차헌 PC                 | GC2/GC3 장비 PC              |
+
+  · Origin, G: 드라이브, IMAP 메일 계정은 데이터 PC(은규/차헌 PC)에 있음
+  · machine_profile.json role=data_pc, paths.script_dir=Desktop\\.cursor\\
+  · gc_automation.env 는 Desktop\\.cursor\\ 에 둠 (장비 PC의 박은규/KCH env 와 별개)
 
 [장비 PC와의 관계]
-  GC1/GC2/GC3 장비 PC: repo gc_automation.py → KCH 원본 xlsx → SMTP 발송
-  데이터 PC (본 스크립트): IMAP 수신 → 계산 → G: → Origin
+  GC1/GC2/GC3 **장비 PC**: repo gc_automation.py → KCH 원본 xlsx → SMTP 발송
+  **은규 PC / 차헌 PC** (본 스크립트): IMAP 수신 → 계산 → G: → Origin
 
 [사용자가 이 스크립트를 만든 목적]
   연구실 GC(Agilent) 분석 후 반복되는 수작업을 줄이기 위함:
@@ -38,8 +45,9 @@ from datetime import datetime, timedelta
   · G: 드라이브 실험 폴더에 .opju / .pptx / .xlsx 정리
 
 [전체 파이프라인 — 두 대 PC]
-  GC2 PC:  ChemStation → gc_automation.py → KCH 원본.xlsx → 네이버 SMTP 발송
-  데이터 PC: (본 스크립트)
+  GC2/GC3 장비 PC (차헌): ChemStation → gc_automation.py → KCH 원본.xlsx → SMTP → **차헌 PC**
+  GC1 장비 PC (은규): Autochro → gc_automation.py → KCH 원본.xlsx → SMTP → **은규 PC**
+  은규 PC / 차헌 PC (본 스크립트):
     1) IMAP 메일 수신 — 받은·보낸·내게쓴(미읽음) → KCH/inbox (오래된 순 전건 반영)
     2) 수율/전환율 계산 → KCH/processed (검토용 사본)
     3) G: 실험 폴더 생성 (반응별 최신 폴더 복사 템플릿)
@@ -113,7 +121,9 @@ def _get_originpro():
 # ==========================================
 # ⚙️ 사용자 설정 (USER SETTINGS)
 # ==========================================
-# *** 다른 PC/장비에서 값 복사 금지 — CALIB·TIME 은 GC 실측값 ***
+# *** CALIB·TIME 은 해당 **장비**에서 실측. 다른 연구원/장비 값 복사 금지 ***
+# 아래 GC2/GC3 블록 = 차헌이 GC2·GC3 **장비**에서 실측한 값 (차헌 PC 스크립트에 저장).
+# GC1 블록 = 은규가 GC1 **장비**에서 실측 (은규 PC 스크립트에 저장).
 #
 # feed 초기 ppm — 파일명에 농도(%)가 없을 때만 사용 (fallback).
 # 파일명에 (x)% 가 있으면 화공 양론으로 ppm 을 자동 산출 (resolve_feed_ppm 참고):
@@ -121,18 +131,18 @@ def _get_originpro():
 #   DRE  x% → C2H6 x%, CO2 2x%
 #   DRM  x% → CH4 x%, CO2 x%
 #
-# [1] GC2 장비 설정 (DRE 반응용) — 차헌 PC 실측. 기본 1.5% 가정
+# [1] GC2 **장비** 교정 (DRE) — 차헌 PC에서 사용. 값은 GC2 장비 PC 실측.
 GC2_INITIAL_C2H6 = 15000
 GC2_INITIAL_CO2  = 30000
 
-# [DRM] GC2 장비 설정 (DRM 반응용) — 기본 5% 가정
+# [DRM] GC2 **장비** 교정 (DRM)
 GC2_DRM_INITIAL_CH4 = 50000 
 GC2_DRM_INITIAL_CO2 = 50000
 
 GC2_CALIB = {'H2': 9.9496, 'CO': 97.4074, 'CH4': 25.4261, 'CO2': 77.5254, 'C2H4': 29.8598, 'C2H6': 24.8321}
 GC2_TIME = {'H2': (0.4, 0.55), 'CO': (1.3, 1.5), 'CH4': (3.0, 3.6), 'CO2': (5.2, 5.5), 'C2H4': (8.7, 8.9), 'C2H6': (9.5, 10.0)}
 
-# [2] GC3 장비 설정 (DRME 반응용) — 기본 1.5% 가정
+# [2] GC3 **장비** 교정 (DRME) — 차헌 PC에서 사용
 GC3_INITIAL_C2H6 = 15000
 GC3_INITIAL_CO2  = 45000
 GC3_YIELD_BASE_H2 = 75000   # C2H6_ppm × 5  (1.5% → 75000)
@@ -145,7 +155,7 @@ GC3_CALIB = {'H2': 0.12736, 'CO': 0.01504, 'CH4': 0.03004, 'CO2': 0.01839, 'C2H4
 GC3_TIME_TCD = {'H2': (0.6, 0.8), 'CO': (1.8, 2.2), 'CO2': (6.0, 6.6)}
 GC3_TIME_FID = {'CH4': (3.0, 3.8), 'C2H4': (5.0, 5.25), 'C2H6': (5.26, 5.6)}
 
-# [3] GC1 장비 설정 (YL6500 Autochro) — 은규 GC1 PC 실측
+# [3] GC1 **장비** 교정 (Autochro) — 은규 PC에서 사용. RT/CALIB는 GC1 장비 PC 실측.
 #     TIME 1차값: gc_gc1.py DEFAULT_*_WINDOWS 와 동기화 (Step 7.2 — extract_gc1_rt_from_xlsx.py 로 검증)
 #     CALIB: 표준가스 실측 전까지 계산 중단 (GC1_CALIB_READY=False)
 GC1_INITIAL_C2H6 = 15000   # DRE fallback 1.5%

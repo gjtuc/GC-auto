@@ -1,6 +1,6 @@
 {
   "role": "data_pc",
-  "label": "은규 — 데이터 PC",
+  "label": "은규 PC",
   "description": "촉매 반응 계산.py 실행 PC (메일 → 계산 → G: → Origin). GC1 장비 PC 아님.",
   "gc_assignment": {
     "equipment": "GC1",
@@ -16,7 +16,10 @@
     "cpu": "CPU 모델명 (선택)"
   },
   "notes": {
-    "reference_chaheon": "deploy/machine_profile.reference.chaheon.json",
-    "best_id": "smbios_uuid 또는 machine_guid"
+    "pc_naming": "은규 PC (role=data_pc). GC1 장비 PC의 machine_profile(role=gc1_pc) 과 computer_name 이 다를 수 있음.",
+    "do_not_run_gc_automation": "gc_automation.py 는 GC1 장비 PC에서만 실행",
+    "reference_chaheon": "차헌 PC 참고: deploy/machine_profile.reference.chaheon.json",
+    "best_id": "smbios_uuid 또는 machine_guid",
+    "doc": "docs/PC_NAMING.md"
   }
 }

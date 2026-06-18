@@ -1,12 +1,14 @@
 # 데이터 PC — `촉매 반응 계산.py` 안내
 
+> PC 명칭: 은규 PC / 차헌 PC — [`docs/PC_NAMING.md`](../docs/PC_NAMING.md)
+
 > **GitHub:** https://github.com/gjtuc/GC-auto/tree/main/data_pc  
 > **전체 맥락:** [`docs/CODEBASE_GUIDE.md`](../docs/CODEBASE_GUIDE.md)
 
 ## 이 PC의 역할
 
-**은규의 일반 업무 PC (데이터 PC)** 입니다.  
-GC1 장비 PC가 보낸 메일을 받아 **계산 → G: → Origin** 까지 처리합니다.
+**은규 PC** (또는 차헌의 **차헌 PC**)입니다.  
+본인 장비 PC가 보낸 메일을 받아 **계산 → G: → Origin** 까지 처리합니다.
 
 | 단계 | 작업 |
 |------|------|
