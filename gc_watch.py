@@ -25,7 +25,7 @@ gc_watch.py — --watch 핫스팟 감시 루프
 
   1) Wi-Fi SSID 확인 — REQUIRED_HOTSPOT 과 일치할 때만 ChemStation/PDF 접근
   2) 연결 유지 중에는 pipeline 재실행 안 함 (GC1·GC2 공통)
-  3) 바탕화면 MMDDHHmm.txt 갱신 — watch 생존 신호 (gc_status ±5분 검증)
+  3) 바탕화면 MMDDHHmm.txt 갱신 — **핫스팟 연결 중만** (gc_status ±5분 검증)
 
 =============================================================================
 [핫스pot edge — GC2/GC3 vs GC1]
@@ -124,7 +124,7 @@ class WatchRunner:
         print(f"[안내] 핫스팟 감시 시작 — {interval}초 간격, SSID: {self.config.required_ssid}")
         print(f"       {mail_rule}")
         print(f"       순간 끊김({reconnect_sec}초 미만 재연결) — 동일 세션, 중복 없음")
-        print(f"       바탕화면 확인: MMDDHHmm.txt")
+        print(f"       바탕화면 확인: MMDDHHmm.txt (핫스팟 연결 중에만 갱신)")
         print(f"       수동 force: gc_동작해줘.bat 또는 Cursor")
 
         self._publish("starting", "감시 시작됨")
@@ -142,11 +142,16 @@ class WatchRunner:
             self._publish_stopped()
 
     def _publish(self, code: str, message: str, **extra) -> None:
+        wifi_ready = is_required_hotspot_connected(
+            self.config.required_ssid,
+            self.config.skip_wifi_check,
+        )
         self._reporter.publish(
             alive=True,
             status_code=code,
             message=message,
             wifi_ssid=get_connected_wifi_ssid(),
+            wifi_ready=wifi_ready,
             **extra,
         )
         if code == "error":

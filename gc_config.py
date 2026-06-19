@@ -186,10 +186,10 @@ HEADER_ROW = {
 # 바탕화면 heartbeat (MMDDHHmm.txt)
 # ---------------------------------------------------------------------------
 #
-# --watch 가 15초마다 tick, 바탕화면 06151513.txt 이름은 매 분 갱신됩니다.
-#   · 파일 **이름** = 마지막 생존 시각 (MM=월, DD=일, HH=시, mm=분)
+# --watch 가 15초마다 tick, 핫스팟 연결 중 바탕화면 06151513.txt 이름 갱신.
+#   · 파일 **이름** = 마지막 핫스팟 연결 시각 (MM=월, DD=일, HH=시, mm=분)
 #   · 지금 시각과 ±HEARTBEAT_TOLERANCE_MINUTES 이내면 "GC 자동화 정상"
-#   · 5분 이상 밀리면 watch 멈춤 → gc_start_watch.bat 재실행 필요
+#   · 5분 이상 밀리면 watch 멈춤 또는 핫스팟 미연결
 #
 # 검증: python gc_automation.py --verify  또는 gc_verify.bat
 # Cursor: force 후 이 검증만 통과하면 추가 수리 불필요 (exit 0)

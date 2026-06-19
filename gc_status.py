@@ -6,17 +6,18 @@ gc_status.py — 감시 상태 표시 (KCH TXT/JSON + 바탕화면 MMDDHHmm.txt)
 [바탕화면 MMDDHHmm.txt — GC 전체 OK 판정]
 =============================================================================
 
-  --watch 가 살아 있으면 1분마다 바탕화면 파일 이름을 현재 시각으로 바꿉니다.
+  --watch 가 **필수 핫스팟에 연결된 동안만** 바탕화면 파일 이름을 현재 시각으로
+  바꿉니다. Wi-Fi 미연결·다른 SSID 이면 파일명은 멈춘 채 유지됩니다.
 
-    예) 2026-06-15 15:13 → 06151513.txt
+    예) 2026-06-15 15:13 + 핫스팟 OK → 06151513.txt
 
   **다른 PC에서 확인할 때는 이것만 보면 됩니다:**
 
     1) 바탕화면에 8자리.txt (06151513.txt) 가 있는가?
     2) 파일명 시각 ↔ 지금 시각 차이가 ±5분 이내인가?
 
-    OK  → watch + 전체 파이프라인 정상 (Cursor 추가 작업 불필요)
-    FAIL → watch 멈춤 → gc_start_watch.bat 재실행
+    OK  → watch + 핫스팟 + 자동화 준비 완료 (Cursor 추가 작업 불필요)
+    FAIL → watch 멈춤 또는 핫스팟 미연결 → gc_start_watch.bat / Wi-Fi 확인
 
   CLI: python gc_automation.py --verify
   bat: gc_verify.bat
@@ -133,10 +134,11 @@ class StatusReporter:
         status_code: str,
         message: str,
         wifi_ssid: str | None = None,
+        wifi_ready: bool = False,
         last_action: str | None = None,
         sequence_folder: str | None = None,
     ) -> None:
-        """상태 3종 동시 갱신."""
+        """상태 갱신 — JSON/TXT는 매 tick, 바탕화면 heartbeat는 wifi_ready 일 때만."""
         now = datetime.now()
         heartbeat = now.strftime("%Y-%m-%d %H:%M:%S")
         payload = {
@@ -190,7 +192,7 @@ class StatusReporter:
             [
                 "",
                 f"※ '갱신' 시각이 {stale_minutes}분 이상 변하지 않으면 감시가 멈춘 것입니다.",
-                "※ 바탕화면 MMDDHHmm.txt 이름이 1분마다 바뀌면 정상입니다.",
+                "※ 핫스팟 연결 중에만 MMDDHHmm.txt 이름이 갱신됩니다.",
                 "========================================",
                 "",
             ]
@@ -198,17 +200,19 @@ class StatusReporter:
         with open(self.status_txt_path, "w", encoding="utf-8") as status_file:
             status_file.write("\n".join(txt_lines))
 
-        _update_desktop_heartbeat(alive=alive, message=message, now=now)
+        if not alive or wifi_ready:
+            _update_desktop_heartbeat(alive=alive, message=message, now=now)
 
 
 def _update_desktop_heartbeat(alive: bool, message: str, now: datetime | None = None) -> None:
     """
     바탕화면 MMDDHHmm.txt — **GC 전체 OK 검증의 유일한 근거**.
 
-    --watch 가 살아 있으면 매 tick:
+    필수 핫스팟 연결 + alive 일 때만 매 tick:
       · 06151513.txt 처럼 파일 **이름**을 현재 시각으로 rename
       · 어제·중복 파일은 갱신 전후에 삭제해 1개만 유지
 
+    Wi-Fi 미연결 → 파일명 갱신 안 함 (마지막 연결 시각에 고정)
     alive=False (--watch 종료) → GC_중지_MMDDHHmm.txt 로 변경
 
     verify_desktop_heartbeat() 는 이 파일명 시각 ±5분만 검사합니다.
@@ -228,8 +232,8 @@ def _update_desktop_heartbeat(alive: bool, message: str, now: datetime | None = 
             f"갱신: {heartbeat_full}",
             f"상태: {message}",
             "",
-            "※ 파일 이름이 지금 시각과 2분 이상 차이 → 감시 멈춤",
-            "※ 1분마다 파일 이름이 바뀌면 정상",
+            "※ 파일 이름이 지금 시각과 2분 이상 차이 → 감시 멈춤 또는 핫스팟 미연결",
+            "※ 핫스팟 연결 중 1분마다 파일 이름이 바뀌면 정상",
         ]
     else:
         new_name = f"{DESKTOP_STOPPED_PREFIX}{display_time}.txt"
@@ -327,13 +331,13 @@ def verify_desktop_heartbeat(tolerance_minutes: int = HEARTBEAT_TOLERANCE_MINUTE
       · 파일 **이름**에 적힌 시각 vs 현재 시각 → ±tolerance_minutes (기본 5분)
 
     force 성공 여부·메일 발송 여부·KCH JSON 은 **여기서 보지 않습니다.**
-    watch 가 돌고 있으면 파일 이름이 1분마다 바뀌므로 ±5분이면 정상입니다.
+    핫스팟 연결 중 watch 가 돌면 파일 이름이 1분마다 바뀌므로 ±5분이면 정상입니다.
     """
     path = find_latest_desktop_heartbeat_file()
     if not path:
         return DesktopHeartbeatCheck(
             ok=False,
-            reason="바탕화면 MMDDHHmm.txt 없음 — --watch 미실행 또는 멈춤",
+            reason="바탕화면 MMDDHHmm.txt 없음 — --watch 미실행, 멈춤, 또는 아직 핫스팟 미연결",
         )
 
     filename = os.path.basename(path)
@@ -373,7 +377,7 @@ def verify_desktop_heartbeat(tolerance_minutes: int = HEARTBEAT_TOLERANCE_MINUTE
         delta_minutes=delta,
         reason=(
             f"비정상 — {filename} 시각과 현재 시각 차이 {delta:.1f}분 "
-            f"(허용 ±{tolerance_minutes}분)"
+            f"(허용 ±{tolerance_minutes}분) — watch 멈춤 또는 핫스팟 미연결"
         ),
     )
 
