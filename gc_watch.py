@@ -60,8 +60,10 @@ from gc_state import (
     gc1_unlimited_auto_send,
     has_new_data_since_last_run,
     load_send_state,
+    mark_gc1_pdf_attempt_failed,
     record_processing_result,
     recover_stale_pending_email,
+    should_retry_gc1_pdf,
     try_pending_email_retry,
 )
 from gc_status import StatusReporter
@@ -99,6 +101,7 @@ class WatchRunner:
         self.script_dir = script_dir
         self._hotspot_was_connected = False
         self._hotspot_lost_at: float | None = None
+        self._pipeline_running = False
         self._started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self._reporter = StatusReporter(
             watch_opts.status_json_path,
@@ -218,15 +221,18 @@ class WatchRunner:
         self._hotspot_was_connected = True
 
         if not just_connected:
+            if self._pipeline_running:
+                self._publish("processing", "GC1 처리 진행 중 — 완료까지 대기")
+                return
             if gc1_unlimited_auto_send(self.config.chemstation_mode) and self._gc1_has_pending_work():
                 print("\n[감지] GC1 새 CRM/PDF — 핫스팟 연결 유지 중 처리")
-                self._on_hotspot_connected()
+                self._on_hotspot_connected(just_connected=False)
                 return
             self._publish("wifi_ok", "핫스팟 연결 유지 중 — 새 CRM/PDF 있으면 자동 처리")
             return
 
         print("\n[감지] 핫스팟 연결됨 — 새 데이터 확인")
-        self._on_hotspot_connected()
+        self._on_hotspot_connected(just_connected=True)
 
     def _gc1_has_pending_work(self) -> bool:
         """GC1: 핫스pot 유지 중에도 CRM 갱신·새 PDF면 재처리."""
@@ -245,12 +251,7 @@ class WatchRunner:
                     return True
 
         pdf_path = find_active_pdf(self.config)
-        if pdf_path and has_new_data_since_last_run(
-            self.watch_opts.send_state_file,
-            pdf_path,
-            "",
-            "gc1",
-        ):
+        if pdf_path and should_retry_gc1_pdf(self.watch_opts.send_state_file, pdf_path):
             return True
         return False
 
@@ -289,8 +290,10 @@ class WatchRunner:
         print(f"[안내] {summary}")
         return None
 
-    def _on_hotspot_connected(self) -> None:
+    def _on_hotspot_connected(self, *, just_connected: bool = True) -> None:
         """핫스팟 edge: 일일 한도 → 미발송 메일 재시도 → 새 데이터 → pipeline."""
+        if self._pipeline_running:
+            return
         self._publish("wifi_connected", "핫스팟 연결됨 — 새 데이터 확인 중")
 
         allowed, reason = check_runtime_gate(
@@ -344,7 +347,7 @@ class WatchRunner:
                 export_ok, export_pdf, export_msg = ensure_gc1_pdf_exported(
                     self.config.excel_output_dir,
                     self.watch_opts.send_state_file,
-                    force=True,
+                    force=just_connected,
                 )
                 if export_ok and export_pdf:
                     print(f"[Autochro] PDF 내보내기 완료 — {export_msg}")
@@ -372,10 +375,12 @@ class WatchRunner:
                 sequence_folder=pdf_path,
             )
             print(f"[진행] GC1 핫스pot 세션 — {pdf_path}")
+            self._pipeline_running = True
             try:
                 result = run_processing(self.config, self.script_dir)
             finally:
                 os.environ.pop("GC1_SKIP_AUTOCHRO_EXPORT", None)
+                self._pipeline_running = False
             if result.ok and result.sequence_folder and result.latest_acam_mtime is not None:
                 self._record_result(result)
                 self._publish(
@@ -386,10 +391,17 @@ class WatchRunner:
                 )
             else:
                 reason = result.fail_reason or "처리 실패"
+                failed_pdf = result.sequence_folder or pdf_path
+                if failed_pdf:
+                    mark_gc1_pdf_attempt_failed(
+                        self.watch_opts.send_state_file,
+                        failed_pdf,
+                        reason,
+                    )
                 self._publish(
                     "error",
-                    f"{reason} — PDF·시료명 확인",
-                    sequence_folder=pdf_path,
+                    f"{reason} — PDF·시료명 확인 (동일 PDF watch 재시도 안 함)",
+                    sequence_folder=failed_pdf,
                 )
             return
 

@@ -247,7 +247,52 @@ def mark_sequence_processed(
     state["last_action_summary"] = action_summary
     if crm_mtime is not None:
         state["last_processed_crm_mtime"] = crm_mtime
+    if sequence_folder and state.get("last_failed_gc1_pdf") == sequence_folder:
+        for key in (
+            "last_failed_gc1_pdf",
+            "last_failed_gc1_pdf_mtime",
+            "last_failed_gc1_reason",
+            "last_failed_gc1_at",
+        ):
+            state.pop(key, None)
     save_send_state(state_path, state)
+
+
+def mark_gc1_pdf_attempt_failed(state_path: str, pdf_path: str, fail_reason: str) -> None:
+    """GC1 watch — 동일 PDF 파싱/엑셀 실패 시 15초마다 Autochro 재실행 방지."""
+    from gc_gc1 import get_latest_pdf_mtime
+
+    mtime = get_latest_pdf_mtime(pdf_path)
+    if mtime is None:
+        return
+    state = load_send_state(state_path)
+    state["last_failed_gc1_pdf"] = pdf_path
+    state["last_failed_gc1_pdf_mtime"] = mtime
+    state["last_failed_gc1_reason"] = fail_reason
+    state["last_failed_gc1_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    save_send_state(state_path, state)
+    print(
+        "[안내] GC1 처리 실패 기록 — 동일 PDF는 watch에서 재시도 안 함 "
+        "(핫스팟 재연결·force·새 PDF/CRM 필요)"
+    )
+    print(f"       사유: {fail_reason}")
+
+
+def should_retry_gc1_pdf(state_path: str, pdf_path: str) -> bool:
+    """마지막 처리 이후 새 PDF이고, 동일 파일로 이미 실패 기록이 없을 때만 재시도."""
+    if not has_new_data_since_last_run(state_path, pdf_path, "", "gc1"):
+        return False
+    from gc_gc1 import get_latest_pdf_mtime
+
+    mtime = get_latest_pdf_mtime(pdf_path)
+    if mtime is None:
+        return False
+    state = load_send_state(state_path)
+    if state.get("last_failed_gc1_pdf") == pdf_path:
+        failed_mtime = state.get("last_failed_gc1_pdf_mtime")
+        if failed_mtime is not None and float(failed_mtime) == float(mtime):
+            return False
+    return True
 
 
 def get_pending_email_retry(state: dict) -> Optional[dict]:
