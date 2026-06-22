@@ -675,6 +675,7 @@ def generate_sample_name(filename):
     temp = temp_match.group(1) if temp_match else "600"
 
     cat_str = re.sub(r'\d{8}', '', name)
+    cat_str = re.sub(r'\(GC3[^)]*\)', '', cat_str, flags=re.IGNORECASE)
     # 반응·부가 접미사 제거 후 촉매 토큰만 남김 (Origin Comments 촉매부)
     cat_str = re.sub(r'DRME|DRM|DRE|_원본|_GC.*|계산완료|\.xlsx|\.xls|C2H6|CH4', '', cat_str, flags=re.IGNORECASE)
     # dre@(3) — 농도 표기는 촉매명이 아니므로 제거 (@650 온도는 아래 @\d+ 에서 제거)
@@ -732,7 +733,7 @@ def _calc_output_path(input_file, suffix):
     return os.path.join(src_dir, out_name)
 
 def _strip_calc_suffix(name):
-    return re.sub(r'_GC2_(DRE|DRM)_계산완료$|_GC3_DRME_계산완료$|_GC1_(DRE|DRM)_계산완료$', '', name)
+    return re.sub(r'_GC2_(DRE|DRM)_계산완료$|_GC3_(DRE|DRME)_계산완료$|_GC1_(DRE|DRM)_계산완료$', '', name)
 
 def _strip_mail_dedup_suffix(name):
     """IMAP 첨부 중복 저장 시 붙는 _1781505851 같은 타임스탬프 접미사 제거."""
@@ -1172,6 +1173,7 @@ def reaction_type_from_output_file(saved_excel):
     base = os.path.basename(saved_excel)
     if "_GC2_DRM_" in base: return "DRM"
     if "_GC1_DRM_" in base: return "DRM"
+    if "_GC3_DRE_" in base: return "DRE"
     if "_GC3_DRME_" in base: return "DRME"
     if "_GC2_DRE_" in base: return "DRE"
     if "_GC1_DRE_" in base: return "DRE"
@@ -1401,8 +1403,11 @@ def process_excel(input_file):
         all_warnings.append(f"⚠️ [교차 검증 오류] 피크는 GC2인데 파일명은 DRME입니다. (일단 DRE로 간주하여 처리합니다)")
         reaction_target = 'DRE'
     elif eq == 'GC3' and reaction_target in ['DRM', 'DRE']:
-        all_warnings.append(f"⚠️ [교차 검증 오류] 피크는 GC3인데 파일명은 {reaction_target}입니다. (일단 DRME로 간주하여 처리합니다)")
-        reaction_target = 'DRME'
+        if reaction_target == 'DRE' and re.search(r'GC3_OCM', os.path.basename(input_file), re.I):
+            pass  # GC3 장비 DRE(OCM) — 파일명 DRE 유지
+        else:
+            all_warnings.append(f"⚠️ [교차 검증 오류] 피크는 GC3인데 파일명은 {reaction_target}입니다. (일단 DRME로 간주하여 처리합니다)")
+            reaction_target = 'DRME'
     elif eq == 'GC1' and reaction_target == 'DRME':
         all_warnings.append(f"⚠️ [교차 검증 오류] 피크는 GC1인데 파일명은 DRME입니다. (일단 DRE로 간주하여 처리합니다)")
         reaction_target = 'DRE'
@@ -1482,7 +1487,8 @@ def process_excel(input_file):
         
         cols = ['H2 Area', 'CO Area', 'CO2 Area', 'CH4 Area', 'C2H4 Area', 'C2H6 Area',
                 'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
-        out_name = _calc_output_path(input_file, '_GC3_DRME_계산완료')
+        gc3_suffix = '_GC3_DRE_계산완료' if reaction_target == 'DRE' else '_GC3_DRME_계산완료'
+        out_name = _calc_output_path(input_file, gc3_suffix)
 
     # [수식 적용 단계: GC1 (DRE / DRM) — GC3 와 동일 나눗셈 교정, FID+TCD 병합]
     elif eq == 'GC1':
