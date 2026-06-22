@@ -1398,19 +1398,20 @@ def process_excel(input_file):
     all_warnings = []
     df_p = pd.DataFrame()
 
-    # 🚨 [교차 검증 경고]
+    # 🚨 [교차 검증] 파일명 반응 타입이 최우선 — 장비·파일명 불일치는 경고만
     if eq == 'GC2' and reaction_target == 'DRME':
-        all_warnings.append(f"⚠️ [교차 검증 오류] 피크는 GC2인데 파일명은 DRME입니다. (일단 DRE로 간주하여 처리합니다)")
-        reaction_target = 'DRE'
+        all_warnings.append(
+            f"⚠️ [교차 검증] 피크는 GC2인데 파일명은 DRME입니다. 파일명 기준으로 DRME 계산합니다."
+        )
     elif eq == 'GC3' and reaction_target in ['DRM', 'DRE']:
-        if reaction_target == 'DRE' and re.search(r'GC3_OCM', os.path.basename(input_file), re.I):
-            pass  # GC3 장비 DRE(OCM) — 파일명 DRE 유지
-        else:
-            all_warnings.append(f"⚠️ [교차 검증 오류] 피크는 GC3인데 파일명은 {reaction_target}입니다. (일단 DRME로 간주하여 처리합니다)")
-            reaction_target = 'DRME'
+        all_warnings.append(
+            f"⚠️ [교차 검증] 피크는 GC3인데 파일명은 {reaction_target}입니다. "
+            f"파일명 기준으로 {reaction_target} 계산합니다."
+        )
     elif eq == 'GC1' and reaction_target == 'DRME':
-        all_warnings.append(f"⚠️ [교차 검증 오류] 피크는 GC1인데 파일명은 DRME입니다. (일단 DRE로 간주하여 처리합니다)")
-        reaction_target = 'DRE'
+        all_warnings.append(
+            f"⚠️ [교차 검증] 피크는 GC1인데 파일명은 DRME입니다. 파일명 기준으로 DRME 계산합니다."
+        )
 
     if eq == 'GC1' and not _gc1_calib_ready():
         all_warnings.append(
