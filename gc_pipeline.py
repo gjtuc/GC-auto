@@ -93,7 +93,19 @@ from gc_chemstation import (
 )
 from gc_config import AppConfig
 from gc_mailer import generate_email_body, send_email_via_smtp
+from gc_sanitize import sanitize_seq_date
 from gc_state import can_auto_send_for_mode, gc1_unlimited_auto_send
+
+
+def _gc1_output_date(report, config: AppConfig) -> str:
+    """GC1 엑셀·메일 날짜 — --sequence-date 우선, 없으면 PDF 추론."""
+    raw = (config.sequence_date or "").strip()
+    if raw:
+        try:
+            return sanitize_seq_date(raw)
+        except Exception:
+            print(f"[경고] --sequence-date 무효({raw!r}) — PDF 날짜 사용: {report.analysis_date}")
+    return report.analysis_date
 
 
 def _try_auto_email(
@@ -440,7 +452,8 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
         )
 
     print(f"\n[안내] GC1 PDF: {os.path.basename(pdf_path)}")
-    print(f"[안내] 분석 날짜: {report.analysis_date}")
+    analysis_date = _gc1_output_date(report, config)
+    print(f"[안내] 분석 날짜: {analysis_date}")
     print(f"[안내] 시료: '{sample_name}'")
     kept_injections = max(len(report.fid_cycles), len(report.tcd_cycles))
     print(f"[안내] PDF 주입 {report.total_injections}회 → 엑셀 적재 {kept_injections}회")
@@ -458,7 +471,7 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
         )
     summarize_assigned_compounds(report)
 
-    output_path = build_output_filename(config.excel_output_dir, sample_name, report.analysis_date)
+    output_path = build_output_filename(config.excel_output_dir, sample_name, analysis_date)
     latest_mtime = get_latest_pdf_mtime(pdf_path)
     total_peaks = sum(len(c) for c in report.fid_cycles) + sum(len(c) for c in report.tcd_cycles)
 
@@ -475,7 +488,7 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
         if config.send_email:
             email_body = generate_email_body(
                 sample_name,
-                report.analysis_date,
+                analysis_date,
                 len(report.tcd_cycles) or len(report.fid_cycles),
                 total_peaks,
                 os.path.basename(output_path),
@@ -490,7 +503,7 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
                 config,
                 output_path,
                 sample_name,
-                report.analysis_date,
+                analysis_date,
                 email_body,
                 script_dir,
             )
@@ -521,7 +534,7 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
             output_path=output_path,
             email_body=email_body,
             sample_name=sample_name,
-            seq_date=report.analysis_date,
+            seq_date=analysis_date,
         )
 
     except PermissionError:
