@@ -1554,21 +1554,60 @@ def _comment_matches_identity(comment, identity_key):
     matched = sum(1 for token in tokens if token in text)
     return matched >= max(2, int(len(tokens) * 0.6))
 
+def _comment_sort_date(text):
+    """Origin Comments / 시료명 선두 YYYYMMDD — 열 날짜순 정렬용."""
+    match = re.match(r"^(\d{8})", (text or "").strip())
+    return match.group(1) if match else None
+
+def _worksheet_dated_columns(wks):
+    """(col_idx, sort_date) — Comments 에 날짜가 있는 열만, 왼쪽→오른쪽."""
+    dated = []
+    for i in range(1, wks.cols):
+        sort_date = _comment_sort_date(wks.get_label(i, "C") or "")
+        if sort_date:
+            dated.append((i, sort_date))
+    return dated
+
+def _insert_worksheet_column_before(wks, col_idx):
+    """0-based col_idx 앞에 빈 Y 열 1개 삽입 (기존 열 오른쪽으로 밀림)."""
+    from originpro.config import po
+    lt_col = col_idx + 1
+    rng = wks.lt_range()
+    po.LT_execute(f"page.xlcolname=0; {rng}.col={lt_col}; {rng}.insert(GCData);")
+
 def _find_worksheet_column_for_sample(wks, sample_name, identity_key=None):
     """
     시료 데이터를 넣을 워크시트 열.
-    같은 identity(재전송) → Comments 정확 일치 → 새 열.
+    · 동일 Comments → 해당 열 갱신
+    · identity_key 일치(재전송) → 해당 열 갱신
+    · 없으면 Comments 날짜(YYYYMMDD)순으로 삽입 — 맨 끝 무조건 추가 금지
     """
-    if identity_key:
-        for i in range(1, wks.cols):
-            comment = wks.get_label(i, 'C') or ''
-            if _comment_matches_identity(comment, identity_key):
-                return i
     for i in range(1, wks.cols):
-        comment = wks.get_label(i, 'C')
+        comment = wks.get_label(i, "C")
         if comment and comment.strip() == sample_name:
             return i
-    return wks.cols
+    if identity_key:
+        for i in range(1, wks.cols):
+            comment = wks.get_label(i, "C") or ""
+            if _comment_matches_identity(comment, identity_key):
+                return i
+
+    new_date = _comment_sort_date(sample_name)
+    dated_cols = _worksheet_dated_columns(wks)
+    if not new_date:
+        return dated_cols[-1][0] + 1 if dated_cols else 1
+
+    insert_at = None
+    for col_idx, sort_date in dated_cols:
+        if new_date < sort_date:
+            insert_at = col_idx
+            break
+    if insert_at is None:
+        insert_at = dated_cols[-1][0] + 1 if dated_cols else 1
+
+    if insert_at < wks.cols and (wks.get_label(insert_at, "C") or "").strip():
+        _insert_worksheet_column_before(wks, insert_at)
+    return insert_at
 
 def update_origin(opju_path, df_data, sample_name, save_in_place=True, identity_key=None):
     """
