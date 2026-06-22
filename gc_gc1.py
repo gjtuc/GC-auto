@@ -1097,6 +1097,60 @@ def load_gc1_phase_thresholds() -> Gc1PhaseThresholds:
     )
 
 
+def load_gc1_excel_start_cycle() -> Optional[int]:
+    """GC1_EXCEL_START_CYCLE=N — 자동 trim 대신 N번째 주입(1-based)부터 엑셀 적재."""
+    raw = os.getenv("GC1_EXCEL_START_CYCLE", "").strip()
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    return value if value >= 1 else None
+
+
+def _trim_from_fixed_cycle(
+    fid_cycles: List[List[dict]],
+    tcd_cycles: List[List[dict]],
+    start_cycle_1based: int,
+    *,
+    quiet: bool = False,
+) -> Tuple[
+    List[List[dict]],
+    List[List[dict]],
+    int,
+    int,
+    int,
+    int,
+    bool,
+]:
+    count = max(len(fid_cycles), len(tcd_cycles))
+    keep_from = start_cycle_1based - 1
+    if count == 0 or keep_from >= count:
+        if not quiet:
+            print(
+                f"\n[GC1] GC1_EXCEL_START_CYCLE={start_cycle_1based} — "
+                f"총 {count}주입, 엑셀에 넣을 데이터 없음"
+            )
+        return [], [], min(keep_from, count), 0, 0, 0, False
+
+    kept_count = count - keep_from
+    if not quiet:
+        print(
+            f"\n[GC1] GC1_EXCEL_START_CYCLE={start_cycle_1based} — "
+            f"앞 {keep_from}주입 제외 → 엑셀 {kept_count}주입"
+        )
+    return (
+        fid_cycles[keep_from:],
+        tcd_cycles[keep_from:],
+        keep_from,
+        0,
+        0,
+        0,
+        True,
+    )
+
+
 def get_compound_area(cycle: List[dict], compound: str) -> Optional[float]:
     for row in cycle:
         name = (row.get("name") or row.get("분석된 원소") or "").strip()
@@ -1282,7 +1336,13 @@ def trim_reduction_and_first_reaction(
       1) H2~20000 나오기 전 노이즈 + 환원(H2~20000) 제외
       2) 환원 직후 전환 1주입 제외 (CO 노이즈가 있어도 반응으로 보지 않음)
       3) 첫 반응 주입부터 엑셀 적재 — **GC1 전용** (GC2/GC3 는 첫 반응 1회 제외)
+
+    GC1_EXCEL_START_CYCLE=N 이 설정되면 위 규칙 대신 N번째 주입(1-based)부터 적재.
     """
+    fixed_start = load_gc1_excel_start_cycle()
+    if fixed_start is not None:
+        return _trim_from_fixed_cycle(fid_cycles, tcd_cycles, fixed_start, quiet=quiet)
+
     thresholds = load_gc1_phase_thresholds()
     count = max(len(fid_cycles), len(tcd_cycles))
     if count == 0:
