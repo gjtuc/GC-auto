@@ -2206,11 +2206,33 @@ if __name__ == "__main__":
     parser.add_argument("--manual", action="store_true", help="1단계 메일 건너뛰고 엑셀 파일을 직접 지정")
     parser.add_argument("--opju", default=None, help="Origin .opju 직접 지정 (G: 자동 아카이브 비활성)")
     parser.add_argument("--no-archive", action="store_true", help="G: 실험 폴더 생성 및 Origin 연동 건너뛰기")
+    parser.add_argument("--poll-once", action="store_true", help="메일 1회 확인 후 종료 (비대화형)")
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="iPhone 핫스팟 감시 — 연결 후 DATA_PC_HOTSPOT_DELAY_SEC 뒤 자동 파이프라인",
+    )
+    parser.add_argument(
+        "--no-wifi-check",
+        action="store_true",
+        help="--watch 테스트용 — 핫스팟 SSID 검사 생략",
+    )
     args = parser.parse_args()
 
     print("=" * 60)
     print(" 🧪 GC 분석 & Origin 자동화 (메일 수신 → 계산 → Origin) 🧪")
     print("=" * 60)
+
+    if args.watch:
+        from data_pc_watch import run_data_pc_watch
+
+        run_data_pc_watch(
+            SCRIPT_DIR,
+            opju_path=args.opju,
+            auto_archive=not args.no_archive and args.opju is None,
+            skip_wifi_check=args.no_wifi_check,
+        )
+        sys.exit(0)
 
     if args.manual:
         print("\n[수동 모드] 메일 건너뜀 — 엑셀 파일을 직접 지정합니다.")
@@ -2225,6 +2247,13 @@ if __name__ == "__main__":
             )
             print("-" * 60)
         sys.exit(0)
+
+    if args.poll_once:
+        count = process_new_gc_emails(
+            opju_path=args.opju,
+            auto_archive=not args.no_archive and args.opju is None,
+        )
+        sys.exit(0 if count >= 0 else 1)
 
     # 기본 모드: 1단계 = 네이버 메일 수신
     while True:
