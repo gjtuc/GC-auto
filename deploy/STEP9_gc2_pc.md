@@ -66,25 +66,23 @@ notepad deploy\gc_automation.env.gc2
 | `GC_INSTANCE` | `gc2` (GC3: `gc3`) | `gc1` 아님 |
 | `EXCEL_OUTPUT_DIR` | `Desktop\KCH` | `박은규` 아님 |
 | `CHEMSTATION_MODE` | `8860` (GC3: `chem32`) | `gc1` 아님 |
-| `REQUIRED_HOTSPOT` | `AndroidHotspot5841` | `iPhone` 아님 |
+| `REQUIRED_HOTSPOT` | `iptime` (구 `AndroidHotspot5841`) | `iPhone` 아님 |
 | `NAVER_EMAIL` | `kimcha0809@...` | `john3556@...` 아님 |
 
 **repo의 `deploy/gc_automation.env.gc2` 를 그대로 덮어쓰지 말 것** — 기존 앱비밀번호 유지.
 
-### 9.2a — 사무실 Wi-Fi vs 핫스팟 (혼동 금지)
+### 9.2a — 사무실 Wi-Fi vs 핫스팟 (GC8860, 2026-06~)
 
-2026-06 TP-Link 증폭기 설치 후 연구실 Wi-Fi 구성 (GC8860):
-
-| 구분 | SSID | 용도 |
+| 구분 | SSID | 비고 |
 |------|------|------|
-| **증폭기** | `iptime 2`, `iptime_5G` | PC가 둘 중 하나에 자동 연결될 수 있음 |
-| **본 공유기** | `iptime` | 휴대폰 Wi-Fi 연결 대상 |
-| **PC 사무실** | `iptime_5G` / `iptime 2` / `iptime` | git, Cursor — **어느 쪽이든 OK** |
-| **핫스팟** (`REQUIRED_HOTSPOT`) | `AndroidHotspot5841` | watch·SMTP 메일 — **PC가 휴대폰 핫스팟에 연결될 때만** |
+| **PC 사무실** | `iptime`, `iptime 2`, `iptime_5G` | **세 개 모두 연결 가능** — git, Cursor OK |
+| **본 공유기** | `iptime` | 휴대폰 Wi-Fi·공유기 |
+| **증폭기** | `iptime 2`, `iptime_5G` | PC가 자동 연결될 수 있음 |
+| **핫스팟** (`REQUIRED_HOTSPOT`) | `iptime` | 구 `AndroidHotspot5841` 에서 이름 변경 |
 
-- 휴대폰은 `iptime`에 붙어 있어도 됨. GC 자동 메일 시 **휴대폰 핫스팟 ON** → PC Wi-Fi를 `AndroidHotspot5841`로 전환.
-- 증폭기·공유기 SSID가 바뀌어도 **`REQUIRED_HOTSPOT` 은 휴대폰 핫스팟 이름 그대로** 둡니다.  
-참고: `deploy/machine_profile.reference.gc8860.json`
+- `Desktop\KCH\gc_automation.env` 에 `REQUIRED_HOTSPOT=iptime` 반영.
+- **SSID 주의:** 공유기·핫스팟 모두 `iptime` 이라 PC가 사무실 `iptime`(공유기)에 붙어 있어도 watch가 “핫스팟 연결”로 볼 수 있음(사무실 인터넷 SMTP). `iptime_5G`·`iptime 2` 에선 SSID 불일치 — 메일 시 휴대폰 핫스팟 `iptime` 연결.
+- 참고: `deploy/machine_profile.reference.gc8860.json`
 
 ---
 

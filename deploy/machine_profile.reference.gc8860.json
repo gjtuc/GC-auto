@@ -8,8 +8,8 @@
     "operator": "차헌",
     "chemstation_mode": "8860",
     "output_dir": "Desktop\\KCH",
-    "required_hotspot": "AndroidHotspot5841",
-    "note": "GC3 이면 GC_INSTANCE=gc3, CHEMSTATION_MODE=chem32"
+    "required_hotspot": "iptime",
+    "note": "GC3 이면 GC_INSTANCE=gc3, CHEMSTATION_MODE=chem32. 핫스팟 SSID는 2026-06 AndroidHotspot5841 에서 iptime 으로 변경."
   },
   "recorded_at": "2026-06-23",
   "identifiers": {
@@ -20,14 +20,12 @@
     "cpu": "Intel(R) Core(TM) i5-10210U CPU @ 1.60GHz"
   },
   "network": {
-    "amplifier_ssids": ["iptime 2", "iptime_5G"],
-    "phone_wifi_ssid": "iptime",
-    "pc_office_ssids": ["iptime_5G", "iptime 2", "iptime"],
-    "pc_typical_ssid": "iptime_5G",
-    "required_hotspot": "AndroidHotspot5841",
-    "office_wifi_note": "2026-06 TP-Link 증폭기 설치. PC는 iptime_5G·iptime 2·iptime 중 자동 연결 가능 — git/Cursor 모두 OK.",
-    "phone_wifi_note": "휴대폰은 iptime(본 공유기)에 연결. GC 메일 시 휴대폰 핫스팟 켜고 PC를 AndroidHotspot5841에 연결.",
-    "hotspot_note": "env REQUIRED_HOTSPOT — 사무실·증폭기 SSID로 바꾸지 말 것."
+    "pc_office_ssids": ["iptime", "iptime 2", "iptime_5G"],
+    "pc_office_note": "PC는 세 SSID 모두 연결 가능 (자동·수동). git/Cursor·일반 인터넷 OK.",
+    "phone_hotspot_ssid": "iptime",
+    "phone_hotspot_previous": "AndroidHotspot5841",
+    "required_hotspot": "iptime",
+    "ssid_collision_note": "본 공유기·휴대폰 핫스팟 SSID 모두 iptime. PC가 사무실 iptime(공유기)에 붙어 있어도 REQUIRED_HOTSPOT 일치로 watch가 동작할 수 있음(사무실 인터넷으로 SMTP). iptime_5G·iptime 2 에선 SSID 불일치 — 핫스팟 iptime 연결 시에만 일치."
   },
   "paths": {
     "repo": "C:\\Users\\User\\chemstation-gc-automation",
@@ -36,7 +34,6 @@
   },
   "notes": {
     "pc_naming": "GC2/GC3 장비 PC. 차헌 PC=Desktop\\.cursor (BFMLJ9J) 와 별개.",
-    "wifi_profiles_windows": "AndroidHotspot5841 2 는 Windows 중복 프로필 이름일 뿐 SSID는 AndroidHotspot5841.",
     "do_not_commit": "로컬 machine_profile.json·gc_automation.env — Git 제외",
     "guide": "deploy/STEP9_gc2_pc.md"
   }

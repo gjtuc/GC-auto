@@ -7,7 +7,7 @@
     "operator": "차헌",
     "chemstation_mode": "8860",
     "output_dir": "Desktop\\KCH",
-    "required_hotspot": "AndroidHotspot5841",
+    "required_hotspot": "iptime",
     "note": "GC3 이면 GC_INSTANCE=gc3, CHEMSTATION_MODE=chem32"
   },
   "recorded_at": "YYYY-MM-DD",

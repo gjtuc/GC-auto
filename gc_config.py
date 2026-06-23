@@ -6,7 +6,7 @@ gc_config.py — 경로·상수·실행 설정(AppConfig)
 [PC 명칭 — 오해 금지]  docs/PC_NAMING.md
 =============================================================================
 
-  이 파일 기본값은 **차헌의 GC2/GC3 장비 PC** 쪽(Desktop\\KCH, AndroidHotspot5841)입니다.
+  이 파일 기본값은 **차헌의 GC2/GC3 장비 PC** 쪽(Desktop\\KCH, iptime 핫스팟)입니다.
   **은규 PC / 차헌 PC** 에서는 gc_automation.py 를 돌리지 않으므로 이 기본값과 무관합니다.
 
   | PC 종류              | env 위치              | 이 파일 기본값 덮어씀? |
@@ -75,7 +75,7 @@ def default_watch_status_txt() -> str:
 # ---------------------------------------------------------------------------
 
 # GC2/GC3 장비 PC 핫스팟 SSID. GC1 env에서 iPhone으로 덮어씀.
-REQUIRED_HOTSPOT_SSID = "AndroidHotspot5841"
+REQUIRED_HOTSPOT_SSID = "iptime"
 
 # GC2/GC3 — 레거시 상수 (am/pm 슬롯; 현재는 session_based_auto_send 로 한도 미사용)
 DAILY_SEND_LIMIT = 2
