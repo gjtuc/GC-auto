@@ -8,8 +8,8 @@
     "operator": "차헌",
     "chemstation_mode": "8860",
     "output_dir": "Desktop\\KCH",
-    "required_hotspot": "iptime",
-    "note": "GC3 이면 GC_INSTANCE=gc3, CHEMSTATION_MODE=chem32. 핫스팟 SSID는 2026-06 AndroidHotspot5841 에서 iptime 으로 변경."
+    "required_hotspot": "iptime,iptime 2,iptime_5G",
+    "note": "구 AndroidHotspot5841 — Wi-Fi 게이트가 위 3 SSID 중 하나면 GC2 역할 수행"
   },
   "recorded_at": "2026-06-23",
   "identifiers": {
@@ -20,12 +20,9 @@
     "cpu": "Intel(R) Core(TM) i5-10210U CPU @ 1.60GHz"
   },
   "network": {
-    "pc_office_ssids": ["iptime", "iptime 2", "iptime_5G"],
-    "pc_office_note": "PC는 세 SSID 모두 연결 가능 (자동·수동). git/Cursor·일반 인터넷 OK.",
-    "phone_hotspot_ssid": "iptime",
-    "phone_hotspot_previous": "AndroidHotspot5841",
-    "required_hotspot": "iptime",
-    "ssid_collision_note": "본 공유기·휴대폰 핫스팟 SSID 모두 iptime. PC가 사무실 iptime(공유기)에 붙어 있어도 REQUIRED_HOTSPOT 일치로 watch가 동작할 수 있음(사무실 인터넷으로 SMTP). iptime_5G·iptime 2 에선 SSID 불일치 — 핫스팟 iptime 연결 시에만 일치."
+    "wifi_gate_ssids": ["iptime", "iptime 2", "iptime_5G"],
+    "wifi_gate_previous": "AndroidHotspot5841",
+    "note": "PC가 세 SSID 중 어디에 연결돼도 GC2 watch·pipeline Wi-Fi 조건 충족. GC1·데이터 PC 설정과 무관."
   },
   "paths": {
     "repo": "C:\\Users\\User\\chemstation-gc-automation",

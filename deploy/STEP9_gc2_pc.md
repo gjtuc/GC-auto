@@ -66,22 +66,23 @@ notepad deploy\gc_automation.env.gc2
 | `GC_INSTANCE` | `gc2` (GC3: `gc3`) | `gc1` 아님 |
 | `EXCEL_OUTPUT_DIR` | `Desktop\KCH` | `박은규` 아님 |
 | `CHEMSTATION_MODE` | `8860` (GC3: `chem32`) | `gc1` 아님 |
-| `REQUIRED_HOTSPOT` | `iptime` (구 `AndroidHotspot5841`) | `iPhone` 아님 |
+| `REQUIRED_HOTSPOT` | `iptime,iptime 2,iptime_5G` (구 `AndroidHotspot5841`) | `iPhone` 아님 |
 | `NAVER_EMAIL` | `kimcha0809@...` | `john3556@...` 아님 |
 
 **repo의 `deploy/gc_automation.env.gc2` 를 그대로 덮어쓰지 말 것** — 기존 앱비밀번호 유지.
 
-### 9.2a — 사무실 Wi-Fi vs 핫스팟 (GC8860, 2026-06~)
+### 9.2a — GC2 Wi-Fi 게이트 (GC8860, 2026-06~)
 
-| 구분 | SSID | 비고 |
-|------|------|------|
-| **PC 사무실** | `iptime`, `iptime 2`, `iptime_5G` | **세 개 모두 연결 가능** — git, Cursor OK |
-| **본 공유기** | `iptime` | 휴대폰 Wi-Fi·공유기 |
-| **증폭기** | `iptime 2`, `iptime_5G` | PC가 자동 연결될 수 있음 |
-| **핫스팟** (`REQUIRED_HOTSPOT`) | `iptime` | 구 `AndroidHotspot5841` 에서 이름 변경 |
+구 `AndroidHotspot5841` 대신 **아래 SSID 중 하나**에 연결되면 GC2 watch·pipeline Wi-Fi 조건 충족:
 
-- `Desktop\KCH\gc_automation.env` 에 `REQUIRED_HOTSPOT=iptime` 반영.
-- **SSID 주의:** 공유기·핫스팟 모두 `iptime` 이라 PC가 사무실 `iptime`(공유기)에 붙어 있어도 watch가 “핫스팟 연결”로 볼 수 있음(사무실 인터넷 SMTP). `iptime_5G`·`iptime 2` 에선 SSID 불일치 — 메일 시 휴대폰 핫스팟 `iptime` 연결.
+| SSID |
+|------|
+| `iptime` |
+| `iptime 2` |
+| `iptime_5G` |
+
+- env: `REQUIRED_HOTSPOT=iptime,iptime 2,iptime_5G` (쉼표 구분)
+- PC가 세 SSID 중 **어디에 붙어 있어도** GC2 역할(acam → xlsx → 메일)만 수행하면 됨. GC1·데이터 PC 설정은 변경 없음.
 - 참고: `deploy/machine_profile.reference.gc8860.json`
 
 ---
@@ -126,7 +127,7 @@ python gc_automation.py --show-profile
 - `GC_INSTANCE` / 인스턴스: **gc2**
 - 출력 폴더: `Desktop\KCH`
 - env: `Desktop\KCH\gc_automation.env`
-- 핫스팟: **iptime** (구 AndroidHotspot5841)
+- 핫스팟: **iptime / iptime 2 / iptime_5G** (구 AndroidHotspot5841)
 - ChemStation 모드: **8860**
 
 또는:
@@ -219,7 +220,7 @@ gc_git_push.bat
 - [ ] 9.2 `Desktop\KCH\gc_automation.env` GC2 값 유지
 - [ ] 9.3 `machine_profile.json` (`gc2_pc`)
 - [ ] 9.4 `SYNC_STATUS.md` PC 등록
-- [ ] 9.5 `--show-profile` → gc2, KCH, iptime
+- [ ] 9.5 `--show-profile` → gc2, KCH, iptime / iptime 2 / iptime_5G
 - [ ] 9.6 GC1 설정 유입 없음 (`verify_gc2_setup.ps1`)
 - [ ] 9.7 `--verify`
 - [ ] 9.8 `--force --no-email` → xlsx

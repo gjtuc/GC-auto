@@ -6,7 +6,7 @@ gc_config.py — 경로·상수·실행 설정(AppConfig)
 [PC 명칭 — 오해 금지]  docs/PC_NAMING.md
 =============================================================================
 
-  이 파일 기본값은 **차헌의 GC2/GC3 장비 PC** 쪽(Desktop\\KCH, iptime 핫스팟)입니다.
+  이 파일 기본값은 **차헌의 GC2/GC3 장비 PC** 쪽(Desktop\\KCH, Wi-Fi 게이트 iptime 3종)입니다.
   **은규 PC / 차헌 PC** 에서는 gc_automation.py 를 돌리지 않으므로 이 기본값과 무관합니다.
 
   | PC 종류              | env 위치              | 이 파일 기본값 덮어씀? |
@@ -48,8 +48,11 @@ from typing import Optional
 # ChemStation / KCH 경로
 # ---------------------------------------------------------------------------
 
-# Agilent ChemStation 기본 Data 루트 — GC2/GC3 장비 PC. GC1은 Autochro(PDF)라 거의 미사용.
+# Agilent ChemStation 기본 Data 루트 — GC2 장비 PC (8860 acam).
 DEFAULT_CHEMSTATION_DATA = r"C:\Users\Public\Documents\ChemStation\1\Data"
+
+# Chem32 / GC7890 — GC3 장비 PC (Report.TXT). env CHEMSTATION_DATA_PATH 로 덮어씀.
+DEFAULT_GC3_DATA = r"C:\Chem32\1\Data"
 
 # KCH 엑셀·상태 파일 — GC2/GC3 **장비** PC 기본 (Desktop\KCH).
 # GC1 **장비** PC는 Desktop\박은규 (env EXCEL_OUTPUT_DIR).
@@ -74,8 +77,8 @@ def default_watch_status_txt() -> str:
 # GC2 핫스팟 / 자동 메일 한도
 # ---------------------------------------------------------------------------
 
-# GC2/GC3 장비 PC 핫스팟 SSID. GC1 env에서 iPhone으로 덮어씀. (2026-06: AndroidHotspot5841 → iptime)
-REQUIRED_HOTSPOT_SSID = "iptime"
+# GC2/GC3 Wi-Fi 게이트 SSID (쉼표 구분). 구 AndroidHotspot5841 → 연구실 iptime 3종.
+REQUIRED_HOTSPOT_SSID = "iptime,iptime 2,iptime_5G"
 
 # GC2/GC3 — 레거시 상수 (am/pm 슬롯; 현재는 session_based_auto_send 로 한도 미사용)
 DAILY_SEND_LIMIT = 2

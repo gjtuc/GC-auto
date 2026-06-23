@@ -42,6 +42,7 @@ from gc_state import (
     get_today_session_send_count,
     load_send_state,
 )
+from gc_wifi import format_required_ssids_label, parse_required_ssids
 
 DESKTOP_HEARTBEAT_RE = re.compile(r"^\d{8}\.txt$")
 _last_desktop_heartbeat_path: str | None = None
@@ -162,13 +163,14 @@ class StatusReporter:
             json.dump(payload, status_file, ensure_ascii=False, indent=2)
 
         state_label = "실행 중" if alive else "중지됨"
+        required_label = format_required_ssids_label(self.required_ssid)
         if wifi_ssid:
-            if wifi_ssid == self.required_ssid:
+            if wifi_ssid in parse_required_ssids(self.required_ssid):
                 wifi_line = f"{wifi_ssid} (필수 SSID 일치)"
             else:
                 wifi_line = f"{wifi_ssid} (필수 SSID와 다름)"
         else:
-            wifi_line = f"미연결 (필수: {self.required_ssid})"
+            wifi_line = f"미연결 (필수: {required_label})"
 
         stale_minutes = max(2, (self.watch_interval * 2 + 59) // 60)
         txt_lines = [

@@ -60,18 +60,42 @@ def get_connected_wifi_ssid() -> str | None:
     return None
 
 
+def parse_required_ssids(required_ssid: str) -> list[str]:
+    """REQUIRED_HOTSPOT — 단일 SSID 또는 쉼표 구분 여러 SSID."""
+    if not required_ssid or not str(required_ssid).strip():
+        return []
+    return [part.strip() for part in str(required_ssid).split(",") if part.strip()]
+
+
+def format_required_ssids_label(required_ssid: str) -> str:
+    """로그·오류 메시지용 SSID 표기."""
+    allowed = parse_required_ssids(required_ssid)
+    if not allowed:
+        return required_ssid or "(미설정)"
+    if len(allowed) == 1:
+        return allowed[0]
+    return " / ".join(allowed)
+
+
 def is_required_hotspot_connected(required_ssid: str, skip_wifi_check: bool = False) -> bool:
     if skip_wifi_check:
         return True
-    return get_connected_wifi_ssid() == required_ssid
+    connected = get_connected_wifi_ssid()
+    if not connected:
+        return False
+    allowed = parse_required_ssids(required_ssid)
+    if not allowed:
+        return False
+    return connected in allowed
 
 
 def hotspot_wait_reason(required_ssid: str) -> str:
     """핫스팟 미연결 시 사용자용 메시지."""
+    label = format_required_ssids_label(required_ssid)
     connected = get_connected_wifi_ssid()
     if connected:
-        return f"필수 핫스팟({required_ssid}) 미연결 — 현재: {connected}"
-    return f"필수 핫스팟({required_ssid}) 미연결 — Wi-Fi 없음"
+        return f"필수 Wi-Fi({label}) 미연결 — 현재: {connected}"
+    return f"필수 Wi-Fi({label}) 미연결 — Wi-Fi 없음"
 
 
 def check_smtp_dns_resolvable(host: str = NAVER_SMTP_HOST) -> bool:
@@ -156,10 +180,12 @@ def check_runtime_gate(
     """
     if not skip_wifi_check and not force:
         connected = get_connected_wifi_ssid()
-        if connected != required_ssid:
+        label = format_required_ssids_label(required_ssid)
+        allowed = parse_required_ssids(required_ssid)
+        if connected not in allowed:
             if connected:
-                return False, f"필수 핫스팟({required_ssid}) 미연결 — 현재: {connected}"
-            return False, f"필수 핫스팟({required_ssid}) 미연결 — Wi-Fi 없음"
+                return False, f"필수 Wi-Fi({label}) 미연결 — 현재: {connected}"
+            return False, f"필수 Wi-Fi({label}) 미연결 — Wi-Fi 없음"
 
     if send_email and not force:
         allowed, reason = can_auto_send_for_mode(state_path, chemstation_mode)
