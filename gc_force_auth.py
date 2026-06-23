@@ -34,11 +34,10 @@ def require_force_auth(provided: str | None = None) -> None:
 
 def print_invoke_token_for_bat() -> None:
     """bat for /f — gc_automation.env 의 GC_FORCE_TOKEN 출력."""
-    from gc_profiles import resolve_profile
+    from gc_profiles import bootstrap_env
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    profile = resolve_profile(script_dir)
-    load_dotenv_files(script_dir, profile.excel_output_dir)
+    bootstrap_env(script_dir)
     sys.stdout.write(configured_force_token())
 
 

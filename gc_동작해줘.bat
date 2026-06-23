@@ -18,12 +18,15 @@ REM   시료 지정: gc_동작해줘.bat --sample-name "Ni10-Al2O3 0.25g DRM@650
 
 REM ============================================================================
 
-chcp 949 >nul
-set PYTHONIOENCODING=
-set PYTHONUTF8=
+chcp 65001 >nul
+set PYTHONUNBUFFERED=1
+set PYTHONIOENCODING=utf-8
 cd /d "%~dp0"
 
-for /f "delims=" %%T in ('python "%~dp0gc_force_auth.py" 2^>nul') do set GC_FORCE_INVOKE=%%T
+echo [시작] gc_동작해줘 — 처리 중입니다. 이 창을 닫거나 안쪽을 클릭하지 마세요.
+echo.
+
+for /f "delims=" %%T in ('python -u "%~dp0gc_force_auth.py" 2^>nul') do set GC_FORCE_INVOKE=%%T
 
 if not exist "%~dp0gc_automation.py" (
 
@@ -45,7 +48,7 @@ echo.
 
 
 
-python "%~dp0gc_automation.py" --request %*
+python -u "%~dp0gc_automation.py" --request %*
 
 if errorlevel 1 pause
 
