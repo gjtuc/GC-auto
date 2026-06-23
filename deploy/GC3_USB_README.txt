@@ -7,7 +7,10 @@ GC3 Win7 PC - USB 배포 (차헌)
 3. Desktop\KCH\gc_automation.env 는 절대 덮어쓰지 말 것
 4. gc_run_force.bat 또는 gc_start_watch.bat 실행
 
-이번 업데이트 핵심: gc_chem32.py (startup 1주입 제외)
+이번 업데이트 핵심:
+  - gc_chem32.py (startup 1주입 제외)
+  - GC2/GC3 자동 메일 3시간 쿨다운 슬롯 (SMTP 검증 후 0/1)
+  - 주석·문서 오전/오후 슬롯 설명 정리
 
 설치 최초 1회만: gc3_setup.bat
   - requirements-gc3.txt 맨 위 한글 주석 있으면 삭제 후 재실행
