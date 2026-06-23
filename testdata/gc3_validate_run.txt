@@ -1,0 +1,178 @@
+﻿[??] ?? ?? 6? (mtime ???):[??] Chem32 ?? ?? ?? ??: testdata\gc3_real\Chem32\1\DATA\260525_DRME_NiC01_N5_Ce5_1.5vol_Al2O3
+=== ?? ?? ===
+testdata\gc3_real\Chem32\1\DATA\260525_DRME_NiC01_N5_Ce5_1.5vol_Al2O3
+REACTION ??? 10?:      001F0101.D  Report=(??)  FID=0  TCD=0      001F0101.D  Report=(??)  FID=0  TCD=0      001F0102.D  Report=(??)  FID=0  TCD=0      001F0101.D  Report=(??)  FID=0  TCD=0      001F0101.D  Report=(??)  FID=0  TCD=0      001F0102.D  Report=(??)  FID=0  TCD=0      001F0101.D  Report=(??)  FID=0  TCD=0      001F0102.D  Report=(??)  FID=0  TCD=0      001F0101.D  Report=(??)  FID=0  TCD=0      001F0101.D  Report=(??)  FID=0  TCD=0      001F0101.D  Report=(??)  FID=0  TCD=0      001F0102.D  Report=(??)  FID=0  TCD=0      001F0103.D  Report=(??)  FID=0  TCD=0      001F0104.D  Report=(??)  FID=0  TCD=0      001F0105.D  Report=(??)  FID=0  TCD=0      001F0106.D  Report=(??)  FID=0  TCD=0      001F0107.D  Report=(??)  FID=0  TCD=0      001F0108.D  Report=(??)  FID=0  TCD=0      001F0109.D  Report=(??)  FID=0  TCD=0      001F0110.D  Report=(??)  FID=0  TCD=0      001F0111.D  Report=(??)  FID=0  TCD=0      001F0112.D  Report=(??)  FID=0  TCD=0      001F0113.D  Report=(??)  FID=0  TCD=0      001F0114.D  Report=(??)  FID=0  TCD=0      001F0115.D  Report=(??)  FID=0  TCD=0      001F0101.D  Report=(??)  FID=0  TCD=0      001F0102.D  Report=(??)  FID=0  TCD=0      001F0103.D  Report=(??)  FID=0  TCD=0      001F0104.D  Report=(??)  FID=0  TCD=0      001F0105.D  Report=(??)  FID=0  TCD=0      001F0106.D  Report=(??)  FID=0  TCD=0      001F0107.D  Report=(??)  FID=0  TCD=0      001F0101.D  Report=(??)  FID=0  TCD=0      001F0102.D  Report=(??)  FID=0  TCD=0      001F0103.D  Report=(??)  FID=0  TCD=0      001F0104.D  Report=(??)  FID=0  TCD=0      001F0105.D  Report=(??)  FID=0  TCD=0      001F0106.D  Report=(??)  FID=0  TCD=0      001F0107.D  Report=(??)  FID=0  TCD=0      001F0108.D  Report=(??)  FID=0  TCD=0      001F0109.D  Report=(??)  FID=0  TCD=0      001F0110.D  Report=(??)  FID=0  TCD=0      001F0111.D  Report=(??)  FID=0  TCD=0      001F0112.D  Report=(??)  FID=0  TCD=0      001F0113.D  Report=(??)  FID=0  TCD=0      001F0114.D  Report=(??)  FID=0  TCD=0      001F0115.D  Report=(??)  FID=0  TCD=0      001F0116.D  Report=(??)  FID=0  TCD=0      001F0117.D  Report=(??)  FID=0  TCD=0      001F0118.D  Report=(??)  FID=0  TCD=0      001F0119.D  Report=(??)  FID=0  TCD=0      001F0120.D  Report=(??)  FID=0  TCD=0      001F0121.D  Report=(??)  FID=0  TCD=0      001F0122.D  Report=(??)  FID=0  TCD=0      001F0123.D  Report=(??)  FID=0  TCD=0      001F0124.D  Report=(??)  FID=0  TCD=0      001F0125.D  Report=(??)  FID=0  TCD=0      001F0126.D  Report=(??)  FID=0  TCD=0      001F0127.D  Report=(??)  FID=0  TCD=0      001F0128.D  Report=(??)  FID=0  TCD=0      001F0129.D  Report=(??)  FID=0  TCD=0      001F0130.D  Report=(??)  FID=0  TCD=0      001F0131.D  Report=(??)  FID=0  TCD=0      001F0132.D  Report=(??)  FID=0  TCD=0      001F0133.D  Report=(??)  FID=0  TCD=0      001F0134.D  Report=(??)  FID=0  TCD=0      001F0135.D  Report=(??)  FID=0  TCD=0      001F0136.D  Report=(??)  FID=0  TCD=0      001F0137.D  Report=(??)  FID=0  TCD=0      001F0138.D  Report=(??)  FID=0  TCD=0      001F0139.D  Report=(??)  FID=0  TCD=0      001F0140.D  Report=(??)  FID=0  TCD=0      001F0141.D  Report=(??)  FID=0  TCD=0      001F0142.D  Report=(??)  FID=0  TCD=0      001F0143.D  Report=(??)  FID=0  TCD=0      001F0144.D  Report=(??)  FID=0  TCD=0      001F0145.D  Report=(??)  FID=0  TCD=0      001F0146.D  Report=(??)  FID=0  TCD=0      001F0147.D  Report=(??)  FID=0  TCD=0      001F0148.D  Report=(??)  FID=0  TCD=0      001F0149.D  Report=(??)  FID=0  TCD=0      001F0150.D  Report=(??)  FID=0  TCD=0      001F0151.D  Report=(??)  FID=0  TCD=0      001F0152.D  Report=(??)  FID=0  TCD=0      001F0153.D  Report=(??)  FID=0  TCD=0      001F0154.D  Report=(??)  FID=0  TCD=0      001F0155.D  Report=(??)  FID=0  TCD=0      001F0156.D  Report=(??)  FID=0  TCD=0      001F0157.D  Report=(??)  FID=0  TCD=0      001F0158.D  Report=(??)  FID=0  TCD=0      001F0159.D  Report=(??)  FID=0  TCD=0      001F0160.D  Report=(??)  FID=0  TCD=0      001F0161.D  Report=(??)  FID=0  TCD=0      001F0162.D  Report=(??)  FID=0  TCD=0      001F0163.D  Report=(??)  FID=0  TCD=0      001F0164.D  Report=(??)  FID=0  TCD=0      001F0165.D  Report=(??)  FID=0  TCD=0      001F0166.D  Report=(??)  FID=0  TCD=0      001F0167.D  Report=(??)  FID=0  TCD=0      001F0168.D  Report=(??)  FID=0  TCD=0      001F0169.D  Report=(??)  FID=0  TCD=0      001F0170.D  Report=(??)  FID=0  TCD=0      001F0171.D  Report=(??)  FID=0  TCD=0      001F0172.D  Report=(??)  FID=0  TCD=0      001F0173.D  Report=(??)  FID=0  TCD=0      001F0174.D  Report=(??)  FID=0  TCD=0      001F0175.D  Report=(??)  FID=0  TCD=0      001F0176.D  Report=(??)  FID=0  TCD=0      001F0177.D  Report=(??)  FID=0  TCD=0      001F0178.D  Report=(??)  FID=0  TCD=0      001F0179.D  Report=(??)  FID=0  TCD=0      001F0180.D  Report=(??)  FID=0  TCD=0      001F0181.D  Report=(??)  FID=0  TCD=0      001F0182.D  Report=(??)  FID=0  TCD=0      001F0183.D  Report=(??)  FID=0  TCD=0      001F0184.D  Report=(??)  FID=0  TCD=0      001F0185.D  Report=(??)  FID=0  TCD=0      001F0186.D  Report=(??)  FID=0  TCD=0      001F0187.D  Report=(??)  FID=0  TCD=0      001F0188.D  Report=(??)  FID=0  TCD=0      001F0189.D  Report=(??)  FID=0  TCD=0      001F0190.D  Report=(??)  FID=0  TCD=0      001F0191.D  Report=(??)  FID=0  TCD=0      001F0192.D  Report=(??)  FID=0  TCD=0      001F0193.D  Report=(??)  FID=0  TCD=0      001F0194.D  Report=(??)  FID=0  TCD=0      001F0195.D  Report=(??)  FID=0  TCD=0      001F0196.D  Report=(??)  FID=0  TCD=0      001F0197.D  Report=(??)  FID=0  TCD=0      001F0198.D  Report=(??)  FID=0  TCD=0      001F0199.D  Report=(??)  FID=0  TCD=0
+[??] Report ?? ?? ??
+=== ?? ?? (pipeline ? ??) ===???(??): '260525_DRME_NiC01_N5_Ce5_1.5vol_Al2O3'FID ??? 0 / TCD ??? 0 / ?? ?? 0 / ??? 0
+=== pipeline ?? (--no-email) ===
+[??] C:\Users\User\Desktop\KCH\gc3_validate_log.txt=== gc_chem32_validate 2026-06-23T22:15:19 ===
+[Data] testdata\gc3_real\Chem32\1\DATA
+
+  1. 260525_DRME_NiC01_N5_Ce5_1.5vol_Al2O3  mtime=2026-06-23 22:15:05.759953
+  2. 20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3  mtime=2026-06-23 22:15:02.189159
+  3. 20260611 DRME 600C Ni0.1g8g_Ni5_Ce5  mtime=2026-06-23 22:15:02.138630
+  4. 20260225_Calibriation_G3  mtime=2026-06-23 22:14:56.430760
+  5. 20260225_Calibriation_G2  mtime=2026-06-23 22:14:56.130009
+  6. 20260225_Calibriation_G1  mtime=2026-06-23 22:14:55.964888
+
+
+
+  - 20260608 REACTION 2026-06-09 10-26-46
+
+  - 20260608 REACTION 2026-06-09 11-05-30
+
+
+  - 20260608 REACTION 2026-06-09 11-50-16
+
+  - 20260608 REACTION 2026-06-09 11-52-44
+
+
+  - 20260608 REACTION 2026-06-09 12-40-14
+
+
+  - 20260608 REACTION 2026-06-09 13-45-43
+
+  - 20260608 REACTION 2026-06-09 13-48-01
+
+  - 20260608 REACTION 2026-06-09 13-53-25
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  - REACTION_TCD-FID 297 CYCLE 2026-05-25 16-46-57
+
+
+
+
+
+
+
+  - REACTION_TCD-FID 297 CYCLE 2026-06-05 17-26-24
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Traceback (most recent call last):
+  File "C:\Users\User\chemstation-gc-automation\gc_chem32_validate.py", line 208, in main
+    code = run_validate(args)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\chemstation-gc-automation\gc_chem32_validate.py", line 174, in run_validate
+    config_from_args(ns, script_dir),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\User\chemstation-gc-automation\gc_automation.py", line 252, in config_from_args
+    allow_prompt=not args.watch,
+                     ^^^^^^^^^^
+AttributeError: 'Namespace' object has no attribute 'watch'
+
+

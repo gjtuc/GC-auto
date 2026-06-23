@@ -83,7 +83,11 @@ def find_sample_folders(data_path: str) -> List[str]:
                 folders.append(entry.path)
     except OSError:
         return []
-    return sorted(folders, key=os.path.getmtime, reverse=True)
+    return sorted(
+        folders,
+        key=lambda path: get_latest_report_mtime(path) or os.path.getmtime(path),
+        reverse=True,
+    )
 
 
 def find_active_sample_folder(
@@ -363,6 +367,38 @@ def cycles_match(
     return True
 
 
+def _resolve_reference_index(
+    peaks_list: List[List[dict]],
+    labels: List[str],
+    detector_key: str,
+) -> int:
+    """첫 주입이 startup(피크 수·패턴 다름)이면 2주입 또는 다수 패턴으로 기준 이동."""
+    if not peaks_list:
+        return 0
+    if len(peaks_list) == 1:
+        return 0
+    if cycles_match(peaks_list[0], peaks_list[1]):
+        return 0
+    if len(peaks_list) >= 3 and cycles_match(peaks_list[1], peaks_list[2]):
+        print(
+            f"[안내] startup 노이즈 — {labels[0]} 제외, "
+            f"{labels[1]} 부터 {detector_key} 기준"
+        )
+        return 1
+    from collections import Counter
+
+    mode_count = Counter(len(peaks) for peaks in peaks_list).most_common(1)[0][0]
+    for index, peaks in enumerate(peaks_list):
+        if len(peaks) == mode_count:
+            if index > 0:
+                print(
+                    f"[안내] {labels[0]}~{labels[index - 1]} 제외 — "
+                    f"피크 {mode_count}개 패턴 기준 ({labels[index]}, {detector_key})"
+                )
+            return index
+    return 0
+
+
 def build_detector_cycles(
     injections: List[Tuple[str, str]],
     detector_key: str,
@@ -373,25 +409,39 @@ def build_detector_cycles(
     Returns:
         (cycles, matched_injection_paths, skipped_mismatch_count)
     """
-    cycles: List[List[dict]] = []
-    matched_paths: List[str] = []
-    reference: Optional[List[dict]] = None
-    skipped = 0
-
+    collected: List[Tuple[str, List[dict], str]] = []
     for injection_path, _sequence_path in injections:
         reports = parse_injection_reports(injection_path)
         peaks = reports.get(detector_key, [])
-        label = os.path.basename(injection_path)
         if not peaks:
             continue
+        collected.append((injection_path, peaks, os.path.basename(injection_path)))
 
-        if reference is None:
-            reference = peaks
+    if not collected:
+        return [], [], 0
+
+    peaks_only = [item[1] for item in collected]
+    labels = [item[2] for item in collected]
+    ref_index = _resolve_reference_index(peaks_only, labels, detector_key)
+    reference = peaks_only[ref_index]
+
+    cycles: List[List[dict]] = []
+    matched_paths: List[str] = []
+    skipped = 0
+
+    for index, (injection_path, peaks, label) in enumerate(collected):
+        if index < ref_index:
+            skipped += 1
+            print(
+                f"[건너뜀] {label} {detector_key}: startup/기준 전 주입 "
+                f"({len(peaks)}피크)"
+            )
+            continue
+        if index == ref_index:
             cycles.append(peaks)
             matched_paths.append(injection_path)
             print(f"[진행] {label} {detector_key}: 피크 {len(peaks)}개 (기준)")
             continue
-
         if cycles_match(reference, peaks):
             cycles.append(peaks)
             matched_paths.append(injection_path)
@@ -404,7 +454,7 @@ def build_detector_cycles(
             )
 
     if skipped:
-        print(f"[안내] {detector_key} — 다른 실험으로 판단해 {skipped}주입 제외")
+        print(f"[안내] {detector_key} — 다른 실험·startup 으로 {skipped}주입 제외")
 
     if len(cycles) >= 2:
         first_label = os.path.basename(matched_paths[0]) if matched_paths else None
@@ -414,6 +464,7 @@ def build_detector_cycles(
         )
         if skipped_first and matched_paths:
             matched_paths = matched_paths[1:]
+            skipped += 1
 
     return cycles, matched_paths, skipped
 

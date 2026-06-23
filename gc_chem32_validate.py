@@ -165,6 +165,7 @@ def run_validate(args: argparse.Namespace) -> int:
             no_email=True,
             no_wifi_check=True,
             force=True,
+            watch=False,
             required_ssid=None,
             send_state_file=None,
             watch_status_json=None,
