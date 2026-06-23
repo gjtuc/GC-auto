@@ -6,7 +6,7 @@ set "GC_OUT=%USERPROFILE%\Desktop\KCH"
 
 if not exist "%GC_OUT%" mkdir "%GC_OUT%"
 
-set "GC_PROJ=%USERPROFILE%\chemstation-gc-automation"
+set "GC_PROJ=%GC_ROOT%"
 
 (
 echo @echo off
