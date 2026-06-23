@@ -85,10 +85,34 @@ class TestGcChem32(unittest.TestCase):
             "Symmetry": 1.0,
         }
         peak_b = dict(peak_a, Area=87.0)
-        peak_c = dict(peak_a, Area=76.0)
+        peak_c = dict(peak_a, Area=82.0)
         self.assertFalse(cycles_match([peak_a], [peak_b]))
         self.assertTrue(cycles_match([peak_b], [peak_c]))
         self.assertIn("Area", describe_cycle_mismatch([peak_a], [peak_b]))
+
+    def test_parse_report_peak_scientific_area_percent(self):
+        """Chem32 가 100% 를 1.000e2 로 쓰는 경우 — FID 누락 방지."""
+        import re
+        from gc_chem32 import REPORT_PEAK_LINE, _peak_row
+
+        line = "   1   3.464 BB    0.0207  169.02991  124.32259 1.000e2"
+        match = REPORT_PEAK_LINE.match(line)
+        self.assertIsNotNone(match)
+        peak = _peak_row(
+            1,
+            float(match.group(2)),
+            float(match.group(4)),
+            float(match.group(5)),
+            float(match.group(6)),
+            float(match.group(7)),
+        )
+        self.assertAlmostEqual(peak["Area%"], 100.0, places=1)
+
+    def test_merged_fid_tcd_cycle_count_equal(self):
+        sample = os.path.join(FIXTURE_ROOT, "20260101 sample DRM")
+        fid_cycles, tcd_cycles, matched, _skipped = build_merged_injection_cycles(sample)
+        self.assertEqual(len(fid_cycles), len(tcd_cycles))
+        self.assertEqual(len(fid_cycles), len(matched))
 
 
 if __name__ == "__main__":

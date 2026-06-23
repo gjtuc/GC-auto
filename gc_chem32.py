@@ -35,7 +35,7 @@ REACTION_DT = re.compile(
 CHEM32_INJECTION_RE = re.compile(r"^001F(\d+)\.D$", re.IGNORECASE)
 SAMPLE_FOLDER_DATE_RE = re.compile(r"^(\d{8})\s+(.+)$")
 REPORT_PEAK_LINE = re.compile(
-    r"^\s*(\d+)\s+([\d.]+)\s+(\S+)\s+([\d.]+)\s+([\d.eE+-]+)\s+([\d.]+)\s+([\d.]+)\s*$"
+    r"^\s*(\d+)\s+([\d.]+)\s+(\S+)\s+([\d.]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s*$"
 )
 
 
@@ -328,6 +328,47 @@ def get_latest_report_mtime(sample_folder: str) -> Optional[float]:
     return latest
 
 
+def injection_report_complete(reports: Dict[str, List[dict]]) -> bool:
+    """완료된 분석 — FID·TCD 피크가 Report 에 모두 있어야 함 (1주입 = 1쌍)."""
+    return bool(reports.get("FID")) and bool(reports.get("TCD"))
+
+
+def _log_in_progress_injections(sample_folder: str) -> None:
+    """GC 가 아직 Report 를 쓰는 중인 주입 — 폴더만 있고 Report 없음."""
+    for sequence_path in find_sequence_folders(sample_folder):
+        for injection_path in find_chem32_injection_folders(sequence_path):
+            if find_report_txt(injection_path):
+                continue
+            label = os.path.basename(injection_path)
+            seq_name = os.path.basename(sequence_path)
+            print(
+                f"[진행중] {label} ({seq_name}): 폴더만 있음 — "
+                "GC 생성 중, Report 미작성 (다음 watch 에 포함)"
+            )
+
+
+def _filter_complete_injection_pairs(
+    injections: List[Tuple[str, str]],
+) -> Tuple[List[Tuple[str, str]], int]:
+    """Report 파일은 있으나 FID/TCD 중 하나만 있는 미완료 주입 제외."""
+    complete: List[Tuple[str, str]] = []
+    skipped = 0
+    for injection_path, sequence_path in injections:
+        reports = parse_injection_reports(injection_path)
+        label = os.path.basename(injection_path)
+        if injection_report_complete(reports):
+            complete.append((injection_path, sequence_path))
+            continue
+        skipped += 1
+        fid_n = len(reports.get("FID", []))
+        tcd_n = len(reports.get("TCD", []))
+        print(
+            f"[건너뜀] {label}: Report 미완료 "
+            f"(FID {fid_n}피크 / TCD {tcd_n}피크 — 완료 후 재처리)"
+        )
+    return complete, skipped
+
+
 def collect_reported_injections(sample_folder: str) -> List[Tuple[str, str]]:
     """(injection_path, sequence_path) — Report 있는 주입만, 시간순."""
     collected = []
@@ -543,32 +584,43 @@ def build_merged_injection_cycles(
     """
     시료 폴더 아래 모든 시퀀스·주입에서 FID/TCD 사이클 수집.
 
-    TCD 패턴으로 같은 실험 여부를 판별하고, 통과한 주입만 FID/TCD 각각 적재.
+    완료된 주입(FID+TCD 모두 Report 에 있음)만 TCD sliding 으로 선별하고,
+    동일 주입에서 FID/TCD 를 1:1 쌍으로 엑셀에 적재.
     """
+    _log_in_progress_injections(sample_folder)
     injections = collect_reported_injections(sample_folder)
     if not injections:
         return [], [], [], 0
 
     print(f"[안내] Report 있는 주입 {len(injections)}개 (시퀀스 {len(find_sequence_folders(sample_folder))}개)")
 
-    tcd_cycles, matched_paths, skipped = build_detector_cycles(injections, "TCD")
+    complete_injections, incomplete_skipped = _filter_complete_injection_pairs(injections)
+    if not complete_injections:
+        return [], [], [], incomplete_skipped
+
+    tcd_cycles, matched_paths, skipped = build_detector_cycles(complete_injections, "TCD")
+    skipped += incomplete_skipped
     if not tcd_cycles:
-        fid_cycles, matched_paths, skipped = build_detector_cycles(injections, "FID")
+        fid_cycles, matched_paths, skipped_fid = build_detector_cycles(complete_injections, "FID")
+        skipped += skipped_fid
         return fid_cycles, [], matched_paths, skipped
 
-    matched_set = set(matched_paths)
     fid_cycles: List[List[dict]] = []
-    for injection_path, _ in injections:
-        if injection_path not in matched_set:
-            continue
+    for injection_path in matched_paths:
         reports = parse_injection_reports(injection_path)
         fid_peaks = reports.get("FID", [])
         label = os.path.basename(injection_path)
-        if fid_peaks:
-            fid_cycles.append(fid_peaks)
-            print(f"[진행] {label} FID: 피크 {len(fid_peaks)}개")
-        else:
-            print(f"[경고] {label} FID: Report 있으나 FID 피크 없음")
+        if not fid_peaks:
+            raise RuntimeError(
+                f"내부 오류: TCD 통과 주입 {label} 에 FID 없음 — complete 필터 버그"
+            )
+        fid_cycles.append(fid_peaks)
+        print(f"[진행] {label} FID: 피크 {len(fid_peaks)}개")
+
+    if len(fid_cycles) != len(tcd_cycles):
+        raise RuntimeError(
+            f"FID/TCD 사이클 수 불일치: FID {len(fid_cycles)} vs TCD {len(tcd_cycles)}"
+        )
 
     matched_labels = [os.path.basename(path) for path in matched_paths]
     return fid_cycles, tcd_cycles, matched_labels, skipped

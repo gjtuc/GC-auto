@@ -231,6 +231,12 @@ def run_validate(args: argparse.Namespace) -> int:
         f"FID 사이클 {len(fid_cycles)} / TCD 사이클 {len(tcd_cycles)} / "
         f"매칭 주입 {len(matched)} / 건너뜀 {skipped}"
     )
+    if len(fid_cycles) != len(tcd_cycles):
+        print(
+            f"\n[오류] FID·TCD 사이클 수 불일치 — "
+            f"완료 주입은 1주입당 FID+TCD 1쌍이어야 함"
+        )
+        return 1
 
     if args.compare_xlsx:
         xlsx_path = args.compare_xlsx
