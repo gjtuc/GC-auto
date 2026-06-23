@@ -108,12 +108,18 @@ EXIT_NEED_REPAIR = 1     # force 했지만 heartbeat FAIL → watch 등 수리 �
 EXIT_NOT_INITIATION = 2  # 개시 문구 아님 → 일반 Cursor 작업
 
 
-def apply_env_overrides(config: AppConfig, script_dir: str) -> AppConfig:
+def apply_env_overrides(
+    config: AppConfig,
+    script_dir: str,
+    *,
+    chemstation_mode_cli: str = "auto",
+) -> AppConfig:
     """gc_automation.env — CHEMSTATION_MODE, SAMPLE_NAME 등."""
     load_dotenv_files(script_dir, config.excel_output_dir)
-    env_mode = os.getenv("CHEMSTATION_MODE", "").strip().lower()
-    if env_mode in ("chem32", "8860", "auto", "gc1"):
-        config = replace(config, chemstation_mode=env_mode)
+    if chemstation_mode_cli == "auto":
+        env_mode = os.getenv("CHEMSTATION_MODE", "").strip().lower()
+        if env_mode in ("chem32", "8860", "auto", "gc1"):
+            config = replace(config, chemstation_mode=env_mode)
     env_sample = os.getenv("SAMPLE_NAME", "").strip()
     if env_sample and not config.sample_name:
         try:
