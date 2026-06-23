@@ -13,6 +13,7 @@ from gc_chem32 import (
     collect_reported_injections,
     cycles_match,
     default_sample_name_from_folder,
+    describe_cycle_mismatch,
     find_active_sample_folder,
     parse_report_txt,
     resolve_chemstation_mode,
@@ -72,6 +73,22 @@ class TestGcChem32(unittest.TestCase):
     def test_cycles_match_same_signature(self):
         peaks = parse_report_txt(REPORT_TXT)["FID"]
         self.assertTrue(cycles_match(peaks, peaks))
+
+    def test_sliding_allows_cumulative_area_drift(self):
+        peak_a = {
+            "#": 1,
+            "Time": 1.0,
+            "Area": 100.0,
+            "Height": 1.0,
+            "Width": 1.0,
+            "Area%": 1.0,
+            "Symmetry": 1.0,
+        }
+        peak_b = dict(peak_a, Area=87.0)
+        peak_c = dict(peak_a, Area=76.0)
+        self.assertFalse(cycles_match([peak_a], [peak_b]))
+        self.assertTrue(cycles_match([peak_b], [peak_c]))
+        self.assertIn("Area", describe_cycle_mismatch([peak_a], [peak_b]))
 
 
 if __name__ == "__main__":

@@ -154,7 +154,7 @@ WATCH_HEARTBEAT_STALE_SEC = _env_int("WATCH_HEARTBEAT_STALE_SEC", 180, minimum=6
 COMPARE_CYCLES = 3
 RT_TOLERANCE = 0.02
 
-# GC3 — 같은 실험 병합 시 Area 상대 허용 (0.12 ≈ ±12%, “10% 내외”)
+# GC3 — 인접 주입(sliding) Area 상대 허용 (0.12 ≈ ±12%). DRM 장시간 반응 drift 대응.
 AREA_MATCH_TOLERANCE = 0.12
 
 # ---------------------------------------------------------------------------

@@ -367,6 +367,40 @@ def cycles_match(
     return True
 
 
+def describe_cycle_mismatch(
+    reference: List[dict],
+    candidate: List[dict],
+    rt_tolerance: float = RT_TOLERANCE,
+    area_tolerance: float = AREA_MATCH_TOLERANCE,
+) -> str:
+    """불일치 사유 — 검증 로그용."""
+    if not reference or not candidate:
+        return "피크 없음"
+    if len(reference) != len(candidate):
+        return f"피크 수 {len(candidate)} vs 직전 {len(reference)}"
+    worst_rt = 0.0
+    worst_area = 0.0
+    worst_peak = 0
+    for index, (ref_peak, new_peak) in enumerate(zip(reference, candidate), start=1):
+        rt_diff = abs(float(ref_peak["Time"]) - float(new_peak["Time"]))
+        ref_area = float(ref_peak["Area"])
+        new_area = float(new_peak["Area"])
+        area_diff = abs(ref_area - new_area) / max(abs(ref_area), 1e-9)
+        if rt_diff > worst_rt:
+            worst_rt = rt_diff
+        if area_diff > worst_area:
+            worst_area = area_diff
+            worst_peak = index
+    if worst_rt > rt_tolerance:
+        return f"RT 불일치 피크#{worst_peak} Δ{worst_rt:.3f}min (허용 {rt_tolerance})"
+    if worst_area > area_tolerance:
+        return (
+            f"Area 불일치 피크#{worst_peak} "
+            f"{worst_area * 100:.1f}% (허용 {area_tolerance * 100:.0f}%, 직전 주입 대비)"
+        )
+    return "불일치"
+
+
 def _resolve_reference_index(
     peaks_list: List[List[dict]],
     labels: List[str],
@@ -399,15 +433,15 @@ def _resolve_reference_index(
     return 0
 
 
-def build_detector_cycles(
+def _build_detector_cycles_chunk(
     injections: List[Tuple[str, str]],
     detector_key: str,
 ) -> Tuple[List[List[dict]], List[str], int]:
     """
-    TCD/FID Report 에서 같은 실험 주입만 모음 (RT + Area 허용, 피크 개수 가변).
+    단일 REACTION 시퀀스 안에서 detector 사이클 수집.
 
-    Returns:
-        (cycles, matched_injection_paths, skipped_mismatch_count)
+    startup 제외 후 **직전 주입(sliding)** 과 RT·Area 비교 — DRM 장시간 반응에서
+    초기 주입 대비 누적 Area drift 로 중간부터 잘리는 문제 방지.
     """
     collected: List[Tuple[str, List[dict], str]] = []
     for injection_path, _sequence_path in injections:
@@ -423,11 +457,11 @@ def build_detector_cycles(
     peaks_only = [item[1] for item in collected]
     labels = [item[2] for item in collected]
     ref_index = _resolve_reference_index(peaks_only, labels, detector_key)
-    reference = peaks_only[ref_index]
 
     cycles: List[List[dict]] = []
     matched_paths: List[str] = []
     skipped = 0
+    chain_ref: Optional[List[dict]] = None
 
     for index, (injection_path, peaks, label) in enumerate(collected):
         if index < ref_index:
@@ -440,21 +474,29 @@ def build_detector_cycles(
         if index == ref_index:
             cycles.append(peaks)
             matched_paths.append(injection_path)
+            chain_ref = peaks
             print(f"[진행] {label} {detector_key}: 피크 {len(peaks)}개 (기준)")
             continue
-        if cycles_match(reference, peaks):
+        assert chain_ref is not None
+        if len(peaks) != len(chain_ref):
+            skipped += 1
+            print(
+                f"[건너뜀] {label} {detector_key}: 피크 수 변경 "
+                f"({len(peaks)} vs 직전 {len(chain_ref)})"
+            )
+            continue
+        if cycles_match(chain_ref, peaks):
             cycles.append(peaks)
             matched_paths.append(injection_path)
+            chain_ref = peaks
             print(f"[진행] {label} {detector_key}: 피크 {len(peaks)}개")
         else:
             skipped += 1
-            print(
-                f"[건너뜀] {label} {detector_key}: 패턴 불일치 "
-                f"({len(peaks)}피크 vs 기준 {len(reference)}피크)"
-            )
+            reason = describe_cycle_mismatch(chain_ref, peaks)
+            print(f"[건너뜀] {label} {detector_key}: {reason}")
 
     if skipped:
-        print(f"[안내] {detector_key} — 다른 실험·startup 으로 {skipped}주입 제외")
+        print(f"[안내] {detector_key} — startup·패턴 불일치로 {skipped}주입 제외")
 
     if len(cycles) >= 2:
         first_label = os.path.basename(matched_paths[0]) if matched_paths else None
@@ -466,6 +508,32 @@ def build_detector_cycles(
             matched_paths = matched_paths[1:]
             skipped += 1
 
+    return cycles, matched_paths, skipped
+
+
+def build_detector_cycles(
+    injections: List[Tuple[str, str]],
+    detector_key: str,
+) -> Tuple[List[List[dict]], List[str], int]:
+    """
+    TCD/FID Report 에서 같은 실험 주입만 모음 (시퀀스별 sliding RT+Area).
+
+    Returns:
+        (cycles, matched_injection_paths, skipped_mismatch_count)
+    """
+    from itertools import groupby
+
+    cycles: List[List[dict]] = []
+    matched_paths: List[str] = []
+    skipped = 0
+    for _sequence_path, group in groupby(injections, key=lambda item: item[1]):
+        chunk_cycles, chunk_paths, chunk_skipped = _build_detector_cycles_chunk(
+            list(group),
+            detector_key,
+        )
+        cycles.extend(chunk_cycles)
+        matched_paths.extend(chunk_paths)
+        skipped += chunk_skipped
     return cycles, matched_paths, skipped
 
 

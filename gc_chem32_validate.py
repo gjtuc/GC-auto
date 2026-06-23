@@ -5,8 +5,9 @@ gc_chem32_validate.py — GC3 Chem32 실데이터 로컬 검증 (GC8860 / Cursor
 GC3 PC에서 cmd가 바로 닫혀도 Desktop\\KCH\\gc3_validate_log.txt 에 전체 로그 저장.
 
 사용:
-  python gc_chem32_validate.py --data-path testdata\\gc3_real
-  python gc_chem32_validate.py --data-path C:\\Chem32\\1\\Data --sample-folder "20260620 DRME..."
+  python gc_chem32_validate.py --data-path testdata\\gc3_e2e\\Chem32\\1\\Data
+  python gc_chem32_validate.py --data-path ... --sample-folder "20260620 DRE..."
+  python gc_chem32_validate.py --data-path ... --audit --compare-xlsx Downloads\\....xlsx
   python gc_chem32_validate.py --data-path ... --run-pipeline --no-email
 """
 
@@ -19,6 +20,7 @@ import traceback
 from contextlib import redirect_stdout
 from datetime import datetime
 from io import StringIO
+from typing import Dict, List, Optional, Tuple
 
 from gc_console import setup_console_encoding
 
@@ -29,14 +31,16 @@ from gc_chem32 import (
     collect_reported_injections,
     cycles_match,
     default_sample_name_from_folder,
+    describe_cycle_mismatch,
     find_active_sample_folder,
     find_chem32_injection_folders,
     find_report_txt,
     find_sample_folders,
     find_sequence_folders,
     parse_injection_reports,
+    _resolve_reference_index,
 )
-from gc_config import DEFAULT_GC3_DATA, EXCEL_OUTPUT_DIR
+from gc_config import AREA_MATCH_TOLERANCE, DEFAULT_GC3_DATA, EXCEL_OUTPUT_DIR, RT_TOLERANCE
 from gc_profiles import resolve_data_path
 
 
@@ -59,6 +63,21 @@ def _log_path() -> str:
     return os.path.join(out, "gc3_validate_log.txt")
 
 
+def count_xlsx_cycles(xlsx_path: str) -> Dict[str, int]:
+    import openpyxl
+
+    wb = openpyxl.load_workbook(xlsx_path, read_only=True)
+    counts: Dict[str, int] = {}
+    for sheet_name in wb.sheetnames:
+        worksheet = wb[sheet_name]
+        cycles = 0
+        for row in worksheet.iter_rows(min_row=2, values_only=True):
+            if row and row[0] == "#":
+                cycles += 1
+        counts[sheet_name] = cycles
+    return counts
+
+
 def _print_sample_tree(sample_folder: str) -> None:
     print(f"\n=== 시료 폴더 ===\n{sample_folder}\n")
     sequences = find_sequence_folders(sample_folder)
@@ -75,31 +94,97 @@ def _print_sample_tree(sample_folder: str) -> None:
             print(f"      {label}  Report={rep}  FID={fid_n}  TCD={tcd_n}")
 
 
-def _print_mismatch_detail(sample_folder: str) -> None:
+def _audit_sliding_chain(sample_folder: str, detector_key: str = "TCD") -> None:
+    """시퀀스별 sliding chain — 주입마다 직전 대비 통과/실패."""
+    from itertools import groupby
+
     injections = collect_reported_injections(sample_folder)
-    if not injections:
-        print("\n[경고] Report 있는 주입 없음")
-        return
-    print(f"\n=== 주입 {len(injections)}개 (시간순) — TCD 패턴 비교 ===")
-    reference = None
-    ref_label = None
-    for injection_path, seq_path in injections:
-        label = os.path.basename(injection_path)
+    print(f"\n=== AUDIT {detector_key} sliding chain (직전 주입 대비) ===")
+    print(
+        f"허용: RT ±{RT_TOLERANCE} min, Area ±{AREA_MATCH_TOLERANCE * 100:.0f}% (인접 주입)"
+    )
+
+    total_ok = 0
+    total_skip = 0
+    for seq_path, group in groupby(injections, key=lambda item: item[1]):
         seq_name = os.path.basename(seq_path)
-        reports = parse_injection_reports(injection_path)
-        for det in ("TCD", "FID"):
-            peaks = reports.get(det, [])
+        chunk = list(group)
+        labels = [os.path.basename(path) for path, _ in chunk]
+        peaks_list = [
+            parse_injection_reports(path).get(detector_key, []) for path, _ in chunk
+        ]
+        if not any(peaks_list):
+            continue
+
+        ref_index = _resolve_reference_index(peaks_list, labels, detector_key)
+        print(f"\n--- {seq_name} (주입 {len(chunk)}개, 기준={labels[ref_index]}) ---")
+
+        chain_ref: Optional[List[dict]] = None
+        for index, (label, peaks) in enumerate(zip(labels, peaks_list)):
             if not peaks:
+                print(f"  [없음] {label}: {detector_key} 피크 0")
+                total_skip += 1
                 continue
-            if reference is None and det == "TCD":
-                reference = peaks
-                ref_label = label
-                print(f"[기준] {label} ({seq_name}) TCD {len(peaks)}피크")
+            if index < ref_index:
+                print(f"  [startup] {label}: {len(peaks)}피크")
+                total_skip += 1
                 continue
-            if det == "TCD" and reference:
-                ok = cycles_match(reference, peaks)
-                mark = "OK" if ok else "불일치"
-                print(f"  [{mark}] {label} ({seq_name}) TCD {len(peaks)}피크 vs 기준 {ref_label} {len(reference)}피크")
+            if index == ref_index:
+                chain_ref = peaks
+                print(f"  [기준] {label}: {len(peaks)}피크")
+                total_ok += 1
+                continue
+            assert chain_ref is not None
+            if len(peaks) != len(chain_ref):
+                print(
+                    f"  [제외] {label}: 피크 수 {len(peaks)} "
+                    f"(직전 {len(chain_ref)})"
+                )
+                total_skip += 1
+                continue
+            if cycles_match(chain_ref, peaks):
+                print(f"  [OK] {label}: {len(peaks)}피크")
+                chain_ref = peaks
+                total_ok += 1
+            else:
+                reason = describe_cycle_mismatch(chain_ref, peaks)
+                print(f"  [제외] {label}: {reason}")
+                total_skip += 1
+
+    print(f"\n[AUDIT 합계] {detector_key} 통과 {total_ok} / 제외 {total_skip}")
+
+
+def _print_compare_xlsx(
+    xlsx_path: str,
+    fid_cycles: int,
+    tcd_cycles: int,
+    raw_injections: int,
+) -> None:
+    if not os.path.isfile(xlsx_path):
+        print(f"\n[오류] xlsx 없음: {xlsx_path}")
+        return
+    counts = count_xlsx_cycles(xlsx_path)
+    print(f"\n=== xlsx 대조: {xlsx_path} ===")
+    for sheet, cycles in counts.items():
+        print(f"  시트 {sheet}: {cycles} 사이클")
+    fid_x = counts.get("FID", counts.get("Sheet1", 0))
+    tcd_x = counts.get("TCD", 0)
+    print(f"\n  Report 주입(원본)     : {raw_injections}")
+    print(f"  pipeline FID/TCD      : {fid_cycles} / {tcd_cycles}")
+    print(f"  xlsx FID/TCD          : {fid_x} / {tcd_x}")
+    if fid_x and fid_cycles != fid_x:
+        print(f"  [불일치] FID pipeline {fid_cycles} vs xlsx {fid_x} (차이 {fid_cycles - fid_x:+d})")
+    elif fid_x:
+        print("  [OK] FID 사이클 수 일치")
+    if tcd_x and tcd_cycles != tcd_x:
+        print(f"  [불일치] TCD pipeline {tcd_cycles} vs xlsx {tcd_x} (차이 {tcd_cycles - tcd_x:+d})")
+    elif tcd_x:
+        print("  [OK] TCD 사이클 수 일치")
+    if fid_cycles < raw_injections - 2:
+        print(
+            f"\n  [힌트] {raw_injections - fid_cycles}주입 미반영 — "
+            "startup·피크 수 변경·인접 Area/RT 초과 시 제외. --audit 로 주입별 사유 확인."
+        )
 
 
 def run_validate(args: argparse.Namespace) -> int:
@@ -131,20 +216,40 @@ def run_validate(args: argparse.Namespace) -> int:
         return 1
 
     _print_sample_tree(sample_folder)
-    _print_mismatch_detail(sample_folder)
+    raw_count = len(collect_reported_injections(sample_folder))
+    print(f"\n[안내] Report 있는 주입 총 {raw_count}개")
+
+    if args.audit:
+        _audit_sliding_chain(sample_folder, "TCD")
+        _audit_sliding_chain(sample_folder, "FID")
 
     print("\n=== 병합 결과 (pipeline 과 동일) ===")
     fid_cycles, tcd_cycles, matched, skipped = build_merged_injection_cycles(sample_folder)
     default_name = default_sample_name_from_folder(sample_folder)
     print(f"시료명(자동): {default_name!r}")
-    print(f"FID 사이클 {len(fid_cycles)} / TCD 사이클 {len(tcd_cycles)} / 매칭 주입 {len(matched)} / 건너뜀 {skipped}")
+    print(
+        f"FID 사이클 {len(fid_cycles)} / TCD 사이클 {len(tcd_cycles)} / "
+        f"매칭 주입 {len(matched)} / 건너뜀 {skipped}"
+    )
+
+    if args.compare_xlsx:
+        xlsx_path = args.compare_xlsx
+        if not os.path.isabs(xlsx_path):
+            xlsx_path = os.path.join(os.path.expanduser("~"), xlsx_path)
+        _print_compare_xlsx(
+            os.path.normpath(xlsx_path),
+            len(fid_cycles),
+            len(tcd_cycles),
+            raw_count,
+        )
 
     if skipped >= 5:
         print(
-            "\n[힌트] 불일치가 많으면 보통:\n"
-            "  · 시료 폴더 안에 예전 REACTION 시퀀스가 여러 개 쌓여 있음\n"
-            "  · 첫 주입만 기준으로 잡고 나머지를 '다른 실험'으로 제외함\n"
-            "  · 최신 시퀀스만 쓰도록 코드 수정이 필요할 수 있음 — 이 로그를 Cursor에 공유"
+            "\n[힌트] 다수 제외 시:\n"
+            "  · startup(첫 주입) — 정상 제외\n"
+            "  · 피크 **개수** 변경 — 다른 실험/조건 전환 가능\n"
+            "  · Area/RT — **직전 주입** 대비 ±12% 초과 (--audit 로 피크# 확인)\n"
+            "  · 예전 REACTION 시퀀스가 같은 시료 폴더에 남아 있으면 시퀀스별로 따로 집계됨"
         )
 
     if args.run_pipeline:
@@ -181,6 +286,17 @@ def run_validate(args: argparse.Namespace) -> int:
         print(f"\n결과: ok={result.ok}  reason={result.fail_reason or '-'}")
         if result.output_path:
             print(f"엑셀: {result.output_path}")
+            if args.compare_xlsx:
+                _print_compare_xlsx(
+                    os.path.normpath(
+                        args.compare_xlsx
+                        if os.path.isabs(args.compare_xlsx)
+                        else os.path.join(os.path.expanduser("~"), args.compare_xlsx)
+                    ),
+                    len(fid_cycles),
+                    len(tcd_cycles),
+                    raw_count,
+                )
         return 0 if result.ok else 1
 
     if not fid_cycles and not tcd_cycles:
@@ -193,6 +309,16 @@ def main() -> None:
     parser.add_argument("--data-path", default=None, help=f"기본: {DEFAULT_GC3_DATA}")
     parser.add_argument("--sample-folder", default=None, help="시료 폴더 이름 또는 전체 경로")
     parser.add_argument("--sample-name", default=None, help="pipeline 테스트 시 시료명")
+    parser.add_argument(
+        "--audit",
+        action="store_true",
+        help="주입별 sliding chain 통과/실패 (피크#·Area% 사유)",
+    )
+    parser.add_argument(
+        "--compare-xlsx",
+        default=None,
+        help="생성 xlsx 사이클 수와 pipeline 결과 대조",
+    )
     parser.add_argument("--run-pipeline", action="store_true", help="엑셀까지 생성 (--no-email)")
     args = parser.parse_args()
 
