@@ -126,7 +126,7 @@ python gc_automation.py --show-profile
 - `GC_INSTANCE` / 인스턴스: **gc2**
 - 출력 폴더: `Desktop\KCH`
 - env: `Desktop\KCH\gc_automation.env`
-- 핫스팟: **AndroidHotspot5841**
+- 핫스팟: **iptime** (구 AndroidHotspot5841)
 - ChemStation 모드: **8860**
 
 또는:
@@ -219,7 +219,7 @@ gc_git_push.bat
 - [ ] 9.2 `Desktop\KCH\gc_automation.env` GC2 값 유지
 - [ ] 9.3 `machine_profile.json` (`gc2_pc`)
 - [ ] 9.4 `SYNC_STATUS.md` PC 등록
-- [ ] 9.5 `--show-profile` → gc2, KCH, AndroidHotspot5841
+- [ ] 9.5 `--show-profile` → gc2, KCH, iptime
 - [ ] 9.6 GC1 설정 유입 없음 (`verify_gc2_setup.ps1`)
 - [ ] 9.7 `--verify`
 - [ ] 9.8 `--force --no-email` → xlsx

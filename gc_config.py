@@ -74,7 +74,7 @@ def default_watch_status_txt() -> str:
 # GC2 핫스팟 / 자동 메일 한도
 # ---------------------------------------------------------------------------
 
-# GC2/GC3 장비 PC 핫스팟 SSID. GC1 env에서 iPhone으로 덮어씀.
+# GC2/GC3 장비 PC 핫스팟 SSID. GC1 env에서 iPhone으로 덮어씀. (2026-06: AndroidHotspot5841 → iptime)
 REQUIRED_HOTSPOT_SSID = "iptime"
 
 # GC2/GC3 — 레거시 상수 (am/pm 슬롯; 현재는 session_based_auto_send 로 한도 미사용)
