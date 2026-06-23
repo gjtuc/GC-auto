@@ -6,7 +6,7 @@ gc_work_job.py — 핫스pot 작업 세션 (미완료 감지·단계별 재개)
 [어느 PC — GC2/GC3 장비 PC (차헌)]
 =============================================================================
 
-  GC2/GC3 **장비** PC merge 시 추가. GC1은 세션당 1회, GC2/GC3는 메일 3시간 쿨다운 슬롯.
+  GC2/GC3 **장비** PC merge 시 추가. GC1은 세션당 1회, GC2/GC3는 메일 1시간 쿨다운(핫스pot 무관).
   은규 PC / 차헌 PC 에서는 미사용 (gc_automation.py 미실행).
 
   GitHub: gjtuc/GC-auto — 다른 PC는 git pull 로 받음.

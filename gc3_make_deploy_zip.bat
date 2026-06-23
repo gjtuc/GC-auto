@@ -9,6 +9,7 @@ if exist "%DEST%" del /f /q "%DEST%"
 
 echo.
 echo  GC3 장비 PC(Win7) 배포 zip 생성...
+echo  포함: gc_*.py/bat, deploy/, test_fixtures/ — env·비밀번호 제외
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0deploy\make_gc3_deploy_zip.ps1"
 if errorlevel 1 (
     echo [오류] zip 생성 실패

@@ -14,6 +14,12 @@ GC3 폴더 구조:
 
 피크 개수는 가변 — FID·TCD 각각 Report 에 있는 만큼만 사용.
 출력·메일 흐름은 GC2와 동일 (Desktop\\KCH).
+
+[병합 규칙 — gc_chem32.build_merged_injection_cycles]
+  · 1주입 = FID+TCD 1쌍 (둘 다 Report 에 피크 있을 때만)
+  · 진행 중 주입: 폴더만 있고 Report 없음 → 제외 (다음 watch 에 포함)
+  · TCD sliding match: 직전 주입 대비 RT·Area (DRM 장주기 drift 대응)
+  · Area% 과학적 표기(1.000e2) 파싱 지원
 """
 
 from __future__ import annotations

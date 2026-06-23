@@ -23,7 +23,7 @@ gc_automation.py — ChemStation / GC1 자동 정리 (CLI 진입점)
 [전체 구조]
 =============================================================================
 
-  (A) --watch  … gc_watch.py — 핫스pot edge 자동 처리
+  (A) --watch  … gc_watch.py — Wi-Fi 감시, GC2/GC3는 연결 유지 중 poll
   (B) force    … gc_request.py — 「시작」「go」「진행」 또는 --force/--request
 
   (A)와 (B)는 **독립**. 상세 아키텍처: gc_architecture.py (문서 전용)
@@ -36,7 +36,7 @@ gc_automation.py — ChemStation / GC1 자동 정리 (CLI 진입점)
 [GC1 vs GC2 watch 차이 — 요약]
 =============================================================================
 
-  GC2/GC3: iptime 3종 Wi-Fi, acam/Report mtime, 자동 메일 3시간 쿨다운 슬롯 1/1
+  GC2/GC3: iptime Wi-Fi, acam/Report poll, 메일 1시간 쿨다운(핫스pot 세션 무관)
   GC1: iPhone, 핫스pot **세션당** PDF·엑셀·메일 1회, 쿨다운·슬롯 없음
 
 =============================================================================

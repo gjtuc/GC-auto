@@ -15,7 +15,7 @@ gc_watch.py — --watch 핫스팟 감시 루프
 [전체 구조 — gc_automation.py 와 분리된 두 갈래]
 =============================================================================
 
-  (A) --watch  … 핫스pot 연결 edge 에서 자동 처리 (본 파일)
+  (A) --watch  … Wi-Fi 감시 + 자동 처리 (본 파일, GC2/GC3는 연결 유지 중 poll)
   (B) force    … 「시작」「go」「진행」 등 개시 요청 (gc_request → pipeline)
                  watch·핫스pot·메일 쿨다운과 무관
 
@@ -23,21 +23,24 @@ gc_watch.py — --watch 핫스팟 감시 루프
 [매 tick(기본 15초)]
 =============================================================================
 
-  1) Wi-Fi SSID 확인 — REQUIRED_HOTSPOT 과 일치할 때만 ChemStation/PDF 접근
-  2) 연결 유지 중에는 pipeline 재실행 안 함 (GC1·GC2 공통)
-  3) 바탕화면 MMDDHHmm.txt 갱신 — **핫스팟 연결 중만** (gc_status ±5분 검증)
+  1) Wi-Fi SSID 확인 — REQUIRED_HOTSPOT 과 일치할 때만 ChemStation/Report 접근
+  2) GC2/GC3: Wi-Fi 유지 중에도 새 acam/Report·pending 메일 있으면 처리
+     GC1: 핫스pot edge 또는 유지 중 CRM/PDF 갱신 시에만 처리
+  3) 바탕화면 MMDDHHmm.txt 갱신 — **Wi-Fi 연결 중만** (gc_status ±5분 검증)
 
 =============================================================================
-[핫스pot edge — GC2/GC3 vs GC1]
+[GC2/GC3 vs GC1 — 자동 메일·트리거]
 =============================================================================
 
-  공통:
-    · 새로 연결(just_connected)일 때만 _on_hotspot_connected()
-    · 순간 끊김: 끊긴 시간 < HOTSPOT_RECONNECT_MIN_SEC → 동일 세션 (GC1 90s, GC2 45s)
+  GC1:
+    · 핫스pot **세션당** PDF·엑셀·메일 1회 (쿨다운 없음)
+    · 순간 끊김 < 90초 → 동일 세션. 길게 껐다 켬 → 세션 1회 더
 
-  GC2/GC3: Wi-Fi 연결 유지 중에도 새 acam/Report 감지 + 메일 1시간 쿨다운(발송·검증 후 0/1)
-  GC1: 핫스pot 세션당 PDF·엑셀·메일 1회 (쿨다운 없음)
-       충분히 껐다 켠 재연결 → 세션 1회 더 (Autochro force export)
+  GC2/GC3:
+    · **핫스pot 재연결 불필요** — Wi-Fi 붙어 있는 동안 15초마다 poll
+    · 자동 메일 한도 = **쿨다운만** (기본 1시간, AUTO_MAIL_COOLDOWN_HOURS)
+    · 쿨다운 중에도 엑셀 생성; SMTP 검증 성공 시에만 쿨다운 소모
+    · 순간 끊김 < 45초 → 중복 pipeline 방지용 (메일 세션과 무관)
 
 [새 날짜 시퀀스 — GC2/GC3]
   시료명 없으면 watch skip. force 시 --sample-name 지정.

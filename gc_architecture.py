@@ -28,11 +28,10 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
 =============================================================================
 
   1) watch (--watch, GC1_감시시작.bat)
-     · 핫스pot **연결 edge** 에서만 자동 처리
-     · 연결 유지 중에는 반복 실행 없음
-     · GC2: 새 acam + 자동 메일 3시간 쿨다운 슬롯(발송·SMTP 검증 후)
+     · GC1: 핫스pot **연결 edge** 세션당 1회
+     · GC2/GC3: Wi-Fi 유지 중 poll + 메일 **1시간 쿨다운**(핫스pot 세션 무관)
      · GC1: **세션당 1회** PDF·엑셀·메일 (쿨다운 없음)
-     · 순간 끊김(< GC1_HOTSPOT_RECONNECT_MIN_SEC) → 동일 세션, skip
+     · 순간 끊김 → 중복 방지용 debounce (GC1 90s, GC2/GC3 45s)
 
   2) force (--force, gc_동작해줘.bat, --request)
      · 핫스pot·메일 쿨다운 무시
@@ -66,7 +65,7 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
 =============================================================================
 
   gc_automation.py   CLI 진입, watch/force/user-message 분기
-  gc_watch.py        핫스pot edge tick, GC1/GC2 분기
+  gc_watch.py        Wi-Fi tick, GC1 edge / GC2·GC3 poll
   gc_pipeline.py     run_processing_gc1 / chem32 / 8860
   gc_autochro.py     Autochro-3000 PDF UI 자동화
   gc_gc1.py          PDF 파싱, trim, cleanup, 엑셀
