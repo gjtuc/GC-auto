@@ -81,7 +81,7 @@ from gc_config import (
     REQUIRED_HOTSPOT_SSID,
     AppConfig,
 )
-from gc_profiles import paths_for_output_dir, print_profile_summary, resolve_profile
+from gc_profiles import paths_for_output_dir, print_profile_summary, resolve_data_path, resolve_profile
 from gc_sanitize import InvalidSampleNameError, InvalidSequenceFolderError, sanitize_sample_name, validate_sequence_folder
 from gc_force_auth import require_force_auth
 from gc_mailer import load_dotenv_files
@@ -120,6 +120,13 @@ def apply_env_overrides(config: AppConfig, script_dir: str) -> AppConfig:
             config = replace(config, sample_name=sanitize_sample_name(env_sample))
         except InvalidSampleNameError as exc:
             print(f"[오류] SAMPLE_NAME env 무효 — {exc}")
+    data_env = os.getenv("CHEMSTATION_DATA_PATH", "").strip() or os.getenv("DATA_PATH", "").strip()
+    if data_env:
+        config = replace(config, data_path=os.path.normpath(os.path.expanduser(data_env)))
+    elif config.chemstation_mode == "chem32" and config.data_path == DEFAULT_CHEMSTATION_DATA:
+        from gc_config import DEFAULT_GC3_DATA
+
+        config = replace(config, data_path=DEFAULT_GC3_DATA)
     return config
 
 
@@ -170,7 +177,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--send-state-file", default=None, help="발송 기록 JSON 경로")
     parser.add_argument("--watch-status-json", default=None)
     parser.add_argument("--watch-status-txt", default=None)
-    parser.add_argument("--data-path", default=DEFAULT_CHEMSTATION_DATA)
+    parser.add_argument("--data-path", default=None, help="ChemStation/Chem32 Data 루트 (기본: 프로필·env)")
     parser.add_argument(
         "--chemstation-mode",
         default="auto",
@@ -223,7 +230,7 @@ def config_from_args(args: argparse.Namespace, script_dir: str) -> AppConfig:
             print(f"[오류] --sequence-folder 무효 — {exc}")
             raise SystemExit(2) from exc
     return AppConfig(
-        data_path=args.data_path,
+        data_path=args.data_path or resolve_data_path(),
         chemstation_mode=args.chemstation_mode
         if args.chemstation_mode != "auto"
         else profile.chemstation_mode,
