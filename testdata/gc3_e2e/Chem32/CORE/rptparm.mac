@@ -1,0 +1,322 @@
+! $Header: /cag/PHX3D/parts/macros/report/rptparm.mac 4.2 2002-07-17 00:47:22-07 reilange Exp $
+!
+! This is the DoPrintRptParm macro, which is called from PrintDAMethod.
+!
+!   The output device (file or printer) has to be opened, configured and
+!   closed by the caller.
+!   Page numbering, page headers and footers are configured by the caller.
+!
+
+Name DoPrintRptParm
+  local Dest$, DestSep$, NoDest$, FileName$, SortedBy$, Dashes$, RptLayout$
+  local DrawSignal, UseRanges$
+  local Ann$, AnnSep$, NoAnn$, Topic
+  local UseRanges
+  local HPCETerms, ChromOverlaid, ChromNormalized
+  Local DoMult, RptParm
+  local Multiplier, Dilution, SampleAmount, UseSampleVars, RPT_SortedBy, RPT_SortedBy$
+  
+  print "DoPrintRptParm"
+  HPCETerms = TabHdrVal (_Config[1], "Features", "HPCETerms")
+
+  if DevNum() = 5 then
+    ! Destination is PRINTER; check for necessary FormFeed
+    CheckFormFeed 12
+  endif
+
+  Dashes$ = "====================================================================="
+  print #5, Dashes$
+  print #5, Center$ (len(Dashes$), NLSCoreMth$("RptTitle"))
+  print #5, Dashes$
+  print #5, ""
+
+        !Code changes for PVCS# 15554
+        
+        RptParm = TabHdrVal(_DAMethod[1],"QuantParm","CalcType")
+        print using #5, NLSCoreMth$("CalcType"), GetRptType$(RptParm)
+        if RptParm > 0 then
+        print using #5, NLSCoreMth$("BasedOn"), \
+                          NLSCoreMthText$("BasedOnParm", \
+                          TabHdrVal(_DAMethod[1],"QuantParm","CalcBase"))
+        EndIf
+                        
+        if TabHdrType(_DAMethod[1], "QuantParm", "DoMult") = 99
+            DoMult = 1
+        else
+            DoMult = TabHdrVal(_DAMethod[1], "QuantParm", "DoMult")
+        endif
+        if DoMult = 1
+            print using #5, NLSCoreMth$("DoMult")
+        else
+            print using #5, NLSCoreMth$("DoNoMult")
+        EndIf
+        Print Using #5, "/"  
+             
+        UseSampleVars = TabHdrVal(_DAMethod[1],"QuantParm","UseSampleVars")
+        if UseSampleVars = 0 then
+          ! Sample Data
+          print using #5, NLSCoreMth$("Multiplier")
+          RptPrintMultiplier TabHdrVal(_DAMethod[1],"QuantParm","Multiplier")
+          print using #5, "/"
+    
+          print using #5, NLSCoreMth$("Dilution")
+          RptPrintMultiplier TabHdrVal(_DAMethod[1],"QuantParm","Dilution")
+          print using #5, "/" 
+    
+          print using #5, NLSCoreMth$("SampleAmount")
+          RptPrintAmount TabHdrVal(_DAMethod[1],"QuantParm","SampleAmount")
+          print using #5, "/"
+          
+        Else 
+          ! Fix for PVCS# 18512
+          print using #5, NLSCoreMth$("UseSampleData")
+          print using #5, "/"
+        endif
+        
+  DestSep$ = ""
+  Dest$ = NLSCoreMth$("RptDestHdr")
+  NoDest$ = NLSCoreMth$("RptDestNone")
+  if TabHdrVal (_DAMethod[1], "RptParm", "DestPrinter") = 1 then
+    Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptDestPrinter")
+    DestSep$ = ", "
+    NoDest$ = ""
+  endif
+  if TabHdrVal (_DAMethod[1], "RptParm", "DestScreen") = 1 then
+    Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptDestScreen")
+    DestSep$ = ", "
+    NoDest$ = ""
+  endif
+  if TabHdrVal (_DAMethod[1], "RptParm", "DestFile") = 1 then
+    Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptDestFileName") + \
+            TabHdrText$ (_DAMethod[1], "RptParm", "FileName") + ")"
+    DestSep$ = ", "
+    NoDest$ = ""
+  endif
+  print #5, Dest$ + NoDest$
+
+  if TabHdrVal (_DAMethod[1], "RptParm", "DestFile") = 1 then
+    DestSep$ = ""
+    Dest$ = NLSCoreMth$("RptDestFileHdr")
+    NoDest$ = NLSCoreMth$("RptDestFileNone")
+    if TabHdrVal (_DAMethod[1], "RptParm", "FileTypeTXT") = 1 then
+      Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptDestFileTXT")
+      DestSep$ = ", "
+      NoDest$ = ""
+    endif
+    if TabHdrVal (_DAMethod[1], "RptParm", "FileTypeWMF") = 1 then
+      Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptDestFileWMF")
+      DestSep$ = ", "
+      NoDest$ = ""
+    endif
+    if TabHdrVal (_DAMethod[1], "RptParm", "FileTypeDIF") = 1 then
+      Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptDestFileDIF")
+      DestSep$ = ", "
+      NoDest$ = ""
+    endif
+    if TabHdrVal (_DAMethod[1], "RptParm", "FileTypeCSV") = 1 then
+      Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptDestFileCSV")
+      DestSep$ = ", "
+      NoDest$ = ""
+    endif
+    if TabHdrVal (_DAMethod[1], "RptParm", "FileTypeXLS") = 1 then
+      Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptDestFileXLS")
+      DestSep$ = ", "
+      NoDest$ = ""
+    endif
+    if TabHdrVal (_DAMethod[1], "RptParm", "FileTypeHTM") = 1 then
+      Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptDestFileHTM")
+      DestSep$ = ", "
+      NoDest$ = ""
+    endif
+    if TabHdrVal (_DAMethod[1], "RptParm", "FileTypePDF") = 1 then
+      Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptDestFilePDF")
+      DestSep$ = ", "
+      NoDest$ = ""
+      if TabHdrVal (_DAMethod[1], "RptParm", "PDFNameUnique") = 1 then
+        Dest$ = Dest$ + DestSep$ + NLSCoreMth$("RptPDFUnique")
+        DestSep$ = ", "
+        NoDest$ = ""
+      endif
+    endif
+    print #5, Dest$ + NoDest$
+  endif
+
+  if TabHdrVal (_DAMethod[1], "RptParm", "SortedBy") = 0 then
+    if HPCETerms = 1 then
+      SortedBy$ = "RptSortedByMT"
+    else
+      SortedBy$ = "RptSortedByRT"
+    endif
+  else
+    SortedBy$ = "RptSortedBySig"
+  endif
+  print using #5, NLSCoreMth$("RptSortedByHdr"), NLSCoreMth$(SortedBy$)
+
+
+  if RowByVal (_Config[1], "ReportStyle", , "Style", "=",  TabHdrVal (_DAMethod[1], "RptParm", "Style")) > 0
+      print using #5, NLSCoreMth$("RptStyle"), \
+                TabText$ (_Config[1], "ReportStyle", \
+                          RowByVal (_Config[1], "ReportStyle", , "Style", "=", \
+                                    TabHdrVal (_DAMethod[1], "RptParm", "Style")), \
+                          "Title")
+  else
+      print using #5, NLSCoreMth$("RptStyle"), "???"
+  endif
+
+  print using #5, NLSCoreMth$("RptSampleInfo"), \
+                  NLSCoreMthText$("YesNo", \
+                         TabHdrVal (_DAMethod[1], "RptParm", "LongHeader"))
+
+  if ReportStyleMacroFound ("PChrom") = 1 then
+    DrawSignal = TabHdrVal (_DAMethod[1], "RptParm", "DrawSignal")
+    print using #5, NLSCoreMthText$("DrawSignal", HPCETerms), \
+                    NLSCoreMthText$("YesNo", DrawSignal)
+    if DrawSignal = 1 then
+      if TabHdrVal (_DAMethod[1], "RptParm", "MultiPage") = 0 then
+        print using #5, NLSCoreMth$("RptSigOutSingle"), \
+                        NLSCoreMthText$("SignalOutput", HPCETerms), \
+                        NLSCoreMthText$("Orientation", \
+                           TabHdrVal (_DAMethod[1], "RptParm", "Orientation"))
+        print using #5, NLSCoreMth$("RptSizeTime"), \
+                        TabHdrVal (_DAMethod[1], "RptParm", "TimeSize") * 100
+        print using #5, NLSCoreMth$("RptSizeResponse"), \
+                        TabHdrVal (_DAMethod[1], "RptParm", "RspSize") * 100
+        
+        
+
+      else
+        print using #5, NLSCoreMth$("RptSigOutMulti"), \
+                        NLSCoreMthText$("SignalOutput", HPCETerms), \
+                        TabHdrVal (_DAMethod[1], "RptParm", "Pages")
+      endif
+    endif
+  endif
+
+! Fix for PVCS# 18512 - print uncalibrated peaks report layout information
+if TabHdrVal (_DAMethod[1], "RptParm", "UncReportMode") = 0 then
+	RptLayout$ = "DoNotRpt"
+else 
+	if TabHdrVal (_DAMethod[1], "RptParm", "UncReportMode") = 1 then
+		RptLayout$ = "WithCalibPeaks"
+	else
+		RptLayout$ = "Separately"
+	endif
+endif
+
+print using #5, NLSCoreMth$("UnCalibPeaksRpt"), NLSCoreMth$(RptLayout$)
+print #5, NLSCoreMth$(RptLayout$)
+print using #5, "/"
+
+  print #5, ""
+  print #5, Dashes$
+  print #5, Center$ (len(Dashes$), NLSCoreMth$("SigOptTitle"))
+  print #5, Dashes$
+  print #5, ""
+
+  AnnSep$ = ""
+  Ann$ = NLSCoreMth$("SigOptInclHdr")
+  NoAnn$ = NLSCoreMth$("SigOptInclNone")
+  Topic = TabHdrVal (_DAMethod[1], "RptParm", "Topic")
+  if TabHdrVal (_DAMethod[1], "RptParm", "AxisVisible") = 1 then
+    Ann$ = Ann$ + AnnSep$ + NLSCoreMth$("SigOptInclAxes")
+    AnnSep$ = ", "
+    NoAnn$ = ""
+  endif
+  if mod (trunc (Topic/8), 2) = 1 then
+    Ann$ = Ann$ + AnnSep$ + NLSCoreMth$("SigOptInclNames")
+    AnnSep$ = ", "
+    NoAnn$ = ""
+  endif
+  if mod (trunc (Topic/4), 2) = 1 then
+    Ann$ = Ann$ + AnnSep$ + NLSCoreMthText$("AnnTimes", HPCETerms)
+    AnnSep$ = ", "
+    NoAnn$ = ""
+  endif
+  if mod (trunc (Topic/2), 2) = 1 then
+    Ann$ = Ann$ + AnnSep$ + NLSCoreMth$("SigOptInclLines")
+    AnnSep$ = ", "
+    NoAnn$ = ""
+  endif
+  if mod (trunc (Topic/1024), 2) = 1 then
+    Ann$ = Ann$ + AnnSep$ + NLSCoreMth$("SigOptInclTicks")
+    AnnSep$ = ", "
+    NoAnn$ = ""
+  endif
+  print #5, Ann$ + NoAnn$
+
+  print using #5, NLSCoreMth$("SigOptFont"), \
+                  TabText$ (_DAMethod[1], "Font", 2, "FaceName"), \
+                  TabVal   (_DAMethod[1], "Font", 2, "Size")
+
+  print #5
+  UseRanges = TabHdrVal (_DAMethod[1], "RptParm", "UseRanges")
+  if UseRanges = 0 then
+    print #5, NLSCoreMth$("SigOptFullRange")
+  else
+    if UseRanges = 1 then
+      UseRanges$ = "SigOptUseRanges"
+    else
+      UseRanges$ = "SigOptAutoscale"
+    endif
+
+    print using #5, NLSCoreMth$("SigOptRangesHdr"), \
+                    NLSCoreMth$(UseRanges$)
+    if TabHdrVal (_DAMethod[1], "RptParm", "TimeMinBlank") = 1 then
+      print using #5, NLSCoreMth$("SigOptMinEmpty")
+    else
+      print using #5, NLSCoreMth$("SigOptMinValue"), \
+                      TabHdrVal (_DAMethod[1], "RptParm", "TimeMin")
+    endif
+    if TabHdrVal (_DAMethod[1], "RptParm", "TimeMaxBlank") = 1 then
+      print using #5, NLSCoreMth$("SigOptMaxEmpty")
+    else
+      print using #5, NLSCoreMth$("SigOptMaxValue"), \
+                      TabHdrVal (_DAMethod[1], "RptParm", "TimeMax")
+    endif
+
+    if UseRanges = 1 then
+      print using #5, NLSCoreMth$("SigOptRespHdr")
+      if TabHdrVal (_DAMethod[1], "RptParm", "RspMinBlank") = 1 then
+        print using #5, NLSCoreMth$("SigOptMinEmpty")
+      else
+        print using #5, NLSCoreMth$("SigOptMinValue"), \
+                        TabHdrVal (_DAMethod[1], "RptParm", "RspMin")
+      endif
+      if TabHdrVal (_DAMethod[1], "RptParm", "RspMaxBlank") = 1 then
+        print using #5, NLSCoreMth$("SigOptMaxEmpty") + "/"
+      else
+        print using #5, NLSCoreMth$("SigOptMaxValue") + "/", \
+                        TabHdrVal (_DAMethod[1], "RptParm", "RspMax")
+      endif
+    endif
+    print #5
+  endif
+
+  ChromOverlaid = TabHdrVal (_DAMethod[1], "RptParm", "ChromOverlaid")
+  ChromNormalized = TabHdrVal (_DAMethod[1], "RptParm", "ChromNormalized")
+  print using #5, NLSCoreMth$("SigOptMulti"), \
+                  NLSCoreMthText$("MultiSig", HPCETerms), \
+                  NLSCoreMthText$("ChromOverlaid", ChromOverlaid), \
+                  NLSCoreMthText$("ChromNormalized", ChromNormalized)
+
+  print #5, ""
+
+  return
+EndMacro
+
+!############################################################################
+name GetRptType$
+
+  parameter RptParm
+
+! Returns a string for the enumeration of CalcType (and CalcBase).
+!############################################################################
+
+  if RptParm = 0 then
+    return NLSCoreMthText$("CalcBase",  \
+                           TabHdrVal(_DAMethod[1],"QuantParm","CalcBase"))
+  else
+    return NLSCoreCalcType$(RptParm)
+  endif
+EndMacro
+!############################################################################

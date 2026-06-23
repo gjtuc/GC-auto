@@ -1,0 +1,36 @@
+[Toolbar Header]
+Description=Isotope Distribution Toolbar
+Style=TOP | BORDER | 3D
+ButtonBitmapFile=isotope.bmp 
+ButtonSize=28,22
+BkgndBitmapFile=
+NCBorder=3
+3DBorder=0
+GapWidth=10
+TimeIncr=0.5
+DefaultColor=192, 192, 192, 0, 0, 0
+3DColor=255, 255, 255, 128, 128, 128
+AltColor1=255,   0,   0, 0, 0, 0
+AltColor2=  0, 255,   0, 0, 0, 0
+AltColor3=  0,   0, 255, 0, 0, 0
+AltColor4=196, 196, 196, 0, 0, 0
+
+[Font Info]
+FaceName=Arial
+Height=10
+Weight=400
+
+[Items]
+1001=1, STICKY | NULL, , Display sum of isotope peak profiles
+1002=2, STICKY | NULL, , Display isotope peak profiles
+1003=3, STICKY | NULL, , Display isotope peaks
+
+;1004=4, GROUP | RADIO  | NULL,   ,  Vary peak width, hold resulution constant
+;1005=5,         RADIO  | NULL,   ,  Vary resolution, hold peak width constant
+
+1008=7, GROUP | PUSH | NULL, , Copy isotope charge list and drawing to the clipboard
+1006=6, GROUP | PUSH | NULL, , Redraw isotope distribution
+
+260=8, GROUP | PUSH | NULL, , Help
+
+1007=1, GROUP | TEXT | CENTER | 3DLOWER | AUTOSIZE | NULL, , 45, Molecular formula

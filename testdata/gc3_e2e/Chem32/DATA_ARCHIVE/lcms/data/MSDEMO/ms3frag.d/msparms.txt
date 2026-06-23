@@ -1,0 +1,50 @@
+This data was acquired in Method&Run Control.
+The MSD parameters were saved in the msdiag register file.
+This msparms.txt file was built using the values from the msdiag register.
+Some parameters normally reported under MSData acquisition in Tune 
+may be missing from this msparms.txt file.  You may be able to read these 
+values from Data Analysis.  These items are marked with an asterisk (*).
+ 
+ 
+ 
+File                     :   D:\HPCHEM\1\DATA\SULF0810\MS3FRAG.D
+Operator                 :   C Miller
+Date acquired            :   Tue Aug 10 15:43:50 1999
+Instrument               :   AppSprite1
+ 
+ 
+Sample information
+----------------------------------
+Sample name              :   100 ng/µl
+Misc info                :   sulfa drug mix in positive mode with 3 scan signals at different fragmentor voltages
+ 
+ 
+MS parameters
+----------------------------------
+Tune File                   :    D:\HPCHEM\1\1946TUNE\atunes.tun
+Skim1                       :    Not Applicable
+Skim2                       :    8.0 V     
+Ion Energy                  :    5.0 V     
+Lens1                       :    2.7 V     
+Lens2                       :    39 V      
+Iris                        :    400 V     
+HED                         :    10000 V   
+Width Gain                  :    730       
+Width Offset                :    Variable  
+                                 Mass         :   Value    
+                                 --------------------------
+                                 118.08       :   -96      
+                                 622.03       :   -96      
+                                 922.01       :   -96      
+                                 1521.97      :   -96      
+                                 2121.93      :   -96      
+                                 --------------------------
+Mass Gain                   :    56.55     
+Mass Offset                 :    0.700     
+Quad DC                     :    0.00 V    
+Octopole Peak               :    250 V     
+Octopole Knee               :    280 Da    
+Mass Filter                 :    Gaussian  
+Mass Filter Width           :    0.30 Da   
+Time Filter                 :    Gaussian  
+Time Filter Width           :    0.050 minutes

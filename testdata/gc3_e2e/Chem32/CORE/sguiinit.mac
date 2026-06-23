@@ -1,0 +1,1316 @@
+!******************************************************************************
+!*
+!* FILE:  SGuiInit.mac
+!*
+!* DESCRIPTION:  Initializes basics for the GUI hotlink filter DLL
+!*
+!* $Header: /cag/DRIVERS/leo/gui/macros/sguiinit.mac 1.54 2001-02-15 14:23:11-08 robertcl Exp $
+!******************************************************************************
+!*
+!* MACROS :                     
+!*           
+!*           
+!*          
+!*         
+
+
+                   
+!############################################################################
+name GUICheckProductMacDemandLoading
+
+parameter  MacFileName$
+parameter  ExecMacroName$   default ""
+parameter  AddonPath$       default ""
+parameter  Params$          default ""
+
+!checks if the macro InitMacroName$ exists, otherwise does a
+!demand load of MacroName$ macro on the product directroy
+!will also run the macro named  ExecMacroName$
+!############################################################################
+local  bExist
+
+evaluate "bExist=Check ( macro , "+ExecMacroName$+" )"
+if bExist = 0
+   GUIProductMacDemandLoading  MacFileName$, ExecMacroName$ , AddonPath$ , Params$
+else
+   evaluate  ExecMacroName$ + " " + Params$
+endif
+
+endmacro
+
+
+
+
+!############################################################################
+name GuiExecHook
+
+  parameter Hook$              ! the name of the hook
+                               ! parameters may be transfered as
+                               ! table hdr items in this hook table
+  parameter Parms$             ! for parameters which can be appended directly
+
+! This executes all commands defined in the hook Hook$.
+! The macro is used by the core product at each defined hook.
+! It may also be used by a special analyzer for hooks in its own code.
+! extended to give parameters to called macors
+!############################################################################
+
+  local row, nRows
+
+  nRows = TabHdrVal (Hook[1], Hook$, "NumberOfRows")
+  for row = 1 to nRows
+      SetTabHdrVal  Hook[1], Hook$, "ExecRow" ,  row     !for orientation in called macro
+      evaluate TabText$ (Hook[1], Hook$, row, "Command") +" "+ Parms$
+  next row
+
+  return
+endmacro
+
+
+!############################################################################
+name GuiNewHookVeneer
+
+  parameter VeneerTab$            ! the name of the veneer table
+
+!############################################################################
+
+RemoveHook  VeneerTab$
+NewHook     VeneerTab$  
+
+!additional information to be stored
+NewTabHdrVal   Hook[1], VeneerTab$, "ExecRow" ,  0    , , 3
+NewColText     Hook[1], VeneerTab$, "RowID"
+
+endmacro
+
+
+!############################################################################
+name GuiSetVeneerHook
+
+  parameter VeneerTab$         ! the name of the veneer table
+  parameter RowID$             ! veneer name
+  parameter Command$
+  
+!############################################################################
+
+if RowID$ <> ""
+   row=RowByText(Hook[1], VeneerTab$, , "RowID", "i=" , RowID$ ) 
+else
+   row=-1  !no name found
+endif   
+if row = -1                     
+   SetHook VeneerTab$,Command$
+   row = RowByText (Hook[1], VeneerTab$, , "RowID", "i=", "")
+   if row > -1
+      SetTabText Hook[1],VeneerTab$,row,"RowID"   ,RowID$
+   endif
+!else ERROR   
+endif   
+
+endmacro
+
+
+
+!############################################################################
+name GuiExecVeneerHook
+
+  parameter VeneerTab$         ! the name of the veneer table
+  parameter RowID$             ! veneer name
+  parameter Parms$             ! for parameters which can be appended directly
+!############################################################################
+
+if RowID$ <> ""
+   row=RowByText(Hook[1], VeneerTab$, , "RowID", "i=" , RowID$ ) 
+else
+   row=-1  !no name found
+endif   
+if row <> -1
+   SetTabHdrVal  Hook[1], VeneerTab$, "ExecRow" ,  row     !for orientation in called macro
+   evaluate TabText$(Hook[1], VeneerTab$, row, "Command") +" "+Parms$
+!else ERROR   
+endif   
+
+endmacro
+
+
+
+
+!############################################################################
+name GuiFindDetHookSymbolicName
+
+parameter  SymbolicName$
+!returns the detector number
+!############################################################################
+local Tab$
+
+Tab$="GuiDetectors"
+return  RowByText(Hook[1], Tab$, , "SymbolicName", "i=" , SymbolicName$ ) 
+
+endmacro
+
+
+
+
+
+!############################################################################
+name GUIPumpReconfiguration
+
+parameter  LastPumpType  default -1
+
+!callback from GUI hotlinks filter DLL in startup to clear any state in DA progress
+!is a required callback macro will be overloaded by systgui.mac
+!############################################################################
+
+
+endmacro    
+
+
+
+!############################################################################
+name GUISamplingAreaReconfiguration
+
+parameter  RequestedNewMode$ default ""  !means reinstall last one used   
+parameter  TrayChanged       default 0   !0 means no tray change, 1 when tray changed (Gui hotlink dll)
+parameter  FiaMode           default -1  !0 means no change, 0 means turn back to no FIA display
+                                         !1 means turn to FIA display
+
+!callback from GUI hotlinks filter DLL in startup to clear any state in DA progress
+!is a required callback macro will be overloaded by systgui.mac
+!############################################################################
+
+endmacro
+
+    
+    
+             
+             
+
+
+
+
+
+
+
+
+
+
+!############################################################################
+name GUIInstallLeoHotlinkDll
+
+parameter  bForce  Default 0 ! 1 does unload and forces a load again
+
+!NOTE: 
+!if CP variable _FiaOn exists by now HpLGuH00.dll will start with 
+! FIA evaluation enabled
+!
+
+!############################################################################
+
+
+
+!also the LEO gui hotlink DLL must reinit its BSP connections to the now available drivers
+if GUIProtocolHotlinkDLL <> 0
+   if bForce = 0
+      return
+   else
+      removecmds GUIProtocolHotlinkDLL
+      if Check ( VARIABLE, GUIHpSam008DLL ) = 1
+         removecmds GUIHpSam008DLL
+      ENDIF   
+      if Check ( VARIABLE, GUIHpLeo008DLL ) = 1
+         removecmds GUIHpLeo008DLL
+      ENDIF   
+   endif   
+endif
+
+GUIProtocolHotlinkDLL=0
+GUIHpSam008DLL=0
+GUIHpLeo008DLL=0
+
+!install the protocol hotlink DLL
+if Check ( VARIABLE, DacTst ) = 1
+   if DacTst = 1
+      GUIProtocolHotlinkDLL=InstallCmds("c:\drivers\leo\gui\src\HpLGuH00.dll")
+      GUIHpLeo008DLL=InstallCmds("c:\drivers\leo\gui\800\pictdll\HpLeo008.dll")
+      GUIHpSam008DLL=InstallCmds("c:\drivers\leo\gui\800\pictsamp\HpSam008.dll")
+   else
+      GUIProtocolHotlinkDLL=InstallCmds(_DriverPath$+"HpLGuH00.dll")
+      GUIHpLeo008DLL=InstallCmds(_DriverPath$+"800\HpLeo008.dll")
+      GUIHpSam008DLL=InstallCmds(_DriverPath$+"800\HpSam008.dll")
+   endif   
+else
+   !standard branch
+
+   GUIProtocolHotlinkDLL=InstallCmds(_DriverPath$+"HpLGuH00.dll")
+   !workaround for NT sporadic LoadLibrary bug 
+   if FileStat (Mode, _DriverPath$+"800\HpLeo008.dll") = 1 then
+      !in HPCE only chemstation HpLeo008.dll does not exist
+      GUIHpLeo008DLL=InstallCmds(_DriverPath$+"800\HpLeo008.dll")
+   endif   
+   if FileStat (Mode, _DriverPath$+"800\HpSam008.dll") = 1 then
+      GUIHpSam008DLL=InstallCmds(_DriverPath$+"800\HpSam008.dll")
+   endif   
+
+endif
+
+!addons must register info at hotlink
+ExecHook  "GuiHotlEmfBubbl"
+
+
+
+endmacro
+
+
+
+!############################################################################
+name GUIReconfigureSystemDiagram
+
+!indirectly called from Leonardo cluster controller if the Leonardo Module 
+!configruation has changed,
+
+!Will be overloaded by more powerful macro GUIReconfigureSystemDiagram from
+!systgui.mac when the digram is once loaded from user
+!
+!############################################################################
+
+
+
+!also the LEO gui hotlink DLL must reinit its BSP connections to the now available drivers
+GUIInstallLeoHotlinkDll
+ 
+!here comes a more powerful macro in systgui.mac when it was loaded
+
+endmacro
+
+
+
+
+
+
+
+
+!############################################################################
+name GUICheckFreeDiskSpace
+
+!callback from Gui hotlink dll every 15 min to check
+!the global (top.mac) FreeDiskLimit is now absolute
+!############################################################################
+
+local DiskSpaceAbsolute       
+local Protocol$
+local SamplingGomIni$
+local a$
+
+local NLSFileName_astxmac$
+local ID_ASTXDRIVERSMACFILES_DISK_SPACE_51
+
+NLSFileName_astxmac$= "astxmac"
+ID_ASTXDRIVERSMACFILES_DISK_SPACE_51 = 17051
+
+if (GomExist(,GUISamplingDiagGOM$ ) = 1 Or Mrc_IsRcNetUi() = 1)
+
+  if GomExist(,GUISamplingDiagGOM$ ) = 1
+    SamplingGomIni$=GUIBuildSequenceSamplingINI$()
+    
+    if GomExist(GUISamplingDiagGOM$,SamplingGomIni$ ) = 0
+       SamplingGomIni$=GUIBuildSingleSampleINI$()
+    endif
+  endif
+  !always place the info there for seq and single sample
+  DiskSpaceAbsolute=FreeDiskSpace(_DataPath$[1])  !default ABSOLUT
+  if DiskSpaceAbsolute < FreeDiskLimit
+     if DiskSpaceAbsolute > ObjHdrVal ( _Config, "GuiMBFreeError" )
+        !put up a warning yellow disk drive 
+        Protocol$="DISKWARNING|"        
+        WriteToLogbook ReadResource$(NLSFileName_AstxMac$, ID_ASTXDRIVERSMACFILES_DISK_SPACE_51)+val$(floor(FreeDiskLimit/(1024*1024)))+" MB"
+     else
+        Protocol$="DISKFULL|"
+     endif   
+  else   
+     Protocol$="DISKOK|"
+  endif      
+  ! YD  if DiskSpaceAbsolute > 1000000000  ! 1GB  
+  !if DiskSpaceAbsolute >= 2147483000
+  !   a$=" >2.0 GB"
+  !else                                
+    ! YD a$=val$(floor((DiskSpaceAbsolute)/1000000))+" MB"
+  !endif
+  if (DiskSpaceAbsolute<(1024*1024*1024))   ! free disk space < 1GB show MB
+    a$=Val$(Floor((DiskSpaceAbsolute)/(1024*1024)))+" MB"
+  Else
+    If  (DiskSpaceAbsolute<(10*1024*1024*1024)) ! free disk space between 1GB and 10GB
+      a$=Val$((Floor((DiskSpaceAbsolute*10)/(1024*1024*1024)))/10)+" GB"
+    Else  ! free disk space >10 GB
+      a$=" >10 GB"
+    endif
+  endif
+  
+  Protocol$=Protocol$+_DataPath$[1:2]+a$
+  if RegSize(GUI) > 0
+     SetObjHdrText GUI, "DiskSpace", Protocol$
+  endif
+  if GomExist(,GUISamplingDiagGOM$ ) = 1
+    if GomExist(GUISamplingDiagGOM$,SamplingGomIni$,"DiskSpace" ) = 1
+      GomSetText GUISamplingDiagGOM$,SamplingGomIni$,"DiskSpace","elements",Protocol$ 
+    endif
+  endif
+   
+endif
+
+endmacro
+        
+
+        
+
+
+
+    
+    
+!############################################################################
+name GUIDebugObjHdrs
+
+parameter   RegName$
+parameter   ObjNr default 1
+!lists all NDRs of an RegObj
+!############################################################################
+
+local  NdrName$
+local  iii                     
+local  iType                     
+local  a$,b$ 
+
+NdrName$=" "   
+iii=1    
+a$=" : "    
+b$="""" 
+!listmessages on
+print "-------------------------------------------------"
+print RegName$+"["+val$(ObjNr)+"]   at  time: "+sprintf$(mtime(),"%.0lf")
+evaluate "NdrName$=ObjHdrName$("+RegName$+"[ObjNr],iii)"
+while  NdrName$ <> ""
+   evaluate "iType=ObjHdrType("+RegName$+"[ObjNr],NdrName$)"
+   if iType=0
+      evaluate "print  NdrName$+a$+b$+ObjHdrText$("+RegName$+"[ObjNr],NdrName$)+b$"
+   else
+   if iType=1
+      evaluate "print  NdrName$+a$+val$(ObjHdrVal("+RegName$+"[ObjNr],NdrName$))"
+   else
+   if iType=4
+      print  NdrName$+" (table) "
+   endif
+   endif
+   endif
+   iii=iii+1
+   evaluate "NdrName$=ObjHdrName$("+RegName$+"[ObjNr],iii)"
+endwhile
+endmacro
+
+   
+
+    
+!############################################################################
+name GUIDebugCpVars
+
+!############################################################################
+
+listmessages on         
+print "-------------------------------------------------"
+print "GuiSystemStatus$: "+ GuiSystemStatus$
+print "GuiStatusTime$  : "+ GuiStatusTime$
+
+print "_MethFile$      : "+ _MethFile$
+print "_METHODINFO$    : "+ _METHODINFO$
+print "_MethodChanged  : ",_MethodChanged
+
+print "_DATAFILE1$     : "+ _DATAFILE1$
+print "_DATAPath$      : "+ _DATAPath$
+print "_DATASeqSubDir$ : "+ _DATASeqSubDir$
+
+print "_SEQCURRLINE1   : ",_SEQCURRLINE1
+print "_SEQINDEX1      : ",_SEQINDEX1
+print "_REPLICATE1     : ",_REPLICATE1
+
+print "_ALSBOTTLE1     : ",_ALSBOTTLE1
+
+print "_DATANAME1$     : "+ _DATANAME1$
+print "_SAMPINFO1$     : "+ _SAMPINFO1$
+print "_DATASubDir$    : "+ _DATASubDir$
+
+print "FreeDiskLimit   : "+ val$(FreeDiskLimit)
+
+
+endmacro
+
+   
+    
+!############################################################################
+name GUIDebugSeqVars
+
+!############################################################################
+local iii
+on error iii=1
+
+listmessages on         
+print "-------------------------------------------------"
+print "_SEQINDEX        : ",_SEQINDEX
+print "_SEQINDEX1       : ",_SEQINDEX1
+print "_SEQCURRLINE1    : ",_SEQCURRLINE1
+print "_REPLICATE1      : ",_REPLICATE1
+
+print "_ALSBOTTLE1      : ",_ALSBOTTLE1
+
+print "_DATAFILE1$      : "+ _DATAFILE1$
+print "_DATANAME1$      : "+ _DATANAME1$
+print "_SAMPINFO1$      : "+ _SAMPINFO1$
+
+print "SeqTable1.VialNo    : ",TabVal(_sequence,SeqTable1,_SEQINDEX1,Vial)
+print "SeqTable1.InjVial   : ",TabVal(_sequence,SeqTable1,_SEQINDEX1,InjVial)
+print "SeqTable1.SampleName: "+TabText$(_sequence,SeqTable1,_SEQINDEX1,SampleName)
+print "SeqTable1.SampleInfo: "+TabText$(_sequence,SeqTable1,_SEQINDEX1,SampleInfo)
+
+on error
+
+endmacro
+
+    
+   
+    
+!############################################################################
+name GUIDebugMenuLinkVars
+
+!############################################################################
+local iii
+on error print  "item missing  !! "
+
+listmessages on         
+print "-------------------------------------------------"
+print "_SEQINDEX        : ",_SEQINDEX
+print "_SEQINDEX1       : ",_SEQINDEX1
+print "_SEQCURRLINE1    : ",_SEQCURRLINE1
+print "_REPLICATE1      : ",_REPLICATE1
+
+print "_ALSBOTTLE1      : ",_ALSBOTTLE1
+
+print "_DATAFILE1$      : "+ _DATAFILE1$
+print "_DATANAME1$      : "+ _DATANAME1$
+print "_SAMPINFO1$      : "+ _SAMPINFO1$
+
+print "SeqTable1.VialNo    : ",TabVal(_sequence,SeqTable1,_SEQINDEX1,Vial)
+print "SeqTable1.InjVial   : ",TabVal(_sequence,SeqTable1,_SEQINDEX1,InjVial)
+print "SeqTable1.SampleName: "+TabText$(_sequence,SeqTable1,_SEQINDEX1,SampleName)
+print "SeqTable1.SampleInfo: "+TabText$(_sequence,SeqTable1,_SEQINDEX1,SampleInfo)
+
+on error
+
+endmacro
+
+    
+    
+!############################################################################
+name GUIShowBubbleMessage
+
+parameter   InfoType$      default "LAST"  !  ERROR  WARNING  WAITING  INFO  NONE  LAST
+parameter   ModuleName$    default ""      !  LINJ LPUMP LTHM1 LTHM2 LDAD1 LDAD2 LMWD1 LMWD2 LRID1 LRID2 LVWD1 LVWD2 LVWD3 LVWD4
+                                           !  MTH DA GLP
+parameter   MessageText$   default ""
+parameter   HelpNumber     default  0
+
+!callback from GUI hotlinks filter DLL in case an error has occured
+!is a required callback macro will be overloaded by systgui.mac
+!############################################################################
+
+
+endmacro
+    
+
+!############################################################################
+name GUIStartDAProgressDisplay
+
+parameter  FctArea$       default "DefaultCase" 
+                          ! "INTEG" , "QUANT" , "REPORT" , "GLPSAVE" , "DONE" , "RESET"
+
+!callback from GUI hotlinks filter DLL in startup to clear any state in DA progress
+!is a required callback macro will be overloaded by systgui.mac
+!############################################################################
+
+
+endmacro
+
+   
+
+    
+!############################################################################
+name GUIDiagramMenuAdd
+
+parameter   AreaToken$ default "" ! "SAMPLINGAREA" ,  "METHODAREA" , "SEPARATOR"
+parameter   Label$
+parameter   Item$
+parameter   Message$   default ""
+parameter   MenuOrderNumber   default 0
+!overloading guigener.mac in case CRTxResolution > 640
+!############################################################################
+
+if AreaToken$ = "SAMPLINGAREA"
+   if DevLeoAls+Dev1090Inject+Dev1050Sampler+DevHPCE > 0
+      if Check ( VARIABLE, GUISampleAreaStateForMenu ) = 0
+         GUISampleAreaStateForMenu=1  !enabled and unchecked
+      endif
+      menuadd Label$, Item$, "TLB_SwitchAcqTask  ,3" , , Message$ , GUISampleAreaStateForMenu , , , MenuOrderNumber 
+   endif
+   if DevRCnet > 0
+      On Error Print ""
+      if RCTrayAvailable() = 1 
+      if Check ( VARIABLE, GUISampleAreaStateForMenu ) = 0
+         GUISampleAreaStateForMenu=1  !enabled and unchecked
+      endif
+      menuadd Label$, Item$, "TLB_SwitchAcqTask  ,3" , , Message$ , GUISampleAreaStateForMenu , , , MenuOrderNumber 
+!        if check(variable,_TrayUIVisible)<>1
+!          _TrayUIVisible=1
+!        endif
+!        menuadd Label$, Item$, "RCShowTray" , , "" , _TrayUIVisible , , , MenuOrderNumber 
+      endif
+      On Error
+   endif
+else
+if AreaToken$ = "METHODAREA" 
+   if DevHPCE > 0
+      if Check ( VARIABLE, GUIDiagramStateForMenu ) = 0
+         GUIDiagramStateForMenu=1  !enabled and unchecked
+      endif
+      menuadd Label$, Item$, "Diagram" ,, Message$ ,GUIDiagramStateForMenu, , , MenuOrderNumber 
+   else
+   if DevLeoPump+DevLeoAls+DevLeoThm+DevLeoClc+GuiDevGuiDets > 0
+      !if anyone is present
+      if Check ( VARIABLE, GUIDiagramStateForMenu ) = 0
+         GUIDiagramStateForMenu=1  !enabled and unchecked
+      endif
+      menuadd Label$, Item$, "GUIShowSystemDiagram  3" , , Message$ , \
+              GUIDiagramStateForMenu , , , MenuOrderNumber 
+   else
+      if (Mrc_IsRcNetUi() > 0)
+        if Check ( VARIABLE, GUIDiagramStateForMenu ) = 0
+          GUIDiagramStateForMenu=1  !enabled and unchecked
+        endif
+        menuadd Label$, Item$, "GUIShowSystemDiagram 3" , , Message$ , \
+        GUIDiagramStateForMenu , , , MenuOrderNumber 
+      endif
+   endif
+   endif           
+else
+if AreaToken$ = "SEPARATOR" 
+   if DevLeoPump+DevLeoAls+DevLeoThm+DevLeoClc+GuiDevGuiDets+ \ 
+      Dev1090Inject+Dev1050Sampler+DevHPCE > 0
+      !if then the above items will show there for only then need a separator
+      menuadd Label$, ,"SEPARATOR" , , , , , , MenuOrderNumber 
+   endif
+endif
+endif
+endif
+
+endmacro
+
+    
+!############################################################################
+name GUIShowSystemDiagram
+
+parameter  ShowType   default  0  ! 0 is show in switch view (test if applicable)
+                                  ! others may be defined by product specific macros
+                                  ! example 1 create and show , 2 destroy, 3 toggle
+
+
+!bootstrap macro for load on demand on a menu call to display the GUI
+!DEFINITION:
+!in the systgui.mac on the product dir there must exist a macro  
+!    GUIShowSystemDiagramCode    to show the system diagram and does state
+!setting via CP variable  GUIDiagramStateForMenu
+!############################################################################
+
+if check ( macro, GUIShowSystemDiagramCode ) = 0
+   GUIProductMacDemandLoading "SystGui.mac" , "Init_systgui"
+endif
+
+if check ( macro, GUIShowSystemDiagramCode ) = 1
+   if GUIProtocolHotlinkDLL = 0
+      !is offline and hotlink dll is not installed yet
+      GUIInstallLeoHotlinkDll
+   endif
+
+   GUIShowSystemDiagramCode ShowType
+endif
+
+endmacro
+    
+    
+!############################################################################
+name GUIShowSamplingDiagram
+
+parameter  RequestedTaskMode$ default ""  !means reinstall last one used
+                                          !find out from view tbl hdr CurrentTask
+                                          !values: TOPSEQ, TOPRUN
+parameter  ShowType   default  0  ! 0 is show in switch view (test if applicable)
+                                  ! others may be defined by product specific macros
+                                  ! 1 create and show , 2 destroy (does not remove sidebar), 
+                                  ! 3 toggle (does create/remove sidebar),
+                                  ! 4 show only in new mode if already there or 
+                                  ! saved there as to be there,
+                                  ! 5 is close in CloseView macro (remove sidebar)
+                                  ! 6 destroy (removes sidebar)
+
+
+!bootstrap macro for load on demand on a menu call to display the GUI
+!DEFINITION:
+!in the systgui.mac on the product dir there must exist a macro  
+!    GUIShowSamplingDiagramCode    to show the system diagram and does state
+!setting via CP variable  GUISampleAreaStateForMenu
+!some how core calls this also if no sample diag is configured
+!############################################################################
+
+local CurrentViewTable$                                                                                              
+local row
+
+
+!init in case it TabHdrVal "SampleAreaOn" is not there
+CurrentViewTable$=TabHdrText$(_config[1], "Window", "CurrentView")
+if CurrentViewTable$ = "" 
+   CurrentViewTable$="TOP"
+endif
+CurrentViewTable$="View_"+CurrentViewTable$
+if ObjHdrType(_config[1],CurrentViewTable$) = 4
+   if TabHdrType(_config[1],CurrentViewTable$,"SampleAreaOn") = 99
+      NewTabHdrVal  _config[1],CurrentViewTable$,"SampleAreaOn",0 , , 3
+   endif
+   if ShowType = 4
+      if TabHdrVal(_config[1],CurrentViewTable$,"SampleAreaOn") = 1
+         ShowType=0
+      else
+         ShowType=6
+      endif
+   endif                       
+else
+   return
+endif      
+
+if RequestedTaskMode$ = ""
+   !anton sets this info before calling here
+   RequestedTaskMode$=View_CurrentTaskName$()
+endif
+
+
+if DevRCnet > 0
+  if RCTrayAvailable() = 1
+    if ShowType=0 Or ShowType=1 Or ShowType=4
+      GUISamplingRCShowTray 1, CurrentViewTable$, 1, 3
+    endif
+    if ShowType=2 Or ShowType=6
+      GUISamplingRCShowTray 0, CurrentViewTable$, 0, 1
+    endif
+    if ShowType=5
+      if TabHdrVal(_config[1],CurrentViewTable$,"SampleAreaOn") = 1
+        GUISamplingRCShowTray 0, CurrentViewTable$, 1, 3
+      endif        
+    endif
+    if ShowType=3
+      if TabHdrVal(_config[1],CurrentViewTable$,"SampleAreaOn") = 1
+        GUISamplingRCShowTray 0, CurrentViewTable$, 0, 1
+      else
+        GUISamplingRCShowTray 1, CurrentViewTable$, 1, 3
+      endif        
+    endif
+  endif
+else
+  row = RowByVal(_CONFIG[1], CurrentViewTable$,,"WINNUM","=",GuiSamplingDiagramWinNo)
+  if (row <> -1)
+    SetTabVal  _config[1], CurrentViewTable$, row, "Visible", 0
+  endif
+endif
+
+
+if DevLeoAls+Dev1090Inject+Dev1050Sampler+DevHPCE > 0
+   if check ( macro, GUIShowSamplingDiagramCode ) = 0 \
+      AND  ShowType<>5  AND  ShowType<>6
+      !olny then really load in the code
+      GUIProductMacDemandLoading "SystGui.mac" , "Init_systgui"
+   endif
+   if check ( macro, GUIShowSamplingDiagramCode ) = 1
+      if GUIProtocolHotlinkDLL = 0
+         !is offline and hotlink dll is not installed yet
+         GUIInstallLeoHotlinkDll
+      endif
+   endif
+   if check ( macro, GUIShowSamplingDiagramCode ) = 1
+      GUIShowSamplingDiagramCode RequestedTaskMode$, ShowType
+   endif
+endif
+
+endmacro
+    
+
+Name GUISamplingRCShowTray
+
+  parameter tray
+  parameter currentviewtable$
+  parameter samplearea
+  parameter menustate
+
+  RCShowTray ,tray
+  SetTabHdrVal _config[1],CurrentViewTable$,"SampleAreaOn", samplearea
+  GUISampleAreaStateForMenu = menustate
+
+endmacro
+    
+!############################################################################
+name GUIInstrumentReconfiguration
+
+!bootstrap macro for load on demand on an instrument reconfiguration call to 
+!redo the display of the GUI
+!DEFINITION:
+!in the systgui.mac on the product dir there must exist a macro  
+!    GUIReconfigureSystemDiagram    to show the system diagram
+!############################################################################
+
+if check ( macro, GUIReconfigureSystemDiagram ) = 0
+   GUIProductMacDemandLoading "SystGui.mac" , "Init_systgui"
+endif
+
+if check ( macro, GUIReconfigureSystemDiagram ) = 1
+   GUIReconfigureSystemDiagram
+endif
+
+endmacro
+
+
+
+
+!############################################################################
+name InitSystGuiGlobalVars
+
+!############################################################################
+
+
+if Check ( VARIABLE, _SeqCurrLine1 ) = 0
+   _SeqCurrLine1=0 ! seq engine inits it only when seq is started
+endif
+
+
+if Check ( VARIABLE, GUILastSequenceTrayGOM$ ) = 0
+   GUILastSequenceTrayGOM$=""   
+   !contains the subgom containing left and right parts of the tray
+endif
+if Check ( VARIABLE, GUISystemDiagGOM$ ) = 0
+   GUISystemDiagGOM$="LSysCont"
+endif
+if Check ( VARIABLE, GUISamplingDiagGOM$ ) = 0   
+   if Dev1050Sampler > 0
+      GUISamplingDiagGOM$="LSamplsw"
+   else
+   if DevHPCE > 0
+      GUISamplingDiagGOM$="CSamples"
+   else
+      !Leo ALS and 1090
+      GUISamplingDiagGOM$="LSamples"
+   endif
+   endif
+endif
+if Check ( VARIABLE, GUIQuickListGOM$ ) = 0
+   GUIQuickListGOM$="LQuickLs"
+endif
+if Check ( VARIABLE, GUIProtocolHotlinkDLL ) = 0
+   GUIProtocolHotlinkDLL=0
+endif
+if Check ( VARIABLE, GUIHpSam008DLL ) = 0
+   GUIHpSam008DLL=0
+endif
+if Check ( VARIABLE, GUIHpLeo008DLL ) = 0
+   GUIHpLeo008DLL=0
+endif
+
+if Check ( VARIABLE, GUIDiagramStateForMenu ) = 0
+   GUIDiagramStateForMenu=1  !enabled and unchecked
+endif
+
+if Check ( VARIABLE, GUISampleAreaStateForMenu ) = 0
+   GUISampleAreaStateForMenu=1  !enabled and unchecked
+endif
+
+if Check ( VARIABLE, GuiDAProgressLoopRuning ) = 0
+   GuiDAProgressLoopRuning=0 
+endif                 
+
+GuiDAProgressEnd=0    !for reset
+        
+if Check ( VARIABLE, GuiModuleNrdyInfoMenu ) = 0
+   GuiModuleNrdyInfoMenu=0 
+endif                 
+
+if Check ( VARIABLE, GuiALSNrdyInfoMenu ) = 0
+   GuiALSNrdyInfoMenu=0   !module NRDY and Run mode info
+endif                 
+
+
+if Check ( VARIABLE, GuiSeqRunMode ) = 0
+   GuiSeqRunMode=0  !let Gui hotlink know, in order to gray injector correctly
+endif
+if Check ( VARIABLE, GuiUserCalledNrdyInfo$ ) = 0
+   GuiUserCalledNrdyInfo$=""  !let Gui hotlink know if it needs to update a bubble message info
+endif
+
+
+
+if Check ( VARIABLE, DevLeoPump ) = 0
+   DevLeoPump=0
+endif
+if Check ( VARIABLE, DevLeoAls ) = 0
+   DevLeoAls=0
+endif
+if Check ( VARIABLE, DevLeoTHM ) = 0
+   DevLeoTHM=0
+endif
+if Check ( VARIABLE, DevLeoCLC ) = 0
+   DevLeoCLC=0
+endif
+if Check ( VARIABLE, DevLeoDAD ) = 0
+   DevLeoDAD=0
+endif
+if Check ( VARIABLE, DevNucDAD ) = 0
+   DevNucDAD=0
+EndIf
+if Check ( VARIABLE, DevNucMwd ) = 0
+   DevNucMwd=0
+endif
+if Check ( VARIABLE, DevLeoMWD ) = 0
+   DevLeoMWD=0
+endif
+if Check ( VARIABLE, DevLeoVWD ) = 0
+   DevLeoVWD=0
+endif
+if Check ( VARIABLE, DevNucVWD ) = 0
+   DevNucVWD=0
+endif
+if Check ( VARIABLE, DevLeoRID ) = 0
+   DevLeoRID=0
+endif
+if Check ( VARIABLE, DevLeoFLD ) = 0
+   DevLeoFLD=0
+endif
+if Check ( VARIABLE, Dev1946MSD ) = 0
+   Dev1946MSD=0
+endif
+
+if Check ( VARIABLE, GuiSystemDiagramWinNo ) = 0
+   GuiSystemDiagramWinNo=63
+endif
+
+        
+if Check ( VARIABLE, GuiOffline ) = 0
+   GuiOffline=_Offline   !better possiblity to do full testing offline
+endif                 
+        
+if Check ( VARIABLE, GuiDevGuiDets ) = 0
+   GuiDevGuiDets=0
+endif
+        
+if Check ( VARIABLE, GuiDevNonGuiDets ) = 0
+   GuiDevNonGuiDets=0
+endif
+
+        
+if Check ( VARIABLE, SeqEndStatus ) = 0
+   SeqEndStatus=0   !seq only sets this after 1. run
+endif                 
+
+if Check ( VARIABLE, GUIDetRunAnimation ) = 0
+   GUIDetRunAnimation=0 
+endif                 
+
+if Check ( VARIABLE, GuiSamplingDiagramWinNo ) = 0
+   GuiSamplingDiagramWinNo=72
+endif
+
+endmacro
+
+
+
+!############################################################################
+name InitSystGuiRegisters
+
+!############################################################################
+
+
+if ObjHdrType ( _Config, "GuiMBFreeError" ) = 99
+   SetObjHdrVal   _Config, "GuiMBFreeError" , 500000    
+   !put up yellow sign when above this and below FreeDiskLimit
+   !red when below this
+endif
+
+
+if RegSize (Gui) < 1
+   NewObj Gui,1,0,0
+endif
+   
+   SetObjHdrText  Gui,"ModMsgType","NONE"
+   SetObjHdrText  Gui,"ModMsgModName",""
+   SetObjHdrText  Gui,"ModMsgText",""
+   SetObjHdrVal   Gui,"ModMsgHelpNo",0
+
+
+
+
+!things not done by drivers in all cases
+if DevLeoPump > 0
+   if ObjHdrType(LeoPumpStatus1, "WarnBottleA") = 99 
+      SetObjHdrVal LeoPumpStatus1, "WarnBottleA",0.1  !filling level warning when below this limit
+   endif   
+   if ObjHdrType(LeoPumpStatus1, "WarnBottleB") = 99
+      SetObjHdrVal LeoPumpStatus1, "WarnBottleB",0.1
+   endif   
+   if ObjHdrType(LeoPumpStatus1, "WarnBottleC") = 99
+      SetObjHdrVal LeoPumpStatus1, "WarnBottleC",0.1
+   endif   
+   if ObjHdrType(LeoPumpStatus1, "WarnBottleD") = 99
+      SetObjHdrVal LeoPumpStatus1, "WarnBottleD",0.1
+   endif   
+endif
+if DevLeoPump > 1
+   if ObjHdrType(LeoPumpStatus2, "WarnBottleA") = 99 
+      SetObjHdrVal LeoPumpStatus2, "WarnBottleA",0.1  !filling level warning when below this limit
+   endif   
+   if ObjHdrType(LeoPumpStatus2, "WarnBottleB") = 99
+      SetObjHdrVal LeoPumpStatus2, "WarnBottleB",0.1
+   endif   
+   if ObjHdrType(LeoPumpStatus2, "WarnBottleC") = 99
+      SetObjHdrVal LeoPumpStatus2, "WarnBottleC",0.1
+   endif   
+   if ObjHdrType(LeoPumpStatus2, "WarnBottleD") = 99
+      SetObjHdrVal LeoPumpStatus2, "WarnBottleD",0.1
+   endif   
+endif
+if DevLeoPump > 2
+   if ObjHdrType(LeoPumpStatus3, "WarnBottleA") = 99 
+      SetObjHdrVal LeoPumpStatus3, "WarnBottleA",0.1  !filling level warning when below this limit
+   endif   
+   if ObjHdrType(LeoPumpStatus3, "WarnBottleB") = 99
+      SetObjHdrVal LeoPumpStatus3, "WarnBottleB",0.1
+   endif   
+   if ObjHdrType(LeoPumpStatus3, "WarnBottleC") = 99
+      SetObjHdrVal LeoPumpStatus3, "WarnBottleC",0.1
+   endif   
+   if ObjHdrType(LeoPumpStatus3, "WarnBottleD") = 99
+      SetObjHdrVal LeoPumpStatus3, "WarnBottleD",0.1
+   endif   
+endif
+if DevLeoAls = 1
+   if ObjHdrType(LeoAlsStatus1, "PrepProgress") = 99
+      !_DebugPrint "missing objhdr PrepProgress",""
+      SetObjHdrVal LeoAlsStatus1, "PrepProgress",0   !allow simulation of injection prep progress
+   endif   
+   if ObjHdrType(LeoAlsStatus1, "ACT_FIAINJREP") = 99
+      !_DebugPrint "missing objhdr ACT_FIAINJREP",""
+      SetObjHdrVal LeoAlsStatus1, "ACT_FIAINJREP",0   
+   endif   
+endif
+if DevLeoTHM > 0
+   if ObjHdrType(LeoThermostatStatus1, "TempDiffLimit") = 99
+      _DebugPrint "missing objhdr TempDiffLimit" ,""
+      setobjhdrval  LeoThermostatStatus1 , "TempDiffLimit" ,1
+   endif   
+   if ObjHdrType(LeoThermostatStatus1, "LeftTemp") = 99
+      _DebugPrint "missing objhdr LeftTemp" ,""
+      setobjhdrval  LeoThermostatStatus1 , "LeftTemp" ,17
+   endif   
+   if ObjHdrType(LeoThermostatStatus1, "RightTemp") = 99
+      _DebugPrint "missing objhdr RightTemp" ,""
+      setobjhdrval  LeoThermostatStatus1 , "RightTemp" ,20
+   endif   
+endif
+if DevLeoTHM > 1
+   if ObjHdrType(LeoThermostatStatus2, "TempDiffLimit") = 99
+      _DebugPrint "missing objhdr TempDiffLimit" ,""
+      setobjhdrval  LeoThermostatStatus2 , "TempDiffLimit" ,1
+   endif   
+   if ObjHdrType(LeoThermostatStatus2, "LeftTemp") = 99
+      _DebugPrint "missing objhdr LeftTemp" ,""
+      setobjhdrval  LeoThermostatStatus2 , "LeftTemp" ,17
+   endif   
+   if ObjHdrType(LeoThermostatStatus2, "RightTemp") = 99
+      _DebugPrint "missing objhdr RightTemp" ,""
+      setobjhdrval  LeoThermostatStatus2 , "RightTemp" ,20
+   endif   
+endif
+if DevLeoCLC > 0
+   if ObjHdrType(LeoChipCubeStatus1, "ACT_CHIPTYPE") = 99
+      _DebugPrint "missing objhdr ACT_CHIPTYPE" ,""
+      setobjhdrtext  LeoChipCubeStatus1 , "ACT_CHIPTYPE" ,""
+   endif
+endif
+if DevLeoVwd > 0
+   if ObjHdrType(LeoVwdStatus1, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  LeoVwdStatus1 , "UVLamp" ,0
+   endif   
+endif
+if DevLeoVwd > 1
+   if ObjHdrType(LeoVwdStatus2, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  LeoVwdStatus2 , "UVLamp" ,0
+   endif   
+endif
+if DevLeoVwd > 2
+   if ObjHdrType(LeoVwdStatus3, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  LeoVwdStatus3 , "UVLamp" ,0
+   endif   
+endif
+if DevNucVwd > 0
+   if ObjHdrType(NucVwdStatus1, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  NucVwdStatus1 , "UVLamp" ,0
+   endif   
+endif
+if DevNucVwd > 1
+   if ObjHdrType(NucVwdStatus2, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  NucVwdStatus2 , "UVLamp" ,0
+   endif   
+endif
+if DevNucVwd > 2
+   if ObjHdrType(NucVwdStatus3, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  NucVwdStatus3 , "UVLamp" ,0
+   endif   
+endif
+if DevLeoRid > 0
+!   if ObjHdrType(LeoRidStatus1, "UVLamp") = 99
+!      _DebugPrint "missing objhdr UVLamp" ,""
+!      setobjhdrval  LeoRidStatus1 , "UVLamp" ,0
+!   endif   
+endif
+if DevLeoRid > 1
+!   if ObjHdrType(LeoRidStatus2, "UVLamp") = 99
+!      _DebugPrint "missing objhdr UVLamp" ,""
+!      setobjhdrval  LeoRidStatus2 , "UVLamp" ,0
+!   endif   
+endif
+if DevLeoDad > 0
+   if ObjHdrType(LeoDadStatus1, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  LeoDadStatus1 , "UVLamp" ,0
+   endif   
+   if ObjHdrType(LeoDadStatus1, "VisLamp") = 99
+      _DebugPrint "missing objhdr VisLamp" ,""
+      setobjhdrval  LeoDadStatus1 , "VisLamp" ,0
+   endif   
+endif
+if DevLeoDad > 1
+   if ObjHdrType(LeoDadStatus2, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  LeoDadStatus2 , "UVLamp" ,0
+   endif   
+   if ObjHdrType(LeoDadStatus2, "VisLamp") = 99
+      _DebugPrint "missing objhdr VisLamp" ,""
+      setobjhdrval  LeoDadStatus2 , "VisLamp" ,0
+   endif   
+endif
+if DevNucDad > 0
+   if ObjHdrType(NucDadStatus1, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  NucDadStatus1 , "UVLamp" ,0
+   endif   
+   if ObjHdrType(NucDadStatus1, "VisLamp") = 99
+      _DebugPrint "missing objhdr VisLamp" ,""
+      setobjhdrval  NucDadStatus1 , "VisLamp" ,0
+   endif   
+endif
+if DevNucDad > 1
+   if ObjHdrType(NucDadStatus2, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  NucDadStatus2 , "UVLamp" ,0
+   endif   
+   if ObjHdrType(NucDadStatus2, "VisLamp") = 99
+      _DebugPrint "missing objhdr VisLamp" ,""
+      setobjhdrval  NucDadStatus2 , "VisLamp" ,0
+   endif   
+endif
+if DevLeoMwd > 0
+   if ObjHdrType(LeoMwdStatus1, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  LeoMwdStatus1 , "UVLamp" ,0
+   endif   
+   if ObjHdrType(LeoMwdStatus1, "VisLamp") = 99
+      _DebugPrint "missing objhdr VisLamp" ,""
+      setobjhdrval  LeoMwdStatus1 , "VisLamp" ,0
+   endif   
+endif
+if DevLeoMwd > 1
+   if ObjHdrType(LeoMwdStatus2, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  LeoMwdStatus2 , "UVLamp" ,0
+   endif   
+   if ObjHdrType(LeoMwdStatus2, "VisLamp") = 99
+      _DebugPrint "missing objhdr VisLamp" ,""
+      setobjhdrval  LeoMwdStatus2 , "VisLamp" ,0
+   endif   
+endif
+if DevNucMwd > 0
+   if ObjHdrType(NucMwdStatus1, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  NucMwdStatus1 , "UVLamp" ,0
+   endif   
+   if ObjHdrType(NucMwdStatus1, "VisLamp") = 99
+      _DebugPrint "missing objhdr VisLamp" ,""
+      setobjhdrval  NucMwdStatus1 , "VisLamp" ,0
+   endif   
+endif
+if DevNucMwd > 1
+   if ObjHdrType(NucMwdStatus2, "UVLamp") = 99
+      _DebugPrint "missing objhdr UVLamp" ,""
+      setobjhdrval  NucMwdStatus2 , "UVLamp" ,0
+   endif   
+   if ObjHdrType(NucMwdStatus2, "VisLamp") = 99
+      _DebugPrint "missing objhdr VisLamp" ,""
+      setobjhdrval  NucMwdStatus2 , "VisLamp" ,0
+   endif   
+endif
+
+
+  on error print ""
+  
+  if (devGCI > 0)
+     if devRCnet > 0 then
+      if _offline = 1
+        if ObjHdrType(_Config[1], "RcWlsIsWellPlateTray") = 99
+          NewObjHdrVal _Config[1], "RcWlsIsWellPlateTray", 0, 0, 1
+        endif
+        if ObjHdrType(_Config[1], "RcWlsPlate1Rows") = 99
+          NewObjHdrVal _Config[1], "RcWlsPlate1Rows", 0, 0, 1
+        endif
+        if ObjHdrType(_Config[1], "RcWlsPlate1Cols") = 99
+          NewObjHdrVal _Config[1], "RcWlsPlate1Cols", 0, 0, 1
+        endif
+        if ObjHdrType(_Config[1], "RcWlsPlate2Rows") = 99
+          NewObjHdrVal _Config[1], "RcWlsPlate2Rows", 0, 0, 1
+        endif
+        if ObjHdrType(_Config[1], "RcWlsPlate2Cols") = 99
+          NewObjHdrVal _Config[1], "RcWlsPlate2Cols", 0, 0, 1
+        endif
+      endif
+    endif
+  endif
+  
+
+endmacro
+
+
+ 
+!############################################################################
+name GUIBootLeo1050ADDetectors
+
+!add configured dets here so menu decision logic can decide 
+!if menu item and GUI to show or not
+!also fill in the GuiReConfigDet Hook table
+!############################################################################
+
+
+GuiDevGuiDets=GuiDevGuiDets+DevLeoDAD+DevLeoMWD+DevLeoVWD+DevNucVWD+DevLeoRID+adcdevice+DevLeoFLD+DevNucDad+DevNucMwd
+        
+GuiDevNonGuiDets=GuiDevNonGuiDets+dev1050DAD+dev1050MWD+dev1050VWD+dev1046FLD+dev1049ECD
+
+SetHook  "GuiReConfigDet" , \
+         "GUICheckProductMacDemandLoading ""GuiLcDet.mac"", ""GUIReConfigureLeoDetectors"" "
+SetHook  "GuiReConfigDet" , \
+         "GUICheckProductMacDemandLoading ""GuiLcDet.mac"", ""GUIReConfigure1050Detectors"" "
+SetHook  "GuiReConfigDet" , \
+         "GUICheckProductMacDemandLoading ""GuiLcDet.mac"", ""GUIReConfigureADConv"" "
+
+endmacro
+
+
+
+
+
+!############################################################################
+name GUIInitialize
+
+!Initializes GUI modules after all Addons are registered and StartAddons
+!in top.mac was done
+!installs the GUI protocol DLL
+!############################################################################
+
+local erroriii
+
+
+NewHook  "GuiReConfigDet"
+NewHook  "GuiHotlEmfBubbl"
+
+NewHook  "GuiMthDiagrmExt"
+NewHook  "GuiTopMthExt"
+NewHook  "GuiPreMthExt"
+NewHook  "GuiPostMthExt"
+
+GuiNewHookVeneer  "GuiQuickLst"
+
+NewHook  "GuiSampleTask"
+NewHook  "GuiMethSampLnks"
+NewHook  "GuiReConfigGUI"
+
+
+GuiDevGuiDets=0
+GuiDevNonGuiDets=0
+
+ExecHook  "GuiBootstrap"
+
+ 
+!the LEO gui hotlink DLL must reinit its BSP connections to the now available drivers
+if _offline = 0
+   !so pure repocressing copies don't have so many BSP connections
+   if DevLeoPump+DevLeoAls+DevLeoThm+DevLeoClc+GuiDevGuiDets > 0
+      !if leo module is there (serve at least for EMF warning which is in status bar)
+      GUIInstallLeoHotlinkDll   1
+   endif   
+endif   
+
+
+on error  erroriii=1
+
+CpStart "CPGui"
+
+!CpStart "CPGuiAsync" don't just was started CPs
+
+!make sure 3. CP is started in top.mac
+!use 3. cp for GUI callback macros since GUI is acceccable only when there is no
+!second layer dialog box up
+
+CpStart "CP3"
+
+on error 
+
+endmacro
+
+
+
+
+
+
+!############################################################################
+name Init_SGuiInit
+
+!bootstrap macro        
+!initialized the HOOKS
+!initialized global vars
+!############################################################################
+
+
+
+InitSystGuiGlobalVars
+
+InitSystGuiRegisters
+
+
+!moved to guigener.mac  so res < 800 also work with addons NewHook  "GuiBootstrap"
+
+SetHook  "GuiBootstrap" , "GUICheckProductMacDemandLoading ""sguiinit.mac"", ""GUIBootLeo1050ADDetectors"" "
+
+
+endmacro
+
+
+

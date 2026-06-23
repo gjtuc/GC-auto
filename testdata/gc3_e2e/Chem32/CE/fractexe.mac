@@ -1,0 +1,540 @@
+!******************************************************************************
+!
+!   FILE
+!       FRACTEXE.MAC
+!
+!   DESCRIPTION
+!       automatic fraction collection execution macros
+! 
+!              
+!   RCS
+!       $Header: /cag/DRIVERS/leodef/ce/misc/fractexe.mac 1.8 1996-02-15 08:51:54-08 hmgr Exp $
+!
+!******************************************************************************
+
+
+
+
+!******************************************************************************
+NAME FC_PreRun
+!******************************************************************************
+LOCAL LogText$
+
+! ------- pseudo constants -------------------------------
+LOCAL OFF,PressMode,VoltMode,IEFmode
+ OFF       = 1
+ PressMode = 2
+ VoltMode  = 3
+ IEFmode   = 4
+
+
+IF ObjHdrVal(FRACTCOL[1],"Mode") = OFF; RETURN; ENDIF
+
+IF FC_Allowed() = 0
+  SetObjHdrVal FRACTCOL[1], "Mode", OFF
+  LogText$ = "Fraction collection disabled in CE-Mode:" + HPCEMode$("?")
+  Print #2,   LogText$
+  FC_LogEvent LogText$
+  FC_UnLockTimeTable    ! <------ this also disables PeakDetector
+  _MethodChanged = 1
+  RETURN
+ENDIF
+
+
+IF Check(VARIABLE,FC_Debug) = 1
+  Print "Initializing Fraction collection"
+ENDIF
+
+SetAbort OFF
+ON ERROR SetAbort ON
+
+! ---  Get parameter from register into CP variables ---
+FC_GetParamFromReg
+
+! --   Get column/capillary information
+IF FC_CapInfoAvailable() = 1
+  FC_EffectiveLength = TabVal (_CONFIG[1],"BuiltInColumns",1,"effLength")
+  FC_CapillaryLength = TabVal (_CONFIG[1],"BuiltInColumns",1,"colLength")
+ELSE
+  LogText$ = "Fraction Collection: Wrong or missing capillary information."
+  Print #2,   LogText$ 
+  FC_LogEvent LogText$
+  FC_RemoveParamVars
+  FC_RemoveActualVars
+  SetAbort ON
+  RETURN      ! --- error exit ----->
+ENDIF
+
+
+! --- initialize runtime variables
+
+FC_BeginCollectTime = 0
+FC_EndCollectTime   = 0
+FC_PeakOutTime      = 0
+FC_ActVial          = FC_FirstVial
+FC_ActPeakNumber    = 1
+FC_CurrentPeakTime  = 0
+
+
+FC_EnablePeakDetector FC_Mode
+
+! ---- prepare CE to run a Voltage Ramp if set in Fraction Method ----
+!--------------------------------------------------------------------- 
+FC_Delete_TT
+IF (FC_VoltRamp = 1) AND ((FC_Mode = PressMode) OR (FC_Mode = VoltMode))
+  FC_TT_Entry volt,0,0                                   ! set voltage to 0 at time 0
+  FC_TT_Entry volt, FC_VoltRampTime, FC_GetCEParam(volt) ! set voltage to setpoint at time ramp_offset
+ENDIF
+
+!===================== DEBUG ====================
+IF Check(VARIABLE,FC_Debug) = 1
+  FC_TraceVal  "FC_Mode"        
+  FC_TraceVal  "FC_PeakList"    
+  FC_TraceVal  "FC_Migt1"       
+  FC_TraceVal  "FC_Migt2"       
+  FC_TraceVal  "FC_Migt3"       
+  FC_TraceVal  "FC_Migt4"       
+  FC_TraceVal  "FC_FirstVial"
+  FC_TraceVal  "FC_CollectWidth"
+  FC_TraceVal  "FC_MTpressure"  
+  FC_TraceVal  "FC_VoltRamp"    
+  FC_TraceVal  "FC_VoltRampTime"
+ENDIF
+!===================== DEBUG ====================
+
+SetAbort ON
+RETURN
+ENDMACRO 
+
+
+
+!******************************************************************************
+NAME FC_PostAcq
+!******************************************************************************
+! ------- pseudo constants -------------------------------
+LOCAL OFF,PressMode,VoltMode,IEFmode
+ OFF       = 1
+ PressMode = 2
+ VoltMode  = 3
+ IEFmode   = 4
+
+IF ObjHdrVal(FRACTCOL[1],"Mode") = OFF; RETURN; ENDIF
+
+IF Check(VARIABLE,FC_Mode) = 0
+  Print #2, "Fraction Collection not initialized (PostACQ)"
+  RETURN
+ENDIF
+
+IF Check(VARIABLE,FC_Debug) = 1
+  Print "Clearing Fraction collection resources"
+ENDIF
+
+SetAbort OFF
+ON ERROR SetAbort ON
+FC_DisablePeakDetector FC_Mode
+FC_Delete_TT
+FC_RemoveParamVars
+FC_RemoveActualVars
+SetAbort ON
+
+RETURN
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME DADPeak
+!******************************************************************************
+LOCAL MT, LowMT, HighMT, TimingOK,LogText$
+! ------- pseudo constants -------------------------------
+LOCAL OFF,PressMode,VoltMode,IEFmode,TRUE,FALSE
+ OFF       = 1
+ PressMode = 2
+ VoltMode  = 3
+ IEFmode   = 4
+ TRUE  = 1
+ FALSE = 0
+! ------- pseudo constants -------------------------------
+
+IF ObjHdrVal(FRACTCOL[1],"Mode") = OFF; RETURN; ENDIF
+
+IF Check(VARIABLE,FC_Mode) = 0
+  Print #2, "Fraction Collection not initialized (PeakDetector)"
+  RETURN
+ENDIF
+
+SetAbort OFF
+ON ERROR SetAbort ON
+
+IF FC_ActVial > 48
+  LogText$ = "1:---------- Fraction Collection ----------"
+  Print       LogText$
+  FC_LogEvent LogText$
+  LogText$ = "2:Cannot collect peaks beyond vial 48"
+  Print       LogText$
+  FC_LogEvent LogText$
+  SetAbort ON
+  RETURN
+ENDIF
+
+FC_CurrentPeakTime = FC_GetPeakApex()
+
+
+IF FC_PeakList = 2 
+  ! ----------- collect list of peaks --------------------
+  ! ----- check if peak time is within time window -------
+
+  IF FC_ActPeakNumber > 4
+    SetAbort ON
+    RETURN
+  ENDIF
+
+  Evaluate "MT = FC_Migt" + Val$(FC_ActPeakNumber)
+
+  IF MT = 0
+    SetAbort ON
+    RETURN
+  ENDIF
+   
+  IF FC_Mode = IEFMode
+    LowMT  = MT - FC_CollectWidth/2
+    HighMT = MT + FC_CollectWidth/2 
+  ELSE
+    LowMT  = MT * (1 - FC_CollectWidth/200)
+    HighMT = MT * (1 + FC_CollectWidth/200) 
+  ENDIF
+
+  IF (LowMT <= FC_CurrentPeakTime) AND (FC_CurrentPeakTime <= HighMT)
+    !---- Peak is within time window. Start collection ------------------
+    TimingOK = FC_SetCETimetable(FC_CurrentPeakTime, FC_ActVial, FC_ActPeakNumber)
+    IF TimingOK = TRUE 
+      FC_ActVial       = FC_ActVial + 1
+      FC_ActPeakNumber = FC_ActPeakNumber + 1
+    ENDIF
+  ELSE
+    !----- peak detected outside time window. Enter in Logbook ---------
+    LogText$ = "1:---------- Fraction Collection ----------"
+    Print       LogText$
+    FC_LogEvent LogText$
+    LogText$ = "2:Peak at "+Val$(FC_CurrentPeakTime)+" min not collected"
+    Print       LogText$
+    FC_LogEvent LogText$
+    LogText$ = "3:Search window is: "+Val$(LowMT)+" to "+Val$(HighMT)+" min"
+    Print       LogText$
+    FC_LogEvent LogText$
+  ENDIF
+
+ELSE
+  ! collect all peaks within specified time window 
+  ! ----------------------------------------------
+  IF (FC_MigtFrom <= FC_CurrentPeakTime) AND (FC_CurrentPeakTime <= FC_MigtTo)
+    TimingOK = FC_SetCETimetable(FC_CurrentPeakTime, FC_ActVial, FC_ActPeakNumber)
+    IF TimingOK = TRUE 
+      FC_ActVial       = FC_ActVial + 1
+      FC_ActPeakNumber = FC_ActPeakNumber + 1
+    ENDIF
+  ENDIF
+ENDIF
+
+SetAbort ON
+
+RETURN
+ENDMACRO
+
+
+
+
+
+!******************************************************************************
+NAME FC_SetCETimetable
+
+   PARAMETER PeakTime
+   PARAMETER VialNumber
+   PARAMETER PeakNumber
+!
+!   DESCRIPTION
+!        Macro function: calculate and send Timetable commands
+!        to the CE-Instrument
+!
+!   RETURN
+!       FALSE if timing conflict
+!       TRUE if all timing consistent
+!
+!******************************************************************************
+
+LOCAL RampOffset
+LOCAL EffStartCollectTime
+LOCAL StartCollect$
+LOCAL StopCollect$
+LOCAL PeakOut$
+LOCAL LogText$
+
+! ------- pseudo constants -------------------------------
+LOCAL OFF,PressMode,VoltMode,IEFmode,TRUE,FALSE, TimeToMoveVial
+ OFF       = 1
+ PressMode = 2
+ VoltMode  = 3
+ IEFmode   = 4
+ TRUE  = 1
+ FALSE = 0
+ TimeToMoveVial = 0.05 !min
+
+  LogText$ = "1:---------- Fraction Collection ----------"
+  Print       LogText$
+  FC_LogEvent LogText$
+
+  IF (FC_Mode = IEFmode)
+    FC_PeakOutTime      = PeakTime + FC_MTpressure * (FC_CapillaryLength - FC_EffectiveLength)/FC_EffectiveLength
+    FC_BeginCollectTime = FC_PeakOutTime - FC_CollectWidth/2
+  ELSE
+    IF FC_VoltRamp = 1 
+      RampOffset = FC_VoltRampTime
+      IF (PeakTime < RampOffset) ! Voltage ramp must be ready before first peak
+        LogText$ = "2:Peak at "+Val$(PeakTime)+" min not collected !"
+        Print       LogText$
+        FC_LogEvent LogText$
+        LogText$ = "3:Peak must be after volt.ramp at "+Val$(RampOffset)+" min"
+        Print       LogText$
+        FC_LogEvent LogText$
+        RETURN FALSE  ! --------- error exit ------->
+      ENDIF
+    ELSE
+      RampOffset = 0
+    ENDIF
+    FC_PeakOutTime      = (PeakTime - RampOffset/2)*FC_CapillaryLength/FC_EffectiveLength + RampOffset/2
+    FC_BeginCollectTime = FC_PeakOutTime * (1 - FC_CollectWidth/200)
+  ENDIF
+
+  IF ((FC_BeginCollectTime - TimeToMoveVial) < (FC_EndCollectTime + TimeToMoveVial)) ! collection window overlap
+    LogText$ = "2:Peak at "+Val$(PeakTime)+" min not collected !"
+    Print       LogText$
+    FC_LogEvent LogText$
+    LogText$ = "3:Collection window overlap"
+    Print       LogText$
+    FC_LogEvent LogText$
+    RETURN FALSE  ! --------- error exit ------->
+  ENDIF
+
+  LogText$ = "2:Collect peak #"+Val$(PeakNumber)+" at "+Val$(PeakTime)+" min in vial "+Val$(VialNumber)
+  Print       LogText$
+  FC_LogEvent LogText$
+
+
+  IF (FC_Mode = PressMode)
+    FC_EndCollectTime = FC_BeginCollectTime + FC_PeakOutTime * FC_MTpressure/PeakTime * FC_CollectWidth/100
+    FC_BeginCollectTime = FC_BeginCollectTime - TimeToMoveVial
+    FC_TT_Entry volt,   FC_BeginCollectTime-0.02, FC_GetCEParam(volt) ! hold voltage
+    FC_TT_Entry volt,   FC_BeginCollectTime ,     0                   ! set voltage to 0
+    FC_TT_Entry press,  FC_BeginCollectTime ,     0                   ! set pressure to 0
+    FC_TT_Entry outvial,FC_BeginCollectTime ,     VialNumber          ! set fraction vial
+    FC_TT_Entry press,  FC_BeginCollectTime+0.02, 50                  ! set pressure to 50 mbar
+    FC_TT_Entry press,  FC_EndCollectTime ,       50                  ! set pressure to 50 mbar
+    FC_TT_Entry volt,   FC_EndCollectTime ,       0                   ! hold voltage at 0
+    FC_TT_Entry press,  FC_EndCollectTime+0.02 ,  0                   ! set pressure to 0 mbar
+    FC_TT_Entry outvial,FC_EndCollectTime+0.02 ,  FC_GetCEParam(dout) ! set outlet vial
+    FC_TT_Entry volt,   FC_EndCollectTime+0.02 ,  FC_GetCEParam(volt) ! restore voltage
+  ENDIF
+  IF (FC_Mode = VoltMode)
+    FC_EndCollectTime = FC_BeginCollectTime + FC_PeakOutTime * FC_CollectWidth/100
+    FC_BeginCollectTime = FC_BeginCollectTime - TimeToMoveVial
+    FC_TT_Entry outvial, FC_BeginCollectTime, VialNumber          ! set fraction vial
+    FC_TT_Entry outvial, FC_EndCollectTime ,  FC_GetCEParam(dout) ! set outlet vial
+  ENDIF
+  IF (FC_Mode = IEFmode)
+    FC_EndCollectTime = FC_PeakOutTime + FC_CollectWidth/2
+    FC_BeginCollectTime = FC_BeginCollectTime - TimeToMoveVial
+    FC_TT_Entry outvial, FC_BeginCollectTime, VialNumber          ! set fraction vial
+    FC_TT_Entry outvial, FC_EndCollectTime,   FC_GetCEParam(dout) ! set outlet vial
+  ENDIF
+
+  PeakOut$ = SPRINTF$(FC_PeakOutTime,"%.3f")
+  LogText$ = "3:Peak expected at Outvial at " + PeakOut$ + " min"
+  Print       LogText$
+  FC_LogEvent LogText$
+
+  EffStartCollectTime = FC_BeginCollectTime + TimeToMoveVial
+  StartCollect$ = SPRINTF$(EffStartCollectTime,"%.2f")
+  StopCollect$  = SPRINTF$(FC_EndCollectTime,  "%.2f")
+  LogText$ = "4:Collect from " + StartCollect$ + " until " + StopCollect$ + " min"
+  Print       LogText$
+  FC_LogEvent LogText$
+
+  RETURN TRUE
+ENDMACRO
+
+
+
+
+
+!******************************************************************************
+NAME FC_GetCEParam
+
+  PARAMETER para_query$     ! Name of parameter
+!
+!   DESCRIPTION
+!        function that queries a parameter value fron the CE instrument
+!
+!   RETURN
+!       parameter value
+!
+!******************************************************************************
+LOCAL a$
+  a$ = sendmodule$("HPCE",para_query$+"?")
+  RETURN val(a$[14:len(a$)])
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_GetPeakApex
+!
+!   DESCRIPTION
+!        function that queries the time when a peak was detected by the DAD
+!
+!   RETURN
+!       PeakApex
+!
+!******************************************************************************
+LOCAL a$
+  a$ = sendmodule$("DAD","act:lstp?")
+  RETURN val(a$[18:len(a$)])
+ENDMACRO
+
+
+
+
+
+!******************************************************************************
+NAME FC_TT_Entry
+
+  PARAMETER whichpar$
+  PARAMETER time
+  PARAMETER value
+!
+!   DESCRIPTION
+!        send Timetable commands to the CE-Instrument
+!        NOTE: Instrument truncates time values, so 0.005 min
+!              are added to get the rounded value
+!
+!   RETURN
+!       none
+!
+!******************************************************************************
+LOCAL Cmd$, Response$
+
+  IF (whichpar$ = "volt")
+    Cmd$      = "at:volt " + val$(time + 0.005) +"," + val$(value)
+    Response$ = sendmodule$("HPCE",Cmd$)
+  ENDIF
+  IF (whichpar$ = "press")
+    Cmd$      = "at:cprs " + val$(time + 0.005) +"," + val$(value)
+    Response$ = sendmodule$("HPCE",Cmd$)
+  ENDIF
+  IF (whichpar$ = "outvial")
+    Cmd$      = "at:dout " + val$(time + 0.005) +"," + val$(value)
+    Response$ = sendmodule$("HPCE",Cmd$)
+  ENDIF
+
+  IF Check(VARIABLE,FC_Debug) = 1
+    Print       Response$
+    FC_LogEvent Response$
+  ENDIF
+
+RETURN
+ENDMACRO
+
+
+!******************************************************************************
+NAME FC_LogEvent
+
+  PARAMETER line$    ! text 
+!
+!   DESCRIPTION
+!        writes to a special fraction collection log file
+!
+!   RETURN
+!       none
+!
+!******************************************************************************
+
+  WriteToLogBook line$
+  RETURN
+ENDMACRO
+
+
+
+
+
+!******************************************************************************
+NAME FC_Delete_TT
+!
+!   DESCRIPTION
+!        Clears Timetable in the CE-Instrument
+!
+!******************************************************************************
+LOCAL Response1$, Response2$, Response3$
+
+! ------- pseudo constants -------------------------------
+LOCAL OFF,PressMode,VoltMode,IEFmode
+OFF       = 1
+PressMode = 2
+VoltMode  = 3
+IEFmode   = 4
+
+  Response1$ = sendmodule$("HPCE","at:dout:del")
+
+  IF FC_Mode <> IEFmode
+    Response2$ = sendmodule$("HPCE","at:volt:del")
+  ENDIF
+
+  IF FC_Mode = PressMode
+    Response3$ = sendmodule$("HPCE","at:cprs:del")
+  ENDIF
+
+  IF Check(VARIABLE,FC_Debug) = 1
+    Print       Response1$
+    FC_LogEvent Response1$
+    Print       Response2$
+    FC_LogEvent Response2$
+    Print       Response3$
+    FC_LogEvent Response3$
+  ENDIF
+
+  RETURN
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME FC_RemoveActualVars
+!******************************************************************************
+
+ON ERROR Print
+remove FC_EffectiveLength
+remove FC_CapillaryLength
+remove FC_BeginCollectTime
+remove FC_EndCollectTime
+remove FC_PeakOutTime
+remove FC_ActVial
+remove FC_ActPeakNumber
+remove FC_CurrentPeakTime
+
+RETURN
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_TraceVal
+PARAMETER NameOfVariable$
+!******************************************************************************
+LOCAL Text$,Value$
+
+EVALUATE "Value$ = Val$("+NameOfVariable$+")"
+Text$ = NameOfVariable$ + " =  " + Value$
+Print Text$
+FC_LogEvent Text$
+
+RETURN
+ENDMACRO

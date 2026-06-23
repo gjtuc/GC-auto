@@ -1,0 +1,207 @@
+
+
+
+
+
+
+
+
+
+
+!*******************
+name USR_IdMethod !*
+!*******************
+parameter NotUsed
+  
+  local PrintIt
+  
+  !----- Caution: ---------------------------------------------------------
+  ! This macro should not print. Macro names must not be a duplicate of
+  ! any macro delivered with the ChemStation. You are responsible for any
+  ! error occuring due to loading or running user defined macros. It is
+  ! recommended to store this macro file in C:\HPCHEM\REPSTYLE\
+  !------------------------------------------------------------------------
+  ! This custom macro has no parameter. It may perform any calculation
+  ! needed and return the result.
+  ! The macro must return 0, if the section shall not be printed, 
+  ! otherwise it must return a value <> 0.
+  !------------------------------------------------------------------------
+
+
+  if (IsAutoLibraryIdent() = 0)
+    ! print warning, if standard identification is used.
+    ! is called by section options of nested general section
+    PrintIt = 1
+  endif
+  
+  return PrintIt
+endmacro
+
+!*******************
+name USR_LibMatch !*
+!*******************
+parameter CompoundIndex
+  
+  local Number
+  
+  !----- Caution: ---------------------------------------------------------
+  ! This macro should not print. Macro names must not be a duplicate of
+  ! any macro delivered with the ChemStation. You are responsible for any
+  ! error occuring due to loading or running user defined macros. It is
+  ! recommended to store this macro file in C:\HPCHEM\REPSTYLE\
+  !------------------------------------------------------------------------
+  ! This custom macro gets the index of the currently printed Compound
+  ! in the _DAMethod register as parameter. It may perform any calculation
+  ! needed and return the result.
+  !------------------------------------------------------------------------
+
+
+	
+  if (IsAutoLibraryIdent() = 0)
+    return 0
+  endif
+
+  Number = TabVal(ChromRes[1], "Compound", CompoundIndex, "Match")
+  
+  If Number > 0 then
+    return Number
+  Else
+    return 0
+  EndIf
+endmacro
+
+!*********************
+name USR_LibCompare !*
+!*********************
+parameter CompoundIndex
+  
+  !----- Caution: ---------------------------------------------------------
+  ! This macro should not print. Macro names must not be a duplicate of
+  ! any macro delivered with the ChemStation. You are responsible for any
+  ! error occuring due to loading or running user defined macros. It is
+  ! recommended to store this macro file in C:\HPCHEM\REPSTYLE\
+  !------------------------------------------------------------------------
+  ! This custom macro gets the index of the currently printed Compound
+  ! in the Chromres register as parameter. It should generate an object,
+  ! place it in the FRPT_CustGraphics register and return. The complete
+  ! contents of this register will be drawn using the options set in the
+  ! drawing options dialog. Afterwards the contents of the
+  ! FRPT_CustGraphics register will be deleted.
+  !------------------------------------------------------------------------
+
+  local retTime, value, entry, sigNum, peakNum, LibNum, Name$, AbsThres, oldname$
+  local Obj_Min, Obj_Max, Obj_X_Min, Obj_X_Max, DataYMin, DataYMax, SpecShift
+!.............................................................................
+
+  NLSFileName_repstyle$ = "repstyle"
+  ID_REPSTYLE_LOAD_SPECTRUM_1                        =  17001	
+  ID_REPSTYLE_COULD_NOT_LOAD_2                       =  17002  
+  ID_REPSTYLE_NO_LIBRARY_IDE_3                       =  17003  
+  ID_REPSTYLE_COULD_NOT_LOAD_4                       =  17004  
+  ID_REPSTYLE_COMPOUND_WAS_N_5                       =  17005  
+  ID_REPSTYLE_LOAD_LIBRARY_S_6                       =  17006  
+  ID_REPSTYLE_FROM_7                                 =  17007   
+  ID_REPSTYLE_WAS_NOT_FOUND_8                        =  17008  
+ 
+  if (IsAutoLibraryIdent() = 0)
+    return
+  endif
+
+  Name$   = TabText$(chromRes[1], "compound", CompoundIndex, "Name")
+  peakNum = TabVal(  chromRes[1], "compound", CompoundIndex, "FirstPeak")
+  sigNum  = TabVal(  chromRes[1], "peak",     peakNum,       "Signal")
+  retTime = tabVal(chromRes, "peak", peakNum, "measRetTime")
+
+  if retTime <= 0 then
+    return
+  endIf
+
+  SPC_chromObjNum = FRPT_SearchChromRegObj(TabText$(chromRes[1], "signal", sigNum, "desc"))
+  if (SPC_chromObjNum < 1)
+    return
+  endif
+
+  ! Load apex spectrum of main peak of current compound
+  !----------------------------------------------------
+  DelReg SpecReg
+  print ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_LOAD_SPECTRUM_1),val$(rettime)
+  value = GetPeakApexSpectrum (retTime,0,SPC_DoRefSpec,SPC_DoRefSpecType, \ 
+                               SPC_SpecRefTime1,SPC_SpecRefTime2,"SPC_")
+  if regsize(specreg) < 1 then
+    print ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_COULD_NOT_LOAD_2),val$(rettime) 
+    RETURN
+  endif
+
+  ! see if correct library loaded
+  !------------------------------
+  libNum   = TabVal(  chromRes[1],"compound",   CompoundIndex,"LibraryNum")
+  if libNum < 1
+    print ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_NO_LIBRARY_IDE_3)
+    RETURN
+  endif
+  libName$ = TabText$(chromRes[1],"autoIDParms",libNum,       "LibraryName")
+  if LIBFilename$() <> libName$
+    if LoadLibrary(libName$,1,,0)<>0
+      print ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_COULD_NOT_LOAD_4),libName$
+      RETURN
+    endif
+  endif
+
+  MoveObj specreg[1],FRPT_CustGraphics
+  if (Name$ = "")
+    print ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_COMPOUND_WAS_N_5)
+    RETURN
+  endif
+  print ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_LOAD_LIBRARY_S_6),Name$,ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_FROM_7),libName$
+
+  ! get the library entry number by the name
+  !-----------------------------------------
+  copytab _config[2],"libsearchtemp",FRPT_CustGraphics[1],"libsearchtemp"
+  settabHdrVal FRPT_CustGraphics[1],"libsearchtemp",  "compare_spec",0
+  settabHdrVal FRPT_CustGraphics[1],"libsearchtemp",  "Whole_Word",1
+  settabText   FRPT_CustGraphics[1],"libsearchtemp",1,"Search_String",name$
+  if libsearch(FRPT_CustGraphics[1],,,,,FRPT_CustGraphics[1],1) < 1
+    ! See if it is set alternatieve name (with ? or ??)
+    oldname$ = name$
+    if (instr(name$,"? ") = 1) AND (len(name$) > 2)
+      name$ = name$[3:len(name$)]
+    else
+      if (instr(name$,"?? ") = 1) AND (len(name$) > 3)
+        name$ = name$[4:len(name$)]
+      else
+        print Name$,ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_WAS_NOT_FOUND_8),libname$
+        RETURN
+      endif
+    endif
+    ! Search Again
+    settabText   FRPT_CustGraphics[1],"libsearchtemp",1,"Search_String",name$
+    if libsearch(FRPT_CustGraphics[1],,,,,FRPT_CustGraphics[1],1) < 1
+      print oldname$,ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_WAS_NOT_FOUND_8),libname$
+      RETURN
+    endif
+  endif
+
+  ! copy library spectrum to FRPT_CustGraphics if there is one
+  !-----------------------------------------------------------
+  if (TabHdrVal(FRPT_CustGraphics[1],"libsearchresult","NumberOfRows")>0)
+    entry = tabval(FRPT_CustGraphics[1],"libsearchresult",1,"entry")
+    if (entry > 0)
+      CopyObj SpecLibReg[entry],FRPT_CustGraphics
+      SpecShift = TabHdrVal(SpecLibReg[LIBinfoObject()],LibSearchTemp,Wave_Shift)
+      ! Shift the spectrum if specified
+      if SpecShift<> 0
+        TransformObj FRPT_CustGraphics[regsize(FRPT_CustGraphics)],0:1,SpecShift:1+Specshift,"Xaxis"
+      endif
+      ! Do the spectrum normalization
+      AbsThres  = TabHdrVal(SpecLibReg[LIBinfoObject()],LibSearchTemp,Abs_Thres)
+      value = DoSpecNorm(SPC_DoNormalize,SPC_NormRangeLow, \
+                         SPC_NormRangeHigh,1,AbsThres,"FRPT_CustGraphics")
+    else
+      print Name$,ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_WAS_NOT_FOUND_8),libname$
+    endif
+  else
+    print Name$,ReadResource$(NLSFileName_repstyle$,ID_REPSTYLE_WAS_NOT_FOUND_8),libname$
+  endif
+
+endmacro
+

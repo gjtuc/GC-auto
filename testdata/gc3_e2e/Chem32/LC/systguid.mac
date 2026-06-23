@@ -1,0 +1,2027 @@
+
+
+!******************************************************************************
+!*
+!* FILE:  SystGuid.mac
+!*
+!* DESCRIPTION:  specific GUI Macros for running the GUI demo
+!*
+!* $Header: /DRIVERS/leo/gui/macros/Systguid.mac 1.20 2000-09-25 11:34:11-04 fkremser Exp $
+!******************************************************************************
+!*
+!* MACROS :                     
+!*           
+!*           
+!*          
+!*         
+!############################################################################
+name GUIShowTrayDiagram
+
+!test macro for faster detail testing
+!else same as  GUIShowSystemDiagram
+!############################################################################
+                                       
+local b$
+local LeoType   
+local ProdArea$
+local DetNos
+
+NLSFileName_astxmac$= "astxmac"
+ID_ASTXDRIVERSMACFILES_SEQUENCE_1                  =  17001  
+
+GUISamplingAreaReconfiguration  ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SEQUENCE_1)
+
+                                       
+if GomExist( , GUISystemDiagGOM$) = 0
+   !!
+   
+   ProdArea$="DRIVERS"
+   GOMShowGUI  , GUISystemDiagGOM$  , ProdArea$ , , GuiSystemDiagramWinNo        !later from LC or CORE 
+   
+   !NOTE: if any of GOMShowGUI did not find something , must set CRTxResolution to 800
+   !and redo all since we garantee at 800 is ALL there
+   
+   GOMShowGUI GUISystemDiagGOM$, "LMethod"  , ProdArea$               !later from LC or CORE
+   !GuiShowBubbleMessage "LAST"                                        !later from LC or CORE
+   
+   GOMShowGUI GUISystemDiagGOM$, "LInjPump" , ProdArea$ 
+
+    
+
+   GUISamplingAreaReconfiguration
+
+endif
+
+endmacro
+
+
+
+
+
+
+!############################################################################
+name GUITestModuleState
+
+parameter  RegNamePrefix$ 
+parameter  StateName$    default "DefaultCase"
+parameter  NotReady      default  -1 
+parameter  Error         default  -1 
+parameter  NotReadyMsg$  default "??" 
+parameter  ErrorMsg$     default "??"
+parameter  ModuleNumber  default  1 
+
+!does the same things as drivers would do in their status reg
+!############################################################################
+
+local iii
+
+RegNamePrefix$=RegNamePrefix$+"status"+val$(ModuleNumber)
+
+if StateName$ = ""
+   StateName$="DefaultCase"
+endif
+on error goto DefaultCase
+evaluate "GoTo "+ StateName$
+   OFFLINE:;on error
+     iii=1
+     goto endswitch
+   POWEROFF:;on error
+     iii=2
+     goto endswitch
+   POWERON:;on error
+     iii=3
+     goto endswitch
+   STANDBY:;on error
+     iii=4
+     goto endswitch
+   OFF:;on error
+     iii=4  !just more used to this name -> STANDBY
+     goto endswitch
+   PRERUN:;on error
+     iii=5
+     goto endswitch
+   READY:;on error
+     iii=5   !just more used to this name -> PRERUN
+     goto endswitch
+   PREPARING:;on error
+     iii=6   
+     goto endswitch
+   DRAW:;on error
+     iii=6   !just more used to this name -> PREPARING
+     goto endswitch
+   POSTRUN:;on error
+     iii=7
+     goto endswitch
+   RUN:;on error
+     iii=8
+     goto endswitch
+   INJECTING:;on error
+     iii=9
+     goto endswitch
+   BREAK:;on error
+     iii=10
+     goto endswitch
+   INITIALIZING:;on error
+     iii=11
+     goto endswitch
+   DefaultCase:;on error
+     iii=12
+     goto endswitch
+endswitch:
+
+evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"  +val$(iii)
+if NotReady <> -1
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",nRdyState," +val$(NotReady) 
+endif   
+if Error <> -1
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",ErrorState,"+val$(Error) 
+endif   
+
+print "state=", StateName$
+sleep 1
+  
+endmacro
+
+
+!############################################################################
+name GUITestPrintStates
+
+parameter  StateNumber
+!############################################################################
+
+
+
+local StateName$                      
+
+NLSFileName_astxmac$= "astxmac"
+ID_ASTXDRIVERSMACFILES_OFFLINE_2                   =  17002  
+ID_ASTXDRIVERSMACFILES_POWEROFF_3                  =  17003  
+ID_ASTXDRIVERSMACFILES_POWERON_4                   =  17004  
+ID_ASTXDRIVERSMACFILES_STANDBY_5                   =  17005  
+ID_ASTXDRIVERSMACFILES_PRERUN_6                    =  17006  
+ID_ASTXDRIVERSMACFILES_PREPARING_7                 =  17007  
+ID_ASTXDRIVERSMACFILES_POSTRUN_8                   =  17008  
+ID_ASTXDRIVERSMACFILES_RUN_9                       =  17009  
+ID_ASTXDRIVERSMACFILES_INJECTING_10                =  17010  
+ID_ASTXDRIVERSMACFILES_BREAK_11                    =  17011  
+ID_ASTXDRIVERSMACFILES_INITIALIZING_12             =  17012  
+
+
+on error goto DefaultCase
+evaluate "GoTo State"+ val$(StateNumber)
+   State1:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OFFLINE_2)
+     goto endswitch
+   State2:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_POWEROFF_3)
+     goto endswitch
+   State3:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_POWERON_4)
+     goto endswitch
+   State4:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_STANDBY_5)
+     goto endswitch
+   State5:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRERUN_6)
+     goto endswitch
+   State6:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PREPARING_7)
+     goto endswitch
+   State7:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_POSTRUN_8)
+     goto endswitch
+   State8:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_9)
+     goto endswitch
+   State9:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTING_10)
+     goto endswitch
+   State10:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BREAK_11)
+     goto endswitch
+   State11:;on error
+     StateName$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INITIALIZING_12)
+     goto endswitch
+   DefaultCase:;on error
+     return
+ endswitch:
+
+
+print "state=", StateNumber , "    ", StateName$
+
+
+endmacro
+
+
+!############################################################################
+name GUITestAllStates
+
+parameter  RegNamePrefix$ 
+parameter  ModuleNumber  default  1 
+parameter  WhichPart$  default "ALL"  ! "ALL", ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRERUN_6) , "PREP_RUN" , ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_9) , "ERRORS" , "STARTUP"
+parameter  SimpleNdrSimulation$ default ""  ! give NDR to give the status to 
+parameter  GuiProtocolPrefix$ default ""    ! prefix in protocol status text
+parameter  ErrorModuleName$
+!############################################################################
+
+local iii,jjj
+
+!           ACQ_STA_NOMODULE   // 0
+!           ACQ_STA_OFFLINE,   // 1
+!           ACQ_STA_POWEROFF,  // 2
+!           ACQ_STA_POWERON,   // 3
+!           ACQ_STA_STANDBY,   // 4
+!           ACQ_STA_PRERUN,    // 5
+!           ACQ_STA_PREPARING, // 6
+!           ACQ_STA_POSTRUN,   // 7
+!           ACQ_STA_RUN,       // 8
+!           ACQ_STA_INJECTING, // 9
+!           ACQ_STA_BREAK,     //   10
+!           ACQ_STA_INITIALIZING // 11
+
+NLSFileName_astxmac$= "astxmac"
+ID_ASTXDRIVERSMACFILES_OFFLINE_2                   =  17002  
+ID_ASTXDRIVERSMACFILES_PRERUN_6                    =  17006  
+ID_ASTXDRIVERSMACFILES_POSTRUN_8                   =  17008  
+ID_ASTXDRIVERSMACFILES_RUN_9                       =  17009  
+ID_ASTXDRIVERSMACFILES_ERROR_TEXT__PR_13           =  17013  
+ID_ASTXDRIVERSMACFILES_STARTUP_16                  =  17016  
+ID_ASTXDRIVERSMACFILES_NONE_17                     =  17017  
+
+
+
+RegNamePrefix$=RegNamePrefix$+"status"+val$(ModuleNumber)
+
+evaluate "iii=RegSize ("+ RegNamePrefix$ +")"
+
+if iii > 0
+evaluate  "SetObjHdrVal "+RegNamePrefix$+",nRdyState,"+val$(0) 
+evaluate  "SetObjHdrVal "+RegNamePrefix$+",ErrorState,"+val$(0) 
+
+if WhichPart$="ALL"  or WhichPart$="STARTUP"
+for iii=1 to 4
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"+val$(iii)
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",UVLamp, 0"  !for detector demos
+  GUITestPrintStates iii
+  sleep 1
+next iii
+for iii=11 to 11
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"+val$(iii)
+  GUITestPrintStates iii
+  sleep 1
+next iii
+for iii=5 to 5
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"+val$(iii)
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",UVLamp, 1"  !for detector demos
+  GUITestPrintStates iii
+  sleep 1
+next iii
+endif
+
+if WhichPart$="ALL"  or WhichPart$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRERUN_6) 
+for iii=5 to 5
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"+val$(iii)
+  GUITestPrintStates iii
+  sleep 1
+next iii
+endif
+
+
+if WhichPart$="ALL"  or WhichPart$="PREP_RUN"
+for iii=10 to 10
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"+val$(iii)
+  GUITestPrintStates iii
+  sleep 2
+next iii
+for iii=6 to 6
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"+val$(iii)
+  GUITestPrintStates iii
+  sleep 1
+next iii
+for iii=9 to 9
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"+val$(iii)
+  GUITestPrintStates iii
+  if RegNamePrefix$[1:4] = "DEMO"
+     for jjj=0 to 1000 
+         sleep 2
+         evaluate  "SetObjHdrVal "+RegNamePrefix$+",PrepProgress,"+val$(jjj)
+         jjj=jjj+200
+     next jjj
+     sleep 2    
+  else 
+     sleep 10  !software does progress
+  endif   
+next iii
+endif
+
+if WhichPart$="ALL"  or WhichPart$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_9)
+for iii=8 to 8
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"+val$(iii)
+  GUITestPrintStates iii
+  sleep 1
+next iii
+endif
+
+if WhichPart$="ALL"  or WhichPart$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_POSTRUN_8)
+for iii=7 to 7
+  evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"+val$(iii)
+  GUITestPrintStates iii
+  sleep 1
+next iii
+endif
+
+if WhichPart$="ALL"  or WhichPart$="ERRORS"
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",nRdyState,"+val$(0) 
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",ErrorState,"+val$(0) 
+
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",nRdyState,"+val$(1) 
+     print "state=  NRDY"
+     sleep 1
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",nRdyState,"+val$(0) 
+     sleep 1
+
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",ErrorState,"+val$(1)
+     print "state=  ERROR"
+   GUIShowBubbleMessage "ERROR", ErrorModuleName$, \
+       ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ERROR_TEXT__PR_13) , 2000
+     sleep 3
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",nRdyState,"+val$(1) 
+     sleep 1
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+     sleep 1
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",ErrorState,"+val$(0) 
+     sleep 1
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",nRdyState,"+val$(0) 
+     sleep 1
+   evaluate  "SetObjHdrVal "+RegNamePrefix$+",RunState,"+val$(5)
+     print "state=  PRERUN"
+     sleep 1
+endif
+else 
+   !simulate on GUI hotlink NDR itself
+   !difficlut to do in a generic way especially for the more complex protocols 
+   if SimpleNdrSimulation$ <> "" 
+      if WhichPart$="ALL"  or WhichPart$="PREP_RUN"  or WhichPart$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_STARTUP_16)
+         SetObjHdrText GUI , SimpleNdrSimulation$ , GuiProtocolPrefix$+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OFFLINE_2)
+         sleep 1
+         SetObjHdrText GUI , SimpleNdrSimulation$ , GuiProtocolPrefix$+"OFF"
+         sleep 1
+      endif
+      if WhichPart$="ALL"  or WhichPart$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRERUN_6) 
+         SetObjHdrText GUI , SimpleNdrSimulation$ , GuiProtocolPrefix$+"READY"
+         sleep 1
+      endif
+      if WhichPart$="ALL"  or WhichPart$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_9)
+         SetObjHdrText GUI , SimpleNdrSimulation$ , GuiProtocolPrefix$+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_9)
+         sleep 1
+      endif
+      if WhichPart$="ALL"  or WhichPart$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_POSTRUN_8)
+         SetObjHdrText GUI , SimpleNdrSimulation$ , GuiProtocolPrefix$+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_9)
+         sleep 1
+      endif
+      if WhichPart$="ALL"  or WhichPart$="ERRORS"
+         SetObjHdrText GUI , SimpleNdrSimulation$ , GuiProtocolPrefix$+"NRDY"
+         sleep 1
+         SetObjHdrText GUI , SimpleNdrSimulation$ , GuiProtocolPrefix$+"ERRORS"
+         sleep 1
+         SetObjHdrText GUI , SimpleNdrSimulation$ , GuiProtocolPrefix$+"READY"
+         sleep 1
+      endif
+
+   endif
+endif
+
+endmacro
+
+
+!############################################################################
+name GUITestAddonDetectors
+
+parameter  GuiReg$
+parameter  GuiNdr$  default ""
+parameter  NdrText$ default "DetReady"
+!############################################################################
+
+evaluate "setobjhdrtext  "+GuiReg$+","+GuiNdr$+","+NdrText$
+sleep 2           
+
+endmacro
+
+
+
+!############################################################################
+name GUITestAddonDetectorsAllStates  
+
+parameter  GuiReg$
+parameter  GuiNdr$  default ""
+parameter  WhichPart$  default "ALL"  
+!############################################################################
+!mapp state to one of
+!Symbols1=DetOff|DetNrdy|DetReady|DetRun|DetError|DetNN|DetOffline|DetBalance|DetRun0|DetRun1|DetRun2|DetRun3|DetRun4|DetRun5|DetRun6|DetRun7|DetRun8|DetRun9|DetRun10|DetIgnition|DetTune|DetRunScan|DetReadyScan
+
+local iii
+
+NLSFileName_astxmac$= "astxmac"
+ID_ASTXDRIVERSMACFILES_PRERUN_6                    =  17006  
+ID_ASTXDRIVERSMACFILES_POSTRUN_8                   =  17008  
+ID_ASTXDRIVERSMACFILES_RUN_9                       =  17009  
+ID_ASTXDRIVERSMACFILES_ERROR_TEXT__PR_13           =  17013  
+
+
+
+if WhichPart$="ALL"  or WhichPart$="STARTUP"
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetOffline"
+   sleep 1
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetError"
+   sleep 1
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetOff"
+   sleep 1
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetNRdy"
+   sleep 1
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetReady"
+   sleep 1
+endif
+
+if WhichPart$="ALL"  or WhichPart$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRERUN_6) 
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetReady"
+   sleep 1
+endif
+
+if WhichPart$="ALL"  or WhichPart$="PREP_RUN"
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetBalance"
+   print ObjHdrText$( MsdState1, MsdState1)
+   sleep 1
+endif
+
+if WhichPart$="ALL"  or WhichPart$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_9)
+   for iii=0 to 10
+       GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetRun"+val$(iii)
+       print ObjHdrText$( MsdState1, MsdState1)
+       sleep 1
+   next iii    
+endif
+
+if WhichPart$="ALL"  or WhichPart$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_POSTRUN_8)
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetRun"
+   print ObjHdrText$( MsdState1, MsdState1)
+   sleep 1
+endif
+
+if WhichPart$="ALL"  or WhichPart$="ERRORS"
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetNrdy"
+   sleep 2
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetError"
+   sleep 1
+   GUIShowBubbleMessage "ERROR", ErrorModuleName$, \
+       ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ERROR_TEXT__PR_13) , 2000
+     sleep 3
+   GUITestAddonDetectors  GuiReg$,GuiNdr$, "DetReady"
+   sleep 1
+endif
+
+endmacro
+
+
+
+
+!############################################################################
+name GUITestAllDAStates
+
+
+!############################################################################
+NLSFileName_astxmac$= "astxmac"
+ID_ASTXDRIVERSMACFILES_REPORT_25                   =  17025  
+
+print "state=  RUNNING DATA EVALUATION"
+
+GUIStartDAProgressDisplay   "INTEG"
+sleep 2
+GUIStartDAProgressDisplay   "QUANT"
+sleep 2
+GUIStartDAProgressDisplay   ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_REPORT_25)
+sleep 2
+GUIStartDAProgressDisplay   "GLPSAVE"
+sleep 2
+GUIStartDAProgressDisplay   "DONE"
+sleep 1
+GUIStartDAProgressDisplay   "RESET"
+sleep 1
+
+
+endmacro
+
+
+
+
+
+!############################################################################
+name GUITestShowTrayTestcombination
+
+parameter TrayA
+parameter TrayB
+
+!must do GUISamplingAreaReconfiguration since in a one CP macro 
+!############################################################################
+
+setobjhdrval leoalsstatus1, act_tray_a, TrayA
+setobjhdrval leoalsstatus1, act_tray_b, TrayB
+setobjhdrtext _sequence , dummy, "DEMO"  !cause seq tray protocol to be rewritten
+GUISamplingAreaReconfiguration ,1
+sleep 2
+
+endmacro
+
+
+
+
+!############################################################################
+name GUITestLeftTrayMemoryFilter
+
+parameter LeftT
+parameter RightT
+!############################################################################
+
+setverbose 1
+
+NLSFileName_astxmac$= "astxmac"
+ID_ASTXDRIVERSMACFILES_LEFT_TRAY_MUST_14           =  17014  
+
+GUITestShowTrayTestcombination 100,0           
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination  LeftT,0           
+GUITestShowTrayTestcombination  LeftT,RightT          
+GUITestShowTrayTestcombination   0,RightT          
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination   0,RightT          
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination   0,RightT          
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination   0,RightT          
+print ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_LEFT_TRAY_MUST_14)
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination   0,RightT          
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination   0,RightT          
+
+endmacro
+
+!############################################################################
+name GUITestRightTrayMemoryFilter
+
+parameter LeftT
+parameter RightT
+!############################################################################
+
+setverbose 1
+NLSFileName_astxmac$= "astxmac"
+ID_ASTXDRIVERSMACFILES_RIGHT_TRAY_MUS_15           =  17015  
+
+
+GUITestShowTrayTestcombination 100,0           
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination   0,RightT          
+GUITestShowTrayTestcombination  LeftT,RightT          
+GUITestShowTrayTestcombination  LeftT,0
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination  LeftT,0          
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination  LeftT,0          
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination  LeftT,0          
+print ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RIGHT_TRAY_MUS_15)
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination  LeftT,0
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination  LeftT,0          
+
+endmacro
+
+
+!############################################################################
+name GUITestAllTrays
+
+!must do GUISamplingAreaReconfiguration since in a one CP macro 
+!############################################################################
+
+GUIShowSamplingDiagram "TOPSEQ"
+GUISamplingAreaReconfiguration
+sleep 2
+setverbose 1
+setobjhdrval _config[1],Leo_Tray_B,0
+setobjhdrval _config[1],Leo_Tray_A,0
+GUITestShowTrayTestcombination 100,0           
+!clear all memory
+setobjhdrval _config[1],Leo_Tray_B,0
+setobjhdrval _config[1],Leo_Tray_A,0
+GUITestShowTrayTestcombination   0,0           
+!clear all memory
+setobjhdrval _config[1],Leo_Tray_B,0
+setobjhdrval _config[1],Leo_Tray_A,0
+
+!this are all the steps a user does to change halfs of trays
+GUITestShowTrayTestcombination  40,0           
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination  15,0           
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination   0,15          
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination   0,40          
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination   0,40          
+GUITestShowTrayTestcombination  15,40          
+GUITestShowTrayTestcombination  15,0           
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination  40,0           
+GUITestShowTrayTestcombination  40,15          
+GUITestShowTrayTestcombination   0,15          
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination  40,0          
+GUITestShowTrayTestcombination  40,40          
+GUITestShowTrayTestcombination   0,40          
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination   0,15          
+GUITestShowTrayTestcombination  15,15          
+GUITestShowTrayTestcombination  15,0           
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination  40,0           
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination 100,0           
+
+!test memory filter         
+GUITestLeftTrayMemoryFilter    15,15
+GUITestRightTrayMemoryFilter   15,15
+GUITestLeftTrayMemoryFilter    40,40
+GUITestRightTrayMemoryFilter   40,40
+
+GUITestLeftTrayMemoryFilter    40,15
+GUITestRightTrayMemoryFilter   15,40
+GUITestLeftTrayMemoryFilter    15,40
+GUITestRightTrayMemoryFilter   40,15
+
+!test all tray combinations
+GUITestShowTrayTestcombination 100,0           
+GUITestShowTrayTestcombination 100,15
+GUITestShowTrayTestcombination 100,40
+!clear all memory
+setobjhdrval _config[1],Leo_Tray_B,0
+setobjhdrval _config[1],Leo_Tray_A,0
+
+GUITestShowTrayTestcombination 15,0           
+GUITestShowTrayTestcombination 15,15
+GUITestShowTrayTestcombination 15,40
+!clear all memory
+setobjhdrval _config[1],Leo_Tray_B,0
+setobjhdrval _config[1],Leo_Tray_A,0
+
+GUITestShowTrayTestcombination 40,0           
+GUITestShowTrayTestcombination 40,15
+GUITestShowTrayTestcombination 40,40
+!clear all memory
+setobjhdrval _config[1],Leo_Tray_B,0
+setobjhdrval _config[1],Leo_Tray_A,0
+
+GUITestShowTrayTestcombination 0,0           
+!clear all memory
+setobjhdrval _config[1],Leo_Tray_B,0
+setobjhdrval _config[1],Leo_Tray_A,0
+GUITestShowTrayTestcombination 0,0           
+GUITestShowTrayTestcombination 0,15
+GUITestShowTrayTestcombination 0,40
+
+
+
+GUITestShowTrayTestcombination   0,0           
+GUITestShowTrayTestcombination 100,0           
+
+endmacro
+
+
+
+!############################################################################
+name GUITestPumpComposition
+
+parameter  RegPrefix$  default ""  ! can be used to switch demo to DEMOxxx regs
+!############################################################################
+local iii
+
+evaluate "iii=RegSize ("+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+")"
+if iii < 1
+   return
+endif
+
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_A, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_A, 2.0   "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_B, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_B, 2.0   "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_C, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_C, 2.0   "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_D, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_D, 2.0   "
+
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+
+print "state=  PRESSURE RISING"
+evaluate "setobjhdrval  "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", Pressure,     0"
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", Flow,         1.255"
+evaluate "setobjhdrval  "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", Pressure,     120"
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", Pressure,     220"
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", Pressure,     370"
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", Pressure,     400"
+sleep 2
+print "state=  PRESSURE STABILIZING"
+evaluate "setobjhdrval  "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", Pressure,     250"
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", Pressure,     220"
+sleep 2
+
+print "state=  GRADIENT RUNNING"
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_A, 80.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_B, 20.0 "
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_A, 65.3 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_B, 34.7 "
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_A, 65.3 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_B, 20.5 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_C, 14.2 "
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_A, 65.3 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_B,  5.1 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_C, 14.2 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_D, 15.4 "
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_A,  0.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_B,100.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_C,  0.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_D,  0.0 "
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_A,  0.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_B, -1.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_C,100.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_D,  0.0 "
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_A,  0.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_B,  0.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_C,  0.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_D,100.0 "
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_A,100.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_B,  0.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_C,  0.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_D,  0.0 "
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_A, 90.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_B, 10.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_C, -1.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", SOLV_RATIO_D, -1.0 "
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+sleep 2
+
+print "state=  SOLVENT CONSUMPTION"
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_A, 1.5 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_A, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_B, 1.8 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_B, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_C, 0.5 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_C, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_D, 0.2 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_D, 2.0 "
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_A, 1.2 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_A, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_B, 1.6 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_B, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_C, 0.4 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_C, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_D, 0.2 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_D, 2.0 "
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_A, 0.8 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_A, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_B, 0.08"
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_B, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_C, 0.3 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_C, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_D, 0.2 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_D, 2.0 "
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_A, 0.5 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_A, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_B, 0.00"
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_B, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_C, 0.2 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_C, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_D, 0.2 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_D, 2.0 "
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_A, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_A, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_B, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_B, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_C, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_C, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", ACT_BOTTLE_D, 2.0 "
+evaluate "setobjhdrval "+RegPrefix$+"leoPUMPstatus"+Val$(_MainPump)+", MAX_BOTTLE_D, 2.0 "
+sleep 2
+
+ENDDEMO1:
+
+endmacro
+
+
+
+
+
+!############################################################################
+name GUITestInjVols
+
+parameter  RegPrefix$  default ""  ! can be used to switch demo to DEMOxxx regs
+parameter  RunInjProg  default 0
+!############################################################################
+local iii
+
+evaluate "iii=RegSize ("+RegPrefix$+"leoALSstatus1)"
+if iii < 1
+   return
+endif
+
+on error iii=0
+! in case no  RegPrefix$+"leoALSmethod1" is there
+!hotlink DLL still runs on original  leoALSmethod1
+
+evaluate "setobjhdrval "+RegPrefix$+"leoALSstatus1, nRdyState,    1 " 
+!to make more visible where the action is
+sleep 2
+evaluate "setobjhdrval "+RegPrefix$+"leoALSstatus1, nRdyState,    0 "
+
+if RunInjProg = 0
+setobjhdrval                          leoALSmethod1, InjectMode,     1
+evaluate "setobjhdrtext "+RegPrefix$+"leoALSstatus1, Act_Command,    """" "
+
+setobjhdrval                          leoALSmethod1, Injvolume,      1.8
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoALSstatus1, Act_volume,     1.8"
+sleep 2
+setobjhdrval                          leoALSmethod1, Injvolume,      45.0
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoALSstatus1, Act_volume,     45.0"
+sleep 2
+setobjhdrval                          leoALSmethod1, Injvolume,      138.1
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoALSstatus1, Act_volume,     138.1"
+sleep 2
+setobjhdrval                          leoALSmethod1, Injvolume,      1317.5
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoALSstatus1, Act_volume,     1317.5"
+sleep 2
+setobjhdrval                          leoALSmethod1, Injvolume,      617.5
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoALSstatus1, Act_volume,     1.8"
+sleep 2
+setobjhdrval                          leoALSmethod1, Injvolume,      27.0
+sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoALSstatus1, Act_volume,     27.0"
+sleep 2
+setobjhdrval                          leoALSmethod1, InjectMode,     2
+sleep 2
+!to cause update (for now ?)
+!evaluate "setobjhdrval "+RegPrefix$+"leoALSstatus1, Act_volume,     27.0"
+!sleep 4
+
+else
+
+evaluate "setobjhdrval  "+RegPrefix$+"leoALSstatus1, RunState,   5"
+setobjhdrval                          leoALSmethod1, InjectMode,     3
+sleep 3
+evaluate "setobjhdrval  "+RegPrefix$+"leoALSstatus1, RunState,   9"
+
+sleep 2
+evaluate "setobjhdrtext "+RegPrefix$+"leoALSstatus1, Act_Command,    ""DRAW"""
+sleep 2
+evaluate "setobjhdrtext "+RegPrefix$+"leoALSstatus1, Act_Command,    ""MIX"""
+sleep 2
+evaluate "setobjhdrtext "+RegPrefix$+"leoALSstatus1, Act_Command,    ""WAIT"""
+sleep 2
+evaluate "setobjhdrtext "+RegPrefix$+"leoALSstatus1, Act_Command,    ""NEEDLE"""
+sleep 2
+!evaluate "setobjhdrtext "+RegPrefix$+"leoALSstatus1, Act_Command,    ""ENDREPEAT"""
+!sleep 4
+evaluate "setobjhdrtext "+RegPrefix$+"leoALSstatus1, Act_Command,    ""SYRINGE"""
+sleep 2
+evaluate "setobjhdrtext "+RegPrefix$+"leoALSstatus1, Act_Command,    ""EJECT"""
+sleep 2
+!evaluate "setobjhdrtext "+RegPrefix$+"leoALSstatus1, Act_Command,    ""INJECT"""
+!sleep 2
+evaluate "setobjhdrval  "+RegPrefix$+"leoALSstatus1, RunState,   5"
+sleep 3
+setobjhdrval                          leoALSmethod1, InjectMode,     1
+sleep 2
+evaluate "setobjhdrtext "+RegPrefix$+"leoALSstatus1, Act_Command,    """" "
+sleep 2
+endif
+on error
+
+endmacro
+
+
+
+!############################################################################
+name GUITestAllStatesAllModules
+
+parameter  RegNamePrefix$  default ""
+parameter  ModuleNumber  default  1 
+parameter  WhichPart$  default "ALL"  
+!############################################################################
+
+NLSFileName_astxmac$= "astxmac"
+ID_ASTXDRIVERSMACFILES_POSTRUN_8                   =  17008  
+ID_ASTXDRIVERSMACFILES_RUN_9                       =  17009  
+ID_ASTXDRIVERSMACFILES_STARTUP_16                  =  17016  
+
+if DevLeoPump > 0 
+   GUITestAllStates RegNamePrefix$+"LeoPump", ModuleNumber , WhichPart$, , , "LPUMP"
+endif   
+if DevLeoThm > 0 
+   GUITestAllStates RegNamePrefix$+"LeoThermostat", ModuleNumber , WhichPart$, , , "LTHM1" 
+endif   
+if Dev1946MSD > 0  
+   if WhichPart$ <> ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_9)
+      GUITestAddonDetectorsAllStates  "MsdState1" , "MsdState1" , WhichPart$
+   else   
+      GUITestAddonDetectorsAllStates  "MsdState1" , "MsdState1" , ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_POSTRUN_8)
+   endif
+endif   
+If DevLeoDAD > 0
+   GUITestAllStates RegNamePrefix$+"LeoDAD", ModuleNumber , WhichPart$, , , "LDAD1"
+   if WhichPart$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_STARTUP_16)  
+      GUITestDetLampsOn  RegNamePrefix$+"LeoDAD"
+   endif
+endif   
+If DevNucDAD > 0 
+   GUITestAllStates RegNamePrefix$+"NucDad", ModuleNumber , WhichPart$, , , "NDAD1"
+   if WhichPart$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_STARTUP_16)  
+      GUITestDetLampsOn  RegNamePrefix$+"NucDAD"
+   endif
+endif   
+if DevLeoMWD > 0 
+   GUITestAllStates RegNamePrefix$+"LeoMWD", ModuleNumber , WhichPart$, , , "LMWD1"
+   if WhichPart$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_STARTUP_16) 
+      GUITestDetLampsOn  RegNamePrefix$+"LeoMWD"
+   endif
+ EndIf   
+If DevNucMWD > 0 
+   GUITestAllStates RegNamePrefix$+"NucMWD", ModuleNumber , WhichPart$, , , "NMWD1"
+   if WhichPart$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_STARTUP_16) 
+      GUITestDetLampsOn  RegNamePrefix$+"NucMWD"
+   endif
+endif   
+if DevLeoVWD > 0 
+   GUITestAllStates RegNamePrefix$+"LeoVWD", ModuleNumber , WhichPart$, , , "LVWD1"
+   if WhichPart$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_STARTUP_16) 
+      GUITestDetLampsOn  RegNamePrefix$+"LeoVWD"
+   endif
+endif   
+if DevNucVWD > 0 
+   GUITestAllStates RegNamePrefix$+"nucVWD", ModuleNumber , WhichPart$, , , "NVWD1"
+   if WhichPart$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_STARTUP_16) 
+      GUITestDetLampsOn  RegNamePrefix$+"NucVWD"
+   endif
+endif   
+if DevLeoRID > 0 
+   GUITestAllStates RegNamePrefix$+"LeoRID", ModuleNumber , WhichPart$, , , "LRID1"
+   if WhichPart$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_STARTUP_16) 
+      GUITestDetLampsOn  RegNamePrefix$+"LeoRID"
+   endif
+endif   
+if DevLeoFLD > 0 
+   GUITestAllStates RegNamePrefix$+"LeoFLD", ModuleNumber , WhichPart$, , , "LFLD1"
+   if WhichPart$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_STARTUP_16) 
+      GUITestDetLampsOn  RegNamePrefix$+"LeoFLD"
+   endif
+endif   
+
+if DevLeoALS > 0 
+   GUITestAllStates RegNamePrefix$+"LeoAls", ModuleNumber , WhichPart$, , , "LINJ"
+endif   
+
+if Dev1946MSD > 0  AND  WhichPart$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_9)
+   GUITestAddonDetectorsAllStates  "MsdState1" , "MsdState1" , WhichPart$
+endif   
+
+if 1 = 0 
+   !this is not implemented in the drivers anyway
+   GUITestAllStates RegNamePrefix$+"LeoDet", ModuleNumber , WhichPart$, "DAD1050Status", "Det"
+   GUITestAllStates RegNamePrefix$+"LeoDet", ModuleNumber , WhichPart$, "VWD1050Status", "Det"
+endif   
+
+endmacro
+
+
+
+!############################################################################
+name GUITestDetLampsOn
+
+parameter  RegNamePrefix$  default ""
+parameter  ModuleNumber  default  1 
+!############################################################################
+local iii
+
+   
+RegNamePrefix$=RegNamePrefix$+"status"+val$(ModuleNumber)
+evaluate "iii=RegSize ("+RegNamePrefix$+")"
+if iii < 1
+   return
+endif
+
+evaluate "setobjhdrval  "+RegNamePrefix$+", nRdyState, 1 "
+evaluate "setobjhdrval  "+RegNamePrefix$+", nRdyType, 512 "
+print "state=6  IGNITION"
+sleep 2           
+
+evaluate "setobjhdrval  "+RegNamePrefix$+", nRdyState, 1 "
+evaluate "setobjhdrval  "+RegNamePrefix$+", nRdyType, 256 "
+print "state=6  BALANCING"
+sleep 2           
+evaluate "setobjhdrval  "+RegNamePrefix$+", nRdyType, 0 "
+evaluate "setobjhdrval  "+RegNamePrefix$+", nRdyState, 0 "
+
+endmacro
+
+
+
+
+!############################################################################
+name GUITestDetBalancing
+
+parameter  RegNamePrefix$  default ""
+parameter  ModuleNumber  default  1 
+!############################################################################
+local iii
+
+RegNamePrefix$=RegNamePrefix$+"status"+val$(ModuleNumber)
+evaluate "iii=RegSize ("+RegNamePrefix$+")"
+if iii < 1
+   return
+endif
+
+evaluate "setobjhdrval  "+RegNamePrefix$+", nRdyState, 1 "
+evaluate "setobjhdrval  "+RegNamePrefix$+", nRdyType, 256 "
+print "state=6  BALANCING"
+sleep 2           
+evaluate "setobjhdrval  "+RegNamePrefix$+", nRdyType, 0 "
+evaluate "setobjhdrval  "+RegNamePrefix$+", nRdyState, 0 "
+
+endmacro
+
+
+
+
+
+
+!############################################################################
+name GuiDemoSystemDiagramCode
+
+parameter  RegPrefix$  default ""  ! "DEMO" can be used to switch demo to DEMOxxx regs
+!############################################################################
+
+local  Old_RUN_ACQ                      
+local  Tab$
+local  Module$
+local  x
+local  MsdState$ 
+ 
+                      
+SetAbort off
+
+NLSFileName_astxmac$= "astxmac"
+ID_ASTXDRIVERSMACFILES_PRERUN_6                    =  17006  
+ID_ASTXDRIVERSMACFILES_POSTRUN_8                   =  17008  
+ID_ASTXDRIVERSMACFILES_RUN_9                       =  17009  
+ID_ASTXDRIVERSMACFILES_NONE_17                     =  17017  
+
+
+
+if Check ( VARIABLE, GUIDemoDiagramOn ) = 0 
+   GUIDemoDiagramOn=0        !when 1 causes hplguh00.dll on installcmds 
+                             !to set hotlinks on "Demo"+"LeoXXXStatus1" regs
+                             !instead of "LeoXXXStatus1" regs
+endif                 
+
+Old_RUN_ACQ=RUN_ACQ
+
+
+if RegPrefix$="DEMO"
+   evaluate "x=RegSize(LeoPumpStatus"+Val$(_MainPump)+")"
+   if x > 0
+      evaluate "CopyObj LeoPumpStatus"+Val$(_MainPump)+"[1], DemoLeoPumpStatus1[1]"
+   else
+      !put in all necessary defaults
+      newobj  DemoLeoPumpStatus1,1,0,0                    
+      
+      setobjhdrval  DemoLeoPumpStatus1 , "PUMPTYPE" ,   2
+
+      setobjhdrval  DemoLeoPumpStatus1 , "RunState" ,   5
+      setobjhdrval  DemoLeoPumpStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoLeoPumpStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoLeoPumpStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoLeoPumpStatus1 , "ErrorType" ,  0
+
+      setobjhdrval  DemoLeoPumpStatus1 , "FLOW" ,          0
+      setobjhdrval  DemoLeoPumpStatus1 , "PRESSURE" ,      0
+      setobjhdrval  DemoLeoPumpStatus1 , "PRESSURE_MIN" ,  0
+      setobjhdrval  DemoLeoPumpStatus1 , "PRESSURE_MAX" ,  0
+      setobjhdrval  DemoLeoPumpStatus1 , "SOLV_RATIO_A" ,100
+      setobjhdrval  DemoLeoPumpStatus1 , "SOLV_RATIO_B" ,  0 
+      setobjhdrval  DemoLeoPumpStatus1 , "SOLV_RATIO_C" ,  0 
+      setobjhdrval  DemoLeoPumpStatus1 , "SOLV_RATIO_D" ,  0 
+
+   endif
+   setobjhdrval  DemoLeoPumpStatus1 , "ACT_BOTTLE_A" ,  1
+   setobjhdrval  DemoLeoPumpStatus1 , "ACT_BOTTLE_B" ,  1
+   setobjhdrval  DemoLeoPumpStatus1 , "ACT_BOTTLE_C" ,  1
+   setobjhdrval  DemoLeoPumpStatus1 , "ACT_BOTTLE_D" ,  1
+   setobjhdrval  DemoLeoPumpStatus1 , "MAX_BOTTLE_A" ,  2
+   setobjhdrval  DemoLeoPumpStatus1 , "MAX_BOTTLE_B" ,  2
+   setobjhdrval  DemoLeoPumpStatus1 , "MAX_BOTTLE_C" ,  2
+   setobjhdrval  DemoLeoPumpStatus1 , "MAX_BOTTLE_D" ,  2
+
+   if RegSize(LeoALSStatus1) > 0
+      CopyObj LeoALSStatus1[1], DemoLeoALSStatus1[1]
+      CopyObj LeoALSMethod1[1], DemoLeoALSMethod1[1]
+   else   
+      !put in all necessary defaults
+      newobj  DemoLeoALSStatus1,1,0,0                    
+
+      setobjhdrval  DemoLeoALSStatus1 , "RunState" ,   5
+      setobjhdrval  DemoLeoALSStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoLeoALSStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoLeoALSStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoLeoALSStatus1 , "ErrorType" ,  0
+
+      setobjhdrval  DemoLeoALSStatus1 , "ACT_TRAY_A" ,   100
+      setobjhdrval  DemoLeoALSStatus1 , "ACT_TRAY_A" ,   100
+
+      setobjhdrtext DemoLeoALSStatus1 , "ACT_COMMAND" ,   ""
+      setobjhdrval  DemoLeoALSStatus1 , "ACT_INJMODE" ,   1
+      setobjhdrval  DemoLeoALSStatus1 , "ACT_VOLUME" ,   10.0
+      setobjhdrval  DemoLeoALSStatus1 , "ACT_VIAL" ,     10
+
+   endif
+   if RegSize(LeoThermostatStatus1) > 0
+      CopyObj LeoThermostatStatus1[1], DemoLeoThermostatStatus1[1]
+   else   
+      !put in all necessary defaults
+      newobj  DemoLeoThermostatStatus1,1,0,0                    
+
+      setobjhdrval  DemoLeoThermostatStatus1 , "RunState" ,   5
+      setobjhdrval  DemoLeoThermostatStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoLeoThermostatStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoLeoThermostatStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoLeoThermostatStatus1 , "ErrorType" ,  0
+   endif
+   setobjhdrval  DemoLeoThermostatStatus1 , "LeftTemp"  ,35
+   setobjhdrval  DemoLeoThermostatStatus1 , "RightTemp" ,35
+   if RegSize(LeoDADStatus1) > 0
+      CopyObj LeoDADStatus1[1], DemoLeoDADStatus1[1]
+      setobjhdrval  DemoLeoDADStatus1 , "UVLamp", 1
+   else   
+      !put in all necessary defaults
+      newobj  DemoLeoDADStatus1,1,0,0                    
+
+      setobjhdrval  DemoLeoDADStatus1 , "RunState" ,   5
+      setobjhdrval  DemoLeoDADStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoLeoDADStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoLeoDADStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoLeoDADStatus1 , "ErrorType" ,  0
+      setobjhdrval  DemoLeoDADStatus1 , "UVLamp", 1
+   endif
+   if RegSize(NucDADStatus1) > 0
+      CopyObj NucDADStatus1[1], DemoNucDADStatus1[1]
+      setobjhdrval  DemoNucDADStatus1 , "UVLamp", 1
+   else   
+      !put in all necessary defaults
+      newobj  DemoNucDADStatus1,1,0,0                    
+
+      setobjhdrval  DemoNucDADStatus1 , "RunState" ,   5
+      setobjhdrval  DemoNucDADStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoNucDADStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoNucDADStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoNucDADStatus1 , "ErrorType" ,  0
+      setobjhdrval  DemoNucDADStatus1 , "UVLamp", 1
+   endif
+   if RegSize(LeoMWDStatus1) > 0
+      CopyObj LeoMWDStatus1[1], DemoLeoMWDStatus1[1]
+      setobjhdrval  DemoLeoMWDStatus1 , "UVLamp", 1
+   else   
+      !put in all necessary defaults
+      newobj  DemoLeoMWDStatus1,1,0,0                    
+
+      setobjhdrval  DemoLeoMWDStatus1 , "RunState" ,   5
+      setobjhdrval  DemoLeoMWDStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoLeoMWDStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoLeoMWDStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoLeoMWDStatus1 , "ErrorType" ,  0
+      setobjhdrval  DemoLeoMWDStatus1 , "UVLamp", 1
+   endif
+   if RegSize(NucMWDStatus1) > 0
+      CopyObj NucMWDStatus1[1], DemoNucMWDStatus1[1]
+      setobjhdrval  DemoNucMWDStatus1 , "UVLamp", 1
+   else   
+      !put in all necessary defaults
+      newobj  DemoNucMWDStatus1,1,0,0                    
+
+      setobjhdrval  DemoNucMWDStatus1 , "RunState" ,   5
+      setobjhdrval  DemoNucMWDStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoNucMWDStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoNucMWDStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoNucMWDStatus1 , "ErrorType" ,  0
+      setobjhdrval  DemoNucMWDStatus1 , "UVLamp", 1
+   endif
+   if RegSize(LeoVWDStatus1) > 0
+      CopyObj LeoVWDStatus1[1], DemoLeoVWDStatus1[1]
+      setobjhdrval  DemoLeoVWDStatus1 , "UVLamp", 1
+   else   
+      !put in all necessary defaults
+      newobj  DemoLeoVWDStatus1,1,0,0                    
+
+      setobjhdrval  DemoLeoVWDStatus1 , "RunState" ,   5
+      setobjhdrval  DemoLeoVWDStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoLeoVWDStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoLeoVWDStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoLeoVWDStatus1 , "ErrorType" ,  0
+      setobjhdrval  DemoLeoVWDStatus1 , "UVLamp", 1
+   endif
+   if RegSize(NucVWDStatus1) > 0
+      CopyObj NucVWDStatus1[1], DemoNucVWDStatus1[1]
+      setobjhdrval  DemoNucVWDStatus1 , "UVLamp", 1
+   else   
+      !put in all necessary defaults
+      newobj  DemoNucVWDStatus1,1,0,0                    
+
+      setobjhdrval  DemoNucVWDStatus1 , "RunState" ,   5
+      setobjhdrval  DemoNucVWDStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoNucVWDStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoNucVWDStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoNucVWDStatus1 , "ErrorType" ,  0
+      setobjhdrval  DemoNucVWDStatus1 , "UVLamp", 1
+   endif
+   if RegSize(LeoRIDStatus1) > 0
+      CopyObj LeoRIDStatus1[1], DemoLeoRIDStatus1[1]
+!      setobjhdrval  DemoLeoVWDStatus1 , "UVLamp", 1
+   else   
+      !put in all necessary defaults
+      newobj  DemoLeoRIDStatus1,1,0,0                    
+
+      setobjhdrval  DemoLeoRIDStatus1 , "RunState" ,   5
+      setobjhdrval  DemoLeoRIDStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoLeoRIDStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoLeoRIDStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoLeoRIDStatus1 , "ErrorType" ,  0
+!      setobjhdrval  DemoLeoRIDStatus1 , "UVLamp", 1
+   endif
+   if RegSize(LeoFLDStatus1) > 0
+      CopyObj LeoFLDStatus1[1], DemoLeoFLDStatus1[1]
+      setobjhdrval  DemoLeoFLDStatus1 , "UVLamp", 1
+   else   
+      !put in all necessary defaults
+      newobj  DemoLeoFLDStatus1,1,0,0                    
+
+      setobjhdrval  DemoLeoFLDStatus1 , "RunState" ,   5
+      setobjhdrval  DemoLeoFLDStatus1 , "nRdyState" ,  0
+      setobjhdrval  DemoLeoFLDStatus1 , "ErrorState" , 0
+      setobjhdrval  DemoLeoFLDStatus1 , "nRdyType" ,   0
+      setobjhdrval  DemoLeoFLDStatus1 , "ErrorType" ,  0
+      setobjhdrval  DemoLeoFLDStatus1 , "UVLamp", 1
+   endif        
+   
+
+   if RegSize(MsdState1) > 0
+      MsdState$=ObjHdrText$( MsdState1,"MsdState1")
+   endif   
+   
+
+   GUIDemoDiagramOn=1
+   !Need to reinstall the hplguh00.dll so it hotlinks to DEMO regs
+   GUIInstallLeoHotlinkDll  1
+
+endif
+
+RUN_ACQ=1
+
+_debugPrint    "GUIDemoDiagramOn"  , , GUIDemoDiagramOn
+
+Tab$="seqtable1"
+if TabHdrVal(_sequence,Tab$,"NumberOfRows") < 1
+   InsTabRow _sequence,Tab$
+   SetTabVal _sequence,Tab$,1,"Vial",1
+   SetTabVal _sequence,Tab$,1,"InjVial",1
+endif
+       
+if Check ( VARIABLE, _FiaOn ) = 1
+   Tab$="FIATABLE"
+   if TabHdrVal(FIAREG,Tab$,"NumberOfRows") < 1
+      InsTabRow FIAREG,Tab$
+      SetTabVal FIAREG,Tab$,1,"Vial",1
+      SetTabVal FIAREG,Tab$,1,"InjVial",1
+   endif
+endif
+
+       
+
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+GuiShowSystemDiagram    
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+GUITestAllStatesAllModules RegPrefix$, 1, "STARTUP"
+
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+if DevLeoAls > 0
+   GUITestAllStates RegPrefix$+"LeoAls",  1 ,"PREP_RUN"
+endif
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+
+!show detector balancing
+if Dev1946MSD > 0         
+   GUITestAddonDetectorsAllStates  "MsdState1" , "MsdState1" , "PREP_RUN"
+endif   
+if DevLeoDad > 0
+   GUITestDetBalancing RegPrefix$+"LeoDad"
+endif   
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+if DevNucDad > 0
+   GUITestDetBalancing RegPrefix$+"NucDad"
+endif   
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+if DevLeoMwd > 0
+   GUITestDetBalancing RegPrefix$+"LeoMwd"
+endif   
+if _Abort = 1
+  goto ENDDEMO1
+EndIf     
+if DevNucMwd > 0
+   GUITestDetBalancing RegPrefix$+"NucMwd"
+endif   
+if _Abort = 1
+  goto ENDDEMO1
+endif     
+if DevLeoVwd > 0
+   GUITestDetBalancing RegPrefix$+"LeoVwd"
+endif   
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+if DevNucVwd > 0
+   GUITestDetBalancing RegPrefix$+"NucVwd"
+endif   
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+if DevLeoRid > 0
+   GUITestDetBalancing RegPrefix$+"LeoRid"
+endif   
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+if DevLeoFld > 0
+   GUITestDetBalancing RegPrefix$+"LeoFld"
+endif   
+
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+GUITestAllStatesAllModules RegPrefix$, 1, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_9)
+
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+if DevLeoPump > 0
+   GUITestPumpComposition  RegPrefix$
+endif   
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+
+
+GUITestAllStatesAllModules RegPrefix$, 1, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_POSTRUN_8)
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+
+GUITestAllDAStates
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+
+
+GUITestAllStatesAllModules RegPrefix$, 1, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_POSTRUN_8)
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+GUITestAllStatesAllModules RegPrefix$, 1, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRERUN_6)
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+
+if DevLeoPump > 0
+   GUITestAllStates RegPrefix$+"LeoPump", 1 , "ERRORS", , , "LPUMP"
+endif   
+if _Abort = 1
+  goto ENDDEMO1
+endif       
+
+ENDDEMO1:
+_Abort=0
+
+if DevLeoAls > 0
+   GUIShowBubbleMessage "INFO", "LINJ", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 3
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif   
+if _Abort = 1
+  goto ENDDEMO
+endif       
+if DevLeoPump > 0
+   GUIShowBubbleMessage "INFO", "LPUMP", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif
+if DevLeoThm > 0
+   GUIShowBubbleMessage "INFO", "LTHM1", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif
+if _Abort = 1
+  goto ENDDEMO
+endif       
+if Dev1946MSD > 0
+   GUIShowBubbleMessage "INFO", "MSD1", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif   
+if _Abort = 1
+  goto ENDDEMO
+endif       
+if DevLeoDad > 0
+   GUIShowBubbleMessage "INFO", "LDAD1", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif   
+if _Abort = 1
+  goto ENDDEMO
+endif       
+if DevNucDad > 0
+   GUIShowBubbleMessage "INFO", "NDAD1", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif   
+if _Abort = 1
+  goto ENDDEMO
+endif       
+if DevLeoMwd > 0
+   GUIShowBubbleMessage "INFO", "LMWD1", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif   
+if _Abort = 1
+  goto ENDDEMO
+EndIf      
+if DevNucMwd > 0
+   GUIShowBubbleMessage "INFO", "NMWD1", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif   
+if _Abort = 1
+  goto ENDDEMO
+endif      
+if DevLeoVwd > 0
+   GUIShowBubbleMessage "INFO", "LVWD1", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif   
+if _Abort = 1
+  goto ENDDEMO
+endif       
+if DevNucVwd > 0
+   GUIShowBubbleMessage "INFO", "NVWD1", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif   
+if _Abort = 1
+  goto ENDDEMO
+endif       
+if DevLeoRid > 0
+   GUIShowBubbleMessage "INFO", "LRID1", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif   
+if _Abort = 1
+  goto ENDDEMO
+endif       
+if DevLeoFld > 0
+   GUIShowBubbleMessage "INFO", "LFLD1", \
+      "Click in this icon to obtain the setup menus." , 0
+   sleep 2
+   GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+endif   
+if _Abort = 1
+  goto ENDDEMO
+endif       
+GUIShowBubbleMessage "INFO", "GLP", \
+   "Click in this icon to obtain the setup menus." , 0
+sleep 2
+if _Abort = 1
+  goto ENDDEMO
+endif       
+
+GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+  sleep 1
+if DevLeoAls > 0
+   Module$="LINJ"
+else   
+if DevLeoPump > 0
+   Module$="LPUMP"
+else   
+if DevLeoTHM > 0
+   Module$="LTHM1"
+else   
+if Dev1946MSD > 0
+   Module$="MSD1"
+else   
+if DevLeoDad > 0
+   Module$="LDAD1"
+else   
+if DevNucDad > 0
+   Module$="NDAD1"
+else
+if DevLeoMwd > 0
+   Module$="LMWD1"
+Else  
+if DevNucMwd > 0
+   Module$="NMWD1"
+else  
+if DevLeoVwd > 0
+   Module$="LVWD1"
+else   
+if DevNucVwd > 0
+   Module$="NVWD1"
+else   
+if DevLeoRid > 0
+   Module$="LRID1"
+else   
+if DevLeoFld > 0
+   Module$="LFLD1"
+endif
+endif
+EndIf
+EndIf
+endif
+endif
+endif
+endif
+endif
+endif
+endif
+endif
+
+GUIShowBubbleMessage "WARNING", Module$, \
+    "Use the menu item       ""Not Ready Information"" to get online infos." , 2000
+sleep 3
+
+
+ENDDEMO:
+
+GUIShowBubbleMessage ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_17),
+sleep 1
+
+remove  GUIDemoDiagramOn
+
+RUN_ACQ=Old_RUN_ACQ
+
+if RegPrefix$="DEMO"
+   !Need to reinstall the hplguh00.dll so it hotlinks to non DEMO regs
+   GUIInstallLeoHotlinkDll 1
+   if RegSize(DemoLeoPumpStatus1) > 0
+      DelReg DemoLeoPumpStatus1
+   endif
+   if RegSize(DemoLeoALSStatus1) > 0
+      DelReg DemoLeoALSStatus1
+   endif
+   if RegSize(DemoLeoALSMethod1) > 0
+      !put back original values
+      CopyObj DemoLeoALSMethod1[1], LeoALSMethod1[1]
+      DelObj LeoALSMethod1[2]
+      DelReg DemoLeoALSMethod1
+   endif
+   if RegSize(DemoLeoThermostatStatus1) > 0
+      DelReg DemoLeoThermostatStatus1
+   endif
+   if RegSize(DemoLeoDADStatus1) > 0
+      DelReg DemoLeoDADStatus1
+   endif
+   if RegSize(DemoNucDADStatus1) > 0
+       DelReg DemoNucDADStatus1
+   endif
+   if RegSize(DemoLeoMWDStatus1) > 0
+      DelReg DemoLeoMWDStatus1
+  EndIf
+   if RegSize(DemoNucMWDStatus1) > 0
+      DelReg DemoNucMWDStatus1
+   endif
+   if RegSize(DemoLeoVWDStatus1) > 0
+      DelReg DemoLeoVWDStatus1
+   endif
+   if RegSize(DemoNucVWDStatus1) > 0
+      DelReg DemoNucVWDStatus1
+   endif
+   if RegSize(DemoLeoRIDStatus1) > 0
+      DelReg DemoLeoRIDStatus1
+   endif
+   if RegSize(DemoLeoFLDStatus1) > 0
+      DelReg DemoLeoFLDStatus1
+   endif
+   if RegSize(MsdState1) > 0
+      SetObjHdrText MsdState1,"MsdState1",MsdState$
+   endif   
+endif
+
+SetAbort on
+
+endmacro
+
+
+
+
+!---------------------------------------------------------------------------------------------------------------------------------------------------------
+! Mrc_Debug Macros
+
+!------------------------------------------
+!Mrc_DiskSpace
+Name Mrc_DiskSpaceDebugOk
+
+  SetObjHdrText GUI, "DiskSpace", "DISKOK|>10GB"
+
+endmacro
+
+
+Name Mrc_DiskSpaceDebugWarning
+
+  SetObjHdrText GUI, "DiskSpace", "DISKWARNING|100kb"
+
+endmacro
+
+
+Name Mrc_DiskSpaceDebugError
+
+  SetObjHdrText GUI, "DiskSpace", "DISKFULL|full"
+
+endmacro
+
+!------------------------------------------
+!Mrc_TaskSwitch
+Name Mrc_TaskSwitchSingleSample
+
+  TLB_SwitchAcqTask TopRun
+
+endmacro
+
+
+Name Mrc_TaskSwitchSequence
+
+  TLB_SwitchAcqTask TopSeq
+
+endmacro
+
+
+!------------------------------------------
+!Mrc_Method
+Name Mrc_MethodGreen
+
+  guisystemstatus$ = "1|9|SysGreen|Ready|MthGreen|"
+  
+endmacro
+
+Name Mrc_MethodBlue
+
+  guisystemstatus$ = "1|9|SysGreen|Ready|MthBlue|"
+  
+endmacro
+
+Name Mrc_MethodRed
+
+  guisystemstatus$ = "1|9|SysGreen|Ready|MthRed|"
+  
+endmacro
+
+Name Mrc_MethodYellow
+
+  guisystemstatus$ = "1|9|SysGreen|Ready|MthYellow|"
+  
+endmacro
+
+Name Mrc_MethodMagenta
+
+  guisystemstatus$ = "1|9|SysGreen|Ready|MthMagenta|"
+  
+endmacro
+
+Name Mrc_MethodCyan
+
+  guisystemstatus$ = "1|9|SysGreen|Ready|MthCyan|"
+  
+endmacro
+
+Name Mrc_MethodWhite
+
+  guisystemstatus$ = "1|9|SysGreen|Ready|MthWhite|"
+  
+endmacro
+
+Name Mrc_MethodUnchanged
+
+  _methodchanged = 0
+  
+endmacro
+
+!------------------------------------------
+!Mrc_SampleInfo
+Name Mrc_SampleInfoVial
+
+  setobjhdrtext gui, "Act_SInf", "VIAL|123|My Sample Name 1|My Sample Info 1|directory1.d|c:\chem32\1\subdir1"
+  setobjhdrtext gui, "SeqAct_SInf", "VIAL|123|My Seq Sample Name 1|My Seq Sample Info 1|001-0101.d|c:\chem32\1\data1|1|1|1"
+
+endmacro
+
+Name Mrc_SampleInfoNoVial
+
+  setobjhdrtext gui, "Act_SInf", "NOVIAL||My Sample Name 2|My Sample Info 2|directory2.d|c:\chem32\2\subdir2"
+  setobjhdrtext gui, "SeqAct_SInf", "NOVIAL||My Seq Sample Name 2|My Seq Sample Info 2|002-0202.d|c:\chem32\2\data2|2|2|2"
+  
+endmacro
+
+Name Mrc_SampleInfoVialDisabled
+
+  setobjhdrtext gui, "Act_SInf", "VIALDISABLED|?|My Sample Name 3|My Sample Info 3|directory3.d|c:\chem32\3\subdir3"
+  setobjhdrtext gui, "SeqAct_SInf", "VIALDISABLED|?|My Seq Sample Name 3|My Seq Sample Info 3|003-0303.d|c:\chem32\3\data3|3|3|3"
+  
+endmacro
+
+Name Mrc_SampleInfoPlate
+
+  setobjhdrtext gui, "Act_SInf", "PLATE|1-P1-A01|My Sample Name 4|My Sample Info 4|directory4.d|c:\chem32\4\subdir4"
+  setobjhdrtext gui, "SeqAct_SInf", "PLATE|1-P1-A01|My Seq Sample Name 4|My Seq Sample Info 4|004-0404.d|c:\chem32\4\data4|4|4|4"
+
+endmacro
+
+Name Mrc_SampleInfoFiaRun
+
+  setobjhdrtext gui, "SeqAct_SInf", "SEQFIARUN|55|My Seq Sample Name 5|My Seq Sample Info 5|005-0505.d|c:\chem32\5\data5|5|5|5"
+
+endmacro
+
+!------------------------------------------
+!Mrc_DataAnalysis
+
+Name Mrc_DataAnalysisIntegrating
+
+  GUISetDARunStatus  "Integ"
+  
+endmacro
+
+Name Mrc_DataAnalysisQuant
+
+  GUISetDARunStatus  "Quant"
+  
+endmacro
+
+Name Mrc_DataAnalysisReport
+
+  GUISetDARunStatus  "Report"
+  
+endmacro
+
+Name Mrc_DataAnalysisDone
+
+  GUISetDARunStatus  "Done"
+  
+endmacro
+
+Name Mrc_DataAnalysisReset
+
+  GUISetDARunStatus  "Reset"
+  
+endmacro
+
+Name Mrc_DataAnalysisECM
+
+  GUISetDARunStatus  "ECM"
+  
+endmacro
+
+Name Mrc_DataAnalysisWithDa
+
+  run_da = 1
+  
+endmacro
+
+Name Mrc_DataAnalysisWithoutDa
+
+  run_da = 0
+  
+endmacro
+
+
+Name Mrc_MsOff
+  setobjhdrtext MsdState1, "MsdState1","DetOff"
+endmacro
+Name Mrc_MsNrdy
+  setobjhdrtext MsdState1, "MsdState1", "DetNrdy"
+endmacro
+Name Mrc_MsReady
+  setobjhdrtext MsdState1, "MsdState1", "DetReady"
+endmacro
+Name Mrc_MsRun
+  setobjhdrtext MsdState1, "MsdState1", "DetRun"
+endmacro
+Name Mrc_MsError
+  setobjhdrtext MsdState1, "MsdState1", "DetError"
+endmacro
+Name Mrc_MsBalance
+  setobjhdrtext MsdState1, "MsdState1", "DetBalance"
+endmacro
+Name Mrc_MsIgnition
+  setobjhdrtext MsdState1, "MsdState1", "DetIgnition"
+endmacro
+
+
+
+
+Name Mrc_DumpStatus
+
+  local sTemp$
+  local onoff$
+  
+  sFile$ = _TEMPPATH$ + "mrcstatus.txt"
+  
+  on error print
+  delete sFile$, DONTASK
+  on error
+
+  print "print MRC Status"
+
+  On Error return
+
+  Open sFile$ for append as #42
+  On Error
+
+  if (_offline = 1)
+    onoff$ = "offline"
+  else
+    onoff$ = "online "
+  endif
+  sTemp$ = Date$(0)  + " " + Time$(2, , "HH:mm:ss") + " " + onoff$ + " " + _Instname$
+  Print #42, sTemp$
+  Print #42, "-------------------------------------------------------------------------------"
+
+  !print #42, "_ECM_DATA = ", _ecm_data
+  
+  print #42, "guisystemstatus$ = ", guisystemstatus$
+  print #42, "ObjHdrText$(GUI, DiskSpace) = ", ObjHdrText$(GUI, "DiskSpace")
+  print #42, "ObjHdrText$(GUI, Act_SInf) = ", ObjHdrText$(GUI, "Act_SInf")
+  print #42, "ObjHdrText$(GUI, SeqAct_SInf) = ", ObjHdrText$(GUI, "SeqAct_SInf")
+  print #42, "ObjHdrText$(GUI, SrDataSubDir) = ", ObjHdrText$(GUI, "SrDataSubDir")
+  print #42, "ObjHdrText$(GUI, SeqDataSubDir) = ", ObjHdrText$(GUI, "SeqDataSubDir")
+  print #42, "_SEQUENCEIDLE = ", _SEQUENCEIDLE
+  print #42, "_SLAVEIDLE = ", _SLAVEIDLE
+  print #42, "bManagerLevelAccess = ", bManagerLevelAccess
+  print #42, "TopEnableStart = ", TopEnableStart
+  print #42, "TopEnableStop = ", TopEnableStop
+  print #42, "AS_IsPermitted_RunRun = ", AS_IsPermitted_RunRun
+  print #42, "_HyperIdleLn = ", _HyperIdleLn
+  print #42, "run_da = ", run_da
+  print #42, "MrcDaRunStatus$ = ", MrcDaRunStatus$
+  print #42, "TabHdrVal(_DAMethod[1], RptParm, Style ) = ", TabHdrVal(_DAMethod[1], "RptParm", "Style")
+  print #42, "TabHdrVal(_DAMethod[1], QuantParm, CalcBase) = ", TabHdrVal(_DAMethod[1],"QuantParm","CalcBase")
+  print #42, "TabHdrVal(_DAMethod[1], QuantParm , CalcType) = ", TabHdrVal(_DAMethod[1],"QuantParm","CalcType")
+  print #42, "TabHdrText$(_config[1], MenusForViews, MenuCol) = ", TabHdrText$(_config[1], "MenusForViews", "MenuCol")
+  print #42, "TabHdrText$(_config[1], view_top, CurrentTask) = ", TabHdrText$(_config[1], "view_top", "CurrentTask")
+
+ 
+  Close #42
+
+  textviewer "MRC Status", sFile$
+
+endmacro
+
+
+!---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+!############################################################################
+name GuiDemoSystemDiagram1
+
+parameter  RegPrefix$  default ""  ! "DEMO" can be used to switch demo to DEMOxxx regs
+!############################################################################
+
+local x
+
+if RegPrefix$="DEMO"
+   GUIDemoDiagramOn=1
+   !Need to reinstall the hplguh00.dll so it hotlinks to DEMO regs
+   evaluate "x = RegSize(LeoPumpStatus"+Val$(_MainPump)+")"
+   if x > 0
+      evaluate "CopyObj LeoPumpStatus"+Val$(_MainPump)+"[1], DemoLeoPumpStatus1[1]"
+   endif
+   if RegSize(LeoALSStatus1) > 0
+      CopyObj LeoALSStatus1[1], DemoLeoALSStatus1[1]
+      CopyObj LeoALSMethod1[1], DemoLeoALSMethod1[1]
+   endif
+   GUIInstallLeoHotlinkDll  1
+endif
+
+_debugPrint    "GUIDemoDiagramOn"  , , GUIDemoDiagramOn
+
+GUITestPumpComposition  RegPrefix$
+
+GUITestInjVols  RegPrefix$ , 1
+
+GUITestAllStatesAllModules RegPrefix$, 1, "ERRORS"
+
+GUITestAllTrays
+
+if RegPrefix$="DEMO"
+   GUIDemoDiagramOn=0
+   !Need to reinstall the hplguh00.dll so it hotlinks to non DEMO regs
+   GUIInstallLeoHotlinkDll  1
+   if RegSize(DemoLeoPumpStatus1) > 0
+      DelReg DemoLeoPumpStatus1
+   endif
+   if RegSize(DemoLeoALSStatus1) > 0
+      DelReg DemoLeoALSStatus1
+   endif
+   if RegSize(DemoLeoALSMethod1) > 0
+      !put back original values
+      CopyObj DemoLeoALSMethod1[1], LeoALSMethod1[1]
+      DelObj LeoALSMethod1[2]
+      DelReg DemoLeoALSMethod1
+   endif
+endif
+
+endmacro
+
+
+
+
+

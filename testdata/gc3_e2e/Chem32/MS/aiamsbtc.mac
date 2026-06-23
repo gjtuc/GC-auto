@@ -1,0 +1,257 @@
+!******************************************************************************
+!* FILE:  aiamsbtc.mac
+!* DESCRIPTION:  NetCDF/AIA MS Batch conversion macro
+!* $Header: /triath1b/partsmac/da/aiamsbtc.mac
+!* Revision History:
+!* 09/11/00 RMC  New
+!* 11/29/05 LL Added globalization changes.
+!******************************************************************************!
+!*****************************************************************************
+name AIAMSDlgBrowse$
+PARAMETER Original$
+!*****************************************************************************
+LOCAL Return$, Path$, File$
+LOCAL Type, ii
+Local  ID_SUPPORTMACFILES_SELECT_TARGET_93
+ID_SUPPORTMACFILES_SELECT_TARGET_93                =  17093  
+   ON ERROR Return Original$
+   Path$ = _DATAPATH$
+   ii = SelectFile (2,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_TARGET_93), "*.*", Path$, File$, Type)
+   if (ii = 0) then
+      Return$ = Original$
+   else
+      Return$ = Path$+File$
+   endif
+   RETURN Return$
+endmacro  !  AIAMSDlgBrowse$
+
+!*****************************************************************************
+name AIAMSDlgAdd$
+PARAMETER Original$
+!*****************************************************************************
+LOCAL Return$, Path$, File$
+LOCAL Type, ii
+Local  ID_SUPPORTMACFILES_SELECT_DATA_FI_95
+ID_SUPPORTMACFILES_SELECT_DATA_FI_95               =  17095  
+   ON ERROR Return Original$
+   Path$ = _DATAPATH$
+   ii = SelectFile (2,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_DATA_FI_95), "*.*", Path$, File$, Type)
+   if (ii = 0) then
+      Return$ = Original$
+   else
+      if (Len(Original$) > 0) then
+         Return$ = Original$ + "|"+Path$+File$
+      else
+         Return$ = Path$+File$
+      endif
+   endif
+   RETURN Return$
+endmacro  !  AIAMSDlgAdd$
+
+!*****************************************************************************
+name AIAMSDlgRemove$
+PARAMETER OriginalList$
+PARAMETER RemoveThis$
+!*****************************************************************************
+LOCAL Return$
+LOCAL Start
+   ON ERROR Return Original$
+   Start = InStr(OriginalList$, RemoveThis$)
+   if (start > 0) then
+      if (Len(OriginalList$) = Len(RemoveThis$)) then
+         ! one item in the list
+         Return$ = ""
+      else
+         if (start = 1) then
+            ! first item of several
+            Return$ = OriginalList$[Len(RemoveThis$)+2:Len(OriginalList$)]
+         else
+            if (start = ((Len(OriginalList$) - Len(RemoveThis$)) + 1)) then
+               ! last item
+               Return$ = OriginalList$[1:Len(OriginalList$)-Len(RemoveThis$)-1]
+            else
+               ! middle item
+               Return$ = OriginalList$[1:Start-1] + OriginalList$[Start+Len(RemoveThis$)+1:Len(OriginalList$)]
+            endif
+         endif
+      endif
+   else
+      Return$ = OriginalList$
+   endif
+   RETURN Return$
+endmacro  !  AIAMSDlgRemove$
+!*****************************************************************************
+!*****************************************************************************
+name AIAMSDlgBox$
+! Selected$ needs to be global to be accessed outside of this macro
+!*****************************************************************************
+LOCAL RetVal$
+LOCAL HelpIndex
+Local ID_SUPPORTMACFILES_AIAMSBATCHDLG_96
+Local ID_SUPPORTMACFILES_BATCH_CONVERT_97
+Local  ID_SUPPORTMACFILES_TARGET_DIRECTO_98
+Local  ID_SUPPORTMACFILES_BROWSE_99
+Local  ID_SUPPORTMACFILES_SELECTED_FILES_101
+Local  ID_SUPPORTMACFILES_ADD_102
+Local  ID_SUPPORTMACFILES_REMOVE_104
+Local  ID_SUPPORTMACFILES_OK_106
+Local  ID_SUPPORTMACFILES_CANCEL_107
+Local  ID_SUPPORTMACFILES_HELP_108
+ID_SUPPORTMACFILES_AIAMSBATCHDLG_96                =  17096  
+ID_SUPPORTMACFILES_BATCH_CONVERT_97 = 17097
+ID_SUPPORTMACFILES_TARGET_DIRECTO_98               =  17098  
+ID_SUPPORTMACFILES_BROWSE_99                       =  17099  
+ID_SUPPORTMACFILES_SELECTED_FILES_101              =  17101  
+ID_SUPPORTMACFILES_ADD_102                         =  17102  
+ID_SUPPORTMACFILES_REMOVE_104                      =  17104  
+ID_SUPPORTMACFILES_OK_106                          =  17106  
+ID_SUPPORTMACFILES_CANCEL_107                      =  17107  
+ID_SUPPORTMACFILES_HELP_108                        =  17108  
+   ON ERROR Return ""
+   ! Initialization
+   HelpIndex = 5028  ! from kdmscore.h
+   FileList$ = ""
+   Selected$ = ""
+   ! Create the dialog box to get the list of files to convert
+   RemoveDialog "AIAMSBatchDlg"
+   BeginDialog  "AIAMSBatchDlg", 80, 10, 300, 200, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_BATCH_CONVERT_97)
+      StaticText      10,  12, 200, 12, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TARGET_DIRECTO_98)
+      EditBox         10,  25, 200, 12, Target$
+      ExecPushButton 230,  24,  40, 15, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_BROWSE_99), CP2, "Target$=AIAMSDlgBrowse$(Target$)"
+      StaticText      10,  47, 200, 12, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECTED_FILES_101)
+      ListBox         10,  60, 200, 96, FileList$, Selected$
+      ExecPushButton 230,  90,  40, 15, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_ADD_102),    CP2, "FileList$=AIAMSDlgAdd$(FileList$)"
+      ExecPushButton 230, 110,  40, 15, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_REMOVE_104), CP2, "FileList$=AIAMSDlgRemove$(FileList$, Selected$)"
+      OkButton        70, 175,  40, 15, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_OK_106)
+      CancelButton   130, 175,  40, 15, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CANCEL_107)
+      ExecPushButton 190, 175,  40, 15, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_HELP_108), CP2, \
+                     "Help HelpSubSystemTopic (""HPMSCORE""," + \
+                     sprintf$(HelpIndex,"%f") + ")"
+   EndDialog
+   if (ShowDialog("AIAMSBatchDlg") = 0) then
+      FileList$ = ""
+   endif
+   RemoveDialog "AIAMSBatchDlg"
+   if (Len(Target$) > 0) then
+      if (Target$[Len(Target$)] <> "\") then
+         Target$ = Target$ + "\"
+      endif
+   endif
+   RetVal$ = FileList$
+   Remove (Selected$)
+   Remove (FileList$)
+   RETURN RetVal$
+endmacro  !  AIAMSDlgBox$
+
+!*****************************************************************************
+name AIAMSGetFilename$
+PARAMETER FullPath$
+!*****************************************************************************
+LOCAL RetVal$, Temp$
+LOCAL ii
+   RetVal$ = FullPath$
+   ii = Instr(RetVal$, "\")
+   while (ii > 0)
+      RetVal$ = RetVal$[ii+1:Len(RetVal$)]
+      ii = Instr(RetVal$, "\")
+   endwhile
+   Temp$ = RetVal$[(Len(RetVal$)-1):Len(RetVal$)]
+   Temp$ = ConvertText$(lower, Temp$)
+   if (Temp$ = ".d") then
+      RetVal$ = RetVal$[1:Len(RetVal$)-2]
+   endif
+   RETURN RetVal$
+endmacro  !  AIAMSGetFilename$
+!*****************************************************************************
+!*****************************************************************************
+name AIAMSGetPath$
+PARAMETER FullPath$
+!*****************************************************************************
+LOCAL RetVal$, Temp$
+LOCAL ii
+   Temp$ = FullPath$
+   ii = Len(Temp$)
+   while ((ii > 0) AND (Temp$[ii] <> "\"))
+      ii = ii - 1
+   endwhile
+   RetVal$ = Temp$[1:ii]
+   RETURN RetVal$
+endmacro  !  AIAMSGetPath$
+!*****************************************************************************
+!*****************************************************************************
+name AIAMSBatchConvert
+PARAMETER DummyParam
+!*****************************************************************************
+LOCAL Files$, CurrentEntry$, ConvertedFile$, Temp$, subFiles$, CurrentFile$, NewTarget$
+LOCAL ii, jj, kk, SubDir, iError
+   iError = 0
+   ON ERROR evaluate "iError = -1; Goto EndAIAMSBC"
+   ! Get the files to convert
+   Target$ = _DATAPATH$
+   Files$  = AIAMSDlgBox$()
+   ! go trough the list of files
+   ii = 1
+   CurrentEntry$ = SubString$(Files$, ii)
+   while (CurrentEntry$ <> "")
+      SubDir = 0
+      if (ConvertText$(lower, CurrentEntry$[(Len(CurrentEntry$)-1):Len(CurrentEntry$)]) = ".d") then
+         SubFiles$ = CurrentEntry$
+      else
+         SubFiles$ = FindFile$(CurrentEntry$+"\*.d", "D")
+         SubDir = 1
+      endif
+      jj = 1
+      CurrentFile$ = SubString$(SubFiles$, jj)
+      while (CurrentFile$ <> "")
+         if (subDir = 1) then
+            CurrentFile$ = CurrentEntry$+"\"+CurrentFile$
+         endif
+         print CurrentFile$
+         !for each file, load the file
+         LoadFile CurrentFile$
+         ! setup the filename for the NetCDF file
+         if (Len(Target$) > 0) then
+            ConvertedFile$ = Target$+AIAMSGetFilename$(CurrentFile$)+".aia"
+         else
+            ConvertedFile$ = AIAMSGetPath$(CurrentFile$)+AIAMSGetFilename$(CurrentFile$)+".aia"
+         endif
+         !check if the file exists, if so create a numbered subdir for the new file
+         if (filestat(mode, ConvertedFile$) >= 0) then
+            kk = Len(ConvertedFile$)
+            while ((kk > 0) AND (ConvertedFile$[kk] <> "\"))
+               kk = kk - 1
+            endwhile
+            NewTarget$ = ConvertedFile$[1:kk]
+            
+            kk = 0;
+            repeat
+               kk = kk + 1
+               ConvertedFile$ = NewTarget$+Val$(kk)+"\"+AIAMSGetFilename$(ConvertedFile$)
+               ! check if the directory needs to be made
+               if (filestat(mode, NewTarget$+Val$(kk)) = -1) then
+                  mkdir NewTarget$+Val$(kk)
+               endif
+            until ((filestat(mode, ConvertedFile$) < 0) OR (kk > 99999998))
+         endif
+         ! do the conversion
+         print "Converting "+ConvertedFile$
+         MSSaveAIAPrep
+         MSSaveAIADLC ConvertedFile$, 0, 0, 0
+         ! cleanup
+         MSSaveAIACleanUp
+         jj = jj + 1
+         CurrentFile$ = SubString$(SubFiles$, jj)
+      endwhile
+      ii = ii + 1
+      CurrentEntry$ = SubString$(Files$, ii)
+   endwhile
+   EndAIAMSBC:
+   On Error
+   if (iError = -1) then
+     Generate Error 1, "Error converting MSD data files to NetCDF format."
+   endif
+   Remove (Target$)
+   RETURN iError
+endmacro  !  AIAMSBatchConvert
+Print "AIAMSBatch conversion macros, version: 1.0.0"
+!*****************************************************************************

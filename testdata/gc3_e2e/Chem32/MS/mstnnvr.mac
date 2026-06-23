@@ -1,0 +1,2544 @@
+!*************************************************************************
+! mstnNVR.mac 
+! 
+! Utility macros to read, backup and restore the contents of the G1946x,
+! G1956x & G6100 series LC/MSD Non-Volatile memory.
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States             
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+ NVRver$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/mstnnvr.mac B.04.02 2009-12-08 clove Exp $"
+! 
+!**************************************************************************
+!*
+!* Macros: 
+!*      ShowNVR        Reads all NVR values and generates a report (text file)
+!*      ReadNVR        Reads all NVR values into the NVRAM table - no display
+!*      PrintNVR       Prints report without reading values first (for offline)
+!*      ShowNVRTab     Displays NVRAM table for edit
+!*      PrintNVRTab    Text file dump of NVRAM table
+!*      SaveNVR        Save NVR table
+!*      InitNVR        Load NVRAM table
+!*      BackupNVR      Reads all instrument parameters and saves to disk
+!*      RestoreNVR     Downloads all instrument parameters from NVRAM register
+!*      CreateMSDNVR   Create NVRAM table
+!*      SetNVR         Sets main instrument ID items using dialog
+!*      GetNVR$        Returns the value of an NVRAM item using NVRAM table
+!*      BurnNVR        Save a new value to an NVRAM item using NVRAM table
+!*      TestParm$      Tests an NVRAM item against expected value with 
+!*                     specified condition
+!*      PID$           Return PID constants for a specified zone
+!*      nvrGetTimeOut  Reads zone timeouts
+!*      nvrSWRev$      Reads ChemStation version
+!*      nvrDetRev$     Reads log amp calibration string
+!*      nvrLeakCal$    Reads leak sensor calibration value
+!*      nvrAnRev$      Reads analyzer board firmware revision
+!*      nvrIORev$      Reads IO Board firmware revisions
+!*      nvrParmSupported  Checks to see if a specified parameter is supported
+!*      CreateMSDNVR   Generates a new default NVR register
+!*      PolyStr$       Returns a repeating text string
+!*      AppendSemiColon$
+!*
+!* Globals: NVRVer$, MSDNVRAMFileName$
+!*
+!***************************************************************************!
+!*
+!***************************************************************************!
+name IsNRTCmd
+  if (msmodeloptions > 13) AND (msmodeloptions < 28) then
+    return 0
+  endif
+  return 1
+endmacro
+!***************************************************************************!
+!*
+!***************************************************************************!
+NAME SetNVR
+PARAMETER SNum$                 ! Serial number
+PARAMETER QuadNum$              ! Quad Number
+PARAMETER MfgDate$              ! Manufacturing Date (end of Final Test)
+PARAMETER MSValveP default -1   ! Injection valve present (0/1)
+PARAMETER DontAsk  default 0    ! set to 1 to suppress dialog box 
+!
+! For command-line use, the desired new values are supplied to the macro,
+! as well as DontAsk = 1.  If any parameters are not passed, and DontAsk = 1,
+! then those parameters are not set.
+! For interactive use, the instrument parameters displayed in the dialog
+! box are those passed on the command line, or are those read from the 
+! instrument if not passed.
+! The product number as identified by SmartCard's revision string is burned
+! into NVRam
+! 
+!***************************************************************************!
+LOCAL AlertStr$, EditNVR$, EditNVRDlg, button, strLen
+LOCAL OldSNum$, OldQuadNum$, OldMfgDate$, oldMSValveP, oldProdNum$, prodNum$
+
+Local  ID_TUNEMAC_EDIT_INSTRUMEN_184
+Local  ID_TUNEMAC_SERIAL_NUMBER_185
+Local  ID_TUNEMAC_QUAD_NUMBER_186
+Local  ID_TUNEMAC_NOT__QUAD56_187
+Local  ID_TUNEMAC_MFG_DATE_188
+Local  ID_TUNEMAC_MMDDYYYY_189
+Local  ID_TUNEMAC_MS_INJECTION_V_190
+Local  ID_TUNEMAC_ABSENT_191
+Local  ID_TUNEMAC_PRESENT_192
+Local  ID_TUNEMAC_SERIAL_NUMBER_193
+Local  ID_TUNEMAC_QUAD_NUMBER_NO_194
+Local  ID_TUNEMAC_MFG_DATE_FORMA_195
+Local  ID_TUNEMAC_MFG_DATE_NOT_S_196
+Local  ID_TUNEMAC____STORE_VALUE_197
+Local  ID_TUNEMAC_SETNVR_VALUES_198
+Local  ID_TUNEMAC_SETNVR_VALUES_199
+ID_TUNEMAC_EDIT_INSTRUMEN_184                      =  17184  
+ID_TUNEMAC_SERIAL_NUMBER_185                       =  17185  
+ID_TUNEMAC_QUAD_NUMBER_186                         =  17186  
+ID_TUNEMAC_NOT__QUAD56_187                         =  17187  
+ID_TUNEMAC_MFG_DATE_188                            =  17188  
+ID_TUNEMAC_MMDDYYYY_189                            =  17189  
+ID_TUNEMAC_MS_INJECTION_V_190                      =  17190  
+ID_TUNEMAC_ABSENT_191                              =  17191  
+ID_TUNEMAC_PRESENT_192                             =  17192  
+ID_TUNEMAC_SERIAL_NUMBER_193                       =  17193  
+ID_TUNEMAC_QUAD_NUMBER_NO_194                      =  17194  
+ID_TUNEMAC_MFG_DATE_FORMA_195                      =  17195  
+ID_TUNEMAC_MFG_DATE_NOT_S_196                      =  17196  
+ID_TUNEMAC____STORE_VALUE_197                      =  17197  
+ID_TUNEMAC_SETNVR_VALUES_198                       =  17198  
+ID_TUNEMAC_SETNVR_VALUES_199                       =  17199  
+   InitNVR
+   if RegSize(MSDNVR) < 1 then
+      RETURN
+   endif
+
+   ! Read current instrument ID parameters
+   if SNum$ = "" then
+      oldSNum$ = GetNVR$("serialnum")
+   endif                     
+   if QuadNum$ = "" then
+      oldQuadNum$ = GetNVR$("quadnum")
+   endif
+   if MfgDate$ = "" then
+      oldMfgDate$ = GetNVR$("mfgdate")
+   endif
+   if MSValveP = -1 then
+      oldMSValveP = val(GetNVR$("msvalvep"))
+   endif
+   ! Use SmartCard's identification
+   MSSCQuery "*idn?", ProdNum$
+   ProdNum$ = SubString$(ProdNum$,2,,",")
+   
+   SNum$ = oldSNum$
+   QuadNum$ = oldQuadNum$
+   MfgDate$ = oldMfgDate$
+   MSValveP = oldMSValveP + 1
+    
+   EditNVR$ = "EditNVRDialog"
+   if DontAsk = 0 then    ! make dialog box
+      EditNVRDlg = DialogExists(EditNVR$)
+
+      If EditNVRDlg = 0 then         ! create dialog box
+         BeginDialog EditNVR$, 50, 50, 210, 150, \
+                              ReadResource$("tunemac",ID_TUNEMAC_EDIT_INSTRUMEN_184)
+         StaticText    10,  10,  80, 10, ReadResource$("tunemac",ID_TUNEMAC_SERIAL_NUMBER_185)
+         EditBox       70,  10,  70, 10,  SNum$
+         
+         StaticText    10,  26,  80, 10, ReadResource$("tunemac",ID_TUNEMAC_QUAD_NUMBER_186)
+         EditBox       70,  26,  70, 10,  QuadNum$
+         StaticText   150,  26,  50, 10, ReadResource$("tunemac",ID_TUNEMAC_NOT__QUAD56_187)
+         StaticText    10,  42,  80, 10, ReadResource$("tunemac",ID_TUNEMAC_MFG_DATE_188)
+         EditBox       70,  42,  70, 10,  MfgDate$
+         StaticText   150,  42,  40, 10, ReadResource$("tunemac",ID_TUNEMAC_MMDDYYYY_189)
+
+         GroupBox      10,  60, 180,  50, ReadResource$("tunemac",ID_TUNEMAC_MS_INJECTION_V_190)
+         OptionGroup  MSValveP 
+         OptionButton  35,  75,  40,  10, ReadResource$("tunemac",ID_TUNEMAC_ABSENT_191)  ! 1
+         OptionButton  35,  90,  40,  10, ReadResource$("tunemac",ID_TUNEMAC_PRESENT_192) ! 2
+
+         OKButton        53, 120, 32, 16
+         CancelButton   120, 120, 32, 16
+
+         EndDialog
+      endif                               ! if dialog box was created
+    endif    ! end if Don'tAsk
+                                          
+   ! This next statement executes the dialog box 
+   if ShowDialog (EditNVR$) = 0 then   !  Cancel button
+      RemoveDialog EditNVR$
+      RETURN               
+   endif   
+   
+   ! Check values and issue alert if incorrect
+   strLen = len(SNum$) 
+   if (strLen > 10) or (strLen < 6) then
+      AlertStr$ = ReadResource$("tunemac",ID_TUNEMAC_SERIAL_NUMBER_193)
+   endif
+   if QuadNum$ = "quad56" then
+      AlertStr$ = AppendSemiColon$(AlertStr$) + \
+                 ReadResource$("tunemac",ID_TUNEMAC_QUAD_NUMBER_NO_194)
+   endif
+   strLen = len(MfgDate$)
+   if (strLen <> 8) or (InStr(MfgDate$, "/") > 0) then
+      AlertStr$ = AppendSemiColon$(AlertStr$) + \
+                 ReadResource$("tunemac",ID_TUNEMAC_MFG_DATE_FORMA_195)
+   else
+      if (MfgDate$ = "04/10/96") then
+         AlertStr$ = AppendSemiColon$(AlertStr$) + \
+                    ReadResource$("tunemac",ID_TUNEMAC_MFG_DATE_NOT_S_196)
+      endif
+   endif
+   
+   MSValveP = MSValveP - 1
+   
+   ! if there are any warnings, issue them now
+   if len(AlertStr$) > 0 then
+      button = alert(AlertStr$ + ReadResource$("tunemac",ID_TUNEMAC____STORE_VALUE_197), 4, \
+               "SetNVR")
+      if button = 0 then
+         RemoveDialog EditNVR$
+         Print ReadResource$("tunemac",ID_TUNEMAC_SETNVR_VALUES_198)
+         RETURN
+      endif
+   endif              ! end if AlertStr not empty
+   
+   ! Burn the new values 
+
+   if oldSNum$ <> SNum$ then
+      MSSCWrite "config:id:desc serialnum, '" + SNum$ + "'"
+   endif
+   if oldQuadNum$ <> QuadNum$ then
+      MSSCWrite "config:id:desc quadnum, '" + QuadNum$ + "'"
+   endif
+   if oldMfgDate$ <> MfgDate$ then
+      MSSCWrite "config:id:desc mfgdate, '" + MfgDate$ + "'"
+   endif
+   if oldMSValveP <> MSValveP then
+      MSSCWrite "msc:parm:pset msvalvep," + val$(MSValveP)
+   endif
+   !09-10-99 ER & SL:  MSSCWrite "config:id:desc prodnum, '" + ProdNum$ + "'" 
+   !12-10-09 CPL:  "config:id:desc prodnum,'ProdNum$'" sets descriptive string only - NOT actual model number. 
+   
+   Print ReadResource$("tunemac",ID_TUNEMAC_SETNVR_VALUES_199) + SNum$ + "; " + QuadNum$ + "; " + \
+          MfgDate$ + "; " + val$(MSValveP) + "; " + ProdNum$
+
+   nvrSaveToLog !Save shipping info to file for rework sheet to access.
+          
+endmacro                ! end SetNVR
+
+!***************************************************************************!
+!***************************************************************************!
+NAME GetNVR$
+PARAMETER Parameter$
+!
+!***************************************************************************!
+LOCAL RetStr$, EvalStr$, RowNum
+
+
+   On Error Return "Read error"
+   
+   RowNum = RowByText(MSDNVR, NVRAMTab,,"SCParmName", "i=", Parameter$)
+   
+   if RowNum < 1 then
+      RETURN Parameter$ + " not found"
+   endif
+
+   EvalStr$ = TabText$(MSDNVR, NVRAMTab, RowNum, "ReadFunction")
+   Evaluate "RetStr$ = " + EvalStr$
+   
+   RETURN RetStr$ 
+   
+endmacro                ! end GetNVR$
+!***************************************************************************!
+
+!***************************************************************************!
+!***************************************************************************!
+!***************************************************************************!
+NAME BurnNVR
+PARAMETER Parameter$, NewValue$ default "auto", rowNum default -1
+! This macro uses the function in the SetFunction column to set an NVR value.
+! If NewValue$ = "auto", then the value that is burned is taken from the table 
+! according to the following hierarchy:
+!   1. Backup value, if not empty and not (<> Expected)
+!   2. ParmValue value, if not empty and not (<> Expected)
+!   3. Expected value, if not empty
+! An error is logged if none of the above are available.
+! if NewValue$ = "default" then the expected value is burned.
+!
+! if rowNum is supplied, then that row is used rather than Parameter$
+! 
+! Prints a result string.
+!***************************************************************************!
+LOCAL EvalStr$, burnVal$, ErrStr$, Comp$, Exp$, SetF$
+
+Local  ID_TUNEMAC__NOT_A_VALID_N_201
+Local  ID_TUNEMAC__IS_NOT_A_SETA_202
+Local  ID_TUNEMAC__IS_NOT_SUPPOR_203
+Local  ID_TUNEMAC__OCCURRED_IN_B_204
+ID_TUNEMAC__NOT_A_VALID_N_201                      =  17201  
+ID_TUNEMAC__IS_NOT_A_SETA_202                      =  17202  
+ID_TUNEMAC__IS_NOT_SUPPOR_203                      =  17203  
+ID_TUNEMAC__OCCURRED_IN_B_204                      =  17204  
+   On Error goto BurnNVRerr
+ 
+   if RowNum = -1 then 
+      RowNum = RowByText(MSDNVR, NVRAMTab,, "SCParmName", "i=", Parameter$)
+   else
+      if RowNum > 0 then
+         Parameter$ = TabText$(MSDNVR, NVRAMTab, RowNum, "SCParmName")
+      endif
+   endif
+   
+   if RowNum < 1 then
+      print Parameter$ + ReadResource$("tunemac",ID_TUNEMAC__NOT_A_VALID_N_201)
+      RETURN
+   endif
+
+   ! if there is no SetFunction, this is not a setable parameter   
+   SetF$ = TabText$(MSDNVR, NVRAMTab, rowNum , "SetFunction")
+   if len(SetF$) = 0 then
+      Print Parameter$ + ReadResource$("tunemac",ID_TUNEMAC__IS_NOT_A_SETA_202)
+      RETURN
+   endif
+   
+   ! See if this is supported by the current firmware
+   if nvrParmSupported(Parameter$) = 0 then
+      Print Parameter$ + ReadResource$("tunemac",ID_TUNEMAC__IS_NOT_SUPPOR_203)
+      RETURN
+   endif
+   
+   ! Get the value to be burned
+   if ConvertText$(lower, NewValue$) = "default" then
+      NewValue$ = TabText$(MSDNVR, NVRAMTab, rowNum, "Expected")
+      if len(NewValue$) = 0 or Comp$ <> "=" then
+         Print "There is no default parameter for " + Parameter$
+         RETURN
+      endif
+   else
+      ! if "auto"
+      Comp$ = TabText$(MSDNVR, NVRAMTab, rowNum, "Comparison")
+      Exp$  = TabText$(MSDNVR, NVRAMTab, rowNum, "Expected")
+      if ConvertText$(lower, NewValue$) = "auto" then
+         ! If backup value exists and it's not <> Expected, use it
+         NewValue$ = TabText$(MSDNVR, NVRAMTab, rowNum, "Backup")
+         if len(NewValue$) = 0 or ((Comp$ = "<>") and (NewValue$ = Exp$)) then
+            ! if ParmValue exists and not <> Expected, use it
+            NewValue$ = TabText$(MSDNVR, NVRAMTab, rowNum, "ParmValue")
+            if len(NewValue$) = 0 or ((Comp$ = "<>") and (NewValue$ = Exp$)) then
+               ! if Expected exists, use it
+               NewValue$ = Exp$
+               if len(Exp$) = 0 or (Comp$ <> "=") then
+                  Print Parameter$ + " does not have an automatic value to set."
+                  RETURN
+               endif
+            endif
+         endif
+      endif
+   endif
+   Print "Setting " + Parameter$ + " to " + NewValue$
+   
+   EvalStr$ = SPrintF$(NewValue$, SetF$)
+   print EvalStr$
+
+   if _offline = 1 then
+      Print Parameter$ + " not saved to non-volatile RAM in offline session"
+      ! RETURN
+   endif
+   
+   Evaluate EvalStr$
+   Print Parameter$ + " set to " + NewValue$
+   
+   RETURN
+   
+BurnNVRerr:
+   On Error Print
+   Print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_IN_B_204)
+   RETURN
+
+endmacro                ! end BurnNVR
+
+!***************************************************************************!
+!***************************************************************************!
+NAME BackupNVR
+PARAMETER ReadFirst default -1
+! Make a backup copy of all burnable values in the "Backup" column.
+! If ReadFirst = 1, then current values are read from the MSD; otherwise,
+! the most recently read values (from the ReadValue) are used.  By default,
+! the user is asked whether to read from current values.
+! Data stored in the Backup column is only used for restoring non-volatile 
+! RAM values after they have been lost or the hardware has been replaced. 
+!
+!***************************************************************************!
+LOCAL i, EvalStr$, rowNum, WriteStr$
+
+Local  ID_TUNEMAC_READ_ALL_STORE_205
+Local  ID_TUNEMAC_BACKUP_LC_MSD_206
+Local  ID_TUNEMAC_LC_MSD_STORED_207
+Local  ID_TUNEMAC__OCCURRED_IN_B_208
+ID_TUNEMAC_READ_ALL_STORE_205                      =  17205  
+ID_TUNEMAC_BACKUP_LC_MSD_206                       =  17206  
+ID_TUNEMAC_LC_MSD_STORED_207                       =  17207  
+ID_TUNEMAC__OCCURRED_IN_B_208                      =  17208  
+   On Error goto BackupNVRerr
+
+   if ReadFirst = -1 then
+      ReadFirst =  Alert(ReadResource$("tunemac",ID_TUNEMAC_READ_ALL_STORE_205), \
+                    4, ReadResource$("tunemac",ID_TUNEMAC_BACKUP_LC_MSD_206)) 
+   endif
+   
+   if ReadFirst = 1 then
+      ReadNVR
+   endif
+
+   for i = 1 to TabHdrVal(MSDNVR, NVRAMTab, "NumberOfRows")
+      WriteStr$ = TabText$(MSDNVR, NVRAMTab, i, "SetFunction")
+      ! If a set function exists, back up the value.
+      if len(WriteStr$) > 0 then
+         SetTabText  MSDNVR, NVRAMTab, i, "Backup", \
+            TabText$(MSDNVR, NVRAMTab, i, "ParmValue")
+         Print "Backing up " + TabText$(MSDNVR, NVRAMTab, i, "Parameter")
+      endif
+   next i
+   
+   SetObjHdrText MSDNVR, "BackupDate", Date$(1) + " " + Time$(1)
+   SetTabText MSDNVR, NVRAMTab, RowByText(MSDNVR, NVRAMTab, , "SCParmName", \
+              "i=", "backup"), "ParmValue", ObjHdrText$(MSDNVR, "BackupDate")
+   SaveNVR
+   Print ReadResource$("tunemac",ID_TUNEMAC_LC_MSD_STORED_207)
+   
+   RETURN
+   
+BackupNVRerr: 
+   On Error print
+   Print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_IN_B_208)
+   RETURN
+
+endmacro                ! end BackupNVR
+
+!***************************************************************************!
+!***************************************************************************!
+NAME RestoreNVR
+PARAMETER Defaults default 0
+PARAMETER Confirm default 1
+! Restore all burnable values from the NVRAM backup column.
+!
+! If Confirm is set to 1 (default), the user will be asked whether to
+! burn all values or to confirm each item
+! 
+! If Defaults = 1, it restores the Expected values
+!
+!***************************************************************************!
+LOCAL i, EvalStr$, rowNum, WriteStr$, RestoreVal$, Parm$, whichVal$
+LOCAL lastRead, missingValue, msg$, Comp$, resp, SCParm$, ParmSupported
+
+Local  ID_TUNEMAC_RESTORE_ALL_IT_209
+Local  ID_TUNEMAC_RESTORE_ALL_IT_210
+Local  ID_TUNEMAC_PRESS_NO_TO_CO_211
+Local  ID_TUNEMAC_RESTORE_LC_MSD_212
+Local  ID_TUNEMAC_WARNING__THERE_213
+Local  ID_TUNEMAC__VALUE_FOR_214
+Local  ID_TUNEMAC_USE_LAST_READ_216
+
+Local  ID_TUNEMAC_THERE_IS_NO_VA_217
+
+Local  ID_TUNEMAC_NO_VALUE_AVAIL_218
+Local  ID_TUNEMAC_SET_66
+
+Local  ID_TUNEMAC_RESTORENVR__CO_221
+Local  ID_TUNEMAC__NOT_SET_TO_222
+Local  ID_TUNEMAC_RESTORENVR_ABO_223
+
+Local  ID_TUNEMAC_BURNING_224
+Local  ID_TUNEMAC_LC_MSD_STORED_226
+Local  ID_TUNEMAC__OCCURRED_IN_R_227
+ID_TUNEMAC_RESTORE_ALL_IT_209                      =  17209  
+ID_TUNEMAC_RESTORE_ALL_IT_210                      =  17210  
+ID_TUNEMAC_PRESS_NO_TO_CO_211                      =  17211  
+ID_TUNEMAC_RESTORE_LC_MSD_212                      =  17212  
+ID_TUNEMAC_WARNING__THERE_213                      =  17213  
+ID_TUNEMAC__VALUE_FOR_214                          =  17214  
+ID_TUNEMAC_USE_LAST_READ_216                       =  17216  
+ID_TUNEMAC_WARNING__THERE_213                      =  17213  
+ID_TUNEMAC__VALUE_FOR_214                          =  17214  
+ID_TUNEMAC_THERE_IS_NO_VA_217                      =  17217  
+ID_TUNEMAC_RESTORE_LC_MSD_212                      =  17212  
+ID_TUNEMAC_NO_VALUE_AVAIL_218                      =  17218  
+ID_TUNEMAC_SET_66                                  =  17066  
+ID_TUNEMAC_RESTORE_LC_MSD_212                      =  17212  
+ID_TUNEMAC_RESTORENVR__CO_221                      =  17221  
+ID_TUNEMAC__NOT_SET_TO_222                         =  17222  
+ID_TUNEMAC_RESTORENVR_ABO_223                      =  17223  
+ID_TUNEMAC_RESTORENVR__CO_221                      =  17221  
+ID_TUNEMAC_BURNING_224                             =  17224  
+ID_TUNEMAC_LC_MSD_STORED_226                       =  17226  
+ID_TUNEMAC__OCCURRED_IN_R_227                      =  17227  
+   On Error goto RestoreNVRerr
+   
+   InitNVR
+   if RegSize(MSDNVR) < 1 then
+      RETURN
+   endif
+
+   if (Defaults = 1) then
+      msg$ = ReadResource$("tunemac",ID_TUNEMAC_RESTORE_ALL_IT_209)
+   else
+      msg$ = ReadResource$("tunemac",ID_TUNEMAC_RESTORE_ALL_IT_210)
+   endif
+   
+   ! Ask whether to burn all or to confirm each one
+   if (Confirm = 1) then
+      ! Restore all if No is selected
+      Confirm = Alert(msg$ + chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_PRESS_NO_TO_CO_211), 4, \
+                ReadResource$("tunemac",ID_TUNEMAC_RESTORE_LC_MSD_212)) 
+      if (Confirm = 0) then
+         Confirm = 1
+      else
+         Confirm = 0
+      endif
+   endif
+
+   ! Step through the table, acting on each writeable item   
+   for i = 1 to TabHdrVal(MSDNVR, NVRAMTab, "NumberOfRows")
+      ! Get the set function
+      WriteStr$ =   TabText$(MSDNVR, NVRAMTab, i, "SetFunction")
+      Comp$ = TabText$(MSDNVR, NVRAMTab, i, "Comparison")
+      ParmSupported = nvrParmSupported(,i)
+
+      ! If a set function exists, it's a restoreable value.
+      if len(WriteStr$) > 0 then
+         Parm$ = TabText$(MSDNVR, NVRAMTab, i, "Parameter")
+         if Defaults = 1 then
+            if (Comp$ = "=") or (len(Comp$) = 0) then
+               whichVal$ = "default"
+               RestoreVal$ = TabText$(MSDNVR, NVRAMTab, i, "Expected")
+            else
+               RestoreVal$ = ""
+            endif
+         else
+            RestoreVal$ = TabText$(MSDNVR, NVRAMTab, i, "Backup")
+            whichVal$ = "backup"
+         endif
+
+         ! Make sure there's a value there.
+         if len(RestoreVal$) = 0 then
+            if (Confirm = 1) then
+               lastRead = (Alert(ReadResource$("tunemac",ID_TUNEMAC_WARNING__THERE_213) + whichVal$ + \ 
+                           ReadResource$("tunemac",ID_TUNEMAC__VALUE_FOR_214) + chr$(13) + Parm$ + "." + chr$(13) + \
+                           ReadResource$("tunemac",ID_TUNEMAC_USE_LAST_READ_216), 4, "Restore LC/MSD Memory"))
+               if lastRead = 1 then 
+                  RestoreVal$ =  TabText$(MSDNVR, NVRAMTab, i, "ParmValue")
+               endif
+            else
+               Print ReadResource$("tunemac",ID_TUNEMAC_WARNING__THERE_213) + whichVal$ + \
+                     ReadResource$("tunemac",ID_TUNEMAC__VALUE_FOR_214) + Parm$
+               lastRead = 0
+            endif
+         endif
+         
+         if LastRead = 1 then
+            RestoreVal$ = TabText$(MSDNVR, NVRAMTab, i, "ParmValue")
+         endif
+         
+         if len(RestoreVal$) = 0 then
+            if (Confirm = 1) then
+               resp = Alert(ReadResource$("tunemac",ID_TUNEMAC_THERE_IS_NO_VA_217) + Parm$, 2, \
+                            ReadResource$("tunemac",ID_TUNEMAC_RESTORE_LC_MSD_212))
+            else
+               Print ReadResource$("tunemac",ID_TUNEMAC_NO_VALUE_AVAIL_218) + Parm$
+            endif
+         else
+            if Confirm = 1 then
+               resp = Alert(ReadResource$("tunemac",ID_TUNEMAC_SET_66) + Parm$ + " to " + RestoreVal$ + "?", 5, \
+                           ReadResource$("tunemac",ID_TUNEMAC_RESTORE_LC_MSD_212))
+               if resp = 1 then
+                   if ParmSupported = 1 then
+                      On Error print ReadResource$("tunemac",ID_TUNEMAC_RESTORENVR__CO_221) + Parm$
+                      evaluate SPrintF$(RestoreVal$ , WriteStr$)
+                      On Error goto RestoreNVRerr
+                   endif
+               else
+                   if resp = 0 then
+                      Print Parm$ + ReadResource$("tunemac",ID_TUNEMAC__NOT_SET_TO_222) + RestoreVal$
+                   else
+                      if resp = -1 then
+                         Print ReadResource$("tunemac",ID_TUNEMAC_RESTORENVR_ABO_223)
+                         RETURN
+                      endif
+                   endif
+                endif
+            else  ! Don't confirm
+                if ParmSupported = 1 then
+                   On Error print ReadResource$("tunemac",ID_TUNEMAC_RESTORENVR__CO_221) + Parm$
+                   evaluate SPrintF$(RestoreVal$ , WriteStr$)
+                   On Error goto RestoreNVRerr
+                endif
+            endif
+         endif
+         if ParmSupported = 1 then
+            Print ReadResource$("tunemac",ID_TUNEMAC_BURNING_224) + RestoreVal$ + "' to " + \
+                  TabText$(MSDNVR, NVRAMTab, i, "Parameter")
+         endif
+      endif
+   next i
+   
+   SetObjHdrText MSDNVR, "RestoreDate", Date$(1) + " " + Time$(1)
+   SetTabText MSDNVR, NVRAMTab, RowByText(MSDNVR, NVRAMTab, , "SCParmName", \
+              "i=", "restore"), "ParmValue", ObjHdrText$(MSDNVR, "RestoreDate")
+   Print ReadResource$("tunemac",ID_TUNEMAC_LC_MSD_STORED_226)
+   
+   RETURN
+   
+RestoreNVRerr:   
+   On Error print
+   Print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_IN_R_227)
+   RETURN
+
+endmacro                ! end RestoreNVR
+
+!***************************************************************************!
+!******************************************************************************
+Name nvrParmSupported
+PARAMETER ParmName$, RowNum default -1
+!  Determines whether a parameter is supported by the existing SmartCard
+!  code revision in MinRev.  If no MinRev is listed, the parameter is always
+!  supported.  Otherwise, if the current rev is lower than the one in MinRev,
+!  it's not supported.  Returns '1' if supported and '0' if not supported or parameter
+!  not found.
+!  If a RowNumber is provided, the parameter name is ignored
+!******************************************************************************
+LOCAL MinRev$, MinRev, SCRev$, SCRev
+
+   if RowNum = -1 then
+      RowNum = RowByText(MSDNVR, NVRAMTab,, "SCParmName", "=", ParmName$)
+   else
+      if RowNum > 0 then
+         ParmName$ = TabText$(MSDNVR, NVRAMTab, RowNum, "SCParmName")
+      endif
+   endif
+
+   if RowNum < 1 then 
+      RETURN 0
+   endif
+   
+   MinRev$ = TabText$(MSDNVR, NVRAMTab, RowNum, "MinRev")
+   MinRev = val(SubString$(MinRev$, 1,, ".") + SubString$(MinRev$, 2,, ".") + \
+            SubString$(MinRev$, 3,, "."))
+   ! Print MinRev$, MinRev
+   
+   if len(MinRev$) = 0 then
+      RETURN 1
+   else
+      SCRev$ = TabText$ (MSDNVR, NVRAMTab, \
+               RowByText(MSDNVR, NVRAMTab,,"SCParmName", "=", "idn?"), "ParmValue")
+      SCRev = val(SubString$(SCRev$, 1,, ".") + SubString$(SCRev$, 2,, ".") + \
+            SubString$(SCRev$, 3,, "."))
+     !  Print SCRev$, SCRev   
+
+      if SCRev >= MinRev then
+         RETURN 1
+      else
+         RETURN 0
+      endif
+   endif
+
+endmacro   ! end nvrParmSupported
+!******************************************************************************
+
+!******************************************************************************
+!******************************************************************************
+!******************************************************************************
+Name showNVR
+PARAMETER FileName$ default "AUTO"
+!
+!******************************************************************************
+LOCAL EvalStr$
+
+    ReadNVR
+    PrintNVR
+
+endmacro   ! end ReadNVR
+!******************************************************************************
+
+!******************************************************************************
+!******************************************************************************
+!******************************************************************************
+Name ReadNVR
+! ReadNVR just reads every line in the NVRAM table, executing the readFunction
+! and stuffing the return value into the ParmValue column
+!
+!******************************************************************************
+LOCAL EvalStr$, ParmVal$, i
+
+Local  ID_TUNEMAC_READNVR_ABORTE_228
+ID_TUNEMAC_READNVR_ABORTE_228                      =  17228  
+   if _offline = 1 then
+      Print ReadResource$("tunemac",ID_TUNEMAC_READNVR_ABORTE_228)
+      RETURN
+   endif
+
+   InitNVR
+   
+   ! load dgMSPrintError macro
+   if CHECK(MACRO, dgMSPrintError) = 0 then
+     LoadMacroMcxOrMac _AutoMSPath$ + "dgMSUtil"
+   endif
+   
+   On Error dgmsprinterror; ParmVal$ = "Read Error occurred"
+   ! First, reset the values in ParmValue
+   for i = 1 to TabHdrVal(MSDNVR, NVRAMTab, "NumberOfRows")
+      SetTabText MSDNVR, NVRAMTab, i, "ParmValue", ""   ! clear the old value
+      EvalStr$ = tabText$(MSDNVR, NVRAMTab, i, "ReadFunction") 
+      if len(EvalStr$) > 0 then
+          if nvrParmSupported( ,i) = 1 then
+             evaluate "ParmVal$ = " + EvalStr$
+             print ParmVal$
+             SetTabText MSDNVR, NVRAMTab, i, "ParmValue", ParmVal$
+          endif
+      endif
+
+   next i
+   
+   if (IsNRTCmd() = 0) then
+RemoveNRT:
+     i = RowbyText(MSDNVR, NVRAMTab,,"ParmValue", "=", "N/A")
+     if (i > 0) then 
+       DelTabRow MSDNVR, NVRAMTab, i
+       goto RemoveNRT
+     endif
+   endif
+endmacro
+
+!******************************************************************************
+!******************************************************************************
+NAME PrintNVRTab
+! Prints out the NVRAMTab table, for documentation purposes.  This can also be
+! used as an aid to modify the table initialization routine.
+!
+!******************************************************************************
+LOCAL i, j, outStr$, colName$, TypeMSD$, a$
+
+Local  ID_TUNEMAC_NVRAM_REGISTER_229
+Local  ID_TUNEMAC__OCCURRED_IN_R_230
+Local  ID_TUNEMAC__LC_MSD_NV_RAM_231
+Local  ID_TUNEMAC_ROW_232
+Local  ID_TUNEMAC_PRINTNVR_COMPL_233
+ID_TUNEMAC_NVRAM_REGISTER_229                      =  17229  
+ID_TUNEMAC__OCCURRED_IN_R_230                      =  17230  
+ID_TUNEMAC__LC_MSD_NV_RAM_231                      =  17231  
+ID_TUNEMAC_ROW_232                                 =  17232  
+ID_TUNEMAC_PRINTNVR_COMPL_233                      =  17233  
+    InitNVR
+    if RegSize(MSDNVR) < 1 then
+       RETURN
+    endif
+
+    if RegSize(MSDNVR) < 1 then
+       Print ReadResource$("tunemac",ID_TUNEMAC_NVRAM_REGISTER_229)
+       RETURN
+    endif
+    
+    FileName$ = _TempPath$ + "NVRAMTab.txt"
+
+    On Error close 
+    Open FileName$ for output as #7
+    On Error print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_IN_R_230)
+  
+    MSSCQuery "*idn?", TypeMSD$
+    TypeMSD$ = Substring$(TypeMSD$,2,,",")
+
+    Print #7, TypeMSD$ + ReadResource$("tunemac",ID_TUNEMAC__LC_MSD_NV_RAM_231)
+    Print #7, Date$(1) + "  " + Time$(1)
+    Print #7, ""
+
+    for i = 1 to TabHdrVal(MSDNVR, NVRAMTab, "NumberOfRows")
+        print #7, ReadResource$("tunemac",ID_TUNEMAC_ROW_232) + val$(i)
+        for j = 1 to TabHdrVal(MSDNVR, NVRAMTab, "NumberOfCol")
+           colName$ = TabColName$(MSDNVR, NVRAMTab, j) 
+           print #7, colName$ + ": " + TabText$(MSDNVR, NVRAMTab, i, colName$)
+        next j
+        Print #7, ""
+    next i
+    
+    close #7
+    a$ = "notepad.exe " + chr$(34) + FileName$ + chr$(34)
+    execnowait a$, 1
+    Print ReadResource$("tunemac",ID_TUNEMAC_PRINTNVR_COMPL_233)
+   
+
+endmacro
+
+!******************************************************************************
+
+!******************************************************************************
+Name PrintNVR
+PARAMETER FileName$ default "AUTO"
+!
+!******************************************************************************
+LOCAL i, j, EvalStr$, ParmVal$, ParmLen, maxParmLen, leftMargin, leftMargin$
+LOCAL ValLen, maxValLen, MfgEnv, a$
+
+Local  ID_TUNEMAC_NVRAM_REGISTER_229
+Local  ID_TUNEMAC__OCCURRED_IN_P_234
+Local  ID_TUNEMAC_PRINTNVR_COMPL_233
+ID_TUNEMAC_NVRAM_REGISTER_229                      =  17229  
+ID_TUNEMAC__OCCURRED_IN_P_234                      =  17234  
+ID_TUNEMAC_PRINTNVR_COMPL_233                      =  17233  
+    InitNVR
+    if RegSize(MSDNVR) < 1 then
+       RETURN
+    endif
+
+    if RegSize(MSDNVR) < 1 then
+       Print ReadResource$("tunemac",ID_TUNEMAC_NVRAM_REGISTER_229)
+       RETURN
+    endif
+
+    MfgEnv = Check(Variable, PRTestVer$)
+    if (MfgEnv = 1) then
+       Archive_Header "NVR"
+    endif
+
+    leftMargin = 4
+    for j = 1 to leftMargin   ! add left margin as spaces
+       leftMargin$ = leftMargin$ + " "
+    next j
+
+    if FileName$ = "AUTO" then
+       if MfgEnv = 1 then
+          FileName$ = ProdFileName$("ID","TXT")
+       else
+          FileName$ = _tunePath$ + "MSDNVRAM.txt"
+       endif
+    endif 
+
+    On Error close
+    Open FileName$ for output as #7
+    On Error print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_IN_P_234), _errLine
+
+    ! Get the length of the longest Parameter and ParmValue strings
+    for i = 1 to TabHdrVal(MSDNVR, NVRAMTab, "NumberOfRows")
+       ParmLen = len(TabText$(MSDNVR, NVRAMTab, i, "Parameter")) 
+       if ParmLen > maxParmLen then
+          maxParmLen = ParmLen
+       endif
+       ValLen = len(TabText$(MSDNVR, NVRAMTab, i, "ParmValue")) 
+       if ParmLen > 0 then
+          if ValLen > maxValLen then
+             maxValLen = ValLen
+          endif
+       endif
+    next i
+
+    for i = 1 to TabHdrVal(MSDNVR, NVRAMTab, "NumberOfRows")
+        if nvrParmSupported(, i) = 1 then
+           EvalStr$ = TabText$(MSDNVR, NVRAMTab, i, "Parameter")
+           if EvalStr$ <> "" then  ! pad with spaces and append a semicolon
+               for j = len(EvalStr$) to MaxParmLen
+                   EvalStr$ = EvalStr$ + " "      
+               next j
+               EvalStr$ =  EvalStr$ +  ": " 
+           endif
+           EvalStr$ = leftMargin$ + EvalStr$ + TabText$(MSDNVR, NVRAMTab, i, \
+                                               "ParmValue")
+           ! evaluate to see if value is as expected
+           EvalStr$ = TestParm$(EvalStr$, i, maxParmLen + maxValLen + \
+                      leftMargin + 5)
+           
+           Print EvalStr$ 
+           Print #7, EvalStr$
+
+           if (MfgEnv = 1) then
+              if (instr(TabText$(MSDNVR, NVRAMTab, i, "ParmValue"), \
+                                                    "------") < 1) then
+                 Archive_Data " ", TabText$(MSDNVR, NVRAMTab, i, "ParmValue")
+              endif
+           endif
+       endif
+
+    next i
+    
+    close #7
+    a$ = "notepad.exe " + chr$(34) + FileName$ + chr$(34)
+    execnowait a$, 1
+    if (MfgEnv = 1) then
+       Archive
+    endif
+
+    Print ReadResource$("tunemac",ID_TUNEMAC_PRINTNVR_COMPL_233)
+  
+    RETURN
+
+endmacro        ! end PrintNVR 
+
+!******************************************************************************
+
+!******************************************************************************
+NAME TestParm$
+PARAMETER TestString$, RowNum, PadTo
+! This macro evaluates the values read from the instrument and compares them
+! to the 'Expected' value using the 'comparison' operator.  If there is a
+! mismatch, then the expected value is appended.
+! The comparison operators are as in RowByText: "=" for a case-sensitive
+! exact match, "i=" for a case-insensitive match, "in" for Expected found 
+! in ParValue, or "<>"  
+!
+!******************************************************************************
+LOCAL foundRow, i, strLen
+   
+   ! if there is no expected value or no comparison operator, return
+   if (len(TabText$(MSDNVR, NVRAMTab, RowNum, "Expected")) = 0) or \
+      (len(TabText$(MSDNVR, NVRAMTab, RowNum, "Comparison")) = 0)  then
+      RETURN TestString$
+   endif
+
+   temp = RowByText(MSDNVR, NVRAMTab, RowNum:RowNum, "ParmValue",  \ 
+          TabText$ (MSDNVR, NVRAMTab, RowNum, "Comparison"),      \
+          TabText$ (MSDNVR, NVRAMTab, RowNum, "Expected")) 
+   if temp <> RowNum then
+      strLen = len(TestString$)
+      ! pad with spaces to PadTo
+      for i = strLen + 1 to PadTo
+         TestString$ = TestString$ + " "
+      next i
+      TestString$ = TestString$ + "Exp " + \
+                    TabText$ (MSDNVR, NVRAMTab, RowNum, "Comparison") + \
+                    " " + TabText$ (MSDNVR, NVRAMTab, RowNum, "Expected")
+   endif               
+
+   RETURN TestString$
+
+endmacro
+!******************************************************************************
+
+!******************************************************************************
+NAME InitNVR
+PARAMETER MSDNVRAMFileName$ default "MSDNVRAM.REG" 
+PARAMETER DontAsk default 0
+! NVRAMInit will check to see if the MSDNVRAM register exists.  If not, it will
+! attempt to load the file specified in MSDNVRAMFileName$.  If the file doesn't 
+! exist, a new default table will be generated.
+! If DontAsk = 1 and the file is not found, a new one will be created with
+! the default filename, the instrument values will be read and backed up.
+!
+!******************************************************************************
+LOCAL Row, MSDNVRAMPath$, FileFound, Resp, CreateReg, SCQ$, OffLine
+
+Local  ID_TUNEMAC_NVRAM_REGISTER_235
+Local  ID_TUNEMAC_NVRAM_REGISTER_237
+Local  ID_TUNEMAC_LOAD_ALTERNATE_238
+Local  ID_TUNEMAC_PRESS_NO_TO_CR_239
+Local  ID_TUNEMAC_INITNVR_ABORTE_241
+Local  ID_TUNEMAC_CAN_T_CREATE_M_242
+Local  ID_TUNEMAC_CREATING_NEW_N_243
+Local  ID_TUNEMAC_MAKE_A_BACKUP_244
+Local  ID_TUNEMAC_PARAMETERS_FRO_245
+Local  ID_TUNEMAC__OCCURRED_IN_I_246
+ID_TUNEMAC_NVRAM_REGISTER_235                      =  17235  
+ID_TUNEMAC_NVRAM_REGISTER_237                      =  17237  
+ID_TUNEMAC_LOAD_ALTERNATE_238                      =  17238  
+ID_TUNEMAC_PRESS_NO_TO_CR_239                      =  17239  
+ID_TUNEMAC_INITNVR_ABORTE_241                      =  17241  
+ID_TUNEMAC_CAN_T_CREATE_M_242                      =  17242  
+ID_TUNEMAC_CREATING_NEW_N_243                      =  17243  
+ID_TUNEMAC_MAKE_A_BACKUP_244                       =  17244  
+ID_TUNEMAC_PARAMETERS_FRO_245                      =  17245  
+ID_TUNEMAC__OCCURRED_IN_I_246                      =  17246  
+   On Error goto InitNVRerr
+
+   ! load dgMSzoneTimeout$ macro
+   if CHECK(MACRO, dgMSzoneTimeout$) = 0 then
+     LoadMacroMcxOrMac _AutoMSPath$ + "hpmsdiag"
+   endif
+
+   MSDNVRAMPath$ = _tunePath$
+
+   if RegSize(MSDNVR) > 0 then    ! see if the MSDNVR register already exists
+      if ObjHdrType(MSDNVR, NVRAMTab) = 4 then             ! the table exists
+         RETURN
+      else
+         DelReg MSDNVR   ! if no table, delete the register.
+      endif
+   endif
+
+   ! Comment out to ensure user is asked before loading file from disk. 
+   ! see if MSDNVRAM file exists on disk
+   ! if FILESTAT(Mode, MSDNVRAMPath$ + MSDNVRAMFileName$) <> 1 then  
+   !   print ReadResource$("tunemac",ID_TUNEMAC_NVRAM_REGISTER_235) + MSDNVRAMFileName$ + " not found."
+   ! else              
+   !   LoadObj MSDNVRAMPath$ + MSDNVRAMFileName$,, MSDNVR
+   ! endif             ! end if opening file
+
+   if (RegSize(MSDNVR) < 1) then
+      if (DontAsk = 0) then   ! Ask before creating
+         Resp = Alert(ReadResource$("tunemac",ID_TUNEMAC_NVRAM_REGISTER_237) + chr$(13) + \
+                  ReadResource$("tunemac",ID_TUNEMAC_LOAD_ALTERNATE_238) + chr$(13) + \
+                  ReadResource$("tunemac",ID_TUNEMAC_PRESS_NO_TO_CR_239), 5, "InitNVR")
+         if Resp = -1 then
+            Print ReadResource$("tunemac",ID_TUNEMAC_INITNVR_ABORTE_241)
+            STOP
+         else
+            if Resp = 1 then
+               Resp = SelectFile(1, "Select an NVRAM register file ", \
+                                 "Register files (*.reg)", MSDNVRAMPath$, \
+                                 MSDNVRAMFileName$, FileFound )
+            endif
+         endif
+         if (Resp > 0) and (FileFound = 1) then
+            LoadObj MSDNVRAMPath$ + MSDNVRAMFileName$,, MSDNVR
+         else
+            CreateReg = 1
+         endif
+      endif
+
+      ! Check instrument communication
+      OffLine = _Offline
+      if OffLine = 0 then
+         On Error OffLine = 1
+         SCTimeOut = 10
+         MSSCQuery "*idn?", SCQ$
+         Remove SCTimeOut
+      endif
+      if OffLine = 0 then
+         CreateReg = 1
+      else
+         print ReadResource$("tunemac",ID_TUNEMAC_CAN_T_CREATE_M_242)
+         CreateReg = 0
+      endif
+      
+      if CreateReg = 1 then
+         Print ReadResource$("tunemac",ID_TUNEMAC_CREATING_NEW_N_243) + _TunePath$ + \
+                MSDNVRAMFileName$
+         CreateMSDNVR
+         if (DontAsk <> 1) then
+            if Alert(ReadResource$("tunemac",ID_TUNEMAC_MAKE_A_BACKUP_244) + chr$(13) + \
+                     ReadResource$("tunemac",ID_TUNEMAC_PARAMETERS_FRO_245), 4, "InitNVR") = 1 then
+               BackupNVR 1
+            endif
+         else
+            BackupNVR 1 ! always back up in DontAsk mode
+         endif
+         SaveNVR MSDNVRAMFileName$
+      endif 
+   endif  
+
+   RETURN
+   
+InitNVRerr:
+   ON Error Print
+   Print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_IN_I_246)
+   RETURN
+
+endmacro   ! InitNVR
+
+!******************************************************************************
+
+!*****************************************************************************
+NAME ShowNVRTab
+!
+!*****************************************************************************
+LOCAL row, NumParms, Setpoint, TypeMSD$, ConfigTitle$
+
+   InitNVR
+   if RegSize(MSDNVR) < 1 then
+      RETURN
+   endif
+
+   if check(Variable, NVRDispWin) = 0 then
+      NVRDispWin = FreeWin(141)
+   endif
+   
+   SetWinTitle   NVRDispWin, "LC/MSD Instrument Configuration Table"
+
+   ! generate DDTNVRTab from DDT
+   if ObjHdrType(MSDNVR[1],DDTNVRTab)=4 Then
+      DelTab MSDNVR[1],"DDTNVRTab"
+   endif
+   CopyTab _Config[2],"DDT", MSDNVR[1], "DDTNVRTab"
+
+   SetTabHdrVal  MSDNVR[1],"DDTNVRTab",DispRowNum,    1
+   SetTabHdrVal  MSDNVR[1],"DDTNVRTab",FixedCols,     1
+   SetTabHdrVal  MSDNVR[1],"DDTNVRTab",WindowClass,   1
+
+   SetTabVal MSDNVR[1],"DDTNVRTab",0,"Control",2
+   SetTabVal MSDNVR[1],"DDTNVRTab",0,"Justify",0
+   InsTabRow MSDNVR[1],"DDTNVRTab",1:8
+
+   row = 1
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Control",2
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Format","%s"
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Justify",0
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Width",  30
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Source","Parameter"
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Title", "Parameter"
+
+   row = 2
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Control",2
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Format","%s"
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Justify",0
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Width",  10
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Source","SCParmName"
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Title", "keyword"
+
+   row = 3
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Control",2
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Format","%s"
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Justify",0
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Width",  20
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Source","ParmValue"
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Title", "Actual"
+
+   row = 4
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Control",2
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Format","%s"
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Justify",0
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Width",  4
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Source","Comparison"
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Title", ""
+
+   row = 5
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Control",2
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Format","%s"
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Justify",0
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Width",  20
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Source","Expected"
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Title", "Expected"
+
+   row = 6
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Control",2
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Format","%s"
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Justify",0
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Width",  30
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Source","ReadFunction"
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Title", "ReadFunction"
+
+   row = 7
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Control",2
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Format","%s"
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Justify",0
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Width",  30
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Source","SetFunction"
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Title", "SetFunction"
+
+   row = 8
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Control",2
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Format","%s"
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Justify",0
+   SetTabVal  MSDNVR[1],"DDTNVRTab",row,"Width",  8
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Source","MinRev"
+   SetTabText MSDNVR[1],"DDTNVRTab",row,"Title", "MinRev"
+
+   if ObjHdrType(_Config[3], "DDTNVRTab") = 4 Then
+     DelTab _Config[3], "DDTNVRTab"
+   endif
+   CopyTab MSDNVR[1], "DDTNVRTab", _Config[3], "DDTNVRTab"
+
+   ! Put the table up
+   edtab NVRDispWin, MSDNVR, NVRAMTab, DDTNVRTab
+  
+endmacro    ! End ShowNVRTab
+!******************************************************************************
+
+!******************************************************************************
+NAME PolyStr$
+PARAMETER Str$ default "-", length default 80
+! This will concantenate the string Str$ until length is reached
+! defaults create a string of 76 dashes "-"
+!
+!******************************************************************************
+LOCAL RetStr$ 
+ 
+   RetStr$ = Str$
+   while len(RetStr$) < length
+      RetStr$ = RetStr$ + Str$
+   endwhile
+
+   RETURN RetStr$ 
+
+endmacro      ! PolyStr$()
+!******************************************************************************
+
+!******************************************************************************
+NAME SaveNVR
+PARAMETER MSDNVRAMFileName$ default "MSDNVRAM.REG" 
+! This will save the MSDNVRAM register, with table, in the specified filename.
+! The previous register will be overwritten (not appended)
+!
+!******************************************************************************
+
+Local  ID_TUNEMAC_NO_NVRAM_TABLE_247
+Local  ID_TUNEMAC_MSD_NVRAM_TABL_248
+ID_TUNEMAC_NO_NVRAM_TABLE_247                      =  17247  
+ID_TUNEMAC_MSD_NVRAM_TABL_248                      =  17248  
+   if regSize(MSDNVR) < 1 then
+      Print ReadResource$("tunemac",ID_TUNEMAC_NO_NVRAM_TABLE_247)
+      RETURN
+   endif
+
+   SetObjHdrText MSDNVR, "BackupDate", Date$(1) + " " + Time$(1) 
+   SetObjHdrText MSDNVR, "MacroRev", NVRver$  
+   SaveObj MSDNVR, _tunepath$ + MSDNVRAMFileName$, NEW
+   Print ReadResource$("tunemac",ID_TUNEMAC_MSD_NVRAM_TABL_248) + _tunePath$ + MSDNVRAMFileName$
+
+   RETURN
+
+endmacro        ! SaveNVRAM
+
+!******************************************************************************
+
+!******************************************************************************
+NAME G6100PID$
+parameter zone_id default -1
+parameter p default -1
+parameter i default -1
+parameter d default -1
+parameter i_d default 1
+! This will return the PID constants for the specified zone, for Lassen only
+!
+! Zone ID: 0-UNUSED"
+!          1-DRYING GAS FLOW"
+!          2-NEBULIZER"
+!          3-DRYING GAS TEMPERATURE"
+!          4-QUAD TEMPERATURE"
+!          5-UNUSED"
+!          6-UNUSED"
+!          7-VAPORIZER TEMP"
+!
+!******************************************************************************
+local query_str$, read_str$
+local parm$, ret_str$
+
+  ret_str$ = "N/A"
+  parm$ = ""
+  EVALUATE "IF Check(LABEL,ZONE_"+val$(zone_id)+")=1;GOTO ZONE_"+val$(zone_id)+";ELSE;GOTO ZONE_END;ENDIF"
+  ZONE_1:
+    parm$ = "DGASPRES"
+    goto ZONE_END
+  ZONE_2:
+    parm$ = "NEBPRES"
+    goto ZONE_END
+  ZONE_3:
+    parm$ = "DGAS"
+    goto ZONE_END
+  ZONE_4:
+    parm$ = "QUAD"
+    goto ZONE_END
+  ZONE_7:
+    parm$ = "VAPOR"
+    goto ZONE_END
+  ZONE_END:
+  
+  if (Len(parm$) < 1) then
+    return ret_str$
+  endif
+  
+  query_str$ = "msc:parm? " + parm$ + "PT"
+  MSSCQuery query_str$, read_str$
+  ret_str$ = "P="+SPrintF$(val(read_str$), "%5.2f")+"%"
+  
+  query_str$ = "msc:parm? " + parm$ + "IT"
+  MSSCQuery query_str$, read_str$
+  ret_str$ = ret_str$ + ";I="+SPrintF$(val(read_str$), "%5.2f")+"%"
+  
+  query_str$ = "msc:parm? " + parm$ + "DT"
+  MSSCQuery query_str$, read_str$
+  ret_str$ = ret_str$ + ";D="+SPrintF$(val(read_str$), "%5.2f")+"%"
+  
+  return ret_str$
+endmacro
+
+!******************************************************************************
+
+!******************************************************************************
+NAME PID$
+parameter zone_id default -1
+parameter p default -1
+parameter i default -1
+parameter d default -1
+parameter i_d default 1
+! This will return the PID constants for the specified zone
+!
+! Zone ID: 0-UNUSED"
+!          1-DRYING GAS FLOW"
+!          2-NEBULIZER"
+!          3-DRYING GAS TEMPERATURE"
+!          4-QUAD TEMPERATURE"
+!          5-UNUSED"
+!          6-UNUSED"
+!          7-VAPORIZER TEMP"
+!
+!******************************************************************************
+local query_str$,read_str$,command$,state$,byte1$,byte2$,byte3$,byte4$,retStr$
+local ph,pl,ih,il,dh,dl,i_dh,i_dl
+local cmd,which
+
+Local  ID_TUNEMAC__OCCURRED_IN_P_249
+ID_TUNEMAC__OCCURRED_IN_P_249                      =  17249  
+
+   if (IsNRTCmd() = 0) then
+     return G6100PID$(zone_id, p, i, d, i_d)
+   endif
+   
+   on error goto PIDerr
+   
+   ! check the zone id
+   if (zone_id <> 1) AND (zone_id <> 2) AND (zone_id <> 3) AND \
+      (zone_id <> 4) AND (zone_id <> 7) then
+      return "Invalid zone specified"
+   else     
+      if (p>=0) and (i>=0) and (d>=0) and (i_d>=1) then
+         ph=div(p,256)
+         pl=mod(p,256)
+         ih=div(i,256)
+         il=mod(i,256)
+         dh=div(d,256)
+         dl=mod(d,256)
+         i_dh=div(i_d,256)
+         i_dl=mod(i_d,256)
+         query_str$ = "msc:nrt:nv pdb,diag,'3," + val$(zone_id) + \
+                      "," + val$(ph) + "," + val$(pl) + ","
+         query_str$ = query_str$ + val$(ih) + "," + val$(il) + "," + \
+                      val$(dh) + "," + val$(dl) + ","
+         query_str$ = query_str$ + val$(i_dh) + "," + val$(i_dl) + \
+                      ",0,0,0,0,0,0'"
+         ! print query_str$
+         MSSCWrite query_str$
+      endif
+      query_str$="msc:nrt:nv pdb,diag,'11," + \
+                 val$(zone_id)+",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+      ! print query_str$
+      MSSCWrite query_str$
+      cmd=255
+      while (cmd<>11) do
+         if (cmd<>255) then
+             MSSCWrite query_str$
+         endif
+         MSSCQuery "msc:nrt:nv? pdb,diag", read_str$
+         ! print substring$(read_str$,1,,",")
+         cmd=val(substring$(read_str$,1,,","))
+      endwhile
+      which=3
+      while (which<>0) do
+         byte1$=substring$(read_str$,which,,",")
+         byte2$=substring$(read_str$,which+1,,",")
+         rval=val(byte1$)*256+val(byte2$)
+         if (which=3) then 
+            RetStr$ = "P=" + val$(rval)
+         endif
+         if (which=5) then 
+            RetStr$ = RetStr$ + ";I=" + val$(rval)
+         endif
+         if (which=7) then
+            RetStr$ = RetStr$ + ";D=" + val$(rval)
+         endif
+         if (which=9) then
+            RetStr$ = RetStr$ + ";ID="+val$(rval)
+            which=-2
+         endif
+         which=which+2
+      endwhile
+   endif
+      
+   RETURN RetStr$
+
+PIDerr:
+   On Error Print
+   print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_IN_P_249)
+   RETURN  "Error"
+
+endmacro     ! end PID$
+
+!******************************************************************************
+
+!******************************************************************************
+NAME nvrSWRev$
+! Returns the ChemStation software version
+! 
+!******************************************************************************
+LOCAL Pos
+
+   Pos = InStr(_Version$, "Copyright")
+   if Pos > 0 then
+      RETURN _Version$[1:Pos - 2]
+   else
+      RETURN _Version$
+   endif
+
+endmacro     ! end nvrSWRev$
+!******************************************************************************
+
+
+!******************************************************************************
+NAME nvrLeakCal$
+! This macro is derived from get_leak_cal, modified to return a value
+!
+!******************************************************************************
+local cmd,lb,hb,result
+local read_str$,cmd_str$
+
+  if (IsNRTCmd() = 0) then
+     return "N/A"
+  endif
+   
+  cmd_str$="msc:nrt:nv pdb,diag,'24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+  MSSCWrite cmd_str$ 
+  cmd=0
+  while (cmd<>24) do
+    if (cmd<>255) then
+      MSSCWrite cmd_str$
+    endif
+    MSSCQuery "msc:nrt:nv? pdb,diag",read_str$
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+  hb=val(substring$(read_str$,2,,","))
+  lb=val(substring$(read_str$,3,,","))
+  result=lb+hb*256
+  RETURN val$(result)
+  
+endmacro
+!******************************************************************************
+
+!******************************************************************************
+!******************************************************************************
+!******************************************************************************
+NAME nvrGetTimeout$
+PARAMETER zone_id default -1
+! This macro is derived from timeout, modified to return a string value
+!
+!******************************************************************************
+local query_str$, read_str$, byte1$, byte2$, byte3$, byte4$
+local cmd,warning,fault,hb,lb,command_value
+
+Local  ID_TUNEMAC_TIMEOUT_ZONE_250
+ID_TUNEMAC_TIMEOUT_ZONE_250                        =  17250  
+
+   if (IsNRTCmd() = 0) then
+     return "N/A"
+   endif
+
+   hb=div(value,256)
+   lb=mod(value,256)
+   if (zone_id<0) OR (zone_id>7) then
+     return "-1"
+   endif
+   
+   query_str$="msc:nrt:nv pdb,diag,'14," + val$(zone_id) + \
+              ",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+
+   command_value=14 ! command value to read timeout
+   command$=query_str$
+   cmd=255
+   MSSCWrite command$
+
+   while (cmd<>command_value) do
+      if (cmd<>255) then
+         MSSCWrite command$
+      endif
+      MSSCQuery "msc:nrt:nv? pdb,diag",read_str$
+      cmd=val(substring$(read_str$,1,,","))
+   endwhile
+   
+   byte1$ = substring$(read_str$, 3,, ",")
+   byte2$ = substring$(read_str$, 4,, ",")
+   rval = val(byte1$) * 256 + val(byte2$)
+   print ReadResource$("tunemac",ID_TUNEMAC_TIMEOUT_ZONE_250) + val$(zone_id) + ": " + val$(rval)
+  
+   RETURN val$(rval)
+    
+endmacro
+
+!******************************************************************************
+!******************************************************************************
+NAME nvrDetRev
+! Checks for early detector board revision
+! 
+!******************************************************************************
+
+Local  ID_TUNEMAC_DETECTOR_BOARD_251
+Local  ID_TUNEMAC_WRONG_DETECTOR_252
+ID_TUNEMAC_DETECTOR_BOARD_251                      =  17251  
+ID_TUNEMAC_WRONG_DETECTOR_252                      =  17252  
+   count=100
+   while (count>0) do
+      MSSCWrite "msdc:mse 64,20479" 
+      MSSCQuery "msdc:mse? 0", x$ 
+      MSSCWrite "msdc:mse 64,24575" 
+      MSSCQuery "msdc:mse? 0", y$
+      count = count - 1
+      print count, x$, y$
+      if div(val(x$), 16384) <> 0 then
+         count=-1
+      endif
+      if div(val(y$), 16384) <> 0 then
+         count=-1
+      endif 
+   endwhile
+  
+   if (count=0) then
+      print ReadResource$("tunemac",ID_TUNEMAC_DETECTOR_BOARD_251)
+      rval=1
+   endif
+   if (count= -1) then
+      print ReadResource$("tunemac",ID_TUNEMAC_WRONG_DETECTOR_252)
+      rval=0
+   endif
+   
+   RETURN rval 
+    
+endmacro
+
+!******************************************************************************
+!******************************************************************************
+NAME nvr68332Rev$
+
+!******************************************************************************
+LOCAL pdb68332$, index, diag$, pdbcmd$
+
+Local  ID_TUNEMAC_PDB_68332_FIRM_253
+ID_TUNEMAC_PDB_68332_FIRM_253                      = 17253  
+
+   if (IsNRTCmd() = 0) then
+     return "N/A"
+   endif
+   
+   MSSCWrite "msc:nrt:nv pdb,diag,'7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+   MSSCQuery "msc:nrt:nv? pdb,diag",diag$
+   pdbcmd$ = substring$(diag$,1,,",")
+
+   ! Need to retry until PDB is ready to return value
+   while pdbcmd$<>"7" do
+      if pdbcmd$<>"255" then
+         MSSCWrite "msc:nrt:nv pdb,diag,'7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+      endif
+      MSSCQuery "msc:nrt:nv? pdb,diag",diag$
+      pdbcmd$ = substring$(diag$,1,,",")
+   endwhile   
+
+   pdb68332$ = ""
+   for index = 2 to 16
+     pdb68332$ = pdb68332$ + chr$(val(substring$(diag$,index,,",")))
+   next index
+   print ReadResource$("tunemac",ID_TUNEMAC_PDB_68332_FIRM_253)+substring$(pdb68332$,3,,"-")
+
+   RETURN substring$(pdb68332$,3,,"-")
+
+endmacro
+
+!******************************************************************************
+
+!******************************************************************************
+NAME nvrIORev$
+! Return IO board revision
+! 12/10/2009 CPL Add localization string for IOid$
+!******************************************************************************
+LOCAL IOid$, IORev$, SCRev$
+LOCAL ID_TUNEMAC_ABSENT_191
+ID_TUNEMAC_ABSENT_191                              = 17191
+
+   ! if SmartCard 2
+   MSSCQuery "*idn?", SCRev$
+   if val(SubString$(SubString$(SCRev$, 4,, ","), 1,, ".")) < 3 then
+      RETURN "Not supported"
+   endif
+   
+   MSSCQuery "msdc:mse:read? 176", IOid$
+   IOid = val(IOid$)
+   if IOid < 57344 then
+      ! Return "Absent"
+      RETURN ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   else
+      MSSCQuery "msdc:mse:read? 177", IORev$
+      if val(IORev$) > 32767 then
+         Return "Preliminary"
+      else
+         ! Convert rev string to hex
+         IORev$ = SPrintF$(val(IORev$), "%x")
+         RETURN IORev$[1] + "." + IORev$[2] + "; " + IORev$[3] + "." + IORev$[4]
+      endif
+   endif
+
+endmacro
+!******************************************************************************
+
+!******************************************************************************
+NAME nvrIObFC$
+PARAMETER iobval$
+! Returns settings for IO board Fraction Control
+!******************************************************************************
+LOCAL IOid$, IORev$, SCRev$, iobfcval$
+
+  ! if SmartCard 2
+  MSSCQuery "*idn?", SCRev$
+    if val(SubString$(SubString$(SCRev$, 4,, ","), 1,, ".")) < 3 then
+      RETURN "Not Applicable"
+    endif
+    
+  ! if 6100 Series Instrument
+  if pre6100() = 0 then
+   Return "Not Applicable"
+  endif
+  
+  MSSCQuery "msdc:mse:read? 176", IOid$
+  IOid = val(IOid$)
+    if IOid < 57344 then
+      Return "Not Installed"
+    else
+    MSSCQuery "msc:parm:pset? iobval$", iobfcval$
+    Return iobfcval$
+   endif
+
+endmacro !nvrIObFC$
+!******************************************************************************
+
+
+
+!******************************************************************************
+NAME nvrAnRev$
+! Return Analyzer board revision
+! 03/11/2003 PHC Updated to return the actual analyzer board part number.
+! 12/08/2009 CPL Updated for 6100 series 'Orion' instruments. 
+!**************************************************************************
+LOCAL AnRev$, AnRev
+
+   MSSCQuery "sens? mainboard", AnRev$
+   AnRev = val(AnRev$)
+
+   if AnRev = 57354 then
+     Return "G1946-60250MM"   ! Board has had chip update to support Multimode source
+   else
+     if AnRev = 57353 then
+       Return "G1946-60250"
+     else
+       if AnRev = 57352 then
+         Return "G1946-60020"
+       else
+         if AnRev = 57351 then
+           Return "G1946-60001"
+         else
+          if AnRev = 335609859 then
+            Return "G1960-61001" ! Lassen instruments
+          else
+            if AnRev = 536936452 then
+              Return "G7000-61001" ! Orion instruments
+            else
+            Return "Unknown revision"     ! for future revisions
+            endif
+          endif
+         endif 
+       endif
+     endif
+   endif
+
+endmacro        ! nvrAnRev$
+!*******************************************************************************
+
+
+!*******************************************************************************
+NAME mstnGetPosEMV$
+! Returns Positive EMV at Gain = 1
+! CPL 01/10/2007
+!*******************************************************************************
+LOCAL ActEmv, c$, EmvGain0, EmvGain1
+
+   msscquery "msc:parm? EmvGain0",c$
+   EmvGain0=val(c$)
+   msscquery "msc:parm? EmvGain1",c$
+   EmvGain1=val(c$)
+   ActEMV=exp((ln(1)-EmvGain1)/EmvGain0)
+   return SubString$(val$(ActEMV),1,,".")
+
+ENDMACRO !mstnGetPosEMV$
+
+!*******************************************************************************
+
+
+!*******************************************************************************
+NAME mstnGetNegEMV$
+! Returns Negative EMV at Gain = 1
+! CPL 01/10/2007
+!*******************************************************************************
+LOCAL ActEmv, c$, EmvGain0n, EmvGain1n
+
+   msscquery "msc:parm? EmvGain0n",c$
+   EmvGain0n=val(c$)
+   msscquery "msc:parm? EmvGain1n",c$
+   EmvGain1n=val(c$)
+   ActEMV=exp((ln(1)-EmvGain1n)/EmvGain0n)
+   return SubString$(val$(ActEMV),1,,".")
+
+ENDMACRO !mstnGetNegEMV$
+
+!*******************************************************************************
+
+
+!*******************************************************************************
+NAME CreateMSDNVR
+! CPL 01/10/2007 Add Installed Ion Source, Pos & Neg Gain Coefficients
+!                Update descriptions for Manual Inject Valve, SmartCard FW Rev
+! CPL 12/10/2009 Change "config:id:desc? prodnum" query to "config:inst? modl" query.
+!                Add support for 6100 series 'Orion' instruments
+!*******************************************************************************
+LOCAL c$
+LOCAL ID_TUNEMAC_ABSENT_191
+ID_TUNEMAC_ABSENT_191                              = 17191
+
+   ! Create object #1
+   NewObj MSDNVR, 1,0,0
+
+   ! Generate NVRAMTab table
+   NewTab MSDNVR, "NVRAMTab"
+   ! Define columns
+   NewColText MSDNVR, "NVRAMTab", "Parameter", ""
+   NewColText MSDNVR, "NVRAMTab", "SCParmName", ""
+   NewColText MSDNVR, "NVRAMTab", "ParmValue", ""
+   NewColText MSDNVR, "NVRAMTab", "Comparison", ""
+   NewColText MSDNVR, "NVRAMTab", "Expected", ""
+   NewColText MSDNVR, "NVRAMTab", "ReadFunction", ""
+   NewColText MSDNVR, "NVRAMTab", "SetFunction", ""
+   NewColText MSDNVR, "NVRAMTab", "Backup", ""
+   NewColText MSDNVR, "NVRAMTab", "MinRev", ""
+   InsTabRow MSDNVR, NVRAMTab, 1:85
+
+   ! Get header items for NVRAMTab table
+
+   ! Set table contents
+   ! Parameter column
+   SetTabText MSDNVR, "NVRAMTab", 4, "Parameter", "Instrument Name"
+   SetTabText MSDNVR, "NVRAMTab", 5, "Parameter", "Serial Number"
+   SetTabText MSDNVR, "NVRAMTab", 6, "Parameter", "Product Number"
+   SetTabText MSDNVR, "NVRAMTab", 7, "Parameter", "Mfg Date"
+   SetTabText MSDNVR, "NVRAMTab", 8, "Parameter", "Quad Serial Number"
+   SetTabText MSDNVR, "NVRAMTab", 9, "Parameter", "Manual Inject Valve Installed"
+   SetTabText MSDNVR, "NVRAMTab", 10, "Parameter", "Installed Ion Source"   
+   SetTabText MSDNVR, "NVRAMTab", 12, "Parameter", "ChemStation Rev"
+   SetTabText MSDNVR, "NVRAMTab", 13, "Parameter", "SmartCard FW Rev"
+   SetTabText MSDNVR, "NVRAMTab", 14, "Parameter", "Analyzer Board FW Rev"
+   SetTabText MSDNVR, "NVRAMTab", 15, "Parameter", "PDB Hardware Rev"
+   SetTabText MSDNVR, "NVRAMTab", 16, "Parameter", "PDB Firmware Rev"
+   SetTabText MSDNVR, "NVRAMTab", 17, "Parameter", "PDB 68332 FW Rev"
+   SetTabText MSDNVR, "NVRAMTab", 18, "Parameter", "SICB-LON Hardware Rev"
+   SetTabText MSDNVR, "NVRAMTab", 19, "Parameter", "SICB-LON Firmware Rev"
+   SetTabText MSDNVR, "NVRAMTab", 20, "Parameter", "IO Board Firmware Rev"
+   SetTabText MSDNVR, "NVRAMTab", 21, "Parameter", "Turbo Pump Ctrl HW Rev"
+   SetTabText MSDNVR, "NVRAMTab", 22, "Parameter", "Turbo Pump Ctrl FW Rev"
+   SetTabText MSDNVR, "NVRAMTab", 23, "Parameter", "Convect. Gauge HW Rev"
+   SetTabText MSDNVR, "NVRAMTab", 24, "Parameter", "Convect. Gauge FW Rev"
+   SetTabText MSDNVR, "NVRAMTab", 25, "Parameter", "Ion Gauge Hardware Rev"
+   SetTabText MSDNVR, "NVRAMTab", 26, "Parameter", "Ion Gauge Firmware Rev"
+   SetTabText MSDNVR, "NVRAMTab", 27, "Parameter", "Log Amp ID"
+   SetTabText MSDNVR, "NVRAMTab", 29, "Parameter", "Quad Frequency"
+   SetTabText MSDNVR, "NVRAMTab", 30, "Parameter", "Pos Ion Quad Polarity"
+   SetTabText MSDNVR, "NVRAMTab", 31, "Parameter", "Neg Ion Quad Polarity"
+   SetTabText MSDNVR, "NVRAMTab", 33, "Parameter", "Stdby Quad Temp"
+   SetTabText MSDNVR, "NVRAMTab", 34, "Parameter", "Stdby Drying Gas Temp"
+   SetTabText MSDNVR, "NVRAMTab", 35, "Parameter", "Stdby Drying Gas Flow"
+   SetTabText MSDNVR, "NVRAMTab", 36, "Parameter", "Stdby Nebulizer Press"
+  if GetIonSource() = 6 then
+    SetTabText MSDNVR, "NVRAMTab", 37, "Parameter", "Stdby Sheath Gas Temp"
+  else   
+    SetTabText MSDNVR, "NVRAMTab", 37, "Parameter", "Stdby Vaporizer Temp"
+  endif
+   SetTabText MSDNVR, "NVRAMTab", 39, "Parameter", "Quad Temp PIDs"
+   SetTabText MSDNVR, "NVRAMTab", 40, "Parameter", "Drying Gas Temp PIDs"
+  if GetIonSource() = 6 then
+    SetTabText MSDNVR, "NVRAMTab", 41, "Parameter", "Sheath Gas Temp PIDs"
+  else   
+    SetTabText MSDNVR, "NVRAMTab", 41, "Parameter", "Vaporizer Temp PIDs"
+  endif   
+   SetTabText MSDNVR, "NVRAMTab", 42, "Parameter", "Drying Gas Flow PIDs"
+   SetTabText MSDNVR, "NVRAMTab", 43, "Parameter", "Nebulizer Pres PIDs"
+   SetTabText MSDNVR, "NVRAMTab", 45, "Parameter", "Quad Temp Timeout"
+   SetTabText MSDNVR, "NVRAMTab", 46, "Parameter", "Drying Gas Temp Timeout"
+  if GetIonSource() = 6 then
+    SetTabText MSDNVR, "NVRAMTab", 47, "Parameter", "Sheath Gas Temp Timeout"
+  else   
+    SetTabText MSDNVR, "NVRAMTab", 47, "Parameter", "Vaporizer Temp Timeout"
+  endif    
+   SetTabText MSDNVR, "NVRAMTab", 48, "Parameter", "Drying Gas Flow Timeout"
+   SetTabText MSDNVR, "NVRAMTab", 49, "Parameter", "Nebulizer Pres Timeout"
+   SetTabText MSDNVR, "NVRAMTab", 51, "Parameter", "CDS Leak Sensor Calibration"
+   SetTabText MSDNVR, "NVRAMTab", 52, "Parameter", "CDS On Purge Time"
+   SetTabText MSDNVR, "NVRAMTab", 53, "Parameter", "CDS Off Purge Time 1"
+   SetTabText MSDNVR, "NVRAMTab", 54, "Parameter", "CDS Off Purge Time 2"
+   SetTabText MSDNVR, "NVRAMTab", 55, "Parameter", "CDS On Delay"
+   SetTabText MSDNVR, "NVRAMTab", 57, "Parameter", "Mass Axis Lag D Coeff 0"
+   SetTabText MSDNVR, "NVRAMTab", 58, "Parameter", "Mass Axis Lag D Coeff 1"
+   SetTabText MSDNVR, "NVRAMTab", 59, "Parameter", "Mass Axis Lag D Coeff 2"
+   SetTabText MSDNVR, "NVRAMTab", 61, "Parameter", "Pos EMV at Gain = 1"
+   SetTabText MSDNVR, "NVRAMTab", 62, "Parameter", "Pos EMV Gain Coeff 0"
+   SetTabText MSDNVR, "NVRAMTab", 63, "Parameter", "Pos EMV Gain Coeff 1"
+   SetTabText MSDNVR, "NVRAMTab", 64, "Parameter", "Neg EMV at Gain = 1"   
+   SetTabText MSDNVR, "NVRAMTab", 65, "Parameter", "Neg EMV Gain Coeff 0"
+   SetTabText MSDNVR, "NVRAMTab", 66, "Parameter", "Neg EMV Gain Coeff 1"   
+   SetTabText MSDNVR, "NVRAMTab", 68, "Parameter", "Default Analog Out"
+   SetTabText MSDNVR, "NVRAMTab", 69, "Parameter", "Default Fraction Collection Relay"
+   SetTabText MSDNVR, "NVRAMTab", 70, "Parameter", "Default Aux Relay"
+   SetTabText MSDNVR, "NVRAMTab", 72, "Parameter", "Polarity Switching Delay"
+   SetTabText MSDNVR, "NVRAMTab", 73, "Parameter", "Signal Switching Delay"
+   SetTabText MSDNVR, "NVRAMTab", 75, "Parameter", "EMF limit: Calibrant A hrs"
+   SetTabText MSDNVR, "NVRAMTab", 76, "Parameter", "EMF limit: Calibrant B hrs"
+   SetTabText MSDNVR, "NVRAMTab", 77, "Parameter", "EMF limit: Pump Oil hrs"
+   SetTabText MSDNVR, "NVRAMTab", 78, "Parameter", "EMF limit: Gas Conditioner hrs"
+   SetTabText MSDNVR, "NVRAMTab", 79, "Parameter", "EMF limit: Ion Optics hrs"
+   SetTabText MSDNVR, "NVRAMTab", 80, "Parameter", "EMF limit: SSV Cycles"
+   SetTabText MSDNVR, "NVRAMTab", 81, "Parameter", "EMF limit: EM Current"
+   SetTabText MSDNVR, "NVRAMTab", 83, "Parameter", "Last Backup Date"
+   SetTabText MSDNVR, "NVRAMTab", 84, "Parameter", "Last Restore Date"
+   SetTabText MSDNVR, "NVRAMTab", 85, "Parameter", "NVR Macro Revision"
+   ! End of Parameter column
+
+   ! SCParmName column
+   SetTabText MSDNVR, "NVRAMTab", 4, "SCParmName", "instname"
+   SetTabText MSDNVR, "NVRAMTab", 5, "SCParmName", "serialnum"
+   SetTabText MSDNVR, "NVRAMTab", 6, "SCParmName", "modl"
+   SetTabText MSDNVR, "NVRAMTab", 7, "SCParmName", "mfgdate"
+   SetTabText MSDNVR, "NVRAMTab", 8, "SCParmName", "quadnum"
+   SetTabText MSDNVR, "NVRAMTab", 9, "SCParmName", "msvalvep"
+   SetTabText MSDNVR, "NVRAMTab", 10, "SCParmName", "srctype"   
+   SetTabText MSDNVR, "NVRAMTab", 12, "SCParmName", "swrev"
+   SetTabText MSDNVR, "NVRAMTab", 13, "SCParmName", "idn?"
+   SetTabText MSDNVR, "NVRAMTab", 14, "SCParmName", "anafwrev"
+   SetTabText MSDNVR, "NVRAMTab", 15, "SCParmName", "pdbhwrev"
+   SetTabText MSDNVR, "NVRAMTab", 16, "SCParmName", "pdbswrev"
+   SetTabText MSDNVR, "NVRAMTab", 17, "SCParmName", "pdb332rev"
+   SetTabText MSDNVR, "NVRAMTab", 18, "SCParmName", "sbhwrev"
+   SetTabText MSDNVR, "NVRAMTab", 19, "SCParmName", "sbbswrev"
+   SetTabText MSDNVR, "NVRAMTab", 20, "SCParmName", "iobfwrev"
+   SetTabText MSDNVR, "NVRAMTab", 21, "SCParmName", "tpchwrev"
+   SetTabText MSDNVR, "NVRAMTab", 22, "SCParmName", "tpcswrev"
+   SetTabText MSDNVR, "NVRAMTab", 23, "SCParmName", "cghwrev"
+   SetTabText MSDNVR, "NVRAMTab", 24, "SCParmName", "cgswrev"
+   SetTabText MSDNVR, "NVRAMTab", 25, "SCParmName", "ighwrev"
+   SetTabText MSDNVR, "NVRAMTab", 26, "SCParmName", "cgswrev"
+   SetTabText MSDNVR, "NVRAMTab", 27, "SCParmName", "logampid"
+   SetTabText MSDNVR, "NVRAMTab", 29, "SCParmName", "quadfreq"
+   SetTabText MSDNVR, "NVRAMTab", 30, "SCParmName", "quadpolp"
+   SetTabText MSDNVR, "NVRAMTab", 31, "SCParmName", "quadpoln"
+   SetTabText MSDNVR, "NVRAMTab", 33, "SCParmName", "quad"
+   SetTabText MSDNVR, "NVRAMTab", 34, "SCParmName", "dgas"
+   SetTabText MSDNVR, "NVRAMTab", 35, "SCParmName", "dgasflow"
+   SetTabText MSDNVR, "NVRAMTab", 36, "SCParmName", "nebpres"
+   SetTabText MSDNVR, "NVRAMTab", 37, "SCParmName", "vapor"
+   SetTabText MSDNVR, "NVRAMTab", 39, "SCParmName", "quadpid"
+   SetTabText MSDNVR, "NVRAMTab", 40, "SCParmName", "dgaspid"
+   SetTabText MSDNVR, "NVRAMTab", 41, "SCParmName", "vaporpid"
+   SetTabText MSDNVR, "NVRAMTab", 42, "SCParmName", "dgasflowpid"
+   SetTabText MSDNVR, "NVRAMTab", 43, "SCParmName", "nebprespid"
+   SetTabText MSDNVR, "NVRAMTab", 45, "SCParmName", "quadTO"
+   SetTabText MSDNVR, "NVRAMTab", 46, "SCParmName", "dgasTO"
+   SetTabText MSDNVR, "NVRAMTab", 47, "SCParmName", "vaporTO"
+   SetTabText MSDNVR, "NVRAMTab", 48, "SCParmName", "dgasflowTO"
+   SetTabText MSDNVR, "NVRAMTab", 49, "SCParmName", "nebpresTO"
+   SetTabText MSDNVR, "NVRAMTab", 51, "SCParmName", "leakCal"
+   SetTabText MSDNVR, "NVRAMTab", 52, "SCParmName", "cdsdonps"
+   SetTabText MSDNVR, "NVRAMTab", 53, "SCParmName", "cdsdofp1"
+   SetTabText MSDNVR, "NVRAMTab", 54, "SCParmName", "cdsdofp2"
+   SetTabText MSDNVR, "NVRAMTab", 55, "SCParmName", "cdsdoncd"
+   SetTabText MSDNVR, "NVRAMTab", 57, "SCParmName", "mald0"
+   SetTabText MSDNVR, "NVRAMTab", 58, "SCParmName", "mald1"
+   SetTabText MSDNVR, "NVRAMTab", 59, "SCParmName", "mald2"
+   SetTabText MSDNVR, "NVRAMTab", 61, "SCParmName", "emul"
+   SetTabText MSDNVR, "NVRAMTab", 62, "SCParmName", "emvgain0"
+   SetTabText MSDNVR, "NVRAMTab", 63, "SCParmName", "emvgain1"
+   SetTabText MSDNVR, "NVRAMTab", 64, "SCParmName", "emul"   
+   SetTabText MSDNVR, "NVRAMTab", 65, "SCParmName", "emvgain0n"
+   SetTabText MSDNVR, "NVRAMTab", 66, "SCParmName", "emvgain1n"   
+   SetTabText MSDNVR, "NVRAMTab", 68, "SCParmName", "iobaop"
+   SetTabText MSDNVR, "NVRAMTab", 69, "SCParmName", "iobfcrp"
+   SetTabText MSDNVR, "NVRAMTab", 70, "SCParmName", "iobauxrp"
+   SetTabText MSDNVR, "NVRAMTab", 72, "SCParmName", "mpst"
+   SetTabText MSDNVR, "NVRAMTab", 73, "SCParmName", "msst"
+   SetTabText MSDNVR, "NVRAMTab", 75, "SCParmName", "emf_cexa"
+   SetTabText MSDNVR, "NVRAMTab", 76, "SCParmName", "emf_cexb"
+   SetTabText MSDNVR, "NVRAMTab", 77, "SCParmName", "emf_poil"
+   SetTabText MSDNVR, "NVRAMTab", 78, "SCParmName", "emf_gasc"
+   SetTabText MSDNVR, "NVRAMTab", 79, "SCParmName", "emf_iono"
+   SetTabText MSDNVR, "NVRAMTab", 80, "SCParmName", "emf_ssv"
+   SetTabText MSDNVR, "NVRAMTab", 81, "SCParmName", "emf_emul"
+   SetTabText MSDNVR, "NVRAMTab", 83, "SCParmName", "backup"
+   SetTabText MSDNVR, "NVRAMTab", 84, "SCParmName", "restore"
+   SetTabText MSDNVR, "NVRAMTab", 85, "SCParmName", "nvr"
+   ! End of SCParmName column
+
+   ! ParmValue column
+   ! End of ParmValue column
+
+   ! Comparison column
+   SetTabText MSDNVR, "NVRAMTab", 5, "Comparison", "<>"
+   SetTabText MSDNVR, "NVRAMTab", 6, "Comparison", "in"
+   SetTabText MSDNVR, "NVRAMTab", 7, "Comparison", "<>"
+   SetTabText MSDNVR, "NVRAMTab", 8, "Comparison", "<>"
+   !SetTabText MSDNVR, "NVRAMTab", 13, "Comparison", "<"  ! Defer to Service Note
+   !SetTabText MSDNVR, "NVRAMTab", 14, "Comparison", "in" ! Defer to Service Note
+   SetTabText MSDNVR, "NVRAMTab", 15, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 16, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 17, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 18, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 19, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 20, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 21, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 22, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 23, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 24, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 25, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 26, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 27, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 33, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 34, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 35, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 36, "Comparison", "="
+  !SetTabText MSDNVR, "NVRAMTab", 37, "Comparison", "="
+  !SetTabText MSDNVR, "NVRAMTab", 39, "Comparison", "="
+  !SetTabText MSDNVR, "NVRAMTab", 40, "Comparison", "="
+  !SetTabText MSDNVR, "NVRAMTab", 41, "Comparison", "="
+  !SetTabText MSDNVR, "NVRAMTab", 42, "Comparison", "="
+  !SetTabText MSDNVR, "NVRAMTab", 43, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 45, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 46, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 47, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 48, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 49, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 51, "Comparison", "<>"   
+   SetTabText MSDNVR, "NVRAMTab", 52, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 53, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 54, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 55, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 57, "Comparison", "<>"
+   SetTabText MSDNVR, "NVRAMTab", 58, "Comparison", "<>"
+   SetTabText MSDNVR, "NVRAMTab", 59, "Comparison", "<>"
+   SetTabText MSDNVR, "NVRAMTab", 62, "Comparison", "<>"
+   SetTabText MSDNVR, "NVRAMTab", 63, "Comparison", "<>"
+   SetTabText MSDNVR, "NVRAMTab", 65, "Comparison", "<>"
+   SetTabText MSDNVR, "NVRAMTab", 66, "Comparison", "<>"   
+   SetTabText MSDNVR, "NVRAMTab", 72, "Comparison", "="
+   SetTabText MSDNVR, "NVRAMTab", 73, "Comparison", "="
+   ! End of Comparison column
+
+   ! pre6100() = 1 for G1946x and G1956x instruments
+If pre6100() = 1 then
+   SetTabText MSDNVR, "NVRAMTab", 5, "Expected", "US23456789" ! Expect <>
+  if (MSD_46 = 1) then
+    SetTabText MSDNVR, "NVRAMTab", 6, "Expected", "G1946" ! Expect "in"
+  else 
+    SetTabText MSDNVR, "NVRAMTab", 6, "Expected", "G1956" ! Expect "in"
+  endif
+   SetTabText MSDNVR, "NVRAMTab", 7, "Expected", "04/01/96" ! Expect <>
+   SetTabText MSDNVR, "NVRAMTab", 8, "Expected", "quad56"
+  ! SetTabText MSDNVR, "NVRAMTab", 13, "Expected", "3.02.00"    
+  ! SetTabText MSDNVR, "NVRAMTab", 14, "Expected", "G1946" 
+   SetTabText MSDNVR, "NVRAMTab", 15, "Expected", "PPHA.01.00"
+   SetTabText MSDNVR, "NVRAMTab", 16, "Expected", "PRS2.02.00"
+   SetTabText MSDNVR, "NVRAMTab", 17, "Expected", "1.58"
+   SetTabText MSDNVR, "NVRAMTab", 18, "Expected", "PRH1.00.01"
+   SetTabText MSDNVR, "NVRAMTab", 19, "Expected", "PRS1.01.01"
+   SetTabText MSDNVR, "NVRAMTab", 20, "Expected", "6.2; 6.3"
+   SetTabText MSDNVR, "NVRAMTab", 21, "Expected", "TURB1.0.00"
+  if (MSD_46 = 1) then
+    SetTabText MSDNVR, "NVRAMTab", 22, "Expected", "PRSW1.0.11"   ! Two turbo pump system
+  else
+    SetTabText MSDNVR, "NVRAMTab", 22, "Expected", "PRSW1.1.02"   ! Single split-flow turbo pump system
+  endif
+   SetTabText MSDNVR, "NVRAMTab", 23, "Expected", "011411-102"
+   SetTabText MSDNVR, "NVRAMTab", 24, "Expected", "PP11520109"
+   SetTabText MSDNVR, "NVRAMTab", 25, "Expected", "0115-27103"
+   SetTabText MSDNVR, "NVRAMTab", 26, "Expected", "PR11616115"
+   SetTabText MSDNVR, "NVRAMTab", 27, "Expected", "LOG01,CAL"
+   SetTabText MSDNVR, "NVRAMTab", 33, "Expected", "100"
+   SetTabText MSDNVR, "NVRAMTab", 34, "Expected", "300"
+   SetTabText MSDNVR, "NVRAMTab", 35, "Expected", "3.000"
+   SetTabText MSDNVR, "NVRAMTab", 36, "Expected", "20.0"
+  if getionsource() = 3 then
+    SetTabText MSDNVR, "NVRAMTab", 37, "Expected", "200"
+  else
+    SetTabText MSDNVR, "NVRAMTab", 37, "Expected", "325"
+  endif  
+  ! SetTabText MSDNVR, "NVRAMTab", 39, "Expected", "P=3000;I=0;D=0;ID=1"
+  ! SetTabText MSDNVR, "NVRAMTab", 40, "Expected", "P=165;I=2;D=1024;ID=1"
+  ! SetTabText MSDNVR, "NVRAMTab", 41, "Expected", "P=512;I=2;D=0;ID=1"
+  ! SetTabText MSDNVR, "NVRAMTab", 42, "Expected", "P=10;I=1;D=1;ID=1"
+  ! SetTabText MSDNVR, "NVRAMTab", 43, "Expected", "P=10;I=1;D=10;ID=1"
+   SetTabText MSDNVR, "NVRAMTab", 45, "Expected", "88.8"
+   SetTabText MSDNVR, "NVRAMTab", 46, "Expected", "12.3"
+   SetTabText MSDNVR, "NVRAMTab", 47, "Expected", "4.4"
+   SetTabText MSDNVR, "NVRAMTab", 48, "Expected", "13.7"
+   SetTabText MSDNVR, "NVRAMTab", 49, "Expected", "13.7"
+   SetTabText MSDNVR, "NVRAMTab", 51, "Expected", "0"
+   SetTabText MSDNVR, "NVRAMTab", 52, "Expected", "30"
+   SetTabText MSDNVR, "NVRAMTab", 53, "Expected", "75"
+   SetTabText MSDNVR, "NVRAMTab", 54, "Expected", "60"
+   SetTabText MSDNVR, "NVRAMTab", 55, "Expected", "30"
+   SetTabText MSDNVR, "NVRAMTab", 57, "Expected", "0"
+   SetTabText MSDNVR, "NVRAMTab", 58, "Expected", "0"
+   SetTabText MSDNVR, "NVRAMTab", 59, "Expected", "0"
+   SetTabText MSDNVR, "NVRAMTab", 62, "Expected", "8.5"
+   SetTabText MSDNVR, "NVRAMTab", 63, "Expected", "-62.08"
+   SetTabText MSDNVR, "NVRAMTab", 65, "Expected", "8.5"
+   SetTabText MSDNVR, "NVRAMTab", 66, "Expected", "-62.08"   
+   SetTabText MSDNVR, "NVRAMTab", 72, "Expected", "300"
+   SetTabText MSDNVR, "NVRAMTab", 73, "Expected", "50"
+   ! End of pre6100 Expected column
+   
+   ! For G61x0 instruments and later
+Else
+   SetTabText MSDNVR, "NVRAMTab", 5, "Expected", "US23456789" ! Returns <undef> if not programmed
+   SetTabText MSDNVR, "NVRAMTab", 6, "Expected", "G61"        ! Returns <undef> if not programmed
+   SetTabText MSDNVR, "NVRAMTab", 7, "Expected", "01012006"   ! Returns <undef> if not programmed
+   SetTabText MSDNVR, "NVRAMTab", 8, "Expected", "quad56"     ! Returns <undef> if not programmed
+   SetTabText MSDNVR, "NVRAMTab", 13, "Expected", "3.02.00"   ! Expect '<' return value 
+  if MSModelOptions > 21 then 
+    SetTabText MSDNVR, "NVRAMTab", 14, "Expected", "G7000"     ! Expect 'in' for Orion instruments
+  else
+    SetTabText MSDNVR, "NVRAMTab", 14, "Expected", "G1960"     ! Expect 'in' for Lassen instruments
+  endif
+   SetTabText MSDNVR, "NVRAMTab", 27, "Expected", "LOG02,CAL" ! Expect = 
+   SetTabText MSDNVR, "NVRAMTab", 33, "Expected", "100"   ! Expect = 
+   SetTabText MSDNVR, "NVRAMTab", 34, "Expected", "300"   ! Expect = 
+   SetTabText MSDNVR, "NVRAMTab", 35, "Expected", "3.000" ! Expect = 
+   SetTabText MSDNVR, "NVRAMTab", 36, "Expected", "20.0"  ! Expect = 
+  if (getionsource() = 3) OR (getionsource() = 6) then
+    SetTabText MSDNVR, "NVRAMTab", 37, "Expected", "200" ! Expect = 
+  else
+    SetTabText MSDNVR, "NVRAMTab", 37, "Expected", "325" ! Expect = 
+  endif  
+   SetTabText MSDNVR, "NVRAMTab", 45, "Expected", "50.00" ! Expect = 
+   SetTabText MSDNVR, "NVRAMTab", 46, "Expected", "8.00"  ! Expect = 
+  if getionsource() = 6 then   
+    SetTabText MSDNVR, "NVRAMTab", 47, "Expected", "10.06"  ! Expect '=' for Agilent Jet Stream
+  else
+    SetTabText MSDNVR, "NVRAMTab", 47, "Expected", "8.00"  ! Expect '=' for APCI or Multimode
+  endif
+   SetTabText MSDNVR, "NVRAMTab", 52, "Expected", "30"     ! Expect = 
+   SetTabText MSDNVR, "NVRAMTab", 53, "Expected", "30"     ! Expect = 
+   SetTabText MSDNVR, "NVRAMTab", 54, "Expected", "30"     ! Expect = 
+   SetTabText MSDNVR, "NVRAMTab", 55, "Expected", "30"     ! Expect = 
+   SetTabText MSDNVR, "NVRAMTab", 57, "Expected", "0"      ! Expect <>
+   SetTabText MSDNVR, "NVRAMTab", 58, "Expected", "0"      ! Expect <>
+   SetTabText MSDNVR, "NVRAMTab", 59, "Expected", "0"      ! Expect <>
+   SetTabText MSDNVR, "NVRAMTab", 62, "Expected", "8.5"    ! Expect <>
+   SetTabText MSDNVR, "NVRAMTab", 63, "Expected", "-62.08" ! Expect <>
+   SetTabText MSDNVR, "NVRAMTab", 65, "Expected", "8.5"    ! Expect <>
+   SetTabText MSDNVR, "NVRAMTab", 66, "Expected", "-62.08" ! Expect <>   
+   SetTabText MSDNVR, "NVRAMTab", 72, "Expected", "300"    ! Expect = 
+   SetTabText MSDNVR, "NVRAMTab", 73, "Expected", "50"     ! Expect = 
+   ! End of G61x0 instruments Expected column
+Endif
+
+   ! ReadFunction column for G1946x and G1956x instruments
+If pre6100() = 1 then   
+   SetTabText MSDNVR, "NVRAMTab", 1, "ReadFunction", """LC/MSD Instrument Configuration"""
+   SetTabText MSDNVR, "NVRAMTab", 2, "ReadFunction", "time$(1) + ""    "" + date$(1)"
+   SetTabText MSDNVR, "NVRAMTab", 3, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 4, "ReadFunction", "_InstName$"
+   SetTabText MSDNVR, "NVRAMTab", 5, "ReadFunction", "scqStr$(""config:id:desc? serialnum"")"
+   SetTabText MSDNVR, "NVRAMTab", 6, "ReadFunction", "scqStr$(""config:inst:modl?"")"
+   SetTabText MSDNVR, "NVRAMTab", 7, "ReadFunction", "scqStr$(""config:id:desc? mfgdate"")"
+   SetTabText MSDNVR, "NVRAMTab", 8, "ReadFunction", "scqStr$(""config:id:desc? quadnum"")"
+   SetTabText MSDNVR, "NVRAMTab", 9, "ReadFunction", "scqStr$(""msc:parm:pset? msvalvep"")"
+   SetTabText MSDNVR, "NVRAMTab", 10, "ReadFunction", "MSGetIonSrc$()"
+   SetTabText MSDNVR, "NVRAMTab", 11, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 12, "ReadFunction", "nvrSWRev$()"
+   SetTabText MSDNVR, "NVRAMTab", 13, "ReadFunction", "scqStr$(""*idn?"",4)" 
+   SetTabText MSDNVR, "NVRAMTab", 14, "ReadFunction", "nvrAnRev$()"
+   SetTabText MSDNVR, "NVRAMTab", 15, "ReadFunction", "scqStr$(""msc:nrt:id? pdb"",5)"
+   SetTabText MSDNVR, "NVRAMTab", 16, "ReadFunction", "scqStr$(""msc:nrt:id? pdb"",6)"
+   SetTabText MSDNVR, "NVRAMTab", 17, "ReadFunction", "nvr68332rev$()"
+   SetTabText MSDNVR, "NVRAMTab", 18, "ReadFunction", "scqStr$(""msc:nrt:id? sb"",5)"
+   SetTabText MSDNVR, "NVRAMTab", 19, "ReadFunction", "scqStr$(""msc:nrt:id? sb"",6)"
+   SetTabText MSDNVR, "NVRAMTab", 20, "ReadFunction", "nvrIORev$()"
+   SetTabText MSDNVR, "NVRAMTab", 21, "ReadFunction", "scqStr$(""msc:nrt:id? tpc"",5)"
+   SetTabText MSDNVR, "NVRAMTab", 22, "ReadFunction", "scqStr$(""msc:nrt:id? tpc"",6)"
+   SetTabText MSDNVR, "NVRAMTab", 23, "ReadFunction", "scqStr$(""msc:nrt:id? cg"",5)"
+   SetTabText MSDNVR, "NVRAMTab", 24, "ReadFunction", "scqStr$(""msc:nrt:id? cg"",6)"
+   SetTabText MSDNVR, "NVRAMTab", 25, "ReadFunction", "scqStr$(""msc:nrt:id? ig"",5)"
+   SetTabText MSDNVR, "NVRAMTab", 26, "ReadFunction", "scqStr$(""msc:nrt:id? ig"",6)"
+   SetTabText MSDNVR, "NVRAMTab", 27, "ReadFunction", "scqStr$(""config:abund:amp?"",1) + "","" + scqStr$(""config:abund:amp?"",5) "
+   SetTabText MSDNVR, "NVRAMTab", 28, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 29, "ReadFunction", "scqStr$(""msc:parm:pset? quadfreq"")"
+   SetTabText MSDNVR, "NVRAMTab", 30, "ReadFunction", "scqStr$(""msc:parm:pset? quadpolp"")"
+   SetTabText MSDNVR, "NVRAMTab", 31, "ReadFunction", "scqStr$(""msc:parm:pset? quadpoln"")"
+   SetTabText MSDNVR, "NVRAMTab", 32, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 33, "ReadFunction", "scqStr$(""zone:name quad; pset?"")"
+   SetTabText MSDNVR, "NVRAMTab", 34, "ReadFunction", "scqStr$(""zone:name dgas; pset?"")"
+   SetTabText MSDNVR, "NVRAMTab", 35, "ReadFunction", "scqStr$(""zone:name dgasflow; pset?"")"
+   SetTabText MSDNVR, "NVRAMTab", 36, "ReadFunction", "scqStr$(""zone:name nebpres; pset?"")"
+   SetTabText MSDNVR, "NVRAMTab", 37, "ReadFunction", "scqStr$(""zone:name vapor; pset?"")"
+   SetTabText MSDNVR, "NVRAMTab", 38, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 39, "ReadFunction", "pid$(4)"
+   SetTabText MSDNVR, "NVRAMTab", 40, "ReadFunction", "pid$(3)"
+   SetTabText MSDNVR, "NVRAMTab", 41, "ReadFunction", "pid$(7)"
+   SetTabText MSDNVR, "NVRAMTab", 42, "ReadFunction", "pid$(1)"
+   SetTabText MSDNVR, "NVRAMTab", 43, "ReadFunction", "pid$(2)"
+   SetTabText MSDNVR, "NVRAMTab", 44, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 45, "ReadFunction", "dgMSzoneTimeout$(4)"
+   SetTabText MSDNVR, "NVRAMTab", 46, "ReadFunction", "dgMSzoneTimeout$(3)"
+   SetTabText MSDNVR, "NVRAMTab", 47, "ReadFunction", "dgMSzoneTimeout$(7)"
+   SetTabText MSDNVR, "NVRAMTab", 48, "ReadFunction", "dgMSzoneTimeout$(1)"
+   SetTabText MSDNVR, "NVRAMTab", 49, "ReadFunction", "dgMSzoneTimeout$(2)"
+   SetTabText MSDNVR, "NVRAMTab", 50, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 51, "ReadFunction", "nvrLeakCal$()"
+   SetTabText MSDNVR, "NVRAMTab", 52, "ReadFunction", "scqStr$(""msc:parm:pset? cdsdonps"")"
+   SetTabText MSDNVR, "NVRAMTab", 53, "ReadFunction", "scqStr$(""msc:parm:pset? cdsdofp1"")"
+   SetTabText MSDNVR, "NVRAMTab", 54, "ReadFunction", "scqStr$(""msc:parm:pset? cdsdofp2"")"
+   SetTabText MSDNVR, "NVRAMTab", 55, "ReadFunction", "scqStr$(""msc:parm:pset? cdsdoncd"")"
+   SetTabText MSDNVR, "NVRAMTab", 56, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 57, "ReadFunction", "scqStr$(""msc:parm:pset? mald0"")"
+   SetTabText MSDNVR, "NVRAMTab", 58, "ReadFunction", "scqStr$(""msc:parm:pset? mald1"")"
+   SetTabText MSDNVR, "NVRAMTab", 59, "ReadFunction", "scqStr$(""msc:parm:pset? mald2"")"
+   SetTabText MSDNVR, "NVRAMTab", 60, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 61, "ReadFunction", "mstnGetPosEMV$()"
+   SetTabText MSDNVR, "NVRAMTab", 62, "ReadFunction", "scqStr$(""msc:parm:pset? emvgain0"")"
+   SetTabText MSDNVR, "NVRAMTab", 63, "ReadFunction", "scqStr$(""msc:parm:pset? emvgain1"")"
+   SetTabText MSDNVR, "NVRAMTab", 64, "ReadFunction", "mstnGetNegEMV$()"   
+   SetTabText MSDNVR, "NVRAMTab", 65, "ReadFunction", "scqStr$(""msc:parm:pset? emvgain0n"")"
+   SetTabText MSDNVR, "NVRAMTab", 66, "ReadFunction", "scqStr$(""msc:parm:pset? emvgain1n"")"   
+   SetTabText MSDNVR, "NVRAMTab", 67, "ReadFunction", "polyStr$()"
+   !SetTabText MSDNVR, "NVRAMTab", 68, "ReadFunction", "scqStr$(""msc:parm:pset? iobaop"")"
+   SetTabText MSDNVR, "NVRAMTab", 68, "ReadFunction", "nvrIObFC$(iobaop)"
+   !SetTabText MSDNVR, "NVRAMTab", 69, "ReadFunction", "scqStr$(""msc:parm:pset? iobfcrp"")"
+   SetTabText MSDNVR, "NVRAMTab", 69, "ReadFunction", "nvrIObFC$(iobfcrp)"
+   !SetTabText MSDNVR, "NVRAMTab", 70, "ReadFunction", "scqStr$(""msc:parm:pset? iobauxrp"")"
+   SetTabText MSDNVR, "NVRAMTab", 70, "ReadFunction", "nvrIObFC$(iobauxrp)"
+   SetTabText MSDNVR, "NVRAMTab", 71, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 72, "ReadFunction", "scqStr$(""msc:parm:pset? mpst"")"
+   SetTabText MSDNVR, "NVRAMTab", 73, "ReadFunction", "scqStr$(""msc:parm:pset? msst"")"
+   SetTabText MSDNVR, "NVRAMTab", 74, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 75, "ReadFunction", "scqStr$(""msc:parm:pset? emf_cexa"")"
+   SetTabText MSDNVR, "NVRAMTab", 76, "ReadFunction", "scqStr$(""msc:parm:pset? emf_cexb"")"
+   SetTabText MSDNVR, "NVRAMTab", 77, "ReadFunction", "scqStr$(""msc:parm:pset? emf_poil"")"
+   SetTabText MSDNVR, "NVRAMTab", 78, "ReadFunction", "scqStr$(""msc:parm:pset? emf_gasc"")"
+   SetTabText MSDNVR, "NVRAMTab", 79, "ReadFunction", "scqStr$(""msc:parm:pset? emf_iono"")"
+   SetTabText MSDNVR, "NVRAMTab", 80, "ReadFunction", "scqStr$(""msc:parm:pset? emf_ssv"")"
+   SetTabText MSDNVR, "NVRAMTab", 81, "ReadFunction", "scqStr$(""msc:parm:pset? emf_emul"")"
+   SetTabText MSDNVR, "NVRAMTab", 82, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 83, "ReadFunction", "ObjHdrText$(MSDNVR, ""BackupDate"")"
+   SetTabText MSDNVR, "NVRAMTab", 84, "ReadFunction", "ObjHdrText$(MSDNVR, ""RestoreDate"")"
+   SetTabText MSDNVR, "NVRAMTab", 85, "ReadFunction", "nvrVer$"
+  ! End of ReadFunction column for G1946x and G1956x instruments
+Else    
+   SetTabText MSDNVR, "NVRAMTab", 1, "ReadFunction", """LC/MSD Instrument Configuration"""
+   SetTabText MSDNVR, "NVRAMTab", 2, "ReadFunction", "time$(1) + ""    "" + date$(1)"
+   SetTabText MSDNVR, "NVRAMTab", 3, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 4, "ReadFunction", "_InstName$"
+   SetTabText MSDNVR, "NVRAMTab", 5, "ReadFunction", "scqStr$(""config:id:desc? serialnum"")"
+   SetTabText MSDNVR, "NVRAMTab", 6, "ReadFunction", "scqStr$(""config:inst:modl?"")"
+   SetTabText MSDNVR, "NVRAMTab", 7, "ReadFunction", "scqStr$(""config:id:desc? mfgdate"")"
+   SetTabText MSDNVR, "NVRAMTab", 8, "ReadFunction", "scqStr$(""config:id:desc? quadnum"")"
+   SetTabText MSDNVR, "NVRAMTab", 9, "ReadFunction", "scqStr$(""msc:parm:pset? msvalvep"")"
+   SetTabText MSDNVR, "NVRAMTab", 10, "ReadFunction", "MSGetIonSrc$()"
+   SetTabText MSDNVR, "NVRAMTab", 11, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 12, "ReadFunction", "nvrSWRev$()"
+   SetTabText MSDNVR, "NVRAMTab", 13, "ReadFunction", "scqStr$(""*idn?"",4)" 
+   SetTabText MSDNVR, "NVRAMTab", 14, "ReadFunction", "nvrAnRev$()"
+   SetTabText MSDNVR, "NVRAMTab", 15, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 16, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 17, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 18, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 19, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 20, "ReadFunction", "nvrIORev$()"
+   SetTabText MSDNVR, "NVRAMTab", 21, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 22, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 23, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 24, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 25, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 26, "ReadFunction", ReadResource$ ("tunemac",ID_TUNEMAC_ABSENT_191)
+   SetTabText MSDNVR, "NVRAMTab", 27, "ReadFunction", "scqStr$(""config:abund:amp?"",1) + "","" + scqStr$(""config:abund:amp?"",5) "
+   SetTabText MSDNVR, "NVRAMTab", 28, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 29, "ReadFunction", "scqStr$(""msc:parm:pset? quadfreq"")"
+   SetTabText MSDNVR, "NVRAMTab", 30, "ReadFunction", "scqStr$(""msc:parm:pset? quadpolp"")"
+   SetTabText MSDNVR, "NVRAMTab", 31, "ReadFunction", "scqStr$(""msc:parm:pset? quadpoln"")"
+   SetTabText MSDNVR, "NVRAMTab", 32, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 33, "ReadFunction", "scqStr$(""zone:name quad; pset?"")"
+   SetTabText MSDNVR, "NVRAMTab", 34, "ReadFunction", "scqStr$(""zone:name dgas; pset?"")"
+   SetTabText MSDNVR, "NVRAMTab", 35, "ReadFunction", "scqStr$(""zone:name dgasflow; pset?"")"
+   SetTabText MSDNVR, "NVRAMTab", 36, "ReadFunction", "scqStr$(""zone:name nebpres; pset?"")"
+   SetTabText MSDNVR, "NVRAMTab", 37, "ReadFunction", "scqStr$(""zone:name vapor; pset?"")"
+   SetTabText MSDNVR, "NVRAMTab", 38, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 39, "ReadFunction", "pid$(4)"
+   SetTabText MSDNVR, "NVRAMTab", 40, "ReadFunction", "pid$(3)"
+   SetTabText MSDNVR, "NVRAMTab", 41, "ReadFunction", "pid$(7)"
+   SetTabText MSDNVR, "NVRAMTab", 42, "ReadFunction", "pid$(1)"
+   SetTabText MSDNVR, "NVRAMTab", 43, "ReadFunction", "pid$(2)"
+   SetTabText MSDNVR, "NVRAMTab", 44, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 45, "ReadFunction", "scqStr$(""msc:parm? quadTO"")"
+   SetTabText MSDNVR, "NVRAMTab", 46, "ReadFunction", "scqStr$(""msc:parm? dgasTO"")"
+   SetTabText MSDNVR, "NVRAMTab", 47, "ReadFunction", "scqStr$(""msc:parm? vaporTO"")"
+   SetTabText MSDNVR, "NVRAMTab", 48, "ReadFunction", "dgMSzoneTimeout$(1)"
+   SetTabText MSDNVR, "NVRAMTab", 49, "ReadFunction", "dgMSzoneTimeout$(2)"
+   SetTabText MSDNVR, "NVRAMTab", 50, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 51, "ReadFunction", "nvrLeakCal$()"
+   SetTabText MSDNVR, "NVRAMTab", 52, "ReadFunction", "scqStr$(""msc:parm:pset? cdsdonps"")"
+   SetTabText MSDNVR, "NVRAMTab", 53, "ReadFunction", "scqStr$(""msc:parm:pset? cdsdofp1"")"
+   SetTabText MSDNVR, "NVRAMTab", 54, "ReadFunction", "scqStr$(""msc:parm:pset? cdsdofp2"")"
+   SetTabText MSDNVR, "NVRAMTab", 55, "ReadFunction", "scqStr$(""msc:parm:pset? cdsdoncd"")"
+   SetTabText MSDNVR, "NVRAMTab", 56, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 57, "ReadFunction", "scqStr$(""msc:parm:pset? mald0"")"
+   SetTabText MSDNVR, "NVRAMTab", 58, "ReadFunction", "scqStr$(""msc:parm:pset? mald1"")"
+   SetTabText MSDNVR, "NVRAMTab", 59, "ReadFunction", "scqStr$(""msc:parm:pset? mald2"")"
+   SetTabText MSDNVR, "NVRAMTab", 60, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 61, "ReadFunction", "mstnGetPosEMV$()"
+   SetTabText MSDNVR, "NVRAMTab", 62, "ReadFunction", "scqStr$(""msc:parm:pset? emvgain0"")"
+   SetTabText MSDNVR, "NVRAMTab", 63, "ReadFunction", "scqStr$(""msc:parm:pset? emvgain1"")"
+   SetTabText MSDNVR, "NVRAMTab", 64, "ReadFunction", "mstnGetNegEMV$()"   
+   SetTabText MSDNVR, "NVRAMTab", 65, "ReadFunction", "scqStr$(""msc:parm:pset? emvgain0n"")"
+   SetTabText MSDNVR, "NVRAMTab", 66, "ReadFunction", "scqStr$(""msc:parm:pset? emvgain1n"")"   
+   SetTabText MSDNVR, "NVRAMTab", 67, "ReadFunction", "polyStr$()"
+   !SetTabText MSDNVR, "NVRAMTab", 68, "ReadFunction", "scqStr$(""msc:parm:pset? iobaop"")"
+   SetTabText MSDNVR, "NVRAMTab", 68, "ReadFunction", "nvrIObFC$(iobaop)"
+   !SetTabText MSDNVR, "NVRAMTab", 69, "ReadFunction", "scqStr$(""msc:parm:pset? iobfcrp"")"
+   SetTabText MSDNVR, "NVRAMTab", 69, "ReadFunction", "nvrIObFC$(iobfcrp)"
+   !SetTabText MSDNVR, "NVRAMTab", 70, "ReadFunction", "scqStr$(""msc:parm:pset? iobauxrp"")"
+   SetTabText MSDNVR, "NVRAMTab", 70, "ReadFunction", "nvrIObFC$(iobauxrp)"
+   SetTabText MSDNVR, "NVRAMTab", 71, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 72, "ReadFunction", "scqStr$(""msc:parm:pset? mpst"")"
+   SetTabText MSDNVR, "NVRAMTab", 73, "ReadFunction", "scqStr$(""msc:parm:pset? msst"")"
+   SetTabText MSDNVR, "NVRAMTab", 74, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 75, "ReadFunction", "scqStr$(""msc:parm:pset? emf_cexa"")"
+   SetTabText MSDNVR, "NVRAMTab", 76, "ReadFunction", "scqStr$(""msc:parm:pset? emf_cexb"")"
+   SetTabText MSDNVR, "NVRAMTab", 77, "ReadFunction", "scqStr$(""msc:parm:pset? emf_poil"")"
+   SetTabText MSDNVR, "NVRAMTab", 78, "ReadFunction", "scqStr$(""msc:parm:pset? emf_gasc"")"
+   SetTabText MSDNVR, "NVRAMTab", 79, "ReadFunction", "scqStr$(""msc:parm:pset? emf_iono"")"
+   SetTabText MSDNVR, "NVRAMTab", 80, "ReadFunction", "scqStr$(""msc:parm:pset? emf_ssv"")"
+   SetTabText MSDNVR, "NVRAMTab", 81, "ReadFunction", "scqStr$(""msc:parm:pset? emf_emul"")"
+   SetTabText MSDNVR, "NVRAMTab", 82, "ReadFunction", "polyStr$()"
+   SetTabText MSDNVR, "NVRAMTab", 83, "ReadFunction", "ObjHdrText$(MSDNVR, ""BackupDate"")"
+   SetTabText MSDNVR, "NVRAMTab", 84, "ReadFunction", "ObjHdrText$(MSDNVR, ""RestoreDate"")"
+   SetTabText MSDNVR, "NVRAMTab", 85, "ReadFunction", "nvrVer$"
+  ! End of ReadFunction column for 6100 series instruments
+Endif 
+
+   ! SetFunction column
+   SetTabText MSDNVR, "NVRAMTab", 5, "SetFunction", "MSSCWrite ""config:id:desc serialnum, '%s'"""
+   SetTabText MSDNVR, "NVRAMTab", 6, "SetFunction", "MSSCWrite ""config:id:desc prodnum, '%s'"""
+   SetTabText MSDNVR, "NVRAMTab", 7, "SetFunction", "MSSCWrite ""config:id:desc mfgdate, '%s'"""
+   SetTabText MSDNVR, "NVRAMTab", 8, "SetFunction", "MSSCWrite ""config:id:desc quadnum, '%s'"""
+   SetTabText MSDNVR, "NVRAMTab", 9, "SetFunction", "MSSCWrite ""msc:parm:pset msvalvep, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 29, "SetFunction", "MSSCWrite ""msc:parm:pset quadfreq, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 30, "SetFunction", "MSSCWrite ""msc:parm:pset quadpolp, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 31, "SetFunction", "MSSCWrite ""msc:parm:pset quadpoln, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 33, "SetFunction", "MSSCWrite ""zone:name quad; pset %s"""
+   SetTabText MSDNVR, "NVRAMTab", 34, "SetFunction", "MSSCWrite ""zone:name dgas; pset %s"""
+   SetTabText MSDNVR, "NVRAMTab", 35, "SetFunction", "MSSCWrite ""zone:name dgasflow; pset %s"""
+   SetTabText MSDNVR, "NVRAMTab", 36, "SetFunction", "MSSCWrite ""zone:name nebpres; pset %s"""
+   SetTabText MSDNVR, "NVRAMTab", 37, "SetFunction", "MSSCWrite ""zone:name vapor; pset %s"""
+   SetTabText MSDNVR, "NVRAMTab", 39, "SetFunction", "MSZonePID 4,,,,,""%s"",1"
+   SetTabText MSDNVR, "NVRAMTab", 40, "SetFunction", "MSZonePID 3,,,,,""%s"",1"
+   SetTabText MSDNVR, "NVRAMTab", 41, "SetFunction", "MSZonePID 7,,,,,""%s"",1"
+   SetTabText MSDNVR, "NVRAMTab", 42, "SetFunction", "MSZonePID 1,,,,,""%s"",1"
+   SetTabText MSDNVR, "NVRAMTab", 43, "SetFunction", "MSZonePID 2,,,,,""%s"",1"
+   SetTabText MSDNVR, "NVRAMTab", 45, "SetFunction", "MSzoneTimeout 4, %s, , 1"
+   SetTabText MSDNVR, "NVRAMTab", 46, "SetFunction", "MSzoneTimeout 3, %s, , 1"
+   SetTabText MSDNVR, "NVRAMTab", 47, "SetFunction", "MSzoneTimeout 7, %s, , 1"
+   SetTabText MSDNVR, "NVRAMTab", 48, "SetFunction", "MSzoneTimeout 1, %s, , 1"
+   SetTabText MSDNVR, "NVRAMTab", 49, "SetFunction", "MSzoneTimeout 2, %s, , 1"
+   SetTabText MSDNVR, "NVRAMTab", 52, "SetFunction", "MSSCWrite ""msc:parm:pset cdsdonps, %s """
+   SetTabText MSDNVR, "NVRAMTab", 53, "SetFunction", "MSSCWrite ""msc:parm:pset cdsdofp1, %s """
+   SetTabText MSDNVR, "NVRAMTab", 54, "SetFunction", "MSSCWrite ""msc:parm:pset cdsdofp2, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 55, "SetFunction", "MSSCWrite ""msc:parm:pset cdsdoncd, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 57, "SetFunction", "MSSCWrite ""msc:parm:pset mald0, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 58, "SetFunction", "MSSCWrite ""msc:parm:pset mald1, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 59, "SetFunction", "MSSCWrite ""msc:parm:pset mald2, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 62, "SetFunction", "MSSCWrite ""msc:parm:pset emvgain0, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 63, "SetFunction", "MSSCWrite ""msc:parm:pset emvgain1, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 65, "SetFunction", "MSSCWrite ""msc:parm:pset emvgain0n, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 66, "SetFunction", "MSSCWrite ""msc:parm:pset emvgain1n, %s"""   
+   SetTabText MSDNVR, "NVRAMTab", 68, "SetFunction", "MSSCWrite ""msc:parm:pset iobaop, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 69, "SetFunction", "MSSCWrite ""msc:parm:pset iobfcrp, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 70, "SetFunction", "MSSCWrite ""msc:parm:pset iobauxrp, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 72, "SetFunction", "MSSCWrite ""msc:parm:pset mpst, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 73, "SetFunction", "MSSCWrite ""msc:parm:pset msst, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 75, "SetFunction", "MSSCWrite ""msc:parm:pset emf_cexa, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 76, "SetFunction", "MSSCWrite ""msc:parm:pset emf_cexb, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 77, "SetFunction", "MSSCWrite ""msc:parm:pset emf_poil, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 78, "SetFunction", "MSSCWrite ""msc:parm:pset emf_gasc, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 79, "SetFunction", "MSSCWrite ""msc:parm:pset emf_iono, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 80, "SetFunction", "MSSCWrite ""msc:parm:pset emf_ssv, %s"""
+   SetTabText MSDNVR, "NVRAMTab", 81, "SetFunction", "MSSCWrite ""msc:parm:pset emf_emul, %s"""
+   ! End of SetFunction column
+
+   ! Backup column
+   ! End of Backup column
+
+   ! MinRev column
+   ! SetTabText MSDNVR, "NVRAMTab", 13, "MinRev", "3.01.00" ! Not needed
+   SetTabText MSDNVR, "NVRAMTab", 16, "MinRev", "PRS2.02.00"
+   SetTabText MSDNVR, "NVRAMTab", 20, "MinRev", "6.2"
+   SetTabText MSDNVR, "NVRAMTab", 22, "MinRev", "PRSW1.1.01"
+   SetTabText MSDNVR, "NVRAMTab", 27, "MinRev", "LOG01,CAL"
+   ! End of MinRev column
+   
+   ! New Parameters for 6100 'Sirius' instruments
+  if pre6100() = 0 then
+    InsTabRow MSDNVR, NVRAMTab, 10:11
+    SetTabText MSDNVR, "NVRAMTab", 10, "Parameter", "Solvent Divert Valve Installed"
+    SetTabText MSDNVR, "NVRAMTab", 10, "SCParmName", "DV 0/1"
+    SetTabText MSDNVR, "NVRAMTab", 10, "ReadFunction", "scqStr$(""config:info:opts:desc? 7"")"
+    
+    SetTabText MSDNVR, "NVRAMTab", 11, "Parameter", "Fast Switching Capillary Installed"
+    SetTabText MSDNVR, "NVRAMTab", 11, "SCParmName", "rescaplry"
+    SetTabText MSDNVR, "NVRAMTab", 11, "ReadFunction", "scqStr$(""config:id:desc? rescaplry"")"
+  else
+    return
+  endif
+
+   ! Two rows for iButton
+  if pre6100() = 0 then
+    InsTabRow MSDNVR, NVRAMTab, 12:13
+    SetTabText MSDNVR, "NVRAMTab", 12, "Parameter", "Instrument iButton Serial Number"
+    SetTabText MSDNVR, "NVRAMTab", 12, "SCParmName", "ibuttonsn"
+    SetTabText MSDNVR, "NVRAMTab", 12, "Comparison", "<>"
+    SetTabText MSDNVR, "NVRAMTab", 12, "ReadFunction", "scqStr$(""config:inst:ibsn?"")"
+    
+    SetTabText MSDNVR, "NVRAMTab", 13, "Parameter", "Ion Source iButton Serial Number"
+    SetTabText MSDNVR, "NVRAMTab", 13, "SCParmName", "srcibutsn"
+    SetTabText MSDNVR, "NVRAMTab", 13, "Comparison", "<>"
+    SetTabText MSDNVR, "NVRAMTab", 13, "ReadFunction", "scqStr$(""config:src:ibsn?"")"
+  else
+    return
+  endif
+  
+  ! New Parameters for 6100 'Orion' instruments
+  if (MSModelOptions = 26) OR (MSModelOptions = 27) then
+    InsTabRow MSDNVR, NVRAMTab, 48:49
+    SetTabText MSDNVR, "NVRAMTab", 48, "Parameter", "SGas Heater AC Line Voltage"
+    SetTabText MSDNVR, "NVRAMTab", 48, "SCParmName", "pwrid"
+    SetTabText MSDNVR, "NVRAMTab", 48, "Comparison", "<>"
+    SetTabText MSDNVR, "NVRAMTab", 48, "ReadFunction", "scqStr$(""msc:parm? pwrid"")"
+    
+    SetTabText MSDNVR, "NVRAMTab", 49, "Parameter", "SGas Heater Max Drive"
+    SetTabText MSDNVR, "NVRAMTab", 49, "SCParmName", "vapormaxd"
+    SetTabText MSDNVR, "NVRAMTab", 49, "Comparison", "<>"
+    SetTabText MSDNVR, "NVRAMTab", 49, "ReadFunction", "scqStr$(""msc:parm? vapormaxd"")"    
+  else
+    return
+  endif
+
+
+   NewObjHdrText MSDNVR, "ModifDate" , ""
+   NewObjHdrText MSDNVR, "MacroRev" , "1.64"
+   NewObjHdrText MSDNVR, "BackupDate" , ""
+   NewObjHdrText MSDNVR, "RestoreDate" , ""
+
+   ! Generate DDTNVRTab table
+   NewTab MSDNVR, "DDTNVRTab"
+   ! Define columns
+   NewColText MSDNVR, "DDTNVRTab", "Title", ""
+   NewColVal  MSDNVR, "DDTNVRTab", "Control", 2
+   NewColText MSDNVR, "DDTNVRTab", "EnumStrings", ""
+   NewColVal  MSDNVR, "DDTNVRTab", "Width", 0
+   NewColText MSDNVR, "DDTNVRTab", "Format", ""
+   NewColVal  MSDNVR, "DDTNVRTab", "Justify", 0
+   NewColText MSDNVR, "DDTNVRTab", "Source", ""
+   InsTabRow MSDNVR, DDTNVRTab, 1:8
+
+   ! Get header items for DDTNVRTab table
+   NewTabHdrVal MSDNVR, "DDTNVRTab", "DispRowNum", 1,, 3
+   NewTabHdrText MSDNVR, "DDTNVRTab", "RowNumTitle", "#"
+   NewTabHdrVal MSDNVR, "DDTNVRTab", "RowNumWidth", 5,, 3
+   NewTabHdrText MSDNVR, "DDTNVRTab", "RowFormat", "%d"
+   NewTabHdrText MSDNVR, "DDTNVRTab", "TitleFont", ""
+   NewTabHdrText MSDNVR, "DDTNVRTab", "ElemFont", ""
+   NewTabHdrVal MSDNVR, "DDTNVRTab", "FixedCols", 1,, 3
+   NewTabHdrVal MSDNVR, "DDTNVRTab", "WindowClass", 1,, 3
+
+   ! Set table contents
+   ! Title column
+   SetTabText MSDNVR, "DDTNVRTab", 1, "Title", "Parameter"
+   SetTabText MSDNVR, "DDTNVRTab", 2, "Title", "keyword"
+   SetTabText MSDNVR, "DDTNVRTab", 3, "Title", "Actual"
+   SetTabText MSDNVR, "DDTNVRTab", 5, "Title", "Expected"
+   SetTabText MSDNVR, "DDTNVRTab", 6, "Title", "ReadFunction"
+   SetTabText MSDNVR, "DDTNVRTab", 7, "Title", "SetFunction"
+   SetTabText MSDNVR, "DDTNVRTab", 8, "Title", "MinRev"
+   ! End of Title column
+
+   ! Control column
+   ! End of Control column
+
+   ! EnumStrings column
+   ! End of EnumStrings column
+
+   ! Width column
+   SetTabVal  MSDNVR, "DDTNVRTab", 1, "Width", 30
+   SetTabVal  MSDNVR, "DDTNVRTab", 2, "Width", 10
+   SetTabVal  MSDNVR, "DDTNVRTab", 3, "Width", 20
+   SetTabVal  MSDNVR, "DDTNVRTab", 4, "Width", 4
+   SetTabVal  MSDNVR, "DDTNVRTab", 5, "Width", 20
+   SetTabVal  MSDNVR, "DDTNVRTab", 6, "Width", 30
+   SetTabVal  MSDNVR, "DDTNVRTab", 7, "Width", 30
+   SetTabVal  MSDNVR, "DDTNVRTab", 8, "Width", 8
+   ! End of Width column
+
+   ! Format column
+   SetTabText MSDNVR, "DDTNVRTab", 1, "Format", "%s"
+   SetTabText MSDNVR, "DDTNVRTab", 2, "Format", "%s"
+   SetTabText MSDNVR, "DDTNVRTab", 3, "Format", "%s"
+   SetTabText MSDNVR, "DDTNVRTab", 4, "Format", "%s"
+   SetTabText MSDNVR, "DDTNVRTab", 5, "Format", "%s"
+   SetTabText MSDNVR, "DDTNVRTab", 6, "Format", "%s"
+   SetTabText MSDNVR, "DDTNVRTab", 7, "Format", "%s"
+   SetTabText MSDNVR, "DDTNVRTab", 8, "Format", "%s"
+   ! End of Format column
+
+   ! Justify column
+   ! End of Justify column
+
+   ! Source column
+   SetTabText MSDNVR, "DDTNVRTab", 1, "Source", "Parameter"
+   SetTabText MSDNVR, "DDTNVRTab", 2, "Source", "SCParmName"
+   SetTabText MSDNVR, "DDTNVRTab", 3, "Source", "ParmValue"
+   SetTabText MSDNVR, "DDTNVRTab", 4, "Source", "Comparison"
+   SetTabText MSDNVR, "DDTNVRTab", 5, "Source", "Expected"
+   SetTabText MSDNVR, "DDTNVRTab", 6, "Source", "ReadFunction"
+   SetTabText MSDNVR, "DDTNVRTab", 7, "Source", "SetFunction"
+   SetTabText MSDNVR, "DDTNVRTab", 8, "Source", "MinRev"
+   ! End of Source column
+
+   NewObjHdrVal  MSDNVR, "version",2
+   ! Object #1 done
+
+endmacro         ! end CreateMSDNVR
+!***************************************************************************!
+
+!***************************************************************************!
+!***************************************************************************!
+!***************************************************************************!
+NAME nvrSaveToLog
+! Save shipping info to file for rework sheet to access. For production 
+! use only.
+!***************************************************************************!
+LOCAL x_SNLog$, x_QPolP$, x_QPolN$, x_MSValveP$, x_SNum$, x_QuadNum$, x_MfgDate$
+
+Local  ID_TUNEMAC_FILE_255
+Local  ID_TUNEMAC__CONTAINS_INFO_256
+Local  ID_TUNEMAC_SHIPPING_INFOR_257
+ID_TUNEMAC_FILE_255                                =  17255  
+ID_TUNEMAC__CONTAINS_INFO_256                      =  17256  
+ID_TUNEMAC_SHIPPING_INFOR_257                      =  17257  
+   if Check(Variable, PRTestVer$) = 0 then
+      RETURN
+   endif
+   
+   ON ERROR
+   
+   if RegSize(MSDNVR) = -1 then
+      RETURN
+   endif
+
+   x_SNLog$ = "C:\MSSERIAL.LOG"
+
+   !Initialize all variables before reading.
+   x_SNum$ = "x"
+   x_QuadNum$ = "x"
+   x_MfgDate$ = "x"
+   x_QPolP$ = "x"
+   x_QPolN$ = "x"
+   x_MSValveP$ = "x"
+
+   x_SNum$ =    GetNVR$("serialnum")  !Read serial number.
+   x_QuadNum$ = GetNVR$("quadnum") !Read quad number.
+   x_MfgDate$ = GetNVR$("mfgdate") !Read Mfg date.
+   x_QPolP$ =   GetNVR$("quadpolp")  !Read quad polarity for positive ion (0/1).
+   x_QPolN$ =   GetNVR$("quadpoln")  !Read quad polarity for negative ion (0/1)
+   x_MSValveP$ = GetNVR$("msvalvep") !Read Injection valve present (0/1)
+
+   !Save above variables to file.
+   open x_SNLog$ for append as #7
+   if filestat(size, x_SNLog$) = 0 then !new
+      print #7, ReadResource$("tunemac",ID_TUNEMAC_FILE_255) + x_SNLog$ + \
+           ReadResource$("tunemac",ID_TUNEMAC__CONTAINS_INFO_256)
+      print #7, "MSID,Serial#,Quad#,+ionQPol,-ionQPol,InjValve,MfgDate"   
+   endif
+   if check(variable, M_MSID$) > 0 then
+      print using #7, "~%,%,%,%,%,%,%\", M_MSID$, x_SNum$, x_QuadNum$,  \
+                       x_QPolP$, x_QPolN$, x_MSValveP$, x_MfgDate$
+   else
+      print using #7, "~%,%,%,%,%,%,%\", "UNKNOWN", x_SNum$, x_QuadNum$, \
+                      x_QPolP$, x_QPolN$, x_MSValveP$, x_MfgDate$
+   endif
+   close #7
+   print ReadResource$("tunemac",ID_TUNEMAC_SHIPPING_INFOR_257)
+
+endmacro !nvrSaveToLog
+
+!***************************************************************************!
+!***************************************************************************!
+NAME AppendSemiColon$
+PARAMETER InString$
+! If the string isn't empty, a "; " is appended 
+!
+!***************************************************************************!
+
+   if len(InString$) > 0 then
+      InString$ = InString$ + "; "
+   endif
+   
+   RETURN InString$
+
+endmacro                ! appendSemiColon
+!***************************************************************************!
+
+
+!***************************************************************************!
+!***************************************************************************!
+!***************************************************************************!
+NAME MMBoardUpdate
+! Checks to see if G1946-60250 analyzer board and PDB have had the chip updates
+! to support the Multimode source.
+!
+! CPL 04/25/2006 Added mmcheck logic for G61x0A series LC/MSD
+!
+!***************************************************************************!
+Local AnRev,AnRev$,PDBfw$,mmcheck
+ 
+ if (pre6100() = 1) then
+  ! Check analyzer board firmware:
+   MSSCQuery "sens? mainboard", AnRev$
+   AnRev = val(AnRev$)
+   print AnRev
+    if AnRev < 57354 then
+        mmcheck = 1
+    else
+        mmcheck = 0
+    endif
+
+  ! Check the PDB firmware:
+   PDBfw$ = nvr68332Rev$()
+   print PDBfw$
+    if val(PDBfw$) < 1.60 then
+      mmcheck = mmcheck + 1
+    else
+      mmcheck = mmcheck + 0
+    EndIf
+  Else
+    mmcheck = 0
+  EndIf
+  
+  return mmcheck
+
+endmacro                ! MMBoardUpdate
+!***************************************************************************!
+
+ verIx = instr(NVRver$, ".mac ") + 5
+ NVRver$ =  NVRver$[verIx:VerIx + instr(NVRver$[VerIx:len(NVRver$)]," ") - 1] 
+ remove verIx
+ 
+ print "mstnNVR.mac v. " + NVRver$ + " loaded."
+!******** end of file *********************************************************

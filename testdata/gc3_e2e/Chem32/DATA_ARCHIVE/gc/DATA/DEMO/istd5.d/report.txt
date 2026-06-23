@@ -1,0 +1,41 @@
+Data File C:\HPCHEM\2\DATA\ISTD5.D Sample Name: FID 5ul
+Instrument 2 4/9/94 7:58:49 PM by Gary Jackoway
+
+=====================================================================
+Acq. Method     : ASTRXFD5.MTH                   Seq. Line :  3
+Acq. Operator   : I.M.Operator                        Vial :  1
+Injection Date  : 17 Mar 94  02:38 PM                  Inj :  1
+Sample Name     : FID 5ul                      
+
+Analysis Method : C:\HPCHEM\2\METHODS\ISTD_EX.M
+=====================================================================
+  Default Calibration Report (other requested info not available)
+=====================================================================
+           Internal Standard Report (after recalibration)            
+=====================================================================
+
+Sorted by Signal
+Calib. Data Modified  :      Saturday, April 09, 1994 7:53:13 PM
+Multiplier            :      1.000000
+Dilution              :      1.000000
+Uncalibrated Peaks    :      not reported
+
+Signal 1: FID1 A, 
+
+   RT    Type     Area     Amt/Area    Amount  Grp   Name
+  [min]                      ratio     [ng]
+|------|------|----------|----------|----------|--|-----------------|
+  2.317 PV T   1.12884e5  5.74147e-1  510.16238    tetradecane       
+  3.198 PV  +I 2.54084e4     1.00000  200.00000    pentadecane       
+Totals without ISTD(s) :              510.16238
+
+5 Warnings or Errors :
+
+Warning : ISTD compound missing
+Warning : ISTD compound missing
+Warning : ISTD compound missing
+Warning : ISTD compound missing
+Warning : ISTD compound missing
+
+=====================================================================
+                          *** End of Report ***

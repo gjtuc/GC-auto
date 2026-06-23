@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="gstatuscst" PosStyle="TOP" DockRow="1" DockCol="0" Caption="状态" PanelName="Main">
+		<StatusList Name="SysStatus" Help="显示化学工作站状态" NewGroup="1" Enable="1" Width="300" Font="Microsoft Sans Serif, 10, Bold" Border="NoBorder" Justify="Center" Height="20" BkColor="LightGreen" Text="就绪" UseElements="0|0|0|1|1|1" Alias="SysGreen=LightGreen|SysBlue=LightSteelBlue|SysRed=LightSalmon|SysYellow=LightYellow|SysMagenta=Orchid|SysCyan=Aquamarine|SysWhite=GhostWhite|MthGreen=LawnGreen|MthBlue=RoyalBlue|MthRed=Red|MthYellow=Yellow|MthMagenta=Magenta|MthCyan=Cyan|MthWhite=White" Separator="/" Symbols="SysGreen|SysBlue|SysRed|SysYellow|SysMagenta|SysCyan|SysWhite|MthGreen|MthBlue|MthRed|MthYellow|MthMagenta|MthCyan|MthWhite|" Elements="1|1|SysGreen|Ready|MthGreen|"/>
+		<StatusList Name="TimeStatus" Help="显示运行时间状态" NewGroup="1" Enable="1" Width="100" Font="Microsoft Sans Serif, 10, Bold" Border="NoBorder" Justify="Center" Height="20" ForeColor="Yellow" BkColor="DarkBlue" Text="0 min" UseElements="1|0|0|0" Alias="" Separator="/" Symbols="0|1" Elements="|| min| "/>
+		<StatusList Name="Time" Help="显示运行时间" Enable="1" Width="100" Font="Microsoft Sans Serif, 10, Bold" Border="NoBorder" Justify="Center" Height="20" ForeColor="Yellow" BkColor="DarkBlue" Text="0 min" UseElements="0|1|0|0" Alias="" Separator="/" Symbols="0|1" Elements="|| min| "/>
+		<!-- ==================================================================== -->
+		<PushButton Name="MethodStatus" Help="方法修改状态" Command="" NewGroup="1" Enable="0" ImageName="Method20" ImageNameDisabled="Method20"/>
+		<Static Name="MethodStatusText" Help="" Border="NoBorder" Text="方法:"/>
+		<Static Name="Method" Help="当前方法名称" Border="NoBorder" Text="--" Font="Microsoft Sans Serif, 8, Bold"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="SequenceStatus" Help="序列修改状态" Command="" NewGroup="1" Enable="0" ImageName="Sequence20" ImageNameDisabled="Sequence20"/>
+		<Static Name="SequenceStatusText" Help="" Border="NoBorder" Text="序列:"/>
+		<Static Name="Sequence" Help="当前序列名称" Border="NoBorder" Text="--" Font="Microsoft Sans Serif, 8, Bold"/>
+    <!-- ================================================================ -->
+		<PushButton Name="StudyStatus" Help="" Command="" NewGroup="1" Enable="0" Visible="0" ImageName="Chemstore_Study20" ImageNameDisabled="Chemstore_Study20"/>
+		<Static Name="Study" Help="当前研究" Border="NoBorder" Text="--"/>
+	</toolbar>
+</graphical_object>

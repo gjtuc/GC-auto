@@ -1,0 +1,156 @@
+[Header]
+FileVersion=1
+SampleName=Cytochrome c
+BBSetName=Amino Acids
+DefMatchSet=Protein Digest,1.2,1,2,9,7,8
+BBInsertMode=0
+LastMod=Thursday, July 07, 1994 11:37:59 AM
+
+[Globals]
+BBBondAdj=-H2O
+AutoCalcMode=0
+
+[Sequence Window]
+Format=0
+IndexLabels=5
+WordSize=5
+AutoCleavage=64
+ManualCleavage=32
+ModifiedBB=1
+NonDefaultBB=16
+InterSeqLinks=8
+IntraSeqLinks=4
+DisabledSeqLinks=2
+
+[Font Info]
+FaceName=Arial
+Height=8
+Width=0
+Weight=400
+TypeFlags=0
+Family=32
+
+[Reports]
+Margin=1905, 1270, 1270, 1270, 0
+Orientation=0
+
+[Digest]
+Protease=Trypsin
+
+[Report Layout]
+0=1,0,0
+1=2,7,15
+2=3,7,15
+3=4,7,15
+4=5,7,15
+5=6,7,15
+6=7,12,15
+7=8,7,15
+8=9,7,15
+9=10,7,15
+10=11,7,15
+11=0,7,15
+
+[Elements]
+C=Carbon,     12.00000000:98.890, 13.003355:1.110
+H=Hydrogen,    1.00782506:99.985,  2.014102:0.015
+N=Nitrogen,   14.00307407:99.640, 15.000109:0.360
+O=Oxygen,     15.99491475:99.760, 16.999131:0.040, 17.999159:0.20
+F=Fluorine,   18.99840460:100.00,
+Na=Sodium,    22.98877000:100.00
+Si=Silicon,   27.97692860:92.230, 28.976496:4.670, 29.973772:3.10
+P=Phosphorus, 30.97376300:100.00
+S=Sulfur,     31.97207280:95.020, 32.971459:0.760, 33.967868:4.20, 35.96708:0.02
+Cl=Chlorine,  34.96885300:75.770, 36.965903:24.23
+K=Potassium,  38.96370800:93.260, 39.963999:0.01, 40.961825:6.73
+Cr=Chromium,  49.94604600:4.35,  51.940510:83.79, 52.940651:9.50, 53.938882:2.36
+Fe=Iron,      55.93493900:91.720, 53.939612:5.9, 56.935396:2.1, 57.933277:0.28
+Br=Bromine,   78.91833200:50.690, 80.916290:49.31
+I=Iodine,    126.90447300:100.00
+
+
+[BB: Amino Acids]
+A65=Ala,Alanine,90,H7C3NO2,H0,Unmodified
+R82=Arg,Arginine,47,H14C6N4O2,P+,Unmodified
+N78=Asn,Asparagine,44,H8C4N2O3,P0,Unmodified
+D68=Asp,Aspartic Acid,55,H7C4NO4,P-,Unmodified
+C67=Cys,Cysteine,28,H7C3NO2S,H0,Unmodified
+Q81=Gln,Glutamine,39,H10C5N2O3,P0,Unmodified
+E69=Glu,Glutamic Acid,62,H9C5NO4,P-,Unmodified
+G71=Gly,Glycine,75,H5C2NO2,0,Unmodified
+H72=His,Histidine,21,H9C6N3O2,P+,Unmodified
+I73=Ile,Isoleucine,46,H13C6NO2,H0,Unmodified
+L76=Leu,Leucine,75,H13C6NO2,H0,Unmodified
+K75=Lys,Lysine,70,H14C6N2O2,P+,Unmodified
+M77=Met,Methionine,17,H11C5NO2S,H0,Unmodified
+F70=Phe,Phenylalanine,35,H11C9NO2,AH0,Unmodified
+P80=Pro,Proline,46,H9C5NO2,H0,Unmodified
+S83=Ser,Serine,71,H7C3NO3,P0,Unmodified
+T84=Thr,Threonine,60,H9C4NO3,P0,Unmodified
+W87=Trp,Tryptophan,11,H12C11N2O2,PAH0,Unmodified
+Y89=Tyr,Tyrosine,35,H11C9NO3,PA0,Unmodified
+V86=Val,Valine,69,H11C5NO2,H0,Unmodified
+^94=NH2,N-Terminal,0,,+,Unmodified
+$36=COOH,C-Terminal,0,,-,Unmodified
+
+[CID: Amino Acids]
+Series 1=a,-COOH,1,,
+Series 2=x,-H+CO,0,,
+Series 3=b,-OH,1,,
+Series 4=y,+H,0,,
+Series 5=c,-O+NH2,0,,
+Series 6=z,-NH2,1,,
+
+[BB Modification Types]
+Acetylation=GHK,-H+C2H3O,0, ,
+Unmodified=*,,, ,
+
+[Link Types]
+Heme=CC,+C34H32N4O4Fe
+
+[Sample Notes]
+0=148
+1="This peptide tools data set is for Horse heart Cytochrome c.  It "
+2="was cleaved using trypsin and then chromatographed using reverse "
+3="phase LC/ESI-MS."
+
+[Sequence Chains]
+65=Cytochrome c,106
+
+[Sequence Terminals]
+65N=NH2,,+
+65C=COOH,,-
+
+[Sequence Symbols]
+65(1,60)=^GDVEKGKKIFVQKCAQCHTVEKGGKHKTGPNLHGLFGRKTGQAPGFTYTDANKNKGITW
+65(61,106)=KEETLMEYLENPKKYIPGTKMIFAGIKKKTEREDLIAYLKKATNE$
+
+[BB Modifications]
+65(1)=Acetylation,Unmodified
+
+[Links and Bridges]
+65(14)=65(17),Heme
+
+[Fragments]
+65(1,5)=0,0,588.62,588.28
+65(6,7)=0,0,203.24,203.13
+65(8)=0,0,146.19,146.11
+65(9,13)=0,0,633.79,633.39
+65(14,22)=0,0,1634.66,1633.62
+65(23,25)=0,0,260.29,260.15
+65(26,27)=0,0,283.33,283.16
+65(28,38)=0,0,1168.33,1167.61
+65(39)=0,0,146.19,146.11
+65(40,53)=0,0,1470.57,1469.68
+65(54,55)=0,0,260.29,260.15
+65(56,60)=0,0,603.72,603.34
+65(61,72)=0,0,1495.66,1494.69
+65(73)=0,0,146.19,146.11
+65(74,79)=0,0,677.80,677.37
+65(80,86)=0,0,779.01,778.44
+65(87)=0,0,146.19,146.11
+65(88)=0,0,146.19,146.11
+65(89,91)=0,0,404.43,404.20
+65(92,99)=0,0,964.13,963.53
+65(100)=0,0,146.19,146.11
+65(101,104)=0,0,433.42,433.18

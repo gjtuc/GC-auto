@@ -1,0 +1,622 @@
+NAME SS_RemPStrings
+  LOCAL i,c$
+  i = 1
+  WHILE (i <= SS_MAXP) DO
+    c$ = sprintf$(i,"REMOVE SS_P%1d$")
+    EVALUATE c$
+    i = i + 1
+  ENDWHILE
+  REMOVE SS_REV
+  REMOVE SS_MAXP
+  REMOVE SS_NP
+  REMOVE SS_r$
+  RETURN
+ENDMACRO
+
+NAME SS_AppendFile
+  PARAMETER f1$, f2$
+  LOCAL l$, I
+
+  I = 1       
+  ON ERROR print
+  CLOSE #10 
+  CLOSE #11
+  ON ERROR I = 0
+  OPEN f1$ FOR INPUT  AS #10
+  OPEN f2$ FOR APPEND AS #11 
+  PRINT USING #11,"/"        
+  WHILE (I > 0) DO
+    INPUT USING #10,L, l$
+    IF (I>0)
+      PRINT #11,l$
+    ENDIF
+  ENDWHILE
+  CLOSE #10
+  CLOSE #11
+  RETURN
+ENDMACRO
+
+NAME SS_GetSCTrace
+  PARAMETER f$
+  PRINT "Copying Smartcard trace buffer . . ."
+  SS_AppendFile _TUNEPATH$+"SCTRACE.TXT",f$
+  RETURN
+ENDMACRO
+
+NAME SS_Query
+  PARAMETER q$
+  ON ERROR SS_r$ = "<"+_ERRMSG$+">"
+  MSSCQUERY q$,SS_r$
+  RETURN
+  ENDMACRO
+
+NAME SS_Write
+  PARAMETER w$
+  ON ERROR SS_r$ = "<"+_ERRMSG$+">"
+  SS_r$ = ""
+  MSSCWRITE w$
+  RETURN
+ENDMACRO
+
+NAME SS_SetPStrings
+  PARAMETER r$
+  LOCAL i,p,c$,quotes$,index,length
+  
+  quotes$ = """"""
+  
+! ON ERROR stop
+  IF (LEN(r$) = 0) THEN
+    SS_NP = 0
+  ELSE
+    i = 1
+    p = INSTR(r$,",")
+    WHILE (p > 0) DO
+      IF (p = 1) THEN
+        c$ = sprintf$ (i, sprintf$("","""SS_P%%1d$=""%s"""""))
+      ELSE
+        c$ = sprintf$ (i, sprintf$(r$[1:p-1],"SS_P%%1d$=""%s"""))
+      ENDIF
+      index = INSTR(c$, quotes$)
+      while (index > 0) 
+        length = LEN(c$) 
+        IF index+2> length  
+          c$ = c$[1:index]
+        ELSE
+          c$ = c$[1:index] + c$[index+2:LEN(c$)]
+        ENDIF
+        index = INSTR(c$, quotes$)
+      ENDWHILE
+      EVALUATE c$
+      IF (p = LEN(r$)) THEN
+        r$ = ""
+      ELSE
+        r$ = r$[p+1:LEN(r$)]
+      ENDIF
+      i = i + 1
+      p = INSTR(r$,",")
+    ENDWHILE
+    c$ = sprintf$ (i, sprintf$(r$,"SS_P%%1d$=""%s"""))
+    index = INSTR(c$, quotes$)
+    while (index > 0) 
+      length = LEN(c$) 
+      IF index+2> length  
+        c$ = c$[1:index]
+      ELSE
+        c$ = c$[1:index] + c$[index+2:LEN(c$)]
+      ENDIF
+      index = INSTR(c$, quotes$)
+    ENDWHILE
+    EVALUATE c$
+    SS_NP = i
+  ENDIF
+  RETURN
+ENDMACRO
+
+NAME SS_Prepare
+  PARAMETER f$
+  ON ERROR print
+  CLOSE #10,#11
+  DELETE f$,DONTASK
+  SS_MAXP = 0
+  SS_Query "*IDN?"
+  SS_SetPStrings SS_r$
+  SS_REV = VAL(SS_P4$[3:LEN(SS_P4$)])
+  OPEN f$ FOR APPEND AS #10
+  PRINT USING #10,"                          SC State Report (Rev. 2.01)/"
+  PRINT USING #10,"                           %/",TIME$()
+  CLOSE #10
+  RETURN
+ENDMACRO
+
+NAME SS_GetSCConfig
+  PARAMETER f$
+  LOCAL i,n,im$,sn$,frn$,mrl$,mrh$,mrr$,scm$,scs$,scmm$,scim$,scdm$
+
+  PRINT "Reading Smartcard configuration information . . ."
+
+  ON ERROR Print
+  OPEN f$ FOR APPEND AS #10
+
+  SS_Query "*IDN?"
+  SS_SetPStrings SS_r$
+  im$ = SS_P2$
+  sn$ = SS_P3$
+  frn$ = SS_P4$
+  SS_Query "CONFIG:INFO:INST?"
+  SS_SetPStrings SS_r$
+  mrl$ = SS_P2$
+  mrh$ = SS_P3$
+  mrr$ = SS_P4$
+    SS_Query "CONFIG:INFO:SC?"
+    SS_SetPStrings SS_r$
+    scm$  = SS_P1$
+    scs$  = SS_P2$
+    scmm$ = SS_P3$
+    scim$ = SS_P4$
+    scdm$ = SS_P5$
+
+  PRINT USING #10,"/"
+  PRINT USING #10,"Instrument Configuration:/"
+  PRINT USING #10,"/"
+  PRINT USING #10,"  Instrument Model          = %/",im$
+  PRINT USING #10,"  Serial Number             = %/",sn$
+  PRINT USING #10,"  Mass Range Low\/High[Res]  = % \/ % [%]/",mrl$,mrh$,mrr$
+
+  PRINT USING #10,"/"
+  PRINT USING #10,"Smartcard Configuration:/"
+  PRINT USING #10,"/"
+  PRINT USING #10,"  Smartcard Model           = %/",scm$
+  PRINT USING #10,"  Main Processor Speed      = % MHz/",scs$
+  PRINT USING #10,"  Main Processor Memory     = %/",scmm$
+  PRINT USING #10,"  Inst. Controller Memory   = %/",scim$
+  PRINT USING #10,"  Data Processor Memory     = %/",scdm$
+  PRINT USING #10,"  Firmware Revision Number  = %/",frn$
+
+  SS_Query "CONFIG:INFO:OPTS:NUM?"
+  n = VAL(SS_r$)
+  PRINT USING #10,"/"
+  PRINT USING #10,"Options:/"
+  PRINT USING #10,"/"
+  i = 1
+  WHILE (i <= n) DO
+    SS_Query "CONFIG:INFO:OPTS:DESC? "+VAL$(i)
+    PRINT USING #10,"  ##: %/",i,SS_r$
+    i = i + 1
+  ENDWHILE
+
+  CLOSE #10
+  RETURN
+ENDMACRO
+
+NAME SS_GetRunTable
+  PARAMETER f$
+  LOCAL n,i
+
+  PRINT "Reading Smartcard run table . . ."
+
+  OPEN f$ FOR APPEND AS #10
+
+  PRINT USING #10,"/"
+  PRINT USING #10,"Run Table for Last Run:/"
+  PRINT USING #10,"/"
+
+  SS_Query "RUN:TBL:DEF:NUM?"
+  n = VAL(SS_r$)
+  IF (n <= 0) THEN
+    PRINT USING #10,"  <none>/"
+  ELSE
+    i = 1
+    WHILE (i <= n) DO
+      SS_Query "RUN:TBL:DEF:DESC? "+VAL$(i)
+      PRINT USING #10,"  %/",SS_r$
+      i = i + 1
+    ENDWHILE
+  ENDIF
+
+  CLOSE #10
+  RETURN
+ENDMACRO
+
+NAME SS_GetRunEvents
+  PARAMETER f$
+  LOCAL n,i
+
+  PRINT "Reading Smartcard event log . . ."
+
+  OPEN f$ FOR APPEND AS #10
+
+  PRINT USING #10,"/"
+  PRINT USING #10,"Events During Last Run:/"
+  PRINT USING #10,"/"
+
+  SS_Query "RUN:EVNT:NUM?"
+  n = VAL(SS_r$)
+  IF (n <= 0) THEN
+    PRINT USING #10,"  <none>/"
+  ELSE
+    i = 1
+    WHILE (i <= n) DO
+      SS_Query "RUN:EVNT:DESC? "+VAL$(i)
+      PRINT USING #10,"  %/",SS_r$
+      i = i + 1
+    ENDWHILE
+  ENDIF
+
+  CLOSE #10
+  RETURN
+ENDMACRO
+
+NAME SS_GetMSParms
+  PARAMETER f$
+  LOCAL fmt$,n,clen
+  LOCAL i,j,k,in$,jn$,kn$,iv$,jv$,kv$
+
+  PRINT "Reading Smartcard MS Parameter Values . . ."
+
+  OPEN f$ FOR APPEND AS #10
+
+  SS_Query "CONFIG:INFO:PARM:NUM?"
+  n = VAL(SS_r$)
+  PRINT USING #10,"/"
+  PRINT USING #10,"Instrument Parameters:/"
+  PRINT USING #10,"/"
+  PRINT USING #10,"  Mnem.    Cur. Val.    | Mnem.    Cur. Val.    | Mnem.    Cur. Val.   /"
+  PRINT USING #10,"  -------  ------------ | -------  ------------ | -------  ------------/"
+  fmt$         = "  %%%%%%%  %%%%%%%%%%%% | %%%%%%%  %%%%%%%%%%%% | %%%%%%%  %%%%%%%%%%%%/"
+
+  clen = TRUNC(n/3)
+  IF (3*clen <> n) THEN
+    clen = clen + 1
+  ENDIF
+  i = 1
+  j = i+clen
+  k = j+clen         
+  WHILE (i <= clen) DO
+    SS_Query "CONFIG:INFO:PARM:DESC? "+VAL$(i)
+    SS_SetPStrings SS_r$
+    in$ = SS_P1$
+    SS_Query "MSC:PARM? "+in$
+    iv$ = SS_r$
+
+    SS_Query "CONFIG:INFO:PARM:DESC? "+VAL$(j)
+    SS_SetPStrings SS_r$
+    jn$ = SS_P1$
+    SS_Query "MSC:PARM? "+jn$
+    jv$ = SS_r$
+
+    IF (k > n) THEN
+      kn$ = ""
+      kv$ = ""
+    ELSE
+      SS_Query "CONFIG:INFO:PARM:DESC? "+VAL$(k)
+      SS_SetPStrings SS_r$
+      kn$ = SS_P1$
+      SS_Query "MSC:PARM? "+kn$
+      kv$ = SS_r$
+    ENDIF
+
+    PRINT USING #10,fmt$,in$,iv$,jn$,jv$,kn$,kv$
+    i = i + 1
+    j = j + 1
+    k = k + 1
+  ENDWHILE  
+
+  PRINT USING #10,"/"
+  SS_Query "FLTR:MASS:COEF?"
+  PRINT USING #10,"  Mass Filter = %/",SS_r$
+  SS_Query "FLTR:TIME:COEF?"
+  PRINT USING #10,"  Time Filter = %/",SS_r$
+
+  CLOSE #10
+  RETURN
+ENDMACRO
+
+NAME SS_GetMSSensors
+  PARAMETER f$
+  LOCAL fmt$,n,clen
+  LOCAL i,j,in$,jn$,iv$,jv$,is$,js$
+
+  PRINT "Reading Smartcard MS Sensor Values . . ."
+
+  OPEN f$ FOR APPEND AS #10
+
+  PRINT USING #10,"/"
+  PRINT USING #10,"Instrument Sensors:/"
+  PRINT USING #10,"/"
+
+    PRINT USING #10,"  Mnem.      Cur. Val.   Setpoint   | Mnem.      Cur. Val.   Setpoint  /"
+    PRINT USING #10,"  ---------  ----------  ---------- | ---------  ----------  ----------/"
+    fmt$         = "  %%%%%%%%%  %%%%%%%%%%  %%%%%%%%%% | %%%%%%%%%  %%%%%%%%%%  %%%%%%%%%%/"
+
+    SS_Query "CONFIG:INFO:SENS:NUM?"
+    n = VAL(SS_r$)
+
+    clen = TRUNC(n/2)
+    IF (2*clen <> n) THEN
+      clen = clen + 1
+    ENDIF
+    i = 1
+    j = i+clen
+    WHILE (i <= clen) DO    
+      if i <> 17 then
+        SS_Query "CONFIG:INFO:SENS:DESC? "+VAL$(i)
+        SS_SetPStrings SS_r$
+        in$ = SS_P1$
+        SS_Query "MSC:SENS? "+in$
+        iv$ = SS_r$
+        SS_Write "ZONE:NAME "+in$
+        IF (LEN(SS_r$) <> 0) THEN
+          is$ = ""
+        ELSE
+          SS_Query "ZONE:SET?"
+          is$ = SS_r$
+          SS_Query "ZONE:CTL?"
+          IF (VAL(SS_r$) = 0) THEN
+            is$="("+is$+")"
+          ELSE
+            is$=" "+is$+" "
+          ENDIF
+        ENDIF
+      endif
+
+      IF (j > n) THEN
+        jn$ = ""
+        jv$ = ""
+      ELSE
+        SS_Query "CONFIG:INFO:SENS:DESC? "+VAL$(j)
+        SS_SetPStrings SS_r$
+        jn$ = SS_P1$
+        SS_Query "MSC:SENS? "+jn$
+        jv$ = SS_r$
+        SS_Write "ZONE:NAME "+jn$
+        IF (LEN(SS_r$) <> 0) THEN
+          js$ = ""
+        ELSE
+          SS_Query "ZONE:SET?"
+          js$ = SS_r$
+          SS_Query "ZONE:CTL?"
+          IF (VAL(SS_r$) = 0) THEN
+            js$="("+js$+")"
+          ELSE
+            js$=" "+js$+" "
+          ENDIF
+        ENDIF
+      ENDIF
+
+      PRINT USING #10,fmt$,in$,iv$,is$,jn$,jv$,js$
+      i = i + 1
+      j = j + 1
+    ENDWHILE
+
+  CLOSE #10
+  RETURN
+ENDMACRO
+
+NAME SS_GetScanParmsSub
+  PARAMETER stype$
+  LOCAL mr$,ms$,md$,na$,ns$,th$,ii$,ty$,f1$,fn$,f2$,c$,i
+
+  IF stype$ = "SCN" THEN
+    SS_Query stype$+":GRP:ACT?"
+    SS_Write stype$+":GRP:EDT "+SS_r$
+  ENDIF
+  SS_Query stype$+":MASS:RANG?"
+  mr$ = SS_r$
+  SS_Query stype$+":MASS:STEP?"
+  ms$ = SS_r$
+  SS_Query stype$+":MASS:DIR?"
+  md$ = SS_r$
+  SS_Query stype$+":NAVG?"
+  na$ = SS_r$
+  SS_Query stype$+":NSAM?"
+  ns$ = SS_r$
+  IF stype$ = "SCN" THEN
+    SS_Query stype$+":THR?"
+    th$ = SS_r$
+    SS_Query stype$+":PEAK:ISOI?"
+    ii$ = SS_r$
+  ELSE
+    th$="0"
+    ii$=""
+  ENDIF
+  SS_Query stype$+":TYPE?"
+  ty$ = SS_r$
+
+  SS_SetPStrings mr$
+
+  IF md$ = "down" THEN
+    IF ms$[1:1] <> "-" THEN
+      ms$ = "-" + ms$
+    ENDIF
+  ENDIF
+
+
+  PRINT USING #10,"/"
+  PRINT USING #10,"  Last % Parameters:/",stype$
+  f1$          = "    %%%%%%%  ####.## - ####.## AMU Step ##.### Smp=### Avg=### Thr=%/"
+  fn$          = "             ####.## - ####.## AMU/"
+  f2$          = "             (ISOI = %)/"
+  PRINT USING #10,f1$,ty$,VAL(SS_P1$),VAL(SS_P2$),VAL(ms$),VAL(ns$),VAL(na$),th$
+  i = 3                 
+  WHILE (i < SS_NP) DO
+    c$ = sprintf$ (i, "PRINT USING #10, fn$, VAL(SS_P%0d$),VAL(SS_P%%d$)")
+    c$ = sprintf$(i+1, c$) 
+    EVALUATE c$
+    i = i + 2
+  ENDWHILE
+
+  IF ii$ <> "" THEN       
+    PRINT USING #10,f2$,ii$
+  ENDIF
+
+  RETURN
+ENDMACRO
+
+NAME SS_GetAcqParms
+  PARAMETER f$
+
+  PRINT "Reading Smartcard acquisition parameters . . ."
+
+  OPEN f$ FOR APPEND AS #10
+
+  PRINT USING #10,"/"
+  PRINT USING #10,"Acquisition Parameters:/"
+
+    SS_Query "ACQ:TYPE?"
+  PRINT USING #10,"/"
+  PRINT USING #10,"  Last Acquisition Mode = %/",SS_r$
+  SS_GetScanParmsSub "SCN"
+  SS_GetScanParmsSub "PSCN"
+  SS_GetSIMParmsSub
+
+  CLOSE #1
+  RETURN
+ENDMACRO
+
+NAME SS_GetSIMParmsSub
+  LOCAL ct$,cp$,t$,w$,fmt$,fmn$,ifmt$,dfmt$,n,clen,i,j,k,c$,ii$,id$,ji$,jd$,ki$,kd$
+
+  SS_Query "SIM:GRP:ACT?"
+  SS_Write "SIM:GRP:EDT "+SS_r$
+
+  SS_Query "SIM:CYC?"
+  SS_SetPStrings SS_r$
+  ct$=SS_P1$
+  cp$=SS_P2$
+
+  SS_Query "SIM:TYPE?"
+  t$=SS_r$
+
+  SS_Query "SIM:WIDE?"
+  IF (VAL(SS_r$) <> 0) THEN
+    w$ = "YES"
+  ELSE
+    w$ = "NO"
+  ENDIF
+
+  PRINT USING #10,"/"
+  PRINT USING #10,"  Last SIM Parameters:/"
+  PRINT USING #10,"    %%%%%%%  Wide=%%%  Cycle=%(%)/",t$,w$,ct$,cp$
+  PRINT USING #10,"/"
+
+  PRINT USING #10,"               Ion   Dwell  |    Ion   Dwell  |    Ion   Dwell/"
+  PRINT USING #10,"             ------- -----  |  ------- -----  |  ------- -----/"
+  fmt$         = "             %%%%%%% %%%%%  |  %%%%%%% %%%%%  |  %%%%%%% %%%%%/"
+  fmn$         = "             <none>/"
+
+!  ifmt$        = "####.##"
+!  dfmt$        = "#.###"
+   ifmt$        = "%3.1f"
+   dfmt$        = "%1.3f" 
+   
+  SS_Query "SIM:IONS:DEF:NUM?"
+  n = VAL(SS_r$)
+
+  IF (n = 0) THEN
+    PRINT USING #10,fmn$
+  ELSE
+    clen = TRUNC(n/3)
+    IF (3*clen <> n) THEN
+      clen = clen + 1
+    ENDIF
+    i = 0
+    j = i+clen
+    k = j+clen
+    WHILE (i < clen) DO
+      SS_Query "SIM:IONS:DEF:DESC? "+VAL$(i+1)
+      SS_SetPStrings SS_r$
+      ii$ = sprintf$ (VAL(SS_P1$), ifmt$)
+      id$ = sprintf$ (VAL(SS_P2$), dfmt$)
+      IF (j >= n) THEN
+        ji$=""
+        jd$=""
+      ELSE
+        SS_Query "SIM:IONS:DEF:DESC? "+VAL$(j+1)
+        SS_SetPStrings SS_r$
+        ji$ = sprintf$ (VAL(SS_P1$), ifmt$)
+        jd$ = sprintf$ (VAL(SS_P2$), dfmt$)
+      ENDIF
+
+      IF (k >= n) THEN
+        ki$=""
+        kd$=""
+      ELSE
+        SS_Query "SIM:IONS:DEF:DESC? "+VAL$(k+1)
+        SS_SetPStrings SS_r$
+        ki$ = sprintf$ (VAL(SS_P1$), ifmt$)
+        kd$ = sprintf$ (VAL(SS_P2$), dfmt$)
+      ENDIF
+
+      PRINT USING #10,fmt$,ii$,id$,ji$,jd$,ki$,kd$
+
+      i = i + 1
+      j = j + 1
+      k = k + 1
+    ENDWHILE
+  ENDIF
+
+  RETURN
+ENDMACRO
+
+NAME MSLogSCState
+  PARAMETER force DEFAULT 1
+  LOCAL f$,r$,doit,SS_timeout 
+
+  IF _SEQUENCEON <> 0 THEN
+    IF (LEN(_DATASEQSUBDIR$) > 0) THEN
+      f$ = _DATAPATH$ + _DATASEQSUBDIR$ + "\" + _DATAFILE$
+    ELSE
+      f$ = _DATAPATH$ + _DATAFILE$
+    ENDIF
+  ELSE
+    IF (LEN(_DATASUBDIR$) > 0) THEN
+      f$ = _DATAPATH$ + _DATASUBDIR$ + "\" + _DATAFILE$
+    ELSE
+      f$ = _DATAPATH$ + _DATAFILE$
+    ENDIF
+  ENDIF           
+  
+  IF (FILESTAT(MODE,f$) = 2) THEN       
+    f$ = f$ + "\SCSTATE.TXT"
+  ELSE
+    ! This directory doesn't exist; use _tunepath$ 
+    f$ = _TUNEPATH$ + "SCSTATE.TXT"
+  ENDIF
+
+  MSSCTRACE 1
+ 
+  IF CHECK (Variable, sctimeout) = 1 THEN
+    SS_timeout = SCTIMEOUT
+  ELSE
+    SS_timeout = 0
+  ENDIF
+  SCTIMEOUT = 10
+  
+  doit=1
+  IF (force = 0) THEN
+    SS_Query "RUN:EVNT:NUM?"
+    IF (VAL(SS_r$) = 0) THEN
+      doit=0
+    ENDIF
+  ENDIF
+  IF (doit <> 0) THEN
+     SS_Prepare      f$
+     SS_GetSCConfig  f$
+     SS_GetRunTable  f$
+     SS_GetRunEvents f$
+     SS_GetMSParms   f$
+     SS_GetMSSensors f$
+     SS_GetAcqParms  f$
+     SS_GetSCTrace   f$
+     SS_RemPStrings
+  ENDIF
+  
+  IF (SS_timeout > 0)
+    SCTIMEOUT = SS_timeout
+  ELSE
+    REMOVE SCTIMEOUT
+  ENDIF
+
+  RETURN
+ENDMACRO
+

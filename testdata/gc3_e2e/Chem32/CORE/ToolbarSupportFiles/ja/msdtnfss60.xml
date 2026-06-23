@@ -1,0 +1,46 @@
+<!--============================================================================
+! MSDtnfss60.xml Toolbar description for G1960 model with fast scan
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2006.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-->
+<!-- edited (vim) by ueff 060328 -->
+<graphical_object>
+  <toolbar Name="MSDTunes" PosStyle="TOP" Caption="&quot;MSDTunes&quot;" PanelName="Chem">
+
+    <Static Name="PolarityLabel" Text="極性" Help="現在のチューンファイルの極性を表示および設定します"/>
+
+    <NonEditCombobox Name="Polarity" Help="現在のチューンファイルの極性を表示および設定します" Enable="1" DefCommand="Print &quot;Polarity undefined&quot;," Width="100" TextList="ポジティブ|ネガティブ" CmdList="MSTN_ChangePolarity 0 | MSTN_ChangePolarity 1" DefCmdParNumber="0"/>
+
+    <Static Name="TuneIonModeLabel" Text="モード" Help="チューンファイルにより要求されたイオン化モードを表示します"/>
+
+    <NonEditCombobox Name="TuneIonMode" Help="現在のチューンファイルのイオン源モードを表示および設定します" Enable="1" DefCommand="Print &quot;Mode undefined&quot;," Width="100" TextList="1.API-ES|2.APCI|3.APPI|4.MM-ES+APCI|5.MM-ES|6.MM-APCI|7.NanoESI|8.ChipCube|9.AJS-ES" CmdList="MSTN_ChangeIMode API_ES | MSTN_ChangeIMode APCI | MSTN_ChangeIMode APPI | MSTN_ChangeIMode &quot;MM-ES+APCI&quot; | MSTN_ChangeIMode &quot;MM-ES&quot; | MSTN_ChangeIMode &quot;MM-APCI&quot; | MSTN_ChangeIMode &quot;NANOESI&quot; | MSTN_ChangeIMode &quot;CHIPCUBE&quot; | MSTN_ChangeIMode &quot;AJS-ES&quot;" DefCmdParNumber="0"/>
+
+    <Static Name="InstIonModeLabel" Text="ソース" Help="MSD から読み取られた実際のイオン化モードを表示します"/>
+
+    <StatusList Name="InstIonMode" Text="未知" Help="&quot;MSD から読み取られる現在のイオン化モードを表示します&quot;" Width="100"/>
+
+    <Static Name="CalLabel" Text="キャリブラント" Help="MSOn の時に MSD に送信されるキャリブラント設定を選択します"/>
+
+    <NonEditCombobox Name="CalMode" Help="キャリブラントが次の MSOn の時に有効にされるか選択します" Enable="1" DefCommand="MSTN_Calibrant 1" Width="100" TextList="オフ|オン" CmdList="MSTN_Calibrant 1| MSTN_Calibrant 2" DefCmdParNumber="0"/>
+
+    <Static Name="ScanLabel" Text="スキャン" Help="MSOn の時に MSD に送信されるキャリブラント設定を選択します"/>
+
+    <NonEditCombobox Name="ScanMode" Help="現在のチューンファイルのスキャンモードを表示および設定します" Enable="1" DefCommand="Print &quot;ScanMode undefined&quot;," CmdList="MSTN_ChangeScanMode 0 | MSTN_ChangeScanMode 1" Width="100" TextList="標準 | 高速" DefCmdParNumber="0"/>
+  </toolbar>
+</graphical_object>

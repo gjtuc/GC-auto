@@ -1,0 +1,2775 @@
+
+! ==============================================================================
+! Function Name:   vClearVariables
+! Function Description:
+!    This routine sets NULL to all of the global variables for the "Import CSV".
+! Parameter Passed-In:
+!    None.
+! Function Return:
+!    None.
+! Revision History:
+! 01/02/01 YD  First created.
+! ==========================================================================
+name vClearVariables
+
+  ! The general global string buffer
+  sBuf$ = ""
+
+  ! The string buffer for the header names defined in the CSV file
+  sHeader$ = "" 
+
+  ! The string buffer for the header names in the stabhdr.txt or xtabhdr.txt file
+  sTextHdr$ = "" 
+
+  ! The string buffer for the header alias names
+  sTextAlias$ = ""
+
+  ! The string buffer for the compound names defined in the CSV file
+  sCompName$ = ""
+
+  ! The total number of header names defined in the CSV file
+  iTotalCol = 0 
+
+  ! The total number of header names in the stabhdr.txt or xtabhdr.txt file
+  iTotalTextHdr = 0  
+
+  ! The total number of compounds defined in the CSV file
+  iTotalComp = 0 
+   
+  ! The total number of alias names.
+  iAlias = 0
+
+  ! The column names used inteally by the ChemStation
+  sStable$ = ""
+  sXtable$ = ""
+
+endmacro
+
+
+! ==============================================================================
+! Function Name:   vInitVariables
+! Function Description:
+!    This routine sets the initial values to the global variables for the
+!    "Import CSV".
+! Parameter Passed-In:
+!    None.
+! Function Return:
+!    None.
+! Revision History:
+! 01/02/01 YD  First created.
+! ==========================================================================
+name vInitVariables
+
+  ! The general global string buffer
+  sBuf$ = ""
+
+  ! The string buffer for the header names defined in the CSV file
+  sHeader$ = "" 
+
+  ! The string buffer for the header names in the stabhdr.txt or xtabhdr.txt file
+  sTextHdr$ = "" 
+
+  ! The string buffer for the header alias names
+  sTextAlias$ = ""
+
+  ! The string buffer for the compound names defined in the CSV file
+  sCompName$ = ""
+
+  ! The total number of header names defined in the CSV file
+  iTotalCol = 0 
+
+  ! The total number of header names in the stabhdr.txt or xtabhdr.txt file
+  iTotalTextHdr = 0  
+
+  ! The total number of compounds defined in the CSV file
+  iTotalComp = 0 
+   
+  ! The total number of alias names.
+  iAlias = 0
+
+  ! The column names used inteally by the ChemStation
+  sStable$ = "LOCATION,SAMPLENAME,METHOD,INJVIAL,SAMPLETYPE,CALLEVEL,UPDATERF,UPDATERT,INTERVAL,AMOUNT,ISTDAMT,MULTIPLIER,DILUTION,DATAFILENAME,INJVOLUME,SAMPLEINFO,CALLINE,"
+  sXtable$ = "LOCATION,SAMPLENAME,METHOD,INJVIAL,SAMPLETYPE,CALLEVEL,CALIBACTION,UPDATERT,INTERVAL,AMOUNT,ISTDAMT,MULTIPLIER,DILUTION,DATAFILENAME,INJVOLUME,SAMPLEINFO,SAMPLEID,CALLINE,"
+
+endmacro
+
+
+! ==============================================================================
+! Function Name:   sFindCSVFile$
+! Function Description:
+!    This routine let user select a CSV file to be inported to the sequence table.
+! Parameter Passed-In:
+!    sMode$ - Specify if this is for the STANDARD or EXTENDED sequence table.
+! Function Return:
+!    The full path of the CSV file name.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==========================================================================
+name sFindCSVFile$  
+   parameter sMode$  default "STANDARD"
+   local iRet
+   local sPath$, sFile$
+   local iType  
+   local iLen
+
+   on error print
+   iType = 0  
+   sPath$ = _SEQPATH$
+   while (iType <> 1)
+      sFile$ = ""
+      if sMode$ = "EXTENDED"
+         iRet = SelectFile(1, "Please select a CSV file for importing to DEF_LC.SE:", "CSV(*.CSV)", sPath$, sFile$, iType)
+      else 
+         iRet = SelectFile(1, "Please select a CSV file for importing to DEF_LC.S:", "CSV(*.CSV)", sPath$, sFile$, iType)         
+      endif
+      if (iRet = 0)
+         return ""
+      endif
+      if (iRet = 2)
+         if (iType = 1)
+            return sPath$+sFile$
+          else  
+            iType = 0
+         endif
+      else
+         ! iRet = SelectFile(1, "Please select a CSV file for importing to " + _SEQFILE$ + ":", "CSV(*.CSV)", sPath$, sFile$, iType)
+         iType = 0             
+      endif
+   endwhile
+   
+endmacro
+
+
+! ==============================================================================
+! Function Name:   vClearnupTable
+! Function Description:
+!    This routine cleans up the sequence table.
+! Parameter Passed-In:
+!    sMode$ - Specify if this is for the STANDARD or EXTENDED sequence table.
+! Function Return:
+!    None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==========================================================================
+name vCleanupTable
+    parameter sMode$ default "STANDARD"
+    local iTabLen
+    local i
+    local sCol$
+    local iMaxCol
+    
+    on error print
+    if sMode$ = "EXTENDED"
+       iMaxCol = 18
+    else
+       iMaxCol = 17
+    endif
+    
+    DelTabRow _Sequence[1], SeqTable1, -1   
+    iTabLen = TabHdrVal(_Sequence[1], SeqTable1, "NumberOfCol")
+    if iTabLen > iMaxCol
+       for i=18 to iTabLen
+          sCol$ = TabColName$ (_Sequence[1], SeqTable1, i)
+          DelTabCol _Sequence[1], SeqTable1, sCol$
+       next i
+    endif
+
+endmacro 
+
+
+! ==============================================================================
+! Function Name:   vDisableSequenceMenu
+! Function Description:
+!    This routine disables some of the sequence menus, such as Sequence Table,
+!    Sequence Parameters, New Sequence, Load Sequence, Save Sequence As,
+!    Import from CSV, Partial Sequence.
+! Function Return:
+!    None.
+! Revision History:
+! 01/08/01 YD  First created.
+! ==========================================================================
+name vDisableSequenceMenu
+    
+    on error print
+    
+    MenuState "&Sequence", "Sequence Para&meters...", Insensitive  
+    MenuState "&Sequence", "Sequence &Table...", Insensitive    
+    MenuState "&Sequence", "Pa&rtial Sequence...", Insensitive    
+    
+    if iEnableExtSeq() = 1
+        MenuState "&Sequence", "&New Sequence|&Standard", Insensitive   
+        MenuState "&Sequence", "&New Sequence|&Extended", Insensitive  
+        MenuState "&Sequence", "&Load Sequence|&Standard...", Insensitive   
+        MenuState "&Sequence", "&Load Sequence|&Extended...", Insensitive 
+        MenuState "&Sequence", "Save Sequence &As|&Standard...", Insensitive   
+        MenuState "&Sequence", "Save Sequence &As|&Extended...", Insensitive 
+        MenuState "&Sequence", "&Import from CSV|&Standard...", Insensitive   
+        MenuState "&Sequence", "&Import from CSV|&Extended...", Insensitive                                            
+    else
+        MenuState "&Sequence", "&New Sequence", Insensitive   
+        MenuState "&Sequence", "&Load Sequence...", Insensitive   
+        MenuState "&Sequence", "Save Sequence &As...", Insensitive   
+        MenuState "&Sequence", "&Import from CSV...", Insensitive   
+    endif
+    
+endmacro 
+
+
+
+
+! ==============================================================================
+! Function Name:   vEnableSequenceMenu
+! Function Description:
+!    This routine enables some of the sequence menus, such as Sequence Table,
+!    Sequence Parameters, New Sequence, Load Sequence, Save Sequence As,
+!    Import from CSV, Partial Sequence.
+! Function Return:
+!    None.
+! Revision History:
+! 01/08/01 YD  First created.
+! ==========================================================================
+name vEnableSequenceMenu
+    
+    on error print
+    
+    MenuState "&Sequence", "Sequence Para&meters...", Sensitive  
+    MenuState "&Sequence", "Sequence &Table...", Sensitive    
+    MenuState "&Sequence", "Pa&rtial Sequence...", Sensitive    
+    
+    if iEnableExtSeq() = 1
+        MenuState "&Sequence", "&New Sequence|&Standard", Sensitive   
+        MenuState "&Sequence", "&New Sequence|&Extended", Sensitive  
+        MenuState "&Sequence", "&Load Sequence|&Standard...", Sensitive   
+        MenuState "&Sequence", "&Load Sequence|&Extended...", Sensitive 
+        MenuState "&Sequence", "Save Sequence &As|&Standard...", Sensitive   
+        MenuState "&Sequence", "Save Sequence &As|&Extended...", Sensitive 
+        MenuState "&Sequence", "&Import from CSV|&Standard...", Sensitive   
+        MenuState "&Sequence", "&Import from CSV|&Extended...", Sensitive                                            
+    else
+        MenuState "&Sequence", "&New Sequence", Sensitive   
+        MenuState "&Sequence", "&Load Sequence...", Sensitive   
+        MenuState "&Sequence", "Save Sequence &As...", Sensitive   
+        MenuState "&Sequence", "&Import from CSV...", Sensitive   
+    endif
+    
+endmacro 
+
+
+
+
+! ===================================================================
+! Function Name:  iIsSequenceRunning
+! Function Description:
+!     This routine checks if the sequence is currently running or
+!     not.
+! Function Return:
+!     1 if sequence is currently running.
+!     0 otherwise.
+! Revision History:
+! 01/08/01 YD  First created.
+! ===================================================================
+name iIsSequenceRunning
+
+    if (Check(Variable, _SequenceOn)  = 1)
+      if _SequenceOn = 1
+         iRet = Alert ("Cannot import CSV to sequence table while sequence is running.", 3, "Import CSV")
+         return 1
+       endif
+    endif 
+    
+    return 0
+    
+endmacro   
+
+
+! ==============================================================
+! Function Name:      ImportCSVFile  
+! Function Description:
+!     This is the main routine to do the "Import CSV" task.
+! Parameter Passed-In:
+!    sMode$ - A string for the standard or extended sequence
+!             table. A valid string must be either "STANDARD"
+!             or "EXTENDED". The default is "STANDARD".
+!    sCSVFile$ - The name of the CSV file to be imported.
+! Revision History:
+! 12/15/00 YD  First created.
+! ==============================================================
+name ImportCSVFile
+    parameter sMode$  default "STANDARD"
+    parameter sCSVFile$  default ""    
+    ! local sCSVFile$
+    ! local sBuf$
+    local iLines
+    local iRet
+    local iLen
+    local iPos
+
+    on error print  
+
+    if iIsSequenceRunning() = 1
+       return
+    endif
+    
+    sMode$ = UpperCase$(sMode$)
+    if (sMode$ <> "STANDARD") AND (sMode$ <> "EXTENDED")
+        iRet = Alert ("Invalid string " + sMode$ + " for the parameter sMode.", 3, "ImportCSVFile")
+        return
+    endif 
+    
+    ! iRet = Alert ("Importing CSV will replacing the information stored in the current sequence table in " + _SEQFILE$ + ". Do you want to continue?", 4, "Import CSV")
+    ! if iRet <> 1
+    !     return
+    ! endif
+
+    ! sCSVFile$ = "" 
+    sCSVFile$ = sRemoveLeadingBlanks$(sCSVFile$)
+    if sCSVFile$ = ""
+       sCSVFile$ = sFindCSVFile$(sMode$)
+    endif
+    
+    if sCSVFile$ = ""
+       return
+    endif    
+    
+    if iCSVFileNameOK(sCSVFile$) <> 1
+        iRet = Alert ("Error: Invalid CSV file name.", 3, "ImportCSVFile")
+        return
+    endif    
+    
+    if Check(VARIABLE, _SEQUENCECHANGED) = 1
+       while _SEQUENCECHANGED <> 0
+          iRet = Alert ("You have previously made some changes to the " + _SEQFILE$ + " file." + chr$(13) + chr$(10) + "Do you want to save this sequence file?", 5, "Import CSV")
+          if iRet = -1
+             return
+          endif
+          if iRet = 1
+             SaveCurrentSequence
+          endif
+          if iRet = 0
+             _SEQUENCECHANGED = 0
+          endif
+       endwhile
+    endif 
+    
+    vInitVariables 
+    
+    vDisableSequenceMenu
+
+    if sMode$ = "EXTENDED"
+       SequenceNew "SE"
+    else
+       SequenceNew
+    endif
+    
+    ! Open the user defined CSV file for read. #3 = CSV-file
+    Open sCSVFile$ For Input As #3
+    
+    ! Check if we find the [Table] section in the CSV file.
+    if iFindTableSection() <> 1
+       iRet = Alert ("Error: Could not find the [Table] section in " + sCSVFile$ + ".", 3, "Import CSV")
+       Close #3
+       vClearVariables
+       vEnableSequenceMenu
+       on error
+       return
+    endif
+    
+    ! Check the CSV header names for errors. 
+    message "Parsing the CSV headers..."
+    if iCheckHeaders(sMode$) <> 1
+       Close #3
+       vClearVariables
+       vEnableSequenceMenu             
+       on error
+       return
+    endif 
+    
+    ! Clean up the current existing sequence table    
+    message "Preparing the sequence table..."
+    vCleanupTable sMode$        
+        
+    ! Need to setup the compound information
+    if (sMode$ = "EXTENDED") AND (iTotalComp > 0)
+       vUpdateExtHeader
+    endif      
+
+    ! vCleanupTable
+    
+    _SEQUENCECHANGED = 1
+    iLines = 0
+    while (sBuf$ <> "") AND (iLines < 999)
+       sBuf$ = ""
+       ! iLines = iLines + 1
+       on error goto IMPORTCSVFILE1
+       Input Using #3, "L", sBuf$
+       if sBuf$ <> "" 
+           on error print
+           message "Processing sequence table line #" + VAL$(iLines+1) + " ..."
+           if sMode$ = "STANDARD"
+              vUpdateStdSeqTableRow sBuf$ 
+           else
+              vUpdateExtSeqTableRow sBuf$
+           endif  
+           iLines = iLines + 1           
+       endif
+    endwhile
+    
+IMPORTCSVFILE1:
+     
+    on error print
+    
+    if (sBuf$ <> "") AND (iLines >= 999)   
+       on error print
+       sBuf$ = ""
+       ! Check if there are more lines to come-in
+       Input Using #3, "L", sBuf$ 
+       if (sBuf$ <> "")
+          iRet = Alert ("Sequence Table only can handle 999 lines. The remaining lines in the CSV file will be truncated.", 2, "Import CSV")    
+       endif
+    endif
+    
+    Close #3     
+    
+    vClearVariables        
+    vEnableSequenceMenu        
+
+    if Check(VARIABLE, _SEQUENCECHANGED) = 1
+       if _SEQUENCECHANGED <> 0
+          iRet = Alert ("Please use the Sequence Table Editor under the Sequence menu to complete this Import CSV task.", 2, "Import CSV")
+       endif
+    endif   
+    
+    message "Please use the Sequence Table Editor to complete this Import CSV task."
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateExtHeader
+! Function Description:
+!    The original sHeader$ contains all the regular sequence table header names
+!    as well as the compound names. This routine extracts the compound names
+!    from the sHeader$, and put them into the sCompName$. In addition, this
+!    routine also sets the "CompNames" table in the current sequence register
+!    according to the information in the newly updated sCompName$.
+! Function Return:  None.
+! Revision History:
+! 12/28/00 YD  First created.
+! ==============================================================================
+name vUpdateExtHeader
+   local i  
+   local iLen 
+   local iIndex
+   local sTedName$ 
+   local sTabName$  
+   local s1$, s2$
+
+   on error print   
+   if (iTotalCol <= 0)
+     sCompName$ = sHeader$
+     sHeader$ = ""
+     return
+   endif
+   
+   if (iTotalComp <= 0)
+     sCompName$ = ""
+     return
+   endif
+   
+   iLen = LEN(sHeader$)
+   if iLen <= 0
+      return
+   endif
+   
+   iIndex = 0
+   i = 1
+   while (iIndex < iTotalCol) AND (i <= iLen)
+     if sHeader$[i] = ","
+        iIndex = iIndex + 1
+     endif
+     i = i + 1
+   endwhile
+      
+   sCompHdr$ = sHeader$[i:iLen]
+   sHeader$ = sHeader$[1:(i-1)] 
+     
+   s1$ = sCompHdr$
+   s2$ = sHeader$  
+   
+   if (ObjHdrType(_Sequence[1], "CompNames") = 4) 
+       DelTabRow _Sequence[1], "CompNames", -1
+   endif
+   for i=1 to iTotalComp
+       InsTabRow _Sequence[1], "CompNames", 
+       sTabName$ = "Cmpd" + VAL$(i)
+       sTedName$ = sGetNthTok$(sCompHdr$, i)
+       SetTabText _Sequence[1], "CompNames", i, "TabName", sTabName$
+       SetTabText _Sequence[1], "CompNames", i, "TedName", sTedName$ 
+       NewColText _Sequence[1], SeqTable1, sTabName$, , 0, 13            
+   next i
+
+   return   
+
+endmacro
+
+
+! ==============================================================================
+! Function Name:  vUpdateStdSeqTableRow
+! Function Description:
+!    Given a buffer (sBuf$) that contains a line of sequence information,
+!    this routine appends a new row in the current sequence table, and
+!    imports these information into this sequence row.
+!    This routine is written for the standard sequence table only.
+! Parameter Passed-In: sBuf$ - A string that contains one sequence line 
+!                              under the [Table] section of the ginve CSV
+!                              file.
+! Function Returns:   None.
+! Revision History:
+! 12/28/00 YD  First created.
+! ==============================================================================
+name vUpdateStdSeqTableRow
+   parameter sBuf$ default ""
+   local iLen
+   local i
+   local sTok$
+   local sCol$
+   local iRow
+   local sAlias$
+   local iRet
+
+   on error print
+   iLen = LEN(sBuf$)
+   if iLen < 1 
+      ! we have nothing to do
+      return
+   endif
+
+   if iTotalCol <= 0
+     ! we have nothing to do.
+     return
+   endif
+
+   InsTabRow _Sequence[1], SeqTable1,
+   for i=1 to iTotalCol
+     sTok$ = sGetNthTok$(sBuf$,i) 
+     sAlias$ = sGetNthTok$(sHeader$, i) 
+     sCol$ = sGetSeqHdr$(sAlias$)
+     if sCol$ = ""
+        ! This situation should never happen.
+        iRet = Alert ("Error: Invalid sequence header name " + sAlias$ + " in the CSV file.", 3, "Import CSV")
+        return
+     endif
+     iRow = TabHdrVal(_Sequence[1], SeqTable1, "NumberOfRows") 
+     vUpdateStdSeqTblCol sCol$, sTok$, iRow
+   next i
+
+   return
+
+endmacro
+          
+          
+! ==============================================================================
+! Function Name:  vUpdateExtSeqTableRow
+! Function Description:
+!    Given a buffer (sBuf$) that contains a line of sequence information,
+!    this routine appends a new row in the current sequence table, as well as
+!    the "CompNames" table, and imports these information into this sequence 
+!    row.
+!    This routine is written for the extended sequence table only.
+! Parameter Passed-In: sBuf$ - A string that contains one sequence line 
+!                              under the [Table] section of the ginve CSV
+!                              file.
+! Function Returns:   None.
+! Revision History:
+! 12/28/00 YD  First created.
+! ==============================================================================
+name vUpdateExtSeqTableRow
+   parameter sBuf$ default ""
+   local iLen
+   local i
+   local sTok$
+   local sCol$
+   local iRow
+   local sAlias$
+   local iRet
+
+   on error print
+   iLen = LEN(sBuf$)
+   if iLen < 1
+      return
+   endif
+
+   if iTotalCol <= 0
+     ! Let's update the compound names
+     goto UPDATEEXTSEQCOMP
+   endif
+
+   InsTabRow _Sequence[1], SeqTable1,   
+   for i=1 to iTotalCol
+     sTok$ = sGetNthTok$(sBuf$,i) 
+     sAlias$ = sGetNthTok$(sHeader$, i) 
+   
+     sCol$ = sGetSeqHdr$(sAlias$)
+     if sCol$ = ""  
+        ! This should never happen.
+        iRet = Alert ("Error: Invalid sequence header name " + sAlias$ + " in the CSV file.", 3, "Import Extended CSV")
+        return
+     endif
+     iRow = TabHdrVal(_Sequence[1], SeqTable1, "NumberOfRows") 
+     vUpdateExtSeqTblCol sCol$, sTok$, iRow
+   next i 
+   
+UPDATEEXTSEQCOMP:
+
+   if iTotalComp <= 0
+     ! we don't need to do anything.
+     return
+   endif
+   
+   ! Now, lets update the compound names
+   for i=1 to iTotalComp
+     sTok$ = sGetNthTok$(sBuf$,iTotalCol+i) 
+     sTabName$ = TabText$ (_Sequence[1], "CompNames", i, "TabName")
+     iRow = TabHdrVal(_Sequence[1], SeqTable1, "NumberOfRows") 
+     vUpdateExtSeqTblCol sTabName$, sTok$, iRow
+   next i    
+
+   return
+
+endmacro
+          
+          
+
+! ==============================================================================
+! Function Name:   vUpdateVial
+! Function Description:
+!      This routine updates the vial location information in the sequence table.
+!      WPS is supported in this routine.
+! Parameter Passed-In:
+!    sTok$ - The vial number string
+!    iRow  - The row number in the sequence table.
+! Function Return:   None.
+! Revision History:
+! 12/29/00 YD  First created.
+! ==============================================================================
+name vUpdateVial 
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local sNum 
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif  
+  
+  if (sTok$ = "") OR (sTok$ = "0") OR (sTok$[1] = "-") OR (InStr(sTok$, ".")>=1)
+    iRet = Alert ("Invalid vial location " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + "." + chr$(13) + chr$(10) + "A defaul value 1 will be used.", 2, "Import CSV")
+    SetTabVal _Sequence[1], SeqTable1, iRow, "Vial", 1
+    return
+  endif 
+  
+  ! Added WPS support.
+  if Check(FUNCTION, GetPlatePosNumber) = 1
+     sNum = GetPlatePosNumber(sTok$)
+     if sNum <= 0
+       iRet = Alert ("Invalid vial location " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + "." + chr$(13) + chr$(10) + "A defaul value 1 will be used.", 2, "Import CSV")
+       SetTabVal _Sequence[1], SeqTable1, iRow, "Vial", 1
+     else
+       SetTabVal _Sequence[1], SeqTable1, iRow, "Vial", sNum     
+     endif  
+     return
+  endif
+
+  SetTabVal _Sequence[1], SeqTable1, iRow, "Vial", VAL(sTok$)
+
+  return
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateMethod
+! Function Description:
+!      This routine updates the method name information in the sequence table.
+!      WPS is supported in this routine.
+! Parameter Passed-In:
+!    sTok$ - The vial number string
+!    iRow  - The row number in the sequence table.
+! Function Return:   None.
+! Revision History:
+! 12/29/00 YD  First created.
+! ==============================================================================
+name vUpdateMethod 
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local iPos 
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+
+  if sTok$ = ""
+    iRet = Alert ("Invalid method name is specified for the sequence table line #" + VAL$(iRow) + ". DEF_LC.M will be used.", 2, "Import CSV")
+    sTok$ = "DEF_LC"
+  endif
+       
+  iPos = InStr(UpperCase$(sTok$), ".M")
+     
+  if iPos >= 1
+     sTok$ = sTok$[1:(iPos - 1)]
+  endif
+  
+  if filestat(MODE, _METHPATH$ + sTok$ + ".M") <> 2
+    iRet = Alert ("The method name " + sTok$ + ".M specified for the sequence table line #" + VAL$(iRow) + " does not exist. DEF_LC.M will be used.", 2, "Import CSV")
+    sTok$ = "DEF_LC" 
+  endif
+
+  SetTabtext _Sequence[1], SeqTable1, iRow, "Method", sTok$
+
+  return
+
+endmacro
+
+
+! ==============================================================================
+! Function Name:   sRemoveLeadingBlanks$
+! Function Description:
+!      This routine removes all the leading blanks in the given string.
+! Parameter Passed-In:
+!    sBuf$ - The buffer contains the string.
+! Function Return:   A new string with all the leading blanks to be removed.
+! Revision History:
+! 12/29/00 YD  First created.
+! ==============================================================================
+name sRemoveLeadingBlanks$
+  parameter sBuf$ default ""
+  local iLen
+  local i
+
+  on error print  
+  iLen = LEN(sBuf$)
+  if iLen <= 0
+     return ""
+  endif
+  
+  ! if iLen >= 1
+  !   while (sBuf$[1] = " ") AND (iLen >= 1)
+  !     if iLen = 1
+  !        return ""
+  !     else
+  !        sBuf$ = sBuf$[2:iLen]
+  !     endif
+  !     iLen = LEN(sBuf$)
+  !   endwhile
+  ! endif 
+  
+  for i=1 to iLen
+      if sBuf$[i] <> " "
+          goto SREMOVE1
+      endif
+  next i
+
+  
+SREMOVE1:
+  if i > iLen
+     return ""
+  else
+     return sBuf$[i:iLen]
+  endif
+   
+endmacro 
+ 
+ 
+
+! ==============================================================================
+! Function Name:   vUpdateCalLine
+! Function Description:
+!      This routine updates the CalLine column in the sequence table for
+!      the given row.
+!      Note: I don't know if the sequenc for the LCMS ever use this column
+!            or not since the LCMS user won't be able to access this column
+!            through Sequence Table Editor at all.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateCalLine 
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local iLen   
+  local i
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif 
+   
+  sTok$ = sRemoveLeadingBlanks$(sTok$) 
+  
+  i = VAL(sTok$)
+  iLen = LEN(sTok$)
+  
+  if iLen > 0
+    if (i < 1) OR (i > 9) OR (iLen > 1)
+      iRet = Alert ("Invalid CalLine " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". Blank string will be used.", 2, "Import CSV")
+      sTok$ = ""
+    endif
+  endif
+  
+  SetTabtext _Sequence[1], SeqTable1, iRow, "CalLine", sTok$
+
+  return
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateInjVial
+! Function Description:
+!      This routine updates the InjVial column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateInjVial 
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local iRet
+  
+  on error print  
+  if iRow <= 0
+    return
+  endif
+
+  if (sTok$ = "") OR (VAL(sTok$) <= 0) OR (InStr(sTok$, ".") >= 1) OR (VAL(sTok$) > 99)
+    iRet = Alert ("Invalid InjVial " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". A defaul value 1 will be used.", 2, "Import CSV")
+    sTok$ = "1"
+  endif
+
+  SetTabVal _Sequence[1], SeqTable1, iRow, "InjVial", VAL(sTok$)
+
+  return
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateInjVolume
+! Function Description:
+!      This routine updates the InjVolume column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateInjVolume 
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+
+  if sTok$ <> ""
+    if (VAL(sTok$) <= 0) OR (InStr(sTok$, ".") >= 1)
+      iRet = Alert ("Invalid InjVolume " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". A blank will be used for this field.", 2, "Import CSV")
+      sTok$ = ""
+    endif
+  endif
+
+  SetTabText _Sequence[1], SeqTable1, iRow, "InjVolume", sTok$
+
+  return
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateStdSampleType
+! Function Description:
+!      This routine updates the SampleType column in the standard sequence table 
+!      for the given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateStdSampleType 
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local sUtok$ 
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+  
+  sUtok$ = UpperCase$(sTok$)
+
+  if sUtok$ = "CALIBRATION"
+      SetTabVal _Sequence[1], SeqTable1, iRow, "SampleType", 3
+      return
+  endif
+  
+  if sUtok$ = "CONTROL SAMPLE"
+      SetTabVal _Sequence[1], SeqTable1, iRow, "SampleType", 4
+      return
+  endif   
+  
+  if (sUtok$ <> "SAMPLE")
+    iRet = Alert ("Invalid SampleType " + sTok$ + " is specified in for the sequence table line #" + VAL$(iRow) + ". A defaul type SAMPLE will be used.", 2, "Import Standard CSV")
+  endif   
+  
+  SetTabVal _Sequence[1], SeqTable1, iRow, "SampleType", 1
+
+  return
+
+endmacro
+
+
+! ==============================================================================
+! Function Name:   vUpdateExtSampleType
+! Function Description:
+!      This routine updates the SampleType column in the extended sequence table 
+!      for the given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateExtSampleType 
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local sUtok$ 
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+  
+  sUtok$ = UpperCase$(sTok$)  
+  
+  if (sUtok$ = "UNKNOWN") OR (sUtok$ = "1")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "SampleType", 1
+      return
+  endif  
+  
+  if (sUtok$ = "STANDARD") OR (sUtok$ = "3")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "SampleType", 3
+      return
+  endif    
+ 
+  if (sUtok$ = "QUALITY CONTROL") OR (sUtok$ = "4")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "SampleType", 4
+      return
+  endif
+  
+  if (sUtok$ = "BLANK") OR (sUtok$ = "6")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "SampleType", 6
+      return
+  endif    
+  
+  if (sUtok$ = "DOUBLE BLANK") OR (sUtok$ = "7")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "SampleType", 7
+      return
+  endif  
+  
+  if (sUtok$ = "SOLVENT") OR (sUtok$ = "8")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "SampleType", 8
+      return
+  endif  
+
+  iRet = Alert ("Invalid SampleType " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". A defaul type UNKNOWN will be used.", 2, "Import Extended CSV")
+         
+  SetTabVal _Sequence[1], SeqTable1, iRow, "SampleType", 1
+
+  return
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateCalLevel
+! Function Description:
+!      This routine updates the CalLevel column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateCalLevel 
+  parameter sTok$ default ""
+  parameter iRow default 0
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+  
+  sTok$ = sRemoveLeadingBlanks$(sTok$)   
+    
+  if (sTok$ = "") OR (sTok$ = " ")
+     sTok$ = "1"
+  endif
+      
+  if (VAL(sTok$) <= 0) OR (VAL(sTok$) >= 100) OR (InStr(sTok$, ".") >= 1)
+    iRet = Alert ("Invalid CalLevel " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". A default value 1 will be used internally in the sequence table register.", 2, "Import CSV")
+    sTok$ = "1"
+  endif 
+  
+  SetTabVal _Sequence[1], SeqTable1, iRow, "CalLevel", VAL(sTok$)
+
+  return
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateCalibAction
+! Function Description:
+!      This routine updates the CalibAction column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateCalibAction
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local sUtok$ 
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+   
+  sTok$ = sRemoveLeadingBlanks$(sTok$)   
+  sUtok$ = UpperCase$(sTok$)
+  
+  if (sUtok$ = "AVERAGE") OR (sTok$ = "1") OR (sUtok$ = "")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRF", 1
+      return
+  endif
+  
+  ! if (sUtok$ = "BRACKET") OR (sTok$ = "3")
+  !    SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRF", 3
+  !    return
+  ! endif 
+
+  iRet = Alert ("Invalid CalibAction " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ".", 2, "Import Extended CSV")
+  
+  SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRF", 1
+
+  return
+
+endmacro  
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateUpdateRF
+! Function Description:
+!      This routine updates the UpdateRF column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateUpdateRF
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local sUtok$
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+   
+  sTok$ = sRemoveLeadingBlanks$(sTok$)   
+  sUtok$ = UpperCase$(sTok$)
+  
+  if (sUtok$ = "AVERAGE") OR (sTok$ = "1")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRF", 1
+      return
+  endif
+  
+  if (sUtok$ = "NO UPDATE") OR (sTok$ = "0")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRF", 0
+      return
+  endif 
+  
+  if (sUtok$ = "REPLACE") OR (sTok$ = "2")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRF", 2
+      return
+  endif  
+  
+  if (sUtok$ = "BRACKET") OR (sTok$ = "3")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRF", 3
+      return
+  endif 
+
+  if (sUtok$ = "DELTA%") OR (sTok$ = "4")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRF", 4
+      return
+  endif 
+             
+  iRet = Alert ("Invalid UpdateRF " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ".", 2, "Import Standard CSV")
+  
+  SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRF", 1
+
+  return
+
+endmacro  
+
+
+ 
+ 
+! ==============================================================================
+! Function Name:   vUpdateUpdateRT
+! Function Description:
+!      This routine updates the UpdateRT column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateUpdateRT
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local sUtok$ 
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+
+  sTok$ = sRemoveLeadingBlanks$(sTok$)     
+  sUtok$ = UpperCase$(sTok$)
+  
+  if (sUtok$ = "AVERAGE")  !!! OR (sTok$ = "1")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRT", 1
+      return
+  endif
+  
+  if (sUtok$ = "NO UPDATE") !!!  OR (sTok$ = "0")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRT", 0
+      return
+  endif 
+  
+  if (sUtok$ = "REPLACE") !!! OR (sTok$ = "2")
+      SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRT", 2
+      return
+  endif  
+  
+  iRet = Alert ("Invalid UpdateRT " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". A defaul type Average will be used.", 2, "Import CSV")
+  
+  SetTabVal _Sequence[1], SeqTable1, iRow, "UpdateRT", 1
+
+  return
+
+endmacro  
+   
+   
+   
+! ==============================================================================
+! Function Name:   iIsDataFilenameOK
+! Function Description:
+!      This routine checks if the given data file name is OK or not.
+!      Note: Blank is OK in the sequence table.
+! Parameter Passed-In:
+!    sName$ - The data file name to be checked.
+! Function Return:   1 - OK     0 - otherwise.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name iIsDataFilenameOK 
+  parameter sName$ default "'"
+  local iLen
+  local iExt
+  
+  on error print
+  
+  iLen = LEN(sName$)
+  
+  if (iLen = 0) OR (sName$ = " ")
+      return 1
+  endif
+  
+  if (InStr(sName$, "'")>0) OR (InStr(sName$, "<")>0) OR (InStr(sName$, ">")>0) OR (InStr(sName$, "`")>0) OR (InStr(sName$, "^")>0) OR (InStr(sName$, "!")>0) OR (InStr(sName$, "@")>0) OR (InStr(sName$, "%")>0) OR (InStr(sName$, "~")>0)
+      return 0
+  endif
+
+  iExt = InStr(sName$, ".")        
+        
+  !  check filename length                         or check extention length
+  !  ((no ext and len > 8) or (ext starts at > 9)) or (ext exists and longer than 3)
+  if ( ((iExt = 0) AND (iLen > 8)) OR (iExt > 9) ) OR ( (iExt > 0) AND ((iLen-iExt) > 3) ) then
+     return 0
+  endif
+  
+  return 1
+ 
+endmacro
+ 
+
+! ==============================================================================
+! Function Name:   vUpdateDataFilename
+! Function Description:
+!      This routine updates the DataFilename column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateDataFilename 
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local iLen
+  local iExt
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+
+  sTok$ = sRemoveLeadingBlanks$(sTok$)    
+  iLen = LEN(sTok$)
+  
+  if (iLen = 0) OR (sTok$ = " ")
+     SetTabText _Sequence[1], SeqTable1, iRow, "DataFilename", ""
+     return
+  endif
+
+  if iIsDataFilenameOK(sTok$) <> 1
+    iRet = Alert ("Invalid DataFilename " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". A defaul NULL string will be used.", 2, "Import CSV")
+    SetTabText _Sequence[1], SeqTable1, iRow, "DataFilename", ""
+    return
+  endif 
+  
+  iExt = InStr(sTok$, ".")
+  if iExt >= 1
+     sTok$ = sTok$[1:(iExt-1)]     
+  endif  
+  
+  SetTabText _Sequence[1], SeqTable1, iRow, "DataFilename", sTok$
+
+  return
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateInterval
+! Function Description:
+!      This routine updates the Interval column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateInterval
+  parameter sTok$ default ""
+  parameter iRow default 0
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+  
+  sTok$ = sRemoveLeadingBlanks$(sTok$)    
+  if (sTok$ = "") OR (sTok$ = " ") OR (sTok$ = "-1")
+     SetTabVal _Sequence[1], SeqTable1, iRow, "Interval", -1  
+     return
+  endif
+      
+  if (VAL(sTok$) <= 0) OR (VAL(sTok$) >= 1000) OR (InStr(sTok$, ".") >= 1)
+    iRet = Alert ("Invalid Interval " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". A blank will be used.", 2, "Import CSV")
+    sTok$ = "-1"
+  endif 
+  
+  SetTabVal _Sequence[1], SeqTable1, iRow, "Interval", VAL(sTok$)
+
+  return
+
+endmacro  
+
+
+! ==============================================================================
+! Function Name:   vUpdateSampleName
+! Function Description:
+!      This routine updates the SampleName column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateSampleName 
+  parameter sTok$ default ""
+  parameter iRow default 0 
+  local iLen 
+  local iRet
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+  
+  sTok$ = sRemoveLeadingBlanks$(sTok$)   
+  iLen = LEN(sTok$)
+  
+  if (iLen = 0) OR (sTok$ = " ")
+     SetTabText _Sequence[1], SeqTable1, iRow, "SampleName", ""
+     return
+  endif
+
+  if iLen > 16
+    iRet = Alert ("SampleName " + sTok$ + " for the sequence table line #" + VAL$(iRow) + " will be truncated to " + sTok$[1:16] + ".", 2, "Import CSV")
+    SetTabText _Sequence[1], SeqTable1, iRow, "SampleName", sTok$[1:16]
+    return
+  endif
+  
+  SetTabText _Sequence[1], SeqTable1, iRow, "SampleName", sTok$
+
+  return
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateAmount
+! Function Description:
+!      This routine updates the Amount column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateAmount
+  parameter sTok$ default ""
+  parameter iRow default 0
+  local iRet  
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+  
+  sTok$ = sRemoveLeadingBlanks$(sTok$)     
+  if (sTok$ = "") OR (sTok$ = " ")
+     SetTabText _Sequence[1], SeqTable1, iRow, "Amount", ""  
+     return
+  endif
+      
+  if sTok$ = "0" 
+     SetTabText _Sequence[1], SeqTable1, iRow, "Amount", "0"  
+     return  
+  endif
+      
+  if (VAL(sTok$) <= 0)
+    iRet = Alert ("Invalid Amount value " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". This field will be left blank.", 2, "Import CSV")
+    sTok$ = ""
+  endif 
+  
+  SetTabText _Sequence[1], SeqTable1, iRow, "Amount", sTok$
+
+  return
+
+endmacro  
+
+
+! ==============================================================================
+! Function Name:   vUpdateMultiplier
+! Function Description:
+!      This routine updates the Multiplier column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateMultiplier
+  parameter sTok$ default ""
+  parameter iRow default 0
+  local iRet
+  
+  on error print
+  if iRow <= 0
+    return
+  endif
+ 
+  sTok$ = sRemoveLeadingBlanks$(sTok$)        
+  if (sTok$ = "") OR (sTok$ = " ")
+     SetTabText _Sequence[1], SeqTable1, iRow, "Multiplier", ""  
+     return
+  endif
+      
+  if (VAL(sTok$) <= 0)
+    iRet = Alert ("Invalid Multiplier value " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". This field will be left blank.", 2, "Import CSV")
+    sTok$ = ""
+  endif 
+  
+  SetTabText _Sequence[1], SeqTable1, iRow, "Multiplier", sTok$
+
+  return
+
+endmacro  
+
+
+! ==============================================================================
+! Function Name:   vUpdateISTDAmt
+! Function Description:
+!      This routine updates the ISTDAmt column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateISTDAmt
+  parameter sTok$ default ""
+  parameter iRow default 0
+  local iRet  
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+
+  sTok$ = sRemoveLeadingBlanks$(sTok$)       
+  if (sTok$ = "") OR (sTok$ = " ")
+     SetTabText _Sequence[1], SeqTable1, iRow, "ISTDAmt", ""  
+     return
+  endif
+      
+  if (VAL(sTok$) <= 0)
+    iRet = Alert ("Invalid ISTDAmt value " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". This field will be left blank.", 2, "Import CSV")
+    sTok$ = ""
+  endif 
+  
+  SetTabText _Sequence[1], SeqTable1, iRow, "ISTDAmt", sTok$
+
+  return
+
+endmacro  
+ 
+ 
+! ==============================================================================
+! Function Name:   vUpdateDilution
+! Function Description:
+!      This routine updates the Dilution column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateDilution
+  parameter sTok$ default ""
+  parameter iRow default 0
+  local iRet  
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+      
+  sTok$ = sRemoveLeadingBlanks$(sTok$)       
+  if (sTok$ = "") OR (sTok$ = " ")
+     SetTabText _Sequence[1], SeqTable1, iRow, "Dilution", ""  
+     return
+  endif
+      
+  if (VAL(sTok$) <= 0)
+    iRet = Alert ("Invalid Dilution value " + sTok$ + " is specified for the sequence table line #" + VAL$(iRow) + ". This field will be left blank.", 2, "Import CSV")
+    sTok$ = ""
+  endif 
+  
+  SetTabText _Sequence[1], SeqTable1, iRow, "Dilution", sTok$
+
+  return
+
+endmacro  
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateSampleInfo
+! Function Description:
+!      This routine updates the SampleInfo column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateSampleInfo
+  parameter sTok$ default ""
+  parameter iRow default 0  
+  local iLen
+  local iRet  
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+    
+  iLen = LEN(sTok$)
+  if iLen > 4096
+    iRet = Alert ("SampleInfo in the sequence table line #" + VAL$(iRow) + " will be truncated to 4096 characters long.", 2, "Import CSV")
+    sTok$ = sTok$[1:4096]
+  endif   
+  
+  SetTabText _Sequence[1], SeqTable1, iRow, "SampleInfo", sTok$
+
+  return
+
+endmacro  
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateCompound
+! Function Description:
+!      This routine updates the CompNames table in the _Sequence register.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the CompNames table.
+!    sCol$ - The column number in the CompNames table.
+!    iRow  - The row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateCompound
+  parameter sTok$ default ""
+  parameter sCol$ default "" 
+  parameter iRow default 0  
+  local iLen
+  local sTedName$
+  local iRowIndex
+  local iRet  
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+  
+  if sCol$ = ""
+    return
+  endif
+
+  sTok$ = sRemoveLeadingBlanks$(sTok$)      
+  if (sTok$ = "") OR (sTok$ = " ")
+     SetTabText _Sequence[1], SeqTable1, iRow, sCol$, ""  
+     return
+  endif
+  
+  if sTok$ = "0"
+     SetTabText _Sequence[1], SeqTable1, iRow, sCol$, "0"  
+     return  
+  endif
+  
+  if (VAL(sTok$) <= 0) OR (LEN(sTok$) > 10)
+    iRowIndex = RowByText (_Sequence[1], "CompNames", , "TabName", "i=", sCol$)
+    sTedName$ = TabText$ (_Sequence[1], "CompNames", iRowIndex, "TedName")
+    iRet = Alert ("Invalid value " + sTok$ + " for compound " + sTedName$ + " is specified for the sequence table line #" + VAL$(iRow) + ". This field will be left blank.", 2, "Import Extended CSV")
+    sTok$ = ""
+  endif 
+  
+  SetTabText _Sequence[1], SeqTable1, iRow, sCol$, sTok$
+
+  return
+
+endmacro  
+         
+         
+! ==============================================================================
+! Function Name:   vUpdateSampleID
+! Function Description:
+!      This routine updates the SampleID column in the sequence table for the
+!      given row.
+! Parameter Passed-In:
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateSampleID
+  parameter sTok$ default ""
+  parameter iRow default 0  
+  local iLen
+  local iRet  
+
+  on error print
+  if iRow <= 0
+    return
+  endif
+  
+  if sCol$ = ""
+    return
+  endif
+ 
+  sTok$ = sRemoveLeadingBlanks$(sTok$)          
+  if (sTok$ = "") OR (sTok$ = " ")
+     SetTabText _Sequence[1], SeqTable1, iRow, "SampleID", ""  
+     return
+  endif
+   
+  if (LEN(sTok$) > 10)
+    iRet = Alert ("SampleID " + sTok$ + " specified for the sequence table line #" + VAL$(iRow) + " is too long. It will be truncated to " + sTok$[1:10] + ".", 2, "Import Extended CSV")
+    sTok$ = sTok$[1:10]
+  endif 
+  
+  SetTabText _Sequence[1], SeqTable1, iRow, "SampleID", sTok$
+
+  return
+
+endmacro  
+         
+
+
+! ==============================================================================
+! Function Name:   vUpdateExtSeqTblCol
+! Function Description:
+!      Given a column name, the row number, and the content to be updated, this
+!      routine calls the appropriate routine to complete this task. This routine
+!      is written for the extended sequence table only.
+! Parameter Passed-In:
+!    sCol$ - The column name.
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateExtSeqTblCol 
+   parameter sCol$ default ""
+   parameter sTok$ default ""
+   parameter iRow default 0
+   local iLenCol
+   local iLenTok
+
+   on error print
+   if LEN(sCol$) <= 0
+      return
+   endif
+
+   if iRow <= 0
+     return
+   endif 
+
+   if UpperCase$(sCOl$) = "LOCATION"
+      vUpdateVial sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "METHOD"
+      vUpdateMethod sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "CALLINE"
+      vUpdateCalLine sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "INJVIAL"
+      vUpdateInjVial sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "INJVOLUME"
+      vUpdateInjVolume sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "SAMPLETYPE"
+      vUpdateExtSampleType sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "CALLEVEL"
+      vUpdateCalLevel sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "CALIBACTION"
+      vUpdateCalibAction sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "UPDATERT"
+     ! sTok$ = "1"
+     vUpdateUpdateRT sTok$, iRow
+     return
+   endif
+
+   if UpperCase$(sCol$) = "INTERVAL"
+      vUpdateInterval sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "DATAFILENAME"
+      vUpdateDataFilename sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "SAMPLENAME"
+      vUpdateSampleName sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "AMOUNT"
+      vUpdateAmount sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "MULTIPLIER"
+      vUpdateMultiplier sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "ISTDAMT"
+      vUpdateISTDAmt sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "DILUTION"
+      vUpdateDilution sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "SAMPLEINFO"
+      vUpdateSampleInfo sTok$, iRow
+      return
+   endif 
+   
+   if UpperCase$(sCOl$) = "SAMPLEID"
+      vUpdateSampleID sTok$, iRow
+      return
+   endif   
+   
+   if (InStr(UpperCase$(sCol$), "CMPD") = 1)
+      vUpdateCompound sTok$, sCol$, iRow
+      return   
+   endif
+
+   return
+
+endmacro
+
+
+
+
+! ==============================================================================
+! Function Name:   vUpdateStdSeqTblCol
+! Function Description:
+!      Given a column name, the row number, and the content to be updated, this
+!      routine calls the appropriate routine to complete this task. This routine
+!      is written for the standard sequence table only.
+! Parameter Passed-In:
+!    sCol$ - The column name.
+!    sTok$ - The information from the CSV file to be put in the sequence table.
+!    iRow  - The current sequence table row number in processing.
+! Function Return:   None.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name vUpdateStdSeqTblCol 
+   parameter sCol$ default ""
+   parameter sTok$ default "" 
+   parameter iRow default 0
+   local iLenCol
+   local iLenTok
+
+   on error print
+   if LEN(sCol$) <= 0
+      return
+   endif
+   
+   if iRow <= 0
+      return
+   endif
+
+   if UpperCase$(sCOl$) = "LOCATION"
+      vUpdateVial sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "METHOD"
+      vUpdateMethod sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "CALLINE"
+      vUpdateCalLine sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "INJVIAL"
+      vUpdateInjVial sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "INJVOLUME"
+      vUpdateInjVolume sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "SAMPLETYPE"
+      vUpdateStdSampleType sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "CALLEVEL"
+      vUpdateCalLevel sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "UPDATERF"
+      vUpdateUpdateRF sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "UPDATERT"
+      vUpdateUpdateRT sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "INTERVAL"
+      vUpdateInterval sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "DATAFILENAME"
+      vUpdateDataFilename sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "SAMPLENAME"
+      vUpdateSampleName sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "AMOUNT"
+      vUpdateAmount sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "MULTIPLIER"
+      vUpdateMultiplier sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "ISTDAMT"
+      vUpdateISTDAmt sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "DILUTION"
+      vUpdateDilution sTok$, iRow
+      return
+   endif
+
+   if UpperCase$(sCol$) = "SAMPLEINFO"
+      vUpdateSampleInfo sTok$, iRow
+      return
+   endif
+
+   return
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   iCSVFileNameOK
+! Function Description:
+!      This routine checks if the given CSV file name is OK or not.
+! Parameter Passed-In:
+!    sCSVFile$ - The given CSV file name to be checked.
+! Function Return:   1 - The CSV file exist    0 - otherwise.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name iCSVFileNameOK
+    parameter sCSVFile$ default ""
+
+    on error print
+
+    if sCSVFile$ = ""
+        return 0
+    endif  
+    
+    if InStr(UpperCase$(sCSVFile$), ".CSV") <= 1
+        return 0
+    endif
+
+    if FileStat(MODE, sCSVFile$) <> 1
+        return 0
+    endif
+
+    return 1
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   iFindTableSection
+! Function Description:
+!      The routine tries to find out if the [Table] section exists in the CSV
+!      file or not.
+!      Note: Assuming the device #3 is opened for the CSV file handler.
+! Parameter Passed-In:
+!      None.
+! Function Return:   1 - [Table] section exists   0 - Otherwise.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name iFindTableSection
+    local iLines
+
+    sBuf$ = ""
+    iLines = 0
+    on error goto FINDTABLE1
+    while (InStr(UpperCase$(sBuf$), "[TABLE]") <> 1) AND (iLines < 1100)
+       sBuf$ = ""
+       iLines = iLines + 1
+       Input Using #3, "L", sBuf$
+    endwhile
+
+FINDTABLE1:
+
+    on error print
+    
+    if (InStr(UpperCase$(sBuf$), "[TABLE]") <> 1)
+        return 0
+    else
+        return 1
+    endif
+
+endmacro
+
+
+! ==============================================================================
+! Function Name:   iGetTotalTok
+! Function Description:
+!      Given a buffer that contains a group of string tokens seperated by ",", this
+!      routine finds the total number of tokens in the buffer.
+! Parameter Passed-In:
+!    sBuf$ - The buffer contains a group of tokens to be checked.
+! Function Return:   The total number of tokens in this buffer.
+! Revision History:
+! 12/30/00 YD  First created.
+! ==============================================================================
+name iGetTotalTok
+  parameter sBuf$ default ""
+  local iLen
+  local iTotal
+  local i
+
+  on error print  
+  iLen = LEN(sBuf$)
+  if iLen <= 0
+    return 0
+  endif
+  
+  iTotal = 0
+  for i=1 to iLen
+    if sBuf$[i] = ","
+       iTotal = iTotal + 1
+    endif
+  next i
+
+  return iTotal
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   iCheckHeaders
+! Function Description:
+!      This routine first gets the header name line from the user-defined CSV 
+!      file, which should be the first string line below the [Table] section.
+!      Next, it gets the standard header name informtion from the stabhdr.txt
+!      or xtabhdr.txt (depending if this Import CSV task is for the STANDARD
+!      or EXTENDED sequence). Finally, it checks the user-defined header names
+!      from the CSV file againt the ones defined in the stabhdr.txt or 
+!      xtabhdr.txt file.  
+!      Note:  Assuming CSV file is opened with the handle = #3.
+! Parameter Passed-In:
+!    sMode$ - Valid string is either "STANDARD" or "EXTENDED"
+! Global variables are used:
+!     sHeader$ -  Contains the header names from the user defined CSV file.
+!     sTextHdr$ - Contains the header names from the standard/extended header 
+!                 text file.
+!     sTextAlias$ - Contains the alias header names for the user defined CSV file.
+! Function Return:   1 - Header names are OK    0 - otherwise.
+! Revision History:
+! 12/30/00 YD  First created.
+! ============================================================================
+name iCheckHeaders
+    parameter sMode$ default "STANDARD"
+    local iLines
+    local iLen
+
+    on error print
+
+    sBuf$ = ""
+    iLines = 0
+    
+    while (sBuf$ = "") AND (iLines < 50)
+       sBuf$ = ""
+       iLines = iLines + 1
+       on error goto CHECKHEADERS1
+       Input Using #3, "L", sBuf$
+       if sBuf$ <> ""
+          sHeader$ = UpperCase$(sBuf$)
+          if sHeader$[LEN(sHeader$)] <> ","
+            sHeader$ = sHeader$ + ","
+          endif 
+          iTotalCol = iGetTotalTok(sHeader$) 
+       endif
+    endwhile
+ 
+CHECKHEADERS1:
+ 
+    if (iLines >= 50) AND (sHeader$ = "")
+        return 0
+    endif  
+    
+    on error print
+
+    if iGetTextHdr(sMode$) <> 1
+       return 0
+    endif
+
+    if iCompareHeader(sMode$) <> 1
+        return 0
+    endif
+        
+    return 1
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   iCompareHeader
+! Function Description:
+!      This routine compares the user-defined header names from the CSV file
+!      againt the ones defined by the stabhdr.txt or xtabhdr.txt.
+! Parameter Passed-In:
+!    sMode$ - Valid string is either "STANDARD" or "EXTENDED"
+! Function Return:   1 - Header names are OK    0 - otherwise.
+! Revision History:
+! 12/30/00 YD  First created.
+! ============================================================================
+name iCompareHeader
+   parameter sMode$ default "STANDARD"
+
+   on error print
+   if (sMode$ <> "STANDARD") AND (sMode$ <> "EXTENDED")
+      return 0
+   endif
+
+   if sMode$ = "STANDARD"
+      if iCompareStdHdr() = 1
+          return 1
+      else
+          return 0
+      endif
+   else
+      if iCompareExtHdr() = 1
+          return 1
+      else
+          return 0
+      endif
+   endif
+
+   return 0
+
+endmacro
+
+
+! ==============================================================================
+! Function Name:   sRemoveBlanks$
+! Function Description:
+!      Given a string, this routine removes all the leading and trailing blanks.
+! Parameter Passed-In:
+!    sBuf$ - The string to be processed.
+! Function Return:   A string that has leading and trailing blanks to be removed.
+! Revision History:
+! 12/30/00 YD  First created.
+! ============================================================================
+name sRemoveBlanks$
+  parameter sBuf$ default ""
+  local iLen
+  local iBeg
+  local iEnd
+ 
+  on error print 
+  iLen = LEN(sBuf$)
+  if iLen < 1
+     return ""
+  endif
+  
+  iBeg = 1
+  while (sBuf$[iBeg] = " ") AND (iBeg <= iLen)
+     iBeg = iBeg + 1
+  endwhile
+
+  if iBeg > iLen
+    return ""
+  endif
+  
+  iEnd = iLen
+  while (sBuf$[iEnd] = " ") AND (iEnd >= iBeg)
+      iEnd = iEnd - 1
+  endwhile
+  
+  if iEnd < iBeg
+     return ""
+  endif
+  
+  return sBuf$[iBeg:iEnd]
+  
+endmacro
+
+ 
+ 
+! ==============================================================================
+! Function Name:   iCheckTextHdr
+! Function Description:
+!      This routine checks if the stabhdr.txt or xtabhdr.txt got corrupted or
+!      not.
+! Parameter Passed-In:
+!    sMode$ - Valid string is either "STANDARD" or "EXTENDED"
+! Global variables are used:
+!     sTextHdr$ - Contains the header names from the standard/extended header 
+!                 text file.
+!     sXtable$ -  Contains all the valid header names in the extended sequence
+!                 table. 
+!     sStable$ -  Contains all the valid header names in the standard sequence
+!                 table.
+! Function Return:   1 - Header names are OK    0 - otherwise.
+! Revision History:
+! 12/30/00 YD  First created.
+! ============================================================================
+name iCheckTextHdr
+   parameter sMode$ default "STANDARD" 
+   local iRet   
+ 
+   on error print
+     
+   if iTotalTextHdr <= 0
+      return 0   
+   endif
+
+   sTextHdr$ = UpperCase$(sTextHdr$)
+      
+   if sMode$ = "EXTENDED"
+      if sXtable$ <> sTextHdr$
+         iRet = Alert ("Error: Corrupted " + _AutoMSPath$ + "xtabhdr.txt file.", 3, "Import CSV")
+         return 0
+      else
+         return 1 
+      endif
+   else
+      if sStable$ <> sTextHdr$ 
+         iRet = Alert ("Error: Corrupted " + _AutoMSPath$ + "stabhdr.txt file.", 3, "Import CSV")      
+         return 0
+      else
+         return 1   
+      endif
+   endif
+   
+   return 0
+
+endmacro 
+ 
+ 
+
+! ==============================================================================
+! Function Name:   iGetTextHdr
+! Function Description:
+!      This routine gets the header names from the stabhdr.txt or xtabhdr.txt
+!      file. The header name information will be put into the sTextHdr$ and
+!      sTextAlias$ global variables.
+! Parameter Passed-In:
+!    sMode$ - Valid string is either "STANDARD" or "EXTENDED"
+! Global variables are used:
+!     sTextHdr$ - Contains the header names from the standard/extended header 
+!                 text file.
+!     sTextAlias$ -  Contains all the valid alias header names in from the
+!                    standard/extended header text file. 
+! Function Return:   1 - sucessful    0 - otherwise.
+! Revision History:
+! 12/30/00 YD  First created.
+! ============================================================================
+name iGetTextHdr 
+    parameter sMode$ default "STANDARD"
+    local sCSVTextFile$
+    local sTok$
+    local sTok0$
+    local sTok1$ 
+    local iPos 
+    local iLen
+    local iRet    
+    
+    on error print 
+    ! This should never happen
+    if check(VARIABLE, _AutoMSPath$) <> 1
+       _AutoMSPath$ = _EXEPATH$[1:10] + "MS\"
+    endif
+    ! if Len(_EXEPATH$) < 10
+    !    return 0
+    ! endif 
+    if sMode$ = "EXTENDED"
+       sCSVTextFile$ = _AutoMSPath$ + "xtabhdr.txt"
+    else
+       sCSVTextFile$ = _AutoMSPath$ + "stabhdr.txt"    
+    endif
+
+    if FileStat(MODE, sCSVTextFile$) <> 1
+        iRet = Alert ("Error: Could open " + sCSVTextFile$ + " file.", 3, "Import CSV")
+        return 0
+    endif
+
+    on error return 0
+    
+    sTextHdr$ = "" 
+    sTextAlias$ = ""   
+    sTok$ = "a"
+    iTotalTextHdr = 0    
+    
+    Open sCSVTextFile$ For Input As #4
+    
+    on error print
+
+    while sTok$ <> ""
+       sTok$ = ""
+       on error goto GETHDREXIT
+       
+       Input Using #4, "L", sTok$
+       if sTok$ = ""
+           goto GETHDREXIT
+       endif 
+       sTok$ = UpperCase$(sTok$)
+       iTotalTextHdr = iTotalTextHdr + 1
+       iPos = InStr(sTok$, ",")
+       if iPos = 1
+          iRet = Alert ("Error: Invalid header name in " + sCSVTextFile$ + ".", 3, "Import CSV") 
+          on error print
+          Close #4 
+          sTextHdr$ = ""
+          sTextAlias$ = ""
+          iTotalTextHdr = 0
+          return 0
+       endif
+       if iPos > 1
+          sTextHdr$ = sTextHdr$ + sTok$[1:(iPos-1)] + ","
+          iLen = LEN(sTok$)
+          if (iPos+1) > iLen
+             sTextAlias$ = sTextAlias$ + sTok$[1:(iPos - 1)] + ","
+          else
+             sTok0$ = sTok$[(iPos+1):iLen]
+             sTok0$ = sRemoveBlanks$(sTok0$)
+             if sTok0$ = ""
+                 sTextAlias$ = sTextAlias$ + sTok$[1:(iPos - 1)] + ","             
+             else
+                 sTextAlias$ = sTextAlias$ + sTok0$ + ","
+             endif
+          endif
+       else
+          sTextAlias$ = sTextAlias$ + sTok$ + ","
+          sTextHdr$ = sTextHdr$ + sTok$ + ","
+       endif
+       
+    endwhile
+
+GETHDREXIT:
+     
+    on error print
+    
+    Close #4
+             
+    if sTextAlias$ <> sTextHdr$
+       iAlias = 1  
+    else
+       iAlias = 0
+    endif
+    
+    if iCheckTextHdr(sMode$) <> 1
+        return 0
+    else
+        return 1
+    endif
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   sGetSeqHdr$
+! Function Description:
+!      Given an Alias name, this routine returns the corresponding real header
+!      name in the sequence table.
+! Parameter Passed-In:
+!    sAlias$ - An Alias name
+! Global variables are used:
+!     sTextHdr$ - Contains the header names from the standard/extended header 
+!                 text file.
+!     sTextAlias$ -  Contains all the valid alias header names in from the
+!                    standard/extended header text file. 
+! Function Return:   The corresponding real header name in the sequence table.
+! Revision History:
+! 12/30/00 YD  First created.
+! ============================================================================
+name sGetSeqHdr$
+  parameter sAlias$ default ""
+  local iLen
+  local iIndex
+  local sSeqHdr$
+  
+  on error print
+  iLen = LEN(sAlias$)
+  if iLen <= 0
+    return ""
+  endif
+   
+  ! Get the index of the sTextAlias$ buffer for that Alias name. 
+  if iAlias = 1
+     iIndex = iGetIndex(sTextAlias$, sAlias$)
+     if iIndex <= 0
+        return ""
+     endif
+  
+    ! Get the real name.
+    sSeqHdr$ = ""
+    sSeqHdr$ = sGetNthTok$(sTextHdr$, iIndex)
+
+    return sSeqHdr$
+  else
+    return sAlias$
+  endif
+
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   iCompareStdHdr
+! Function Description:
+!      This routine checks if each of the user-defined header names from the 
+!      CSV file matches the ones defined in the stabhdr.txt.
+! Parameter Passed-In:
+!      None.   
+! Global Variable:
+!      iTotalCol - The total number of header names defined in the CSV file.
+! Function Return:   1 - Header names are OK    0 - otherwise.
+! Revision History:
+! 12/30/00 YD  First created.
+! ============================================================================
+name iCompareStdHdr
+    local sTok$
+    local sErr$  
+    local i
+    local iPos
+    local iRet
+    local iLen    
+
+    on error print 
+  
+    if iTotalCol <= 0
+       return 1
+    endif
+    
+    for i=1 to iTotalCol  
+       sTok$ = ""
+       sTok$ = sGetNthTok$(sHeader$, i) + ","
+       iLen = LEN(sTok$)    
+       if iLen <= 1
+         goto STDCOMPAREERR
+       endif
+       if InStr(sTextAlias$, sTok$) <= 0
+       ! if iPos <= 0
+          goto STDCOMPAREERR
+       endif         
+       ! if sTextAlias$[(iPos+iLen)] <> ","
+       !       goto STDCOMPAREERR
+       ! endif         
+     next i 
+     
+     return 1
+  
+ STDCOMPAREERR:   
+    sErr$ = "Error: Unrecognized header column " + sTok$ + " in the given standard CSV file."
+    iRet = Alert (sErr$, 3, "Import Standard CSV") 
+    ! print sTextAlias$
+    ! show
+    return 0           
+ 
+endmacro
+           
+           
+
+! ==============================================================================
+! Function Name:   iCompareExtHdr
+! Function Description:
+!      This routine checks if each of the user-defined header names from the 
+!      CSV file matches the ones defined in the xtabhdr.txt.  
+!      This routine also updates the iToatlCol and iTotalComp global variables.
+! Parameter Passed-In:
+!      None.
+! Global Variable:
+!      iTotalCol - The total number of header names defined in the CSV file.
+!      iTotalComp - The total number of compound names defined in the CSV file.
+!      sHeader$ - The header names from the CSV file.
+!      sTextAlias$ - The header alias names from the xtabhdr.txt file.
+!      sTextHdr$ - The header names from the xtabhdr.txt file.
+! Function Return:   1 - Header names are OK    0 - otherwise.
+! Revision History:
+! 12/30/00 YD  First created.
+! ============================================================================
+name iCompareExtHdr
+    local sTok$
+    local sTok1$
+    local sErr$  
+    local i
+    local iPos 
+    local iTotal 
+    local j
+    local iLen
+    local iRet    
+
+    on error print 
+  
+    if iTotalCol <= 0
+       return 1
+    endif
+     
+    iTotal = iTotalCol
+    iTotalComp = 0
+    
+    for i=1 to iTotal  
+       sTok$ = ""
+       sTok$ = sGetNthTok$(sHeader$, i) + ","
+       iLen = LEN(sTok$)    
+       if iLen <= 1
+         goto EXTCOMPAREERR
+       endif 
+       ! if sTok$[iLen] <> ","
+       !    sTok$ = sTok$ + ","
+       ! endif
+       iPos = InStr(sTextAlias$, sTok$)
+       if iPos <= 0
+          iTotalComp = iTotalCol - i + 1
+          iTotalCol = i - 1  
+          goto EXTCHECKCOMP
+       endif         
+     next i 
+     
+     return 1
+     
+EXTCHECKCOMP:
+     ! Check compound names
+     for j=i to iTotal
+        ! Get the rest of the compound names from the sHeader$ buffer
+        sTok$ = sGetNthTok$(sHeader$, j) + ","
+        iLen = LEN(sTok$)
+        if iLen <= 1
+           goto EXTCOMPAREERR
+        endif 
+        ! if sTok$[iLen] <> ","
+        !    sTok$ = sTok$ + ","
+        ! endif
+        if InStr(sTextAlias$, sTok$) > 0
+        ! if iPos > 0
+          ! The compound name should not occur in the alias list.
+          goto EXTCOMPOUNDERR
+        endif
+        ! if sTextAlias$ <> sTextHdr$
+        if iAlias = 1
+           iPos = InStr(sTextHdr$, sTok$)
+           if iPos > 0
+             goto EXTCOMPOUNDERR
+           endif                          
+        endif
+     next j         
+     
+     return 1
+
+EXTCOMPOUNDERR:
+    iLen = LEN(sTok$)
+    if iLen > 1
+      if sTok$[iLen] = ","
+         sTok$ = sTok$[1:(iLen-1)]
+      endif
+    endif
+    sErr$ = "Error: Invalid user-defined compound name " + sTok$ + " in the given extended CSV file." + chr$(13) + chr$(10) + chr$(10)
+    sErr$ = sErr$ + "Please make sure that the user-defined compound name is appended at the end of the standard header names in your CSV file."
+    iRet = Alert (sErr$, 3, "Import Extended CSV")
+    return 0
+  
+EXTCOMPAREERR:   
+    sErr$ = "Error: Unrecognized header column " + sTok$ + " in the given extended CSV file."
+    iRet = Alert (sErr$, 3, "Import Extended CSV")
+    return 0           
+ 
+endmacro
+           
+           
+
+! ==============================================================================
+! Function Name:   sGetNthTok$
+! Function Description:
+!      This routine returns the Nth token in the given string.
+!      Note: Each token in a given string is seperated by the ",". The last
+!            char. of this string should be ","
+! Parameter Passed-In:
+!      sString$ - The string that consists of tokens. Each token is seperated
+!                 by the ","
+! Function Return:   The Nth token in the sString$. NULL will be returned when
+!                    error occurred.
+! Revision History:
+! 12/30/00 YD  First created.
+! ============================================================================ 
+name sGetNthTok$
+    parameter sString$ default ""
+    parameter iNthCol  default 0
+    local iLen
+    local i
+    local sTok$
+    local sTemp$
+    local iIndex
+    local iPos
+    local iFirst
+    local iSecond
+
+    on error print
+
+    if iNthCol <= 0
+       return ""
+    endif
+
+    iLen = LEN(sString$)
+    if iLen <= 1
+       return ""
+    endif
+    if sString$[iLen] <> ","
+      sString$ = sString$ + ","
+    endif
+
+    if iNthCol = 1
+       iPos = InStr(sString$, ",")
+       if iPos <= 1
+          return ""
+       else
+          return sString$[1:(iPos - 1)]
+       endif
+    endif
+
+    sTemp$ = sString$
+    for i=1 to iNthCol
+            iIndex = InStr(sTemp$, ",")        
+            if iIndex <= 0
+                return ""
+            endif
+            iLen = LEN(sTemp$)
+            if (iLen <= iIndex) AND (i < iNthCol)
+               return ""
+            endif
+            if iIndex = 1
+                 sTok$ = ""
+            else
+                 sTok$ = sTemp$[1:(iIndex - 1)]
+            endif
+            if (i < iNthCol)
+                sTemp$ = sTemp$[(iIndex+1): iLen]
+            else
+                sTemp$ = ""
+            endif
+    next i   
+    
+    return sTok$
+
+! For performance testing only.    
+if i=-25    
+    
+    iFirst = 1
+    i = 0
+    on error return ""
+    while (i < (iNthCol-1)) AND (iFirst <= iLen)
+       if sString$[iFirst] = ","
+         i = i + 1
+       endif
+       iFirst = iFirst + 1
+    endwhile
+    
+    if iFirst > iLen
+       return ""
+    endif
+    
+    iSecond = iFirst
+    while (iSecond<=iLen) AND (sString$[iSecond] <> ",")
+      iSecond = iSecond + 1
+    endwhile
+    
+    if iSecond > iLen
+       return ""
+    else
+       return sString$[iFirst:(iSecond-1)]
+    endif
+    
+endif       
+    
+   
+endmacro
+
+
+
+! ==============================================================================
+! Function Name:   iGetIndex
+! Function Description:
+!      Given a sString$, in which has a set of tokens that are seperated by
+!      ",", and a token, this routine returns the index of this token stored
+!      in this string.
+!      Note: Each token in a given string is seperated by the ",". The last
+!            char. of this string should be ","
+! Parameter Passed-In:
+!      sString$ - The string that consists of tokens. Each token is seperated
+!                 by the "," 
+!      sName$   - The token string
+! Function Return:   The index. 0 will be returned when error occurred.
+! Revision History:
+! 01/02/00 YD  First created.
+! ============================================================================ 
+name iGetIndex
+    parameter sString$ default ""
+    parameter sName$  default ""
+    local iFirst
+    local iIndex
+    local iLen
+    local i
+    local iName
+    local sBuf$
+
+    on error print
+    iName = LEN(sName$)
+    
+    if iName <= 0
+       return 0
+    endif
+    
+    if sName$[iName] <> ","
+       sName$ = sName$ + ","
+       iName = iName + 1
+    endif
+    sName$ = UpperCase$(sName$)
+
+    iLen = LEN (sString$)
+    if iLen <= 0
+       return 0
+    endif
+    
+    if sString$[iLen] <> ","
+       sString$ = sString$ + ","
+    endif
+    
+    sBuf$ = sString$
+    iLen = LEN(sBuf$)
+    
+    iFirst = InStr(UpperCase$(sString$), sName$)
+    if iFirst < 1
+       return 0
+    endif
+    if iFirst = 1
+       return 1
+    endif
+    if iFirst > iLen
+       return 0
+    endif
+    iIndex = 1
+    for i=1 to iFirst
+       if sString$[i:i] = ","
+            iIndex = iIndex + 1
+       endif
+    next i
+    return iIndex
+
+endmacro
+
+
+
+

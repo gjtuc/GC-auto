@@ -1,0 +1,1166 @@
+!***************************************************************************!
+!* FILE dgQeTest.mac        
+!*
+!* Sprite Quad Electronics test macros
+!*
+ dgQeTestVer$ = "$Header: /cag/triath1b/partsmac/diag/dgqetest.mac 1.23 2003-06-23 15:39:15-07 julie_zhao Exp $"
+ verIx = instr(dgQeTestVer$, ".mac") + 5
+ dgQeTestVer$ =  dgQeTestVer$[verIx:VerIx + instr(dgQeTestVer$[VerIx:len(dgQeTestVer$)]," ") - 1] 
+ remove verIx
+!*
+!* Macros:   dgMsQeTest$()          Main macro
+!*           dgMsQeTestInit$()      Set up test register
+!*           dgMsQeTestExec         Acquire frequency and mass scans
+!*           dgMsQeTestEvaluate$()  Apply criteria to data
+!*           dgMsQeFaultCheck       Checks for MS Faults
+!*           dgMsQeReadVals         Read drive and power numbers
+!*           dgMsQeCleanUp          reset the quad frequency
+!*           dgMsQeMakeDisplay      Creates a display object
+!*           dgMSQeXaxis            Draws x axes in display object
+!*           dgMsGetRegister$
+!*
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsQetest$
+PARAMETER TestMZ DEFAULT 2000
+! Revision History:
+! 03/30/00 YD   Fixed the PVCS Bug#6519: Quad Electronics Error. Added
+!               Sprite1C checking, and sets the default M/Z value to 1000
+!               for Sprite1C.
+! 04/21/03 JZ   Setup abort handler for Quad Electronics test in _ABORT$ string
+!***************************************************************************!
+LOCAL Result$, Result2$, Error$, PrintMac$
+
+  if _offline = 1 then
+    return NlsMsDiag$("Failed")
+  endif
+
+  if Check( VARIABLE, EnableViewSwitch) = 1 then
+    if EnableViewSwitch = 0 then
+     return " "
+   endif
+  endif
+
+  ! JZ Setup Abort routine
+  if (check(Variable, _abort$) = 0) then
+     _abort$ = ""
+   endif
+  _abort$ = "dgMsQeCleanUp;"+_abort$
+
+  ! if dgMsCheckTuneMode() <> 1 then
+  !   return NlsMsDiag$("Failed: wrong mode")
+  ! endif
+  ! 03/30/00 YD
+  if TestMZ >= 1500
+     if MSD_VL = 1
+        TestMZ = 1000
+     endif
+  endif
+  ! initialize the test register and define low and high mass
+  Error$=dgMsQeTestInit$(TestMZ)
+  if Error$ <> "" then
+    return Error$
+  endif
+
+  ! acquire data
+  dgMsQeTestExec
+
+  ! prepare test result table
+  Result$ = dgMsQeTestEvaluate$() 
+
+  PrintMac$ = "dgMsPrintTest QEReport, QERes, QEChart1,, 30," + \
+              " 2, ""%-33s"", ""%+17s"", ""%+16s"",""%+8s"""
+  Result2$ = dgMsGetTestResults$("QEChart1","QERes", PrintMac$)
+  
+  dgMsQeCleanUp 1
+
+  if Result$ <> NlsMsDiag$("Passed") then   !pdr added 8-4-99
+    RETURN Result$          ! didn't pass...
+  else
+    RETURN Result2$         ! pass or fail
+  endif
+
+ENDMACRO            ! end dgMsQetest
+
+!***************************************************************************!
+NAME dgMsQeTestEvaluate$
+! Declare pass or fail and annotate
+! Criteria are:     all minima are within quad frequency window
+!                   minima are below spec level
+!                   dip frequencies have to agree
+! 
+! Returns "Pass" or "Fail"
+! Revision History:
+! 10/22/01 PHC   Fixed the way the drive slope and intercept (offset)
+!                specifications were being written out.
+!***************************************************************************!
+LOCAL i, nMassSteps, annIndex, minFreq, maxFreq, minDrive, dipFreq, newFreq
+LOCAL quadFreq, maxRFDrive, freqmaxRFDrive, meanDip, minDip, maxDip, regIndex
+LOCAL massfail, freqFail, testrow, passed$, failed$, annStr$, ScanMin
+LOCAL evalstr$, tempStr$, regTypes, regressobj, tempDip, dummy, drawObj
+LOCAL PowerOn, MassScanIx, FreqScanIx, LineIx, maxDriveOffset, minDriveOffset
+LOCAL MaxDriveSlope, MinDriveSlope, idealDriveSlope, blue, MassRange
+
+   maxDip = 0
+   minDip = 1e7
+   RegTypes = 3   ! 1- rf drive, 2- rf forward power, 3-rf reflected power
+   MassScanIx = 1
+   FreqScanIx = 4 
+   ScanRange = Data(RESULT_REG[MassScanIx], 0, \
+               DataCols(RESULT_REG[MassScanIx])) 
+   MassRange = ScanRange
+   TestMz = ObjHdrVal(RESULT_REG[1], "TestMass")
+   deltaDipSpec    = 500   ! all dip frequencies should be within this delta
+   MaxRFDrive =   TabVal(RESULT_REG, MassTable, \
+        RowByVal(RESULT_REG, MassTable,, "MaxRFDrive",  max), \
+        "MaxRFDrive")
+   MinMaxRFDrive = MaxRFDrive - 20  
+   maxDriveOffset  =  10
+   minDriveOffset  =  -4  ! -1.271 gives RF Drive = 0 at 50 m/z
+   maxDriveSlope   =  (MaxRFDrive - MinDriveOffset)/ScanRange  
+   minDriveSlope   =  (MinMaxRFDrive - MaxDriveOffset)/ScanRange
+   idealDriveSlope =  ((MaxRFDrive + MinMaxRFDrive)/2)/ScanRange
+   nMassSteps =   TabHdrVal(RESULT_REG, MassTable, "NumberOfRows")
+   minFreq =      Data(RESULT_REG[4], 0, 1)
+   maxFreq =      Data(RESULT_REG[4], 0, DataCols(RESULT_REG[4]))
+   quadFreq =     ObjHdrVal(RESULT_REG, "QuadFreq")
+   blue =         16711680
+
+   ! init result text and result flags
+   passed$= NlsMsDiag$("passed")
+   failed$= NlsMsDiag$("failed")
+   massfail=0; freqFail=0
+   
+   WinUpdate Off   
+   DrawObj = dgmsQeMakeDisplay()
+   DelAnn RESULT_REG[DrawObj]
+   
+   ! Findout if RF Power objects are used
+   PowerOn = 0
+   for i = 2 to 6 
+      if (i <> 4) then
+         GetDataMinMax RESULT_REG[i], 1
+         if (OBJ_MAX > 5) then
+             PowerOn = 1
+         endif
+      endif
+   next i
+   SetObjHdrVal RESULT_REG[1], "PowerOn", PowerOn
+   
+   if (ObjHdrType(RESULT_REG[1], TestResultTab) = 4) then
+      DelTabRow RESULT_REG[1], TestResultTab, -1
+   endif
+
+   ! Draw the RF Drive line in the display
+   !-----------------------------
+   i = 1
+   annIndex = 0
+   while (i <= DataCols(RESULT_REG[MassScanIx]))
+      DataX = Data(RESULT_REG[MassScanIx], 0, i)
+      ! Map 0:1 to 0:3000
+      DataX = DataX/ScanRange
+      DataY = Data(RESULT_REG[MassScanIx], 1, i)
+      if (DataY < 100) then
+         if (annIndex = 0) then
+             ! Solid blue line
+             annIndex = NewPolyAnn(RESULT_REG[DrawObj], 0,,, 4,,, blue)
+             lineIx = 1
+         else
+             SetPolyAnnVal RESULT_REG[DrawObj], AnnIndex, \
+                           lineIx, DataX, DataY
+             lineIx = lineIx + 1
+         endif
+      endif
+      i = i + 1  
+   endwhile
+   
+   ! 1. RF Drive
+   !-----------------------------
+   ! make sure rf drive didn't go above spec this assumes that the high mass  
+   ! in the scan is no higher than the highest mass
+
+   InsTabRow  RESULT_REG[1], TestResultTab
+   testrow=TabHdrVal(RESULT_REG[1], TestResultTab, "NumberOfRows")
+   SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", \
+                            "Max RF Drive, mass scan"
+   SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", \
+                             Sprintf$(MaxRFDrive, "< %.1f")
+
+   GetDataMinMax RESULT_REG[1], 1  
+   SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", \
+                             Sprintf$(OBJ_MAX, "%.1f")
+   if OBJ_MAX < MaxRFDrive then    
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+   else 
+      massfail=1
+   endif
+
+   ! 2. RF drive Slope
+   !-----------------------------
+   ! check the slope range
+   InsTabRow  RESULT_REG[1], TestResultTab
+   testrow=TabHdrVal(RESULT_REG[1], TestResultTab, "NumberOfRows")
+   SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", \
+                            "RF Drive slope, mass scan"
+   SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", \
+                             Sprintf$(MinDriveSlope, "%.3f <x") + \
+                             Sprintf$(MaxDriveSlope, "< %.3f")
+                             
+   RegressObj RESULT_REG[1], 0, RESULT_REG[1], 1, RESULT_REG, 2
+   RFDriveSlope = TabHdrVal(RESULT_REG[RegSize(RESULT_REG)], "Regress", K2)
+   SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", \
+                             Sprintf$(RFDriveSlope, "%.3f")
+
+   SetObjHdrVal RESULT_REG[1], "RFDrSlope", RFDriveSlope
+   if (RFDriveSlope < maxDriveSlope) AND (RFDriveSlope > minDriveSlope) then
+     SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+   else 
+     ! show
+     massfail=1
+   endif
+   
+   ! Draw the polygon that encompasses all passing mass scan lines
+   AnnIndex = NewPolyAnn(RESULT_REG[DrawObj], 2,,, 4,,, 0)
+   SetPolyAnnVal RESULT_REG[DrawObj], AnnIndex, 1, 0, MaxDriveOffset
+   SetPolyAnnVal RESULT_REG[DrawObj], AnnIndex, 2, 1, MaxRFDrive 
+   AnnIndex = NewPolyAnn(RESULT_REG[DrawObj], 2,,, 4,,, 0)
+   DataX = (-MinDriveOffset/((minMaxRFDrive - MinDriveOffset)/ScanRange)) \
+            /ScanRange
+   SetPolyAnnVal RESULT_REG[DrawObj], AnnIndex, 1, DataX, 0
+   SetPolyAnnVal RESULT_REG[DrawObj], AnnIndex, 2, 1, MinMaxRFDrive
+
+   ! 3. RF drive offset
+   !-----------------------------
+   ! check the offset range
+
+   InsTabRow  RESULT_REG[1], TestResultTab
+   testrow=TabHdrVal(RESULT_REG[1], TestResultTab, "NumberOfRows")
+   SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", \
+                            "RF Drive intercept, mass scan"
+   SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", \
+                             Sprintf$(MinDriveOffset, "%.1f <x") + \
+                             Sprintf$(MaxDriveOffset, "< %.1f")
+   RFDriveOffset = TabHdrVal(RESULT_REG[RegSize(RESULT_REG)], "Regress", K1)
+   SetObjHdrVal RESULT_REG[1], "RFDrOffset", RFDriveOffset
+   SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", \
+                             Sprintf$(RFDriveOffset, "%.1f")
+   if (RFDriveOffset <= maxDriveOffset) and \
+      (RFDriveOffset >= minDriveOffset) then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+   else 
+     massfail=1             !pdr added 8-4-99
+   endif
+
+   ! Get rid of the regressobj
+   DelObj RESULT_REG[RegSize(RESULT_REG)]
+
+   ! 3A. intermediate check for mass scans
+   !---------------------------------
+   if massFail = 1 then
+      tempStr$ = failed$
+   else
+      tempStr$ = passed$
+   endif
+   SetObjHdrText RESULT_REG[1], "MassScanResult", tempStr$
+
+
+   ! 3B. write spec level on the plot
+   !--------------------------------------
+   annStr$ = "RF Drive Curve: y = " + \
+             Sprintf$(RFDriveSlope, "%.3f") + "(x) + " + \
+             Sprintf$(RFDriveOffset,"%.1f")
+   annIndex =  NewTextAnn(RESULT_REG[1], annStr$, Data(RESULT_REG[1], 0, \
+               MAX(1, DataCols(RESULT_REG[1])-5) ),0,\
+               ,, 8,, 0,, 9,"Arial")
+   annIndex =  NewTextAnn(RESULT_REG[DrawObj], annStr$, \
+                   0.02, 100, ,, 8,, 0,, 1,"Arial")
+
+   annIndex = NewPolyAnn(RESULT_REG[1], 1)     
+   SetPolyAnnVal RESULT_REG[1], annIndex, 1, Data(RESULT_REG[1], 0, 1), \
+                    MaxRFDrive
+   SetPolyAnnVal RESULT_REG[1], annIndex, 2, Data(RESULT_REG[1], 0, \
+            DataCols(RESULT_REG[1])), MaxRFDrive
+   annIndex = NewTextAnn(RESULT_REG[1], "Maximum RF Drive: " + \
+             Sprintf$(MaxRFDrive, "%.1f"), Data(RESULT_REG[1], 0, 1), \
+             MaxRFDrive,,, 8,, 0,, ,"Arial")
+             
+   annIndex = NewPolyAnn(RESULT_REG[DrawObj], 2)     
+   SetPolyAnnVal RESULT_REG[DrawObj], annIndex, 1, 0, MaxRFDrive
+   SetPolyAnnVal RESULT_REG[DrawObj], annIndex, 2, 1, MaxRFDrive
+   annIndex = NewTextAnn(RESULT_REG[DrawObj], "Maximum RF Drive: " + \
+             Sprintf$(MaxRFDrive, "%.1f"), 0.02, \
+             MaxRFDrive,,, 8,, 0,, 1,"Arial")
+   
+   tempStr$ = ObjHdrText$(RESULT_REG[1], "Title") + ":  " + tempStr$   
+   dummy = NewTextAnn(RESULT_REG[1], tempStr$,,,,1) 
+   dummy = NewTextAnn(RESULT_REG[DrawObj], tempStr$, 0.02, 100.5,,, 8,blue, \
+                      0,,3,"Arial" ) 
+   dummy = NewTextAnn(RESULT_REG[2], ObjHdrText$(RESULT_REG[2], "Title"),,,,1)
+   dummy = NewTextAnn(RESULT_REG[3], ObjHdrText$(RESULT_REG[3], "Title"),,,,1)
+
+   ! Check RF forward power curve?
+   ! Check RF reflected power curve   ?
+
+   ! 4. Draw RF drive curve
+   i = 1
+   annIndex = 0
+   ScanMin   = Data(RESULT_REG[FreqScanIx], 0, 1)
+   ScanRange = Data(RESULT_REG[FreqScanIx], 0, \
+               DataCols(RESULT_REG[FreqScanIx])) - ScanMin
+ 
+   while (i <= DataCols(RESULT_REG[FreqScanIx]))
+      DataX = Data(RESULT_REG[FreqScanIx], 0, i)
+      ! Map 1:2 to MinFreq:MaxFreq
+      DataX = ((DataX - ScanMin)/ScanRange) + 1
+      DataY = Data(RESULT_REG[FreqScanIx], 1, i)
+      if (DataY < 100) then
+         if (annIndex = 0) then
+             ! Solid blue line
+             annIndex = NewPolyAnn(RESULT_REG[DrawObj], 0,,, 4,,, 16711680)
+             lineIx = 1
+         else
+             SetPolyAnnVal RESULT_REG[DrawObj], AnnIndex, \
+                           lineIx, DataX, DataY
+             lineIx = lineIx + 1
+         endif
+      endif
+      i = i + 1  
+   endwhile
+
+   ! 4A. RF drive frequency scan evaluation
+   !--------------------------------------
+   for i = 1 to nMassSteps
+      RegIndex = i + RegTypes
+
+      ! 4A1. calculate dip frequency
+      !--------------------------------------
+      GetDataMinMax RESULT_REG[RegIndex], 1
+      MinDrive = OBJ_MIN
+      dipFreq  = OBJ_X_MIN
+
+      ! if there are multiple X values at the Y minimum, find the 
+      ! mean value of the first and last.  
+      tempDip  = dipFreq
+      newFreq = OBJ_X_MIN
+      while (OBJ_MIN = MinDrive) AND (OBJ_MIN > 0) AND (newFreq < maxfreq)
+         tempDip = OBJ_X_MIN
+         newFreq = OBJ_X_MIN + DataVal(RESULT_REG[RegIndex], 0, Step)
+         GetDataMinMax RESULT_REG[RegIndex], 1, newFreq:maxFreq
+      endwhile
+      dipFreq = (dipFreq + tempDip) / 2
+      !print "DipFreq=", dipFreq
+ 
+      SetTabVal RESULT_REG[1], MassTable, i, "MinFreq",  dipFreq
+      SetTabVal RESULT_REG[1], MassTable, i, "MinDrive", MinDrive
+
+      ! 4A2. Set the plotlines to the same colors as are used in mass scan
+      !--------------------------------------
+      if i = 1 then    ! set these colors for the first mass only
+       SetDataVal RESULT_REG[RegIndex], 0, "Color", \
+             DataVal(RESULT_REG[1], 0, "Color")
+       SetDataVal RESULT_REG[RegIndex + 1], 0, "Color", \
+             DataVal(RESULT_REG[2], 0, "Color")
+       SetDataVal RESULT_REG[RegIndex + 2], 0, "Color", \
+             DataVal(RESULT_REG[3], 0, "Color")
+      endif
+      
+      ! 4A3. Draw the crosshairs, using the same color as the plotlines
+      !--------------------------------------
+      evalStr$ = "Color = TabVal(_config[1], color, 1, Obj" + val$(i) + ")"
+      evaluate evalStr$
+      annIndex = NewPolyAnn(RESULT_REG[RegIndex], 0,,,,,, \
+                 DataVal(RESULT_REG[RegIndex], 0, Color))     
+      SetPolyAnnVal RESULT_REG[RegIndex], annIndex, 1, dipFreq, 10
+      SetPolyAnnVal RESULT_REG[RegIndex], annIndex, 2, dipFreq, 100
+      annIndex = NewPolyAnn(RESULT_REG[RegIndex], 2,,,,,, \
+                 DataVal(RESULT_REG[RegIndex], 0, Color))     
+      SetPolyAnnVal RESULT_REG[RegIndex], annIndex, 1, minFreq, MinDrive
+      SetPolyAnnVal RESULT_REG[RegIndex], annIndex, 2, maxFreq, MinDrive
+      
+      ! Draw in display object
+      DipFreqMark = ((dipFreq - ScanMin)/ScanRange) + 1
+      annIndex = NewPolyAnn(RESULT_REG[DrawObj], 2,,,,,, 0) 
+      SetPolyAnnVal RESULT_REG[DrawObj], annIndex, 1, dipFreqMark,  0
+      SetPolyAnnVal RESULT_REG[DrawObj], annIndex, 2, dipFreqMark, 95
+      annIndex = NewPolyAnn(RESULT_REG[DrawObj], 2,,,,,,0)     
+      SetPolyAnnVal RESULT_REG[DrawObj], annIndex, 1, 1, MinDrive
+      SetPolyAnnVal RESULT_REG[DrawObj], annIndex, 2, 2, MinDrive
+      
+      ! 4A4. Max. RF drive in frequency scan
+      !--------------------------------------
+      freqMaxRFDrive = TabVal(RESULT_REG[1], MassTable, i, "MaxRFDrive")
+      freqMaxRFDrive = freqMaxRFDrive * (TestMz/MassRange)
+      InsTabRow  RESULT_REG[1], TestResultTab
+      testrow= TabHdrVal(RESULT_REG[1], TestResultTab, "NumberOfRows")
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", \
+                 "Min RF drive, frequency scan"
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", \
+                 Sprintf$(freqMaxRFDrive, "< %.0f")
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", \
+                 Sprintf$(MinDrive, "%.1f")
+
+      if MinDrive < freqMaxRFDrive then
+         SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+         tempStr$ = passed$
+      else
+         tempStr$ = failed$
+         freqFail = 1
+      endif
+
+      ! 4A5. Label the plot, including pass/fail for level
+      !--------------------------------------
+      dummy = NewTextAnn(RESULT_REG[RegIndex], \
+          ObjHdrText$(RESULT_REG[RegIndex], "Title") + \
+          ":  " + tempStr$,,,,1)    
+      dummy = NewTextAnn(RESULT_REG[DrawObj], \
+          ObjHdrText$(RESULT_REG[FreqScanIx], "Title") + \
+          ":  " + tempStr$, 1.02, 100.5,,,8,blue,0,,3, "Arial" ) 
+
+      ! 4A6. calculate min, max and mean dip  
+      !--------------------------------------
+      meanDip = meanDip + dipFreq
+      minDip  = MIN( dipFreq, minDip)
+      maxDip  = MAX( dipFreq, maxDip)
+   next i 
+   
+   ! evaluate dip frequencies
+   meanDip = meanDip / nMassSteps
+
+   ! 5. Dip frequency spectrum
+   !--------------------------------------
+   ! check to see that the dips from each mass setting agree
+   ! this is a no-op if there's only one mass setting
+   if nMassSteps > 1 then
+      InsTabRow  RESULT_REG[1], TestResultTab
+      testrow= TabHdrVal(RESULT_REG[1], TestResultTab, "NumberOfRows")
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", \
+                               "Dip freqency spectrum"
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", \
+                                Sprintf$(deltaDipSpec, "< %.0f Hz")
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", \
+                                Sprintf$((maxDip - minDip), "%.0f Hz")
+   endif
+
+   freqResultStr$ = "Pass"
+
+   if (maxDip - minDip) > deltaDipSpec then
+      freqFail = 1 
+      dummy = NewTextAnn(RESULT_REG[RegIndex], \
+         "Quad Frequencies do not agree: "+failed$, \
+         meanDip, 10,,,,255, 0,, 4,"Arial")
+      dummy = NewTextAnn(RESULT_REG[DrawObj], \
+         "Quad Frequencies do not agree: "+failed$, \
+          DipFreqMark, 10,,,,255, 0,, 4,"Arial")
+         
+   else
+
+      ! 6. Frequency adjustment recommendation
+      !--------------------------------------
+      !check to see if the mean dip agrees with the system's current setting
+      InsTabRow  RESULT_REG[1], TestResultTab
+      testrow= TabHdrVal(RESULT_REG[1], TestResultTab, "NumberOfRows")
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", \
+                "Quad. frequency delta"
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", \
+                 Sprintf$(deltaDipSpec * 2, "< %.0f Hz")
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", \
+                 Sprintf$(abs(meanDip - QuadFreq), "%.0f Hz")
+
+      !print MeanDip, QuadFreq, MeanDip-QuadFreq, maxFreq, minFreq
+      if abs(meanDip - QuadFreq) > (deltaDipSpec * 2) then
+         freqFail = 1
+         SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", failed$
+         dummy = NewTextAnn(RESULT_REG[RegIndex],\
+                 "MSD Frequency should be readjusted", \
+                  (MaxFreq + MinFreq)/2, 10,,,, 255, 0,, 4, "Arial")
+         dummy = NewTextAnn(RESULT_REG[DrawObj],\
+                 "MSD Frequency should be readjusted", \
+                  1.5, 10,,,, 255, 0,, 4, "Arial")
+      else
+         SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+         dummy = NewTextAnn(RESULT_REG[RegIndex], Sprintf$(meanDip/1e3, \
+                 "Quad Frequency: %5.1f kHz"), (MaxFreq + MinFreq)/2, 100,,,8,, \
+                  0,, 6,"Arial")
+         dummy = NewTextAnn(RESULT_REG[DrawObj], Sprintf$(meanDip/1e3, \
+                 "Quad Frequency: %5.1f kHz"), 1.5, 95,,,8,,0,, 6,"Arial")
+      endif
+   endif    
+   
+   ! Label the x axes
+   dgMsQeXaxis       
+
+   if freqFail = 1 then
+      SetObjHdrText RESULT_REG[1], "FreqScanResult",  Failed$
+   else
+      SetObjHdrText RESULT_REG[1], "FreqScanResult",  Passed$
+   endif
+   
+   WinUpdate ON
+    if (freqFail = 1) or (massFail = 1) then
+     RETURN failed$
+   else 
+     RETURN passed$
+   endif  
+
+ENDMACRO   ! end dgMsQeTestEvaluate
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsQeTestExec
+
+! 1. frequency ramping to the left and to the right of the current quad frequency
+! for all specificed test masses in the "MassTable".
+! this should produce a nice curve with its minimum at the 
+! current dipped quad frequency. If not the quadrupole is not dipped correctly
+! or the quad temperature is not reached
+!
+! 2. if the frequency scan was not a flat line, a mass scan will be done
+!***************************************************************************!
+LOCAL scq$, errText$, NewFreq, maxIndex, Error$, done, RegTypes
+LOCAL quadfreq, freq, i, index, mz, nMassSteps, startTime, fault, mass
+
+   ! prepare error trap
+   done=0; Error$=NlsMsDiag$("ErrInstAccess")
+   On Error goto ErrorTrap
+
+   SCTimeOut  = 5
+   startTime  = mtime()
+   quadfreq   = ObjHdrVal(RESULT_REG[1], "QuadFreq")
+   nMassSteps = TabHdrVal(RESULT_REG, MassTable, "NumberOfRows")
+   RegTypes   = 3      ! 1- rf drive, 2- rf forward power, 3-rf reflected power
+   
+   ! do for all test masses a frequency ramping to the left and to the right.
+   ! this should produce a nice curve with its minimum at the 
+   ! current dipped quad frequency. If not the quadrupole is not dipped 
+   ! correctly or the quad temperature is not reached
+   for i = 1 to nMassSteps   ! for each mass setting
+      RegIndex = RegTypes + nMassSteps
+      !print "RegIndex=",RegIndex
+      mz = TabVal(RESULT_REG[1], MassTable, i, "mz")    ! get the mass setting
+      index = DataIndex(RESULT_REG[RegIndex], quadfreq) ! starting point index
+      dgMsWrite "msc:parm quadfreq," + val$(quadfreq)
+      fault = 0                                    ! clear the fault flag
+      MSSetRFPA mz                                 ! turn on at specified m/z
+      sleep 2
+
+     ! get data size of the register
+     maxIndex = DataCols(RESULT_REG[RegIndex])
+ 
+      ! ramp down from initial quadfreq (to the left)
+      fault = 0
+      while index >= 1                    
+         !print "Quad Frequency = ", Data(RESULT_REG[RegIndex], 0, index)
+         if fault = 1 then
+            SetData RESULT_REG[RegIndex], 1, index, 100
+         else                                    
+         ! Set the quad frequency
+            NewFreq = Data(RESULT_REG[RegIndex], 0, index)
+            Print SPrintF$(NewFreq, "Setting quad frequency to %7.0f Hz")
+            dgMsWrite "msc:parm quadfreq," + Val$(NewFreq)
+            sleep 1.5
+            fault = dgMsQeReadVals(index, regIndex, nMassSteps) ! get the data
+         endif      
+         index = index - 1
+      endwhile
+
+      ! go back to the middle
+      index = DataIndex(RESULT_REG[RegIndex], quadfreq)
+      !print "Index:",index
+      fault = 0
+      dgMsWrite "msc:parm quadfreq," + Val$(quadfreq)
+      MSSetRFPA mz
+      sleep 2
+
+      ! ramp up from initial quadfreq (to the right)
+      fault = 0
+      while index <= maxIndex
+         NewFreq = Data(RESULT_REG[RegIndex], 0, index)
+         ! print "Index = ", index, "; quadfreq = ", NewFreq
+         Print SPrintF$(NewFreq, "Setting quad frequency to %7.0f Hz")
+         if fault = 1 then
+            SetData RESULT_REG[regIndex], 1, index, 100
+         else                                    
+            ! Set the quad frequency
+            dgMsWrite "msc:parm quadfreq," + Val$(NewFreq)
+            sleep 1.5
+            fault = dgMsQeReadVals(index, regIndex, nMassSteps) ! get the data
+         endif      
+         index = index + 1
+      endwhile 
+    next i
+   
+    ! make sure that a minimum was found in the frequency scan before doing 
+    ! the mass scan
+    GetDataMinMax RESULT_REG[RegIndex], 1
+    if OBJ_MIN <> OBJ_MAX then    ! if freq scan is not a flat line     
+       ! do mass scan
+       fault = 0
+       dgMsWrite "msc:parm quadfreq," + val$(quadfreq)
+       sleep 2
+       for i = 1 to DataCols(RESULT_REG[1])
+          if fault = 1 then
+             SetData RESULT_REG[1], 1, i, 100
+          else            ! set the mass
+             mass = Data(RESULT_REG[1], 0, i)
+             MSSetRFPA mass
+             Print SPrintF$(mass, "Setting quad electronics to %4.0f m/z")
+             sleep 2
+             fault = dgMsQeReadVals(i, 1, 1) ! get the data
+          endif
+       next i
+    endif
+
+   ! end the test without error
+   done=1
+   
+ ErrorTrap:
+   ON ERROR
+
+   NewObjHdrVal RESULT_REG[1], "ExecTime", (mtime() - startTime) / 60000
+   ! clean up all instrument settings without deleting the register
+   dgMsQECleanUp 0
+
+   if done=0 then
+     ! result table
+     InsTabRow  RESULT_REG[1], TestResultTab, 1
+     SetTabText RESULT_REG[1], TestResultTab, 1, "Text", "Acquiring test data"
+
+     ! suppress drawing for initilization
+     SetObjHdrVal RESULT_REG[1], "NoDraw", -1
+
+     SetTabText RESULT_REG[1], TestResultTab, TestNumber, Result, Error$
+     SetObjHdrText RESULT_REG[1], "ErrMsg", _ErrMsg$
+     SetObjHdrText RESULT_REG[1], "ErrMacro", _ErrMacro$
+     Generate Error 55555,  "MSD Test ("+_ErrMacro$+"):"+_ErrMsg$
+   endif
+   
+ENDMACRO        ! end dgMsQeTestExec
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsQeMakeDisplay
+! This macro creates a display object for the quad electronics test
+!***************************************************************************!
+LOCAL DisplayIx
+   
+   ! If display object already exists, bail out (assumes it to be top item)
+   DisplayIx = RegSize(RESULT_REG)
+   if (InStr(ConvertText$(lower, ObjHdrText$(RESULT_REG[DisplayIx], "Title")), \
+            "qedisplay") > 0) then
+      RETURN DisplayIx
+   else
+      ! Make a new object for drawing on
+      NewObj RESULT_REG, 1, 1, 8
+      DisplayIx = RegSize(RESULT_REG)
+
+      ! Draw the box around the two drawing areas using data points
+      SetData RESULT_REG[DisplayIx], 0, 1,   0
+      SetData RESULT_REG[DisplayIx], 1, 1,   0
+      SetData RESULT_REG[DisplayIx], 0, 2,   2
+      SetData RESULT_REG[DisplayIx], 1, 2,   0
+      SetData RESULT_REG[DisplayIx], 0, 3,   2
+      SetData RESULT_REG[DisplayIx], 1, 3, 100
+      SetData RESULT_REG[DisplayIx], 0, 4,   1
+      SetData RESULT_REG[DisplayIx], 1, 4, 100
+      SetData RESULT_REG[DisplayIx], 0, 5,   1
+      SetData RESULT_REG[DisplayIx], 1, 5,   0
+      SetData RESULT_REG[DisplayIx], 0, 6,   1
+      SetData RESULT_REG[DisplayIx], 1, 6, 100
+      SetData RESULT_REG[DisplayIx], 0, 7,   0
+      SetData RESULT_REG[DisplayIx], 1, 7, 100
+      SetData RESULT_REG[DisplayIx], 0, 8,   0
+      SetData RESULT_REG[DisplayIx], 1, 8,   0
+
+      ! Set markers off, color black, linestyle solid
+      SetDataVal  RESULT_REG[DisplayIx], 1, "LineStyle", 0
+      SetDataVal  RESULT_REG[DisplayIx], 1, "Marker",    0
+      SetDataVal  RESULT_REG[DisplayIx], 1, "Color",     0
+      SetDataText RESULT_REG[DisplayIx], 1, "AxisTitle", "% RF Drive"
+
+      SetObjHdrText RESULT_REG[DisplayIx], "Title", "QEDisplay"
+   endif
+   
+   RETURN DisplayIx
+   
+ENDMACRO              ! end dgMsQeMakeDisplay
+!***************************************************************************!
+
+
+!***************************************************************************!
+NAME dgMsQeFaultCheck
+  PARAMETER mz
+  PARAMETER quadfreq
+  PARAMETER retry     DEFAULT 0
+
+! This macro checks for a fault.  If a fault has occurred the mz, quadfreq
+! and contents of the status register are stored in the "FaultTable
+! If retry is set to 1, then the system will retry once at the specified m/z.
+! Return
+!   1: fault occured, data in the fault table logged
+!   0: otherwise
+!***************************************************************************!
+LOCAL Status1, rfdrive
+LOCAL row, fault
+
+   ON ERROR return 1
+
+   Status1= Val( dgMsQuery$(":MSDC:MSE? 0") )
+   rfdrive= Val( dgMsQuery$(":sens? rfdrive") )
+   ! check for a fault
+   if (Status1 <> 0) OR (rfdrive <= 0) OR (rfdrive >= 100) then 
+      ! a fault has occurred
+      InsTabRow RESULT_REG, FaultTable
+      row = TabHdrVal(RESULT_REG, FaultTable, "NumberOfRows")
+      SetTabVal RESULT_REG, FaultTable, row, "mz", mz
+      SetTabVal RESULT_REG, FaultTable, row, "quadfreq", QuadFreq
+      SetTabVal RESULT_REG, FaultTable, row, "Status1", Status1
+      SetTabVal RESULT_REG, FaultTable, row, "RFDrive", RFDrive
+
+      ! retry when retry flag is set
+      if retry = 0 then
+         ! 1 means fault has occurred 
+         RETURN 1
+      else                        
+         ! retry and return result of fault check
+         MSOn   
+         dgMsWrite "msc:parm quadfreq, " + val$(QuadFreq)
+         MSSetRFPA mz
+         sleep 3
+         RETURN dgMsQeFaultCheck(mz, quadFreq)
+      endif                     
+   else
+      ! No fault reported
+      RETURN 0                    
+   endif
+
+ENDMACRO                          ! end dgMsQeFaultCheck
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsQeReadVals
+  PARAMETER index
+  PARAMETER whichReg
+  PARAMETER nMassSteps
+! This macro reads the RF drive level, RFPA forward power and RFPA reflected
+! power and puts the values in the appropriate data slot.
+! Index:     is the data index of the data points to be read
+! whichReg:  is the index of the first register to accept the data
+!                     1..RegTypes   are mass scan
+!            RegTypes+1..max        are frequency scans
+! nMassSteps is the register index offset if multiple mass settings 
+!            are used in the quad frequency scans
+! 
+! Return
+!  1 if there's an unrecoverable fault
+!  0 if no error found
+!***************************************************************************!
+LOCAL quadFreq, whichMass, rfpowerf, rfpowerr, RegTypes
+
+   RegTypes =  3      ! 1- rf drive, 2- rf forward power, 3-rf reflected power
+
+   ON ERROR RETURN 1
+    
+   if whichReg <= RegTypes then 
+      ! If doing a mass scan
+      whichMass = Data(RESULT_REG[whichReg], 0, index)
+      quadFreq  = ObjHdrVal(RESULT_REG[1], "QuadFreq")
+   else                  
+      ! If doing a frequency scan
+      whichMass = TabVal(RESULT_REG[1], MassTable, mod(whichReg, 3), "mz")
+      quadFreq  = Data(RESULT_REG[whichReg], 0, index)
+   endif   
+
+   ! print "WhichMass: ", WhichMass, "; QuadFreq: ",QuadFreq   
+   rfdrive = Val( dgMsQuery$(":sens? rfdrive") )
+   if rfdrive >= 100 then
+      SetData RESULT_REG[whichReg], 1, index, 100
+      RETURN 1         ! consider 100% drive a fault
+   endif
+   
+   ! check RF drive for fault
+   if rfdrive = 0 then
+      ! log fault in fault check if it happens again
+      if dgMsQeFaultCheck(whichMass, quadFreq, 1) = 1 then
+         SetData RESULT_REG[whichReg], 1, index, 100
+         RETURN 1
+      else
+         rfdrive = Val( dgMsQuery$(":sens? rfdrive") )
+      endif   
+   endif
+
+   ! store the three RF typed data
+   SetData RESULT_REG[whichReg + 0], 1, index, rfdrive
+   rfpowerf = Val( dgMsQuery$(":sens? rfpowerf") )
+   SetData RESULT_REG[whichReg + 1], 1, index, rfpowerf
+   rfpowerr = Val( dgMsQuery$(":sens? rfpowerr") )
+   SetData RESULT_REG[whichReg + 2], 1, index, rfpowerr
+
+   RETURN 0
+
+ENDMACRO        ! end ReaddgMsQeVals
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsQeTestInit$
+  PARAMETER TestMZ DEFAULT 2000 !appreciated test mass, test mass range
+
+! initialize the test result register and define the low and high mass
+! the register does contain two sets of register types.
+! the first set is for mass scans and the second set is for frequency scans.
+! Each register set contains three objects describing the
+! RF drive, RF forward power and the RF reflected power.
+! Revision History:
+! 03/30/00 YD   Fixed the PVCS Bug#6519: Quad Electronics Error. Added
+!               Sprite1C checking, and sets the default M/Z value to 1000
+!               for Sprite1C.
+! 04/07/00 YD   Removed the IsSprite1C() call. Use MSInstrParm() to
+!                      determine the TestMZ instead.
+! 10/22/01 PHC  Added case for G1946C to have lower MaxRFDrive, as the result
+!               of its limited mass range(1500 instead of 3000).
+!***************************************************************************!
+LOCAL HiMass, LowMass, StepSize, AnnotIndex, RegTypes, IonPol, IonMode$
+LOCAL quadfreq, FreqWindow, FreqStep, nMassSteps, pos, i, mz, RegIndex
+
+   ! define some constants
+   StepSize =  100      ! Make sure LowMass & HiMass are multiples of this
+   LowMass  =  Max(    100, MSInstrParm("MinMass") )
+   HiMass   =  MSInstrParm("MaxMass")  ! MIN( TestMz, MSInstrParm("MaxMass") )
+
+  ! 04/07/00 YD
+  if (TestMZ * 1.4) > HiMass
+     TestMZ = HiMass * 0.6
+  endif
+
+   FreqWindow =  5000      ! 5 kHz
+   FreqStep   =   100      ! Make sure FreqWindow is a multiple of this
+   nMassSteps =     1      ! number of mass to test
+   RegTypes   =     3      ! 1- rf drive, 2- rf forward power, 3-rf reflected power
+
+   delReg RESULT_REG
+
+   ! make sure the Low and High Mass are multiples of the stepsize
+   if MOD(LowMass, StepSize) <> 0 then
+      ! go one multiple up 
+      LowMass= (1+ TRUNC( LowMass /StepSize) ) * StepSize
+   endif
+
+   if MOD(HiMass, StepSize) <> 0 then
+      ! go one multiple down
+      HiMass=  TRUNC( HiMass /StepSize)  * StepSize
+   endif
+   
+   ! check if the mass range make sense
+   if LowMass >= HiMass then
+     return NlsMsDiag$("ErrMassRange")
+   endif
+
+   ! save current quad frequency
+   ON ERROR Return NlsMsDiag$("ErrInstAccess")
+   quadfreq = Val( dgMsQuery$(":msc:parm? quadfreq") )
+   ON ERROR
+
+   ! create first register set "MassScan objects"
+   ! ---------------------------------------------
+   for i = 1 to RegTypes
+      NewObj RESULT_REG[i], 1, 1, floor((HiMass - LowMass)/ StepSize) + 1
+      SetDataVal RESULT_REG[i], 0, Start, LowMass
+      SetDataVal RESULT_REG[i], 0, Step,  StepSize
+   next i
+   ! set object titles and annotations
+   SetObjHdrText RESULT_REG[1], "Title", \
+                 SprintF$(quadfreq/1e3, "RF Drive Scan at %6.1f kHz")
+   SetObjHdrText RESULT_REG[2], "Title", \
+                 SprintF$(quadfreq/1e3, "RF Forward Power Scan at %6.1f kHz")
+   SetObjHdrText RESULT_REG[3], "Title", \
+                 SprintF$(quadfreq/1e3, "RF Reflected Power Scan at %6.1f kHz") 
+
+   ! create all tables
+   ! ---------------------------------------------
+   ! Table containing m/z settings to be tested
+   NewTab    RESULT_REG, MassTable
+   NewColVal RESULT_REG, MassTable, "mz"
+   NewColVal RESULT_REG, MassTable, "MinFreq"
+   NewColVal RESULT_REG, MassTable, "MinDrive"
+   NewColVal RESULT_REG, MassTable, "MaxRFDrive"      ! Maximum allowable
+   NewColVal RESULT_REG, MassTable, "MinDriveWindow"  ! width of curve
+   ! only one test frequency
+   InsTabRow RESULT_REG, MassTable, 1:nMassSteps
+   SetTabVal RESULT_REG, MassTable, 1, "mz", TestMz
+   if MSD_VL = 1
+     SetTabVal RESULT_REG, MassTable, 1, "MaxRFDrive", (45 + 10)  ! VL model, 1500amu range
+   else
+     SetTabVal RESULT_REG, MassTable, 1, "MaxRFDrive", (85 + 10)  ! All others, 3000 amu range
+   endif
+
+   ! Table to record faults
+   NewTab    RESULT_REG, FaultTable
+   NewColVal RESULT_REG, FaultTable, "mz"
+   NewColVal RESULT_REG, FaultTable, "QuadFreq"
+   NewColVal RESULT_REG, FaultTable, "Status1"
+   NewColVal RESULT_REG, FaultTable, "RFDrive"
+
+   ! generate TestResultTable
+   NewTab RESULT_REG[1], TestResultTab
+   NewColText RESULT_REG[1], TestResultTab, "Text", ""
+   NewColText RESULT_REG[1], TestResultTab, "Range", ""
+   NewColText RESULT_REG[1], TestResultTab, "Value", ""
+   NewColText RESULT_REG[1], TestResultTab, "Result", NlsMsDiag$("Failed")
+   InsTabRow  RESULT_REG[1], TestResultTab, 1
+   SetTabText RESULT_REG[1], TestResultTab, 1, "Text", "Initializing Test"
+
+
+   ! create second register set "MassScan objects" for each mass
+   ! ---------------------------------------------
+   for i = 1  to nMassSteps 
+      mz =  TabVal(RESULT_REG, MassTable, i, "mz")
+      
+      ! RF Drive
+      RegIndex = 1+ ( i * RegTypes) 
+      NewObj RESULT_REG[RegIndex], 1, 1, ceil((FreqWindow / FreqStep) + 1)
+      SetDataVal RESULT_REG[RegIndex], 0, Start, QuadFreq - (FreqWindow/2)
+      SetDataVal RESULT_REG[RegIndex], 0, Step,  FreqStep
+      str$ = "RF Drive Frequency Scan at m/z " + val$(mz)
+      SetObjHdrText RESULT_REG[RegIndex], "Title", str$
+      !print "Reg", RegIndex, str$
+      SetObjHdrVal  RESULT_REG[RegIndex], "mz", mz
+      AnnotIndex=NewTextAnn(RESULT_REG[RegIndex], str$,,,,1)
+     
+     ! RF Forward Power
+      RegIndex =  2+ ( i * RegTypes)
+      NewObj RESULT_REG[RegIndex], 1, 1, ceil((FreqWindow / FreqStep) + 1)
+      SetDataVal RESULT_REG[RegIndex], 0, Start, QuadFreq - (FreqWindow/2)
+      SetDataVal RESULT_REG[RegIndex], 0, Step,  FreqStep
+      str$ = "RF Forward Power Frequency Scan at m/z " + val$(mz)
+      SetObjHdrText RESULT_REG[RegIndex], "Title", str$
+      !print "Reg", RegIndex, str$
+      AnnotIndex=NewTextAnn(RESULT_REG[RegIndex], str$,,,,1)
+
+     ! RF Reflected Power
+      RegIndex =  3+ ( i * RegTypes)
+      NewObj RESULT_REG[RegIndex], 1, 1, ceil((FreqWindow / FreqStep) + 1)
+      SetDataVal RESULT_REG[RegIndex], 0, Start, QuadFreq - (FreqWindow/2)
+      SetDataVal RESULT_REG[RegIndex], 0, Step,  FreqStep
+      str$ = "RF Reflected Power Frequency Scan at m/z " + val$(mz) 
+      SetObjHdrText RESULT_REG[RegIndex], "Title", str$
+      !print "Reg", RegIndex, str$
+      AnnotIndex=NewTextAnn(RESULT_REG[RegIndex], str$,,,,1)              
+   next i
+   
+   ! create a display object
+   ! ---------------------------------------------
+   AnnotIndex = DgMsQeMakeDisplay()
+
+   ! Add some identifying information to the register
+   ! Inst serial number, time stamp, SCversion, macro version
+   ! get MS instrument name
+   NewObjHdrVal  RESULT_REG, "QuadFreq", quadfreq
+   NewObjHdrVal  RESULT_REG, "LowMass",  LowMass
+   NewObjHdrVal  RESULT_REG, "HiMass", HiMass
+   NewObjHdrVal  RESULT_REG, "TestMass", TestMZ
+   NewObjHdrVal  RESULT_REG, "StepSize", StepSize
+   NewObjHdrText RESULT_REG, "InstrumentName", _InstName$
+   NewObjHdrText RESULT_REG[1], "FreqScanResult"
+   NewObjHdrText RESULT_REG[1], "MassScanResult"
+   ! save ion polarity
+   IonPol = dgMsCheckTunePol()       ! Will switch to Standard scan mode if in Fast mode
+   SetObjHdrVal RESULT_REG[1], "IonPolarity", IonPol
+   if IonPol = 0 then
+      SetObjHdrText RESULT_REG[1], "IonPol", "Positive Ion"
+   else
+      SetObjHdrText RESULT_REG[1], "IonPol", "Negative Ion"
+   endif
+   MSGetMode IonMode$
+   SetObjHdrText RESULT_REG[1], "IonMode", IonMode$
+   
+   SetObjHdrVal RESULT_REG[1], "OldMsEcho", -1
+   if Check(Variable, MS_Echo) = 1 then
+     SetObjHdrVal RESULT_REG[1], "OldMsEcho", MS_ECHO
+   endif
+   MS_ECHO=0
+
+   dgMsTestInfo "QEChart1", \
+             "dgMsDisplayTest QEChart1, QERes, QEReport", \
+             "123096",  "RESULT_REG[1]"
+             
+   ! add drawing information for printing
+   SetObjHdrText RESULT_REG[1], "DrawChart1", "[7],-0.05:2.05, -10:110"
+
+   return ""
+   
+ENDMACRO       ! end dgMsQeTestInit
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsQeCleanUp
+PARAMETER Clean DEFAULT 1
+! reset quad frequency
+!
+! 04/21/03 JZ  Remove abort handler routine from _ABORT$ string.
+!***************************************************************************!
+local quadfreq, err, oldecho
+Local AbortCmd$
+Local Pos, LenAbort, LenCmd
+
+  ON ERROR err=1
+
+  if Check(Variable, ScTimeOut) = 1 then
+    remove ScTimeOut
+  endif
+
+  ! restore quad frequency
+  MSOff
+  if regSize(RESULT_REG) > 0 then
+    SaveObj RESULT_REG, _diagnosePath$ + "dgqeres.reg", NEW
+
+    if ObjHdrType(RESULT_REG, "QuadFreq") <> 99 then
+       err=0
+       quadFreq = ObjHdrVal(RESULT_REG, "QuadFreq")
+       dgMsWrite ":msc:parm quadfreq," + val$(quadfreq)
+    endif
+  endif
+
+   if ObjHdrType(RESULT_REG[1], "OldMsEcho") <> 99 then
+     oldecho=ObjHdrVal(RESULT_REG[1], "OldMsEcho")
+     if oldecho= -1 then
+       remove MS_ECHO
+     else
+       MS_ECHO=oldecho
+     endif
+   endif
+
+  if clean = 1 then
+    delreg RESULT_REG
+  endif
+  WinUpdate
+
+  ! JZ DELETE CLEAN UP MACRO FROM _ABORT$ STRING
+  AbortCmd$="dgMsQeCleanUp;"
+  Pos=InStr(_abort$,Abortcmd$)
+  IF Pos>0 THEN
+    LenAbort=Len(_abort$)
+    LenCmd=Len(AbortCmd$)
+    if Pos=1 THEN
+      _abort$= _abort$[Pos+LenCmd:LenAbort]
+    else
+      if (Pos+LenCmd)<LenAbort
+        _abort$= _abort$[1:Pos-1] + _abort$[Pos+LenCmd:LenAbort]
+      else
+        _abort$= _abort$[1:Pos-1]
+      endif
+    endif
+  ENDIF
+
+ENDMACRO       ! end dgMsQeCleanUp
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsQeXaxis       
+!***************************************************************************!
+LOCAL AnnIx, DrawIx, MassScanIx, FreqScanIx, ScanMin, ScanRange, DataX
+LOCAL SmallTicY, BigTicY, MajorAxis, MinorAxis, Mass, freq
+   
+   MassScanIx = 1
+   FreqScanIx = 4
+   DrawIx = RegSize(RESULT_REG)
+   
+   ! Get the dimensions  
+   ScanRange = Data(RESULT_REG[MassScanIx], 0, DataCols(RESULT_REG[MassScanIx]))
+   ScanMin   = 0
+   BigTicY   = -1.5
+   SmallTicY = -1
+   MajorAxis = 1000
+   MinorAxis =  200
+   
+   ! Mass scan
+   mass  = 0
+   while (Mass <= ScanRange)
+      DataX = mass/ScanRange
+      annIx = NewPolyAnn(RESULT_REG[DrawIx], 0, DataX, 0)
+      if (mod(mass, MajorAxis) = 0) then
+         setPolyAnnVal RESULT_REG[DrawIx], annIx, 1, 0, 0
+         setPolyAnnVal RESULT_REG[DrawIx], annIx, 2, 0, BigTicY
+         if (Mass = 0) then  
+            alignment = 1      ! upper left
+         else
+            if (Mass = ScanRange) then
+               alignment = 7   ! upper right
+            else
+               alignment = 4   ! upper middle
+            endif
+         endif
+         annIx = NewTextAnn(RESULT_REG[DrawIx], SPrintF$(Mass, "%1.0f"), \
+                 DataX, BigTicY,,,8,,0, 1, alignment, "Arial")
+      else
+         setPolyAnnVal RESULT_REG[DrawIx], annIx, 1, 0, 0
+         setPolyAnnVal RESULT_REG[DrawIx], annIx, 2, 0, SmallTicY
+      endif
+      mass = mass + MinorAxis
+   endwhile 
+   
+   ! Frequency scan
+   ScanMin   = Data(RESULT_REG[FreqScanIx], 0, 1)
+   ScanRange = Data(RESULT_REG[FreqScanIx], 0, \
+                    DataCols(RESULT_REG[FreqScanIx])) - ScanMin
+   MajorAxis = 1000
+   MinorAxis =  250
+   alignment = 0
+   freq = floor(ScanMin/MajorAxis) * MajorAxis
+   freq = floor(freq)
+   while (freq <= (ScanRange + ScanMin))
+      DataX = ((freq - ScanMin)/ScanRange) + 1
+      annIx = NewPolyAnn(RESULT_REG[DrawIx], 1, DataX, 0)
+      if (freq >= (ScanMin)) then
+         if (mod(freq, MajorAxis) = 0) then
+            if (freq < (ScanRange + ScanMin)) then
+               setPolyAnnVal RESULT_REG[DrawIx], annIx, 1, 0, 0
+               setPolyAnnVal RESULT_REG[DrawIx], annIx, 2, 0, BigTicY
+               if (alignment = 0) then  
+                  alignment = 1      ! upper left
+               else
+                  ! if ((Freq + MajorAxis) > (ScanMin + ScanRange)) then
+                  !    alignment = 7   ! upper right
+                  ! else
+                     alignment = 4   ! upper middle
+                  ! endif
+               endif
+               annIx = NewTextAnn(RESULT_REG[DrawIx], SPrintF$(Freq/1000, \
+                       "%4.0f"), DataX, BigTicY,,,8,,0, 1, alignment, "Arial")
+            endif
+         else
+            setPolyAnnVal RESULT_REG[DrawIx], annIx, 1, 0, 0
+            setPolyAnnVal RESULT_REG[DrawIx], annIx, 2, 0, SmallTicY
+         endif
+      endif
+      freq = freq + MinorAxis
+   endwhile 
+   
+   annIx = NewTextAnn(RESULT_REG[DrawIx], "m/z ", 1, 0,,,8,,0, 1, 9, "Arial")
+   annIx = NewTextAnn(RESULT_REG[DrawIx], "kHz ", 2, 0,,,8,,0, 1, 9, "Arial")
+
+   RETURN
+
+ENDMACRO       ! end dgMsQeXaxis
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsGetRegister$
+  PARAMETER RegIndex, RegIncr default 2
+  
+!***************************************************************************!
+  
+  if RegIncr > 0 then
+     return "DiagTestResult[" + VAL$(RegIndex)+ ":"+ VAL$(RegIndex+RegIncr)+ "]"
+  else
+     return "DiagTestResult[" + val$(RegIndex) + "]"
+  endif
+
+ENDMACRO       ! end dgMsGetRegister$
+!***************************************************************************!
+
+!******************************************************************************
+
+print "dgQeTest.mac v. " + dgQEtestVer$ + " loaded."
+
+!********* end of file ******************************************************
+

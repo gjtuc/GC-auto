@@ -1,0 +1,1181 @@
+!***************************************************************************!
+!* dgVacTst.mac        
+!* Sprite Vacuum System Test macros
+!* Erik Reinecke and Daniela Treffinger, CAD
+!*
+!* These macros monitor the foreline and high vacuum, turbo speed and turbo 
+!* power.  
+!*
+!* MACROS:
+!*  dgMsVacTest$
+!*  dgMsVacReadInstrument
+!*  dgMsVacTurboState$
+!*  dgMsVacSetEvent
+!*  dgMsVacFault$
+!*  dgMsVacEvaluateFault$
+!*  dgMsVacEvaluation$
+!*  dgMsVacCleanUp
+
+ dgVacVer$ = "$Header: /cag/triath1b/partsmac/diag/dgvactst.mac 1.22 2003-06-23 15:39:23-07 julie_zhao Exp $"
+ verIx = instr(dgVacVer$, ".mac ") + 5
+ dgVacVer$ =  dgVacVer$[verIx:VerIx + instr(dgVacVer$[VerIx:len(dgVacVer$)]," ") - 1] 
+ remove verIx
+
+
+!***************************************************************************!
+name dgMsVacTest$
+  PARAMETER num    DEFAULT 1
+  PARAMETER RegObjNo       ! PARAMETER attached from test clipboard
+  PARAMETER TestTableName$ ! PARAMETER attached from test clipboard
+  PARAMETER RowNo          ! PARAMETER attached from test clipboard
+
+! runs the actual instrument test in four steps
+! 1: reading instrument values for 5 sesconds
+! 2: vent the system
+! 3: pumpdown the system
+! 4: reading instrument parameters for 2 minutes
+!
+! 04/21/03 JZ  Setup abort handler for Vaccumm test.
+!***************************************************************************!
+local err, DataBlockSize, index, AnnIndex, i
+local FV, HV, T1S, T2S, T1P, T2P
+local result$, endtime
+
+  result$="not finished"
+
+  ! registers in this macro
+  FV  = 1; HV  = 2
+  T1S = 3; T1P = 4; T2S = 5; T2P = 6    ! Switched order of T1P and T2S. PHC 04/09/2003
+
+  ON ERROR GoTo errorTrap
+
+  ! JZ Setup Abort routine
+  if (check(Variable, _abort$) = 0) then
+     _abort$ = ""
+   endif
+  _abort$ = "dgMsVacCleanUp;"+_abort$
+
+  DataBlockSize=900 ! entire test time >12min
+  EndTime = mtime() + (DataBlockSize+140) * 1000
+
+  index=1
+  if MSD_46 = 1 then
+    RegMax=6
+  else
+    RegMax=4   ! Won't need Turbo 2 registers
+  endif
+
+
+  ! 0. initialize register
+  !------------------------
+  ! delete old register
+  delReg RESULT_REG
+
+  ! generate registers with a huge data block to save all instrument readbacks
+  For RegObj=1 TO RegMax
+    NewObj RESULT_REG, 1, 1, DataBlockSize
+  Next RegObj
+
+  ! add necessary test info
+  dgMsTestInfo "VacChart", \
+		"dgMsDisplayTest VacChart, VacRes, VacReport", "040197",  "RESULT_REG[1]"
+
+  ! table to save pump errors and warnings during the test
+  NewTab    RESULT_REG[1], "ErrorTab"
+  NewColVal RESULT_REG[1], "ErrorTab", "Type"
+  NewColVal RESULT_REG[1], "ErrorTab", "Index"
+  NewColVal RESULT_REG[1], "ErrorTab", "Error"
+
+  ! generate TestResultTable
+  NewTab RESULT_REG[1], TestResultTab
+  NewColText RESULT_REG[1], TestResultTab, "Text", ""
+  NewColText RESULT_REG[1], TestResultTab, "Range", ""
+  NewColText RESULT_REG[1], TestResultTab, "Value", ""
+  NewColText RESULT_REG[1], TestResultTab, "Result", NlsMsDiag$("Failed")
+  InsTabRow  RESULT_REG[1], TestResultTab, 1
+  SetTabText RESULT_REG[1], TestResultTab, 1, "Text", "Acquiring data"
+
+  ! inform msd driver to own smartcard for this test
+  if msexternalopcall("notidle_state") = 0 then
+    ret=msexternalopcall("notidle_set")
+  endif
+
+  ! 1. read initial system values for 5 sec
+  !------------------------------------
+  index=dgMsVacReadInstrument("InitialTab", index, 5, "WAIT", \
+	  EndTime, RegObjNo, TestTableName$, RowNo) ! wait for time out
+
+  ! 2. start vent
+  !------------------------------------
+  MsScWrite ":SYS:OLVL vented"
+  index=dgMsVacReadInstrument("VentTab",index, DataBlockSize, "OFF",  \
+	  EndTime, RegObjNo, TestTableName$, RowNo) ! all off
+  if index < DataBlockSize then
+    SetObjHdrVal RESULT_REG[1], "EndVent", index-1 
+  endif
+	print "after venting teh index is ", index
+  ! 3. start pumpdown
+  !------------------------------------
+  ! Turn on spray chamber, to speed up pumpdown
+    MsScWrite ":zone:name dgasflow;:zone:ctl on;:zone:set 13"
+    MsScWrite ":zone:name NebPres;:zone:ctl on;:zone:set 15"
+    MsScWrite ":zone:name dgas;:zone:ctl on;:zone:set 300"
+  MsScWrite ":SYS:OLVL on"
+  index=dgMsVacReadInstrument("PumpDownTab",index, DataBlockSize, "ON", \
+	  EndTime, RegObjNo, TestTableName$, RowNo) ! all on
+  if index < DataBlockSize then
+    SetObjHdrVal RESULT_REG[1], "EndPumpDown", index-1 
+  endif
+	print "after pumpdown the index is ", index
+
+  ! 4. read stable system values 
+  !------------------------------------
+  DataBlockSize=Min(DataBlockSize, index+120) !for additional 120 seconds
+  if MSD_46 = 0 then
+    sleep 60                      ! give single turbo system time to settle
+  endif
+  index=dgMsVacReadInstrument("StableTab",index, DataBlockSize, "WAIT",  \
+	  EndTime, RegObjNo, TestTableName$, RowNo) ! wait for time out
+ 
+  ! restore driver state and release smartcard
+  if msexternalopcall("notidle_state") = 1 then
+    ret=msexternalopcall("notidle_reset")
+  endif
+
+  ! 5. cut of leftover data block space
+  !------------------------------------
+  !copy data into correct data block size
+  index=index-1
+  SetObjHdrVal RESULT_REG[1], "LastIndex", index
+  delReg tmp
+  CopyObj RESULT_REG, tmp
+  delReg  RESULT_REG
+  For i=1 To RegMax
+    NewObj RESULT_REG, 1, 1, index
+    CopyDataRow tmp[i], 0, 1:index, RESULT_REG[i], 0 
+    CopyDataRow tmp[i], 1, 1:index, RESULT_REG[i], 1 
+  NEXT i
+  ! copy test specific data
+  SetObjHdrVal RESULT_REG[1], "EndVent",     ObjHdrVal(tmp, "EndVent")
+  SetObjHdrVal RESULT_REG[1], "EndPumpDown", ObjHdrVal(tmp, "EndPumpDown")
+  CopyTab tmp, "InitialTab", RESULT_REG[1], "InitialTab" 
+  CopyTab tmp, "VentTab",    RESULT_REG[1], "VentTab" 
+  CopyTab tmp, "PumpDownTab",RESULT_REG[1], "PumpDownTab" 
+  CopyTab tmp, "StableTab",  RESULT_REG[1], "StableTab" 
+  CopyTab tmp, "ErrorTab",   RESULT_REG[1], "ErrorTab" 
+
+  ! add necessary test info
+  dgMsTestInfo "VacChart", \
+	       "dgMsDisplayTest VacChart, VacRes, VacReport", "040197",  "RESULT_REG[1]"
+  ! get old time stamp back
+  SetObjHdrVal RESULT_REG[1], "DiagTime", ObjHdrVal(tmp, "DiagTime")
+  SetObjHdrVal RESULT_REG[1], "DiagDate", ObjHdrVal(tmp, "DiagDate")
+
+  ! delete temporary register
+  delReg tmp
+
+ErrorTrap:
+  ON ERROR
+  !close #5
+
+  dgMsVacCleanUp
+
+  ! label the data curves
+  AnnIndex = NewTextAnn(RESULT_REG[FV], "Foreline Vacuum",,,,1)
+  AnnIndex = NewTextAnn(RESULT_REG[HV], "High Vacuum"   ,,,,1)
+  AnnIndex = NewTextAnn(RESULT_REG[T1S],"Turbo 1 Speed" ,,,,1)
+  AnnIndex = NewTextAnn(RESULT_REG[T1P],"Turbo 1 Power" ,,,,1)
+  if MSD_46 = 1 then
+    AnnIndex = NewTextAnn(RESULT_REG[T2S],"Turbo 2 Speed" ,,,,1)
+    AnnIndex = NewTextAnn(RESULT_REG[T2P],"Turbo 2 Power" ,,,,1)
+  endif
+
+MsScQuery ":msc:sens? turbo1pw",readback$
+print readback$
+
+  return "done"
+endmacro
+
+!***************************************************************************!
+name dgMsVacReadInstrument
+  parameter EventTable$
+  parameter index
+  parameter DataBlockSize
+  Parameter EndState$       ! ON | OFF | WAIT
+! test panel information
+  Parameter EndTime
+  PARAMETER RegObjNo       ! PARAMETER attached from test clipboard
+  PARAMETER TestTableName$ ! PARAMETER attached from test clipboard
+  PARAMETER RowNo          ! PARAMETER attached from test clipboard
+
+
+! reads the instrument statest as long as the pumps and pessures have
+! succeeded the Endstate$, or the DataBlock is full, or more the
+! Const_maxErrors have occured during the reading.
+!
+! returns the last used data index in the datablocks (!don't return -1!)
+!***************************************************************************!
+local turbo1$, turbo2$, LowVac$, HiVac$, Foreline$
+local RoughPump$, nForePres, nHighPres, readback$
+local TurboStatus, TurboError, OldEcho
+local Const_vented, Const_HiVacOn, Max_Error
+local FV, HV, T1S, T2S, T1P, T2P
+LOCAL ActTime, Hours, Minutes, Seconds, lowbits
+
+  ! check if the index is valide
+  if index >= DataBlockSize then
+    return index
+  endif
+
+  ! registers in this macro
+  FV  = 1; HV  = 2
+  T1S = 3; T1P = 4; T2S = 5; T2P = 6    ! Switched order of T1P and T2S. PHC 04/09/2003
+
+  ! specs to this test
+  HiVacOK         = 2e-5   ! Torr; high vacuum must be below this
+  Vented          = 100    ! Torr; 
+  Const_MaxError  = 10     ! number of errors to abort this test
+			   ! errors are instrument access or turbo pump problems
+  
+
+  ! initial flags
+  turbo1$   =""
+  turbo2$   =""
+  foreline$ =""; RoughPump$="-99"
+  HiVac$    =""
+  LowVac$   =""
+
+
+  ! suppress MSD echo for diagnosis
+  if Check(VARIABLE, MS_ECHO) = 1 then
+    oldecho=MS_ECHO
+  else
+    oldecho=-1
+  endif
+  MS_ECHO=0
+
+  ! each error writes an instrument access entry into the error table
+  ON ERROR readback$=dgMsVacFault$(Readback$, Index, 0, 0, 1)
+
+
+  repeat    
+    !print index
+	! set timer in test table display
+    ActTime = (EndTime - mtime()) / 1000
+    Hours = TRUNC (ActTime / 3600)
+    Minutes = TRUNC ( MOD (ActTime,3600) / 60 )
+    Seconds = TRUNC ( MOD ( MOD (ActTime,3600),60 ) )
+    ! set time in result column of the test clipboard
+    SetTabText DiagGUITmp, TestTableName$, RowNo, "result", \
+	    VAL$(Minutes) + " min " + VAL$(Seconds) + " s"
+
+	
+	! check turbo state 1+2 and faults
+	!---------------------------------
+	MsScQuery "msc:nrt:stat? tpc", readback$
+    ! extract turbo status and error information
+	TurboStatus = VAL( SubString$(readback$, 3,, ",") )
+	TurboError  = VAL( SubString$(readback$, 4,, ",") )
+	! read new turbo states
+    if MSD_46 = 0 then                      ! There is no Turbo2
+      ! mask out bit 2    (Turbo pump #2 speed zero and power off)
+	  lowbits = MOD(TurboStatus,4)                    ! 2^2=4
+	  TurboStatus = TRUNC(TurboStatus/8)*8 + lowbits
+	  ! mask out bit 10   (Turbo pump #2 mode is off)
+      lowbits = MOD(TurboStatus,1024)                 ! 2^10=1024
+      TurboStatus = TRUNC(TurboStatus/2048)*2048 + lowbits
+	endif
+	turbo1$=dgMsVacTurboState$( EventTable$, 1, index, Turbo1$, TurboStatus )
+	if MSD_46 = 1 then 
+	  turbo2$=dgMsVacTurboState$( EventTable$, 2, index, Turbo2$, TurboStatus )
+    else
+	  turbo2$ = EndState$                     ! No turbo2 exists; don't want test to get hang/fail
+    endif 
+	! check for turbo Warning and error
+	Readback$=dgMsVacFault$(Readback$, Index, TurboStatus, TurboError, 0)
+
+    ! check foreline pump state
+	!-------------------------
+	MsScQuery ":msc:sens? roughpump", readback$
+	if ReadBack$ <> RoughPump$ then
+	  RoughPump$=ReadBack$
+	  if RoughPump$="1" then
+	    Foreline$="ON"
+	  else
+	    Foreline$="OFF"
+	  endif
+      dgMsVacSetEvent EventTable$, Index, "Foreline Pump "+ Foreline$
+	endif
+
+	! check low vacuum
+	!-----------------
+	MsScQuery ":msc:sens? forepres", readback$
+	nForePres=VAL(readback$)
+	if nForePres > Vented AND LowVac$ <> "OFF" then
+	  LowVac$="OFF"
+      dgMsVacSetEvent EventTable$, Index, "Low Vacuum "+ LowVac$
+	else
+	  if nForePres < Vented AND LowVac$ <> "ON" then
+	    LowVac$="ON"; 
+	dgMsVacSetEvent EventTable$, Index, "Low Vacuum "+ LowVac$
+      endif
+	endif
+
+	! check high vacuum
+	!------------------
+	MsScQuery ":msc:sens? highpres", readback$
+	nHighPres=VAL(ReadBack$)
+	print "high vacuum value is ", readback$
+	if nHighPres < HiVacOK AND HiVac$ <> "ON" then
+	  HiVac$="ON"
+      dgMsVacSetEvent EventTable$, Index, "High Vacuum "+  HiVac$
+	else
+	  if nHighPres > HiVacOK AND  HiVac$ <> "OFF" then
+	     HiVac$="OFF"; 
+	dgMsVacSetEvent EventTable$, Index, "High Vacuum "+  HiVac$
+      endif
+	endif
+
+
+    ! write plot data to register data blocks
+	!----------------------------------------
+    if nHighPres > 1 then
+       nHighPres = 1
+    endif
+    SetData RESULT_REG[HV], 1, index, nHighPres
+    SetData RESULT_REG[FV], 1, index, nForePres
+
+	MsScQuery ":msc:sens? turbo1sp", readback$
+	nTurbo=VAL(ReadBack$)
+    SetData RESULT_REG[T1S], 1, index, nTurbo
+
+	MsScQuery ":msc:sens? turbo1pw", readback$
+	nTurbo=VAL(ReadBack$)
+    SetData RESULT_REG[T1P], 1, index, nTurbo
+
+	if MSD_46 = 1 then
+	  MsScQuery ":msc:sens? turbo2sp", readback$
+	  nTurbo=VAL(ReadBack$)
+      SetData RESULT_REG[T2S], 1, index, nTurbo
+
+	  MsScQuery ":msc:sens? turbo2pw", readback$
+	  nTurbo=VAL(ReadBack$)
+      SetData RESULT_REG[T2P], 1, index, nTurbo
+	endif
+
+    index=index+1
+    Sleep 0.7
+
+  until ((turbo1$  =EndState$ AND turbo2$=EndState$ AND \
+	      foreline$=EndState$ AND LowVac$=EndState$ AND HiVac$=EndState$) OR \ 
+	     (index > DataBlockSize) OR \
+	     (TabHdrVal(RESULT_REG[1], "ErrorTab", "NumberOfRows") > Const_MaxError) )
+
+
+  ! set the echo variable back
+  if oldecho <> -1 then
+    MS_ECHO=oldecho
+  else
+    if Check(VARIABLE, MS_ECHO) = 1 then; remove MS_ECHO; endif
+  endif
+	print "the readvalues macro was called, ran adn the index is", index
+
+  return index
+
+endmacro
+
+!***************************************************************************!
+name dgMsVacTurboState$
+  parameter EventTable$
+  Parameter TurboNum
+  Parameter Index
+  Parameter OldState$
+  Parameter TurboStatus
+
+! each bit in the state number indicates one state of the turbo pump
+! Note: two states are set during a transition (bug in turbo firmware)
+! Bit  0 - On
+!      1 - High
+!      2 - Med
+!      3 - Low
+!      4 - off
+! return
+!      current turbo state as word (only one state is returned)
+!      if no bit is set NONE will be returned
+!***************************************************************************!
+Local state$, row, event$, StateNum
+
+  state$="NONE"
+
+  if TurboNum = 1
+	! turbo1: Status bit 15..11
+    StateNum = TRUNC(TurboStatus/2048) 
+  else
+    !TurboNum = 2
+	! turbo2: Status bit 10..6
+    StateNum = TRUNC( MOD(TurboStatus,2048) / 64) 
+  endif			 
+
+  ! bit number 0
+  if MOD(StateNum, 2) > 0 then
+    state$="ON"
+  else
+
+  ! bit number 1
+    if MOD(StateNum, 4) > 0 then
+      state$="HIGH"
+    else 
+
+  ! bit number 2
+      if MOD(StateNum, 8) > 0 then
+	state$="MEDIUM"
+      else 
+
+  ! bit number 3
+	if MOD(StateNum, 16) > 0 then
+	  state$="LOW"
+		else
+
+  ! bit number 4
+	  if MOD(StateNum, 32) > 0 then
+	    state$="OFF"
+		  endif
+  endif; endif; endif; endif
+
+  ! if new state is different than save this event in the table
+  if state$ <> OldState$ then
+	event$ = "Turbo"+VAL$(TurboNum)+" "+state$
+    dgMsVacSetEvent EventTable$, Index, Event$
+  endif
+
+  return state$
+
+endmacro
+
+!***************************************************************************!
+name dgMsVacSetEvent
+  Parameter EventTable$
+  Parameter Index
+  Parameter Text$
+
+! logs an event like "Turbo1 on" with its data block index 
+! into a the specified event table. The event table will be created
+! if it doesn't exist already.
+!***************************************************************************!
+Local row
+
+  !print #5, EventTable$, index, Text$
+
+  if ObjHdrType(RESULT_REG, EventTable$) = 99 then
+    ! table to save events during the test
+    NewTab     RESULT_REG[1], EventTable$
+    NewColVal  RESULT_REG[1], EventTable$, "Index"
+    NewColText RESULT_REG[1], EventTable$, "Event"
+  endif  
+
+  InsTabRow RESULT_REG[1], EventTable$
+  row=TabHdrVal(RESULT_REG[1], EventTable$, "NumberOfRows")
+  SetTabVal  RESULT_REG[1], EventTable$, row, "Index", Index
+  SetTabText RESULT_REG[1], EventTable$, row, "Event", ConvertText$(UPPER, Text$)
+
+endmacro
+
+!***************************************************************************!
+name dgMsVacFault$
+  Parameter Readback$
+  Parameter Index
+  Parameter TurboStatus
+  Parameter Warning
+  Parameter InstrAccess DEFAULT 0
+!
+! saves a detected fault into the error table.
+! fault types:
+!    1: turbo pump error
+!    2: turbo pump warning
+!    3: instrument access problem
+! The error table will be evaluated later, but the test will stop
+! if to many entries are in the error table logged.
+!
+! return: "-1"       instrument readback default
+!         readback$ acutal readback value for turbo pump problems
+!
+!***************************************************************************!
+Local row, error
+
+  ! extract fault information from trubo status bit 5..0
+  Error= MOD(TurboStatus, 64)
+  ! mask the bit 0 indicating "foreline pressure too high"
+  Warning= TRUNC(Warning/2)*2
+
+  if Warning <> 0 then
+	!sprint "Warning:", index, Warning
+    InsTabRow RESULT_REG[1], "ErrorTab"
+    row=TabHdrVal(RESULT_REG[1], "ErrorTab", "NumberOfRows")
+	SetTabVal RESULT_REG[1], "ErrorTab", row, "Type",  1
+	SetTabVal RESULT_REG[1], "ErrorTab", row, "Index", Index
+	SetTabVal RESULT_REG[1], "ErrorTab", row, "Error", Warning
+  endif
+
+  if Error <> 0 then
+	!print "Error:", index, Error
+    InsTabRow RESULT_REG[1], "ErrorTab"
+    row=TabHdrVal(RESULT_REG[1], "ErrorTab", "NumberOfRows")
+	SetTabVal RESULT_REG[1], "ErrorTab", row, "Type",  2
+	SetTabVal RESULT_REG[1], "ErrorTab", row, "Index", Index
+	SetTabVal RESULT_REG[1], "ErrorTab", row, "Error", Error
+  endif
+
+  if InstrAccess <> 0 then
+	!print "InstrAccess:", index
+    InsTabRow RESULT_REG[1], "ErrorTab"
+    row=TabHdrVal(RESULT_REG[1], "ErrorTab", "NumberOfRows")
+	SetTabVal RESULT_REG[1], "ErrorTab", row, "Type",  3
+	SetTabVal RESULT_REG[1], "ErrorTab", row, "Index", Index
+	SetTabVal RESULT_REG[1], "ErrorTab", row, "Error", 0
+	readback$="-1" ! default for instrument access
+  endif
+
+  return readback$
+endmacro
+
+!***************************************************************************!
+name dgMsVacEvaluateFault$
+!
+! evaluates the error table containing turbo pump warnings or errors and
+! instrument access failures.
+!
+! fault types:
+!    1: turbo pump error
+!    2: turbo pump warning
+!    3: instrument access problem
+!
+! return:
+!   passsed  less than 5 instrument errors are only logged
+!   failed   turbo problems or more instrument errors
+!
+!***************************************************************************!
+local row, num, tabrow, bit, errnum, bitnum, type, result$, testrow, text$
+local oldecho
+
+  copyTab RESULT_REG[1], "ErrorTab", RESULT_REG[1], "Tmp"
+  result$=NlsMsDiag$("Passed")
+
+  ! number of allowed instrument access failures to pass the test
+  FailureSpec=5
+
+  ! prepare error log table and count the errors
+  NewTab     RESULT_REG[1], "ErrorLogTab"
+  NewColVal  RESULT_REG[1], "ErrorLogTab", "Number", 0
+  NewColText RESULT_REG[1], "ErrorLogTab", "Spec", "=0"
+  NewColText RESULT_REG[1], "ErrorLogTab", "Bit"
+  NewColText RESULT_REG[1], "ErrorLogTab", "Event"
+  tabrow=0
+
+  ! suppress MSD echo for diagnosis
+  if Check(VARIABLE, MS_ECHO) = 1 then
+    oldecho=MS_ECHO
+  else
+    oldecho=-1
+  endif
+  MS_ECHO=0
+
+  ! analyze all turbo errors
+  type=1
+  row=RowByVal(RESULT_REG[1], "Tmp",,"Type", "=", type)
+  if row > 0 then
+    result$=NlsMsDiag$("Failed")
+	InsTabrow  RESULT_REG[1], "ErrorLogTab", Tabrow+1:Tabrow+5
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+1, "Bit",   "E1"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+1, "Event", NlsMsFault$("E1")
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+2, "Bit",   "E2"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+2, "Event", NlsMsFault$("E2")
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+3, "Bit",   "E3"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+3, "Event", NlsMsFault$("E3")
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+4, "Bit",   "E4"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+4, "Event", NlsMsFault$("E4")
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+5, "Bit",   "E5"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+5, "Event", NlsMsFault$("E5")
+    while row > 0 
+	  errnum=TabVal(RESULT_REG[1], "Tmp", row, "Error")
+      for bitnum=1 to 5 
+	    MsFindBit errnum, bitnum, bit
+		if bit=1 then
+		  num= TabVal(RESULT_REG[1], "ErrorLogTab", tabrow+bitnum, "Number")
+		  SetTabVal RESULT_REG[1], "ErrorLogTab", tabrow+bitnum, "Number", num+1
+		endif
+      next bitnum
+	  DelTabRow     RESULT_REG[1], "Tmp", row
+	  row=RowByVal(RESULT_REG[1], "Tmp",,"Type",  "=", type)
+	endwhile
+	tabrow=tabrow+5
+  endif
+
+  ! analyze all turbo warnings
+  type=2
+  row=RowByVal(RESULT_REG[1], "Tmp",,"Type",  "=", type)
+  if row > 0 then
+    result$=NlsMsDiag$("Failed")
+	InsTabrow  RESULT_REG[1], "ErrorLogTab", Tabrow+1:Tabrow+7
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+1, "Bit",   "W0"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+1, "Event", NlsMsFault$("W0")
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+2, "Bit",   "W1"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+2, "Event", NlsMsFault$("W1")
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+3, "Bit",   "W2"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+3, "Event", NlsMsFault$("W2")
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+4, "Bit",   "W3"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+4, "Event", NlsMsFault$("W3")
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+5, "Bit",   "W4"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+5, "Event", NlsMsFault$("W4")
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+6, "Bit",   "W5"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+6, "Event", NlsMsFault$("W5")
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+7, "Bit",   "W6"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+7, "Event", NlsMsFault$("W6")
+    while row > 0 
+	  errnum=TabVal(RESULT_REG[1], "Tmp", row, "Error")
+      for bitnum=0 to 6 
+	    MsFindBit errnum, bitnum, bit
+		if bit=1 then
+		  num= TabVal(RESULT_REG[1], "ErrorLogTab", tabrow+1+bitnum, "Number")
+		  SetTabVal RESULT_REG[1], "ErrorLogTab", tabrow+1+bitnum, "Number", num+1
+		endif
+      next bitnum
+	  DelTabRow     RESULT_REG[1], "Tmp", row
+	  row=RowByVal(RESULT_REG[1], "Tmp",,"Type",  "=", type)
+	endwhile
+	tabrow=tabrow+7
+  endif
+
+  ! count instrument access failures
+  type=3
+  row=RowByVal(RESULT_REG[1], "Tmp",,"Type", "=", type)
+  if row > 0 then
+	InsTabrow  RESULT_REG[1], "ErrorLogTab", 
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+1, "Bit",   "Info"
+    SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+1, "Event", NlsMsFault$("Info")
+	num=0
+    while row > 0 
+	  errnum=TabVal(RESULT_REG[1], "Tmp", row, "Error")
+	  num=num+1
+	  SetTabVal  RESULT_REG[1], "ErrorLogTab", tabrow+1, "Number", num
+	  SetTabText RESULT_REG[1], "ErrorLogTab", tabrow+1, "Spec", "< "+VAL$(FailureSpec)
+	  DelTabRow      RESULT_REG[1], "Tmp", row
+	  row=RowByVal(RESULT_REG[1], "Tmp",,"Type", "=",  type)
+	endwhile
+	tabrow=tabrow+1
+	if num >= FailureSpec then
+      result$=NlsMsDiag$("Failed")
+	endif
+  endif
+
+  ! set the echo variable back
+  if oldecho <> -1 then
+    MS_ECHO=oldecho
+  else
+    if Check(VARIABLE, MS_ECHO) = 1 then; remove MS_ECHO; endif
+  endif
+
+  ! delete temporary table now (should be empty)
+  DelTab RESULT_REG[1], "Tmp"
+
+  ! delete all entries in error log table with counter zero
+  row=tabrow
+  while (row > 0)
+    row=RowByVal(RESULT_REG[1],"ErrorLogTab",, "Number", "=", 0)
+	if row > 0 then
+      DelTabRow RESULT_REG[1], "ErrorLogTab", row
+	endif
+  endwhile
+
+  ! copy error logs to test result table
+  tabrow = TabhdrVal(RESULT_REG[1], "ErrorLogTab", "NumberOfRows")
+  testrow= TabhdrVal(RESULT_REG[1], "TestResultTab", "NumberOfRows")
+  For row=1 to TabRow
+    InsTabRow  RESULT_REG[1], TestResultTab
+	Testrow=testrow+1
+	! text
+	Text$=TabText$(RESULT_REG[1], "ErrorLogTab", row, "Event")
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", Text$
+	if text$=NlsMsFault$("Info") then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", Result$
+	endif
+	! countered failures
+	Text$=VAL$(TabVal(RESULT_REG[1], "ErrorLogTab", row, "Number"))
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", text$
+	! specifications
+	Text$=TabText$(RESULT_REG[1], "ErrorLogTab", row, "Spec")
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", text$
+  next row
+
+  return Result$
+endmacro
+
+!***************************************************************************!
+name dgMsVacEvaluation$
+!***************************************************************************!
+Local PrintMac$, testrow, Result$, err, none$, passed$, failed$, errnum
+Local Time, Time1, Time2, Row1, Row2, Index1, Index2, annotIndex, RegNum
+Local FV, HV, T1S, T2S, T1P, T2P, RegMax
+
+
+  none$  = NlsMsDiag$("none")
+  passed$= NlsMsDiag$("passed")
+  failed$= NlsMsDiag$("failed")
+
+  if RegSize(RESULT_REG) < 1 then
+    return failed$
+  else
+    RegMax = RegSize(RESULT_REG)
+  endif
+
+  ! registers in this macro
+  FV  = 1; HV  = 2
+  T1S = 3; T1P = 4; T2S = 5; T2P = 6    ! Switched order of T1P and T2S. PHC 04/09/2003
+
+
+  ! Define some specs
+  Const_MaxError  =  10    ! number of errors to abort this test
+  if (MS_SQ_SL = 1) then
+    ForeVacOK       =   4    ! Torr; SL model foreline vacuum must be below this
+  else
+    ForeVacOK       =   3    ! Torr; foreline vacuum must be below this
+  endif
+  HiVacOK         =   2e-5 ! Torr; high vacuum must be below this
+  Vented          = 100    ! Torr; 
+  TimeToForeVacOK =  15    ! seconds for foreline to reach ForeVacOK
+  if MSD_46=1 then
+    TimeToHiVacOK   = 400    ! seconds for high vacuum to reach HiVacOK for 2 turbo systems
+    TimeToPumpDown  = 400    ! seconds for the vent process to reach the HiVacOk for 2 turbo systems
+  else
+    TimeToHiVacOK   = 600    ! seconds for high vacuum to reach HiVacOK for single turbo systems
+    TimeToPumpDown  = 600    ! seconds for the vent process to reach the HiVacOk for single turbo systems
+  endif
+  TimeTo90Pct     = 180    ! seconds for turbos to reach 90% speed
+  TimeToVent      = 420    ! seconds for foreline to reach Vented pressure
+  MinT1PowerMax   = 150    ! Minimum Turbo 1 power maximum
+  if MSD_46 = 1 then
+    MinT2PowerMax   =  60    ! Minimum Turbo 2 power maximum
+    MaxT2PowerMax   = 120    ! Maximum Turbo 2 power maximum
+    MaxT2PowerSS    =  24    ! Maximum Turbo 2 power at steady state
+  endif
+  if (MSD_46 = 1) then
+    if MS_SQ_SL = 1 then
+      MaxT1PowerSS    = 120    ! G1946D (SL) Maximum Turbo 1 power at steady state
+    else
+      MaxT1PowerSS    = 100    ! G1946A/B/C Maximum Turbo 1 power at steady state
+    endif
+  else
+    if MS_SQ_SL = 1 then
+      ! MaxT1PowerSS    = 150    ! G1956B (SL) Maximum Turbo 1 power at steady state
+      MaxT1PowerSS    = 160    ! G1956B (SL) Maximum Turbo 1 power at steady state
+    else
+      ! MaxT1PowerSS    = 130    ! G1956A (VL) Maximum Turbo 1 power at steady state
+      MaxT1PowerSS    = 140    ! G1956A (VL) Maximum Turbo 1 power at steady state
+    endif
+  endif
+
+  ! generate TestResultTable
+  if ObjHdrType(RESULT_REG[1], TestResultTab) <> 99 then
+    DelTabRow RESULT_REG[1], TestResultTab, -1
+  else
+    NewTab RESULT_REG[1], TestResultTab
+    NewColText RESULT_REG[1], TestResultTab, "Text", ""
+    NewColText RESULT_REG[1], TestResultTab, "Range", ""
+    NewColText RESULT_REG[1], TestResultTab, "Value", ""
+    !NewColText RESULT_REG[1], TestResultTab, "Unit", ""
+    NewColText RESULT_REG[1], TestResultTab, "Result", NlsMsDiag$("Failed")
+  endif
+
+  ! 1. Vent Time
+  !--------------------------------------
+  ! DESCRIPTION: used time for venting the system
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=1
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "Vent Time"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "< "+VAL$(TimeToVent)+" sec"
+  !SetTabText RESULT_REG[1], TestResultTab, testrow, "Unit", "sec"
+
+  !check if "EndVent" exists in header in Result_Reg[1]
+  ! if it exists, proceed with reading its value and writing to TestResultTab
+  ! if not, then set testresulttab value to "none", and result to "failed"
+
+  if ObjHdrType(RESULT_REG[1], EndVent) = 99 then
+	!test failed
+	SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+	SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", "Failed"
+	Time=0	
+  else
+	Time = ObjHdrVal( RESULT_REG[1], "EndVent" ) 
+	SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(Time)+" sec"
+	if Time < TimeToVent then 
+      		SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+    	endif
+	
+  endif
+
+
+
+  ! 1A mark the vent end time with cross hairs
+  !---------------------------------------
+  if Time > 0 then
+    ! for RegNum=1 To 6
+    for RegNum=1 To RegMax
+      GetDataMinMax RESULT_REG[RegNum], 1
+      annotIndex = NewPolyAnn(RESULT_REG[RegNum] , 2)
+      SetPolyAnnVal RESULT_REG[RegNum] , annotIndex, 1, time, OBJ_MIN
+      SetPolyAnnVal RESULT_REG[RegNum] , annotIndex, 2, time, OBJ_MAX
+    next RegNum
+  endif
+
+
+  ! 2. Pumpdown Time
+  !--------------------------------------
+  ! DESCRIPTION: used time for pumpdown the system
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=2
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "Pump Down Time"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "< "+VAL$(TimeToPumpDown)+" sec"
+  !SetTabText RESULT_REG[1], TestResultTab, testrow, "Unit", "sec"
+
+  !check if "EndPumpDown" exists in header in Result_Reg[1]
+  ! if it exists, proceed with reading its value and writing to TestResultTab
+  ! if not, then set testresulttab value to "none", and result to "failed"
+
+  if ObjHdrType(RESULT_REG[1], EndPumpDown) = 99 then
+	!test failed
+	SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+	SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", "Failed"
+	EndPumpDown =0	
+  else
+	EndPumpDown = ObjHdrVal( RESULT_REG[1], "EndPumpDown" ) 
+	SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(EndPumpDown-Time)+" sec"
+    	if (EndPumpDown-Time) < TimeToPumpDown then 
+      		SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+    	endif
+  endif
+  
+
+  ! 2A mark the pump down end time with cross hairs
+  !---------------------------------------
+  if EndPumpDown > 0 then
+    ! for RegNum=1 To 6
+    for RegNum=1 To RegMax
+      GetDataMinMax RESULT_REG[RegNum], 1
+      annotIndex = NewPolyAnn(RESULT_REG[RegNum] , 2)
+      SetPolyAnnVal RESULT_REG[RegNum] , annotIndex, 1, EndPumpDown, OBJ_MIN
+      SetPolyAnnVal RESULT_REG[RegNum] , annotIndex, 2, EndPumpDown, OBJ_MAX
+    next RegNum
+  endif
+
+  !---------------------------------------------------------
+  ! C H E C K
+  ! intermediate overview for evaluation
+  ! if no vent done stop evaluation and go to display result
+  !---------------------------------------------------------
+  ! check if the test has logged vent events
+  if ObjHdrType(RESULT_REG[1], "PumpDownTab") = 99 then
+    GoTo CheckError
+  endif
+  if TabHdrVal(RESULT_REG[1], "PumpDownTab", "NumberOfRows") < 0 then
+    GoTo CheckError
+  endif
+
+  ! 3. Foreline Vacuum time
+  !--------------------------------------
+  ! DESCRIPTION: time between trun on the foreline pump and turn on turbo 1
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=3
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "Rough Vacuum Time"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "< "+VAL$(TimeToForeVacOK)+" sec"
+  !SetTabText RESULT_REG[1], TestResultTab, testrow, "Unit", "sec"
+  Row1=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "Foreline Pump ON")
+  Row2=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "Turbo1 LOW")
+  if Row1=-1 OR row2=-1 then
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+  else
+   Time1=TabVal(RESULT_REG[1], "PumpDownTab", Row1, "Index")
+   Time2=TabVal(RESULT_REG[1], "PumpDownTab", Row2, "Index")
+   Time=ABS(Time1-Time2)
+   SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(Time)+" sec"
+   if Time < TimeToForeVacOK then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+   endif
+  endif
+
+  ! 4. Steady State Foreline Vacuum 
+  !--------------------------------------
+  ! DESCRIPTION: upper limit of the foreline vacuum after reaching 3 torr
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=4
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "Rough Vacuum Steady State"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "< "+VAL$(ForeVacOK)+" torr"
+  !SetTabText RESULT_REG[1], TestResultTab, testrow, "Unit", "torr"
+  Row1=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "Turbo1 LOW")
+  if Row1=-1 then
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+  else
+    Index1=TabVal(RESULT_REG[1], "PumpDownTab", Row1, "Index")
+    Index2=DataCols(RESULT_REG[FV])
+    ! get only two third of this interval to make sure the system is stable
+    Index1= Index1 + TRUNC( (Index2-Index1) * 1/3 )
+    GetDataMinMax RESULT_REG[FV], 1, Index1:Index2
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(OBJ_MAX)+" torr"
+    if OBJ_MAX < ForeVacOK then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+    endif
+  endif
+
+  ! 5. High Vacuum Time
+  !--------------------------------------
+  ! DESCRIPTION: time between turn on froeline pump and high vacuum has
+  !              reached its threshold (0.00002 torr)
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=5
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "High Vacuum Time"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "< "+VAL$(TimeToHiVacOK)+" sec"
+  !SetTabText RESULT_REG[1], TestResultTab, testrow, "Unit", "sec"
+  Row1=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "Foreline Pump ON")
+  Row2=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "High Vacuum ON")
+  if Row1=-1 OR row2=-1 then
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+  else
+    Time1=TabVal(RESULT_REG[1], "PumpDownTab", Row1, "Index")
+    Time2=TabVal(RESULT_REG[1], "PumpDownTab", Row2, "Index")
+    Time=ABS(Time1-Time2)
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(Time)+" sec"
+    if Time < TimeToHiVacOK then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+    endif
+  endif
+
+  ! 6. Steady State High Vac.
+  !--------------------------------------
+  ! DESCRIPTION: upper limit of the High Vacuum after reaching its threshold 0.00002 torr
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=6
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "High Vacuum Steady State"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "< "+VAL$(HiVacOk)+" torr"
+  !SetTabText RESULT_REG[1], TestResultTab, testrow, "Unit", "torr"
+  Row1=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "High Vacuum ON")
+  if Row1=-1 then
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+  else
+    Index1=TabVal(RESULT_REG[1], "PumpDownTab", Row1, "Index")
+    Index1=Min(Index1+5, Index2)
+    Index2=DataCols(RESULT_REG[HV])
+    if Index2 = Index1 then
+      Index1=Index1-1            ! Make sure they can never be the same
+    endif
+    ! get only two third of this interval to make sure the system is stable
+    Index1= Index1 + TRUNC( (Index2-Index1) * 1/3 )
+    GetDataMinMax RESULT_REG[HV], 1, Index1:Index2
+    if OBJ_MAX=1 OR OBJ_MAX=-1 then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", NlsMsDiag$("off")
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+    else
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(OBJ_MAX)+" torr"
+      ! the high vacuum get set to 1 if it's over the HiVacOn limit
+      if (OBJ_MAX < HiVacOk) then
+        SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+      endif
+    endif
+  endif
+
+  ! 7. Turbos at 90% Speed
+  !--------------------------------------
+  ! DESCRIPTION: time between turn on rough pump and both turbos at 90% speed
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=7
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "Turbo 1 at 90% Speed"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "< "+VAL$(TimeTo90Pct)+" sec"
+  !SetTabText RESULT_REG[1], TestResultTab, testrow, "Unit", "sec"
+  Row1=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "Low Vacuum ON")
+  if MSD_46 = 1 then            ! G1946 MSD's have 2 turbos
+    Row2=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "Turbo2 HIGH")
+  else
+    Row2=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "Turbo1 HIGH")     ! Assuming "Turbo1 HIGH" exists. PHC 02/21/03
+  endif
+  if Row1=-1 OR row2=-1 then
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+  else
+    Time1=TabVal(RESULT_REG[1], "PumpDownTab", Row1, "Index")
+    Time2=TabVal(RESULT_REG[1], "PumpDownTab", Row2, "Index")
+    Time=ABS(Time1-Time2)
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(Time)+" sec"
+    if Time < TimeTo90Pct then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+    endif
+  endif
+
+  ! 8. limit for Max. Turbo1 power
+  !--------------------------------------
+  ! DESCRIPTION: lower limit of the turbo power maximum. 
+  !              (kind of: did the pump do it's best to get the high vacuum)
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=8
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "Turbo 1 Peak Power"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "> "+VAL$(MinT1PowerMax)+" W"
+  !SetTabText RESULT_REG[1], TestResultTab, testrow, "Unit", "W"
+  if DataCols(RESULT_REG[T1P]) < 1 then
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+  else
+    GetDataMinMax RESULT_REG[T1P], 1
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(OBJ_MAX)+" W"
+    if (OBJ_MAX > MinT1PowerMax)  then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+    endif
+  endif
+
+  ! 9. Steady Turbo1 Power
+  !--------------------------------------
+  ! DESCRIPTION: turbo power limit after both turbos on.
+  !              to make sure that the turbos must be stable
+  !              the first portion of this time frame is not evaluated
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=9
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "Turbo1 Power Steady state"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "< "+VAL$(MaxT1PowerSS)+" W"
+  if MSD_46 = 1 then
+    Row1=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "Turbo2 ON")
+  else
+    Row1=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "Turbo1 ON")
+  endif
+  if Row1=-1 then
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+  else
+    Index1= TabVal(RESULT_REG[1], "PumpDownTab", Row1, "Index")
+    Index2= DataCols(RESULT_REG[T1P])
+    ! get only last portion of this interval, to make sure the turbo is stable
+    if MSD_46 = 1 then
+      Index1= Index1 + TRUNC( (Index2-Index1) * 1/3 )      ! for 2 turbo systems
+    else
+      Index1= Index1 + TRUNC( (Index2-Index1) * 2/3 )      ! for single turbo systems
+    endif
+    GetDataMinMax RESULT_REG[T1P], 1, Index1:Index2
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(OBJ_MAX)+" W"
+    if (OBJ_MAX < MaxT1PowerSS ) then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+    endif
+  endif
+
+! Only do the next two if it's a G1946 MSD, (which has 2 turbo pumps)
+if MSD_46 = 1 then
+  ! 10. Turbo2 power
+  !--------------------------------------
+  ! DESCRIPTION: is the turbo pump working in its specifications
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=10
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "Turbo 2 Peak Power"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "> "+VAL$(MinT2PowerMax)+" W and < "+VAL$(MaxT2PowerMax)+" W"
+  if DataCols(RESULT_REG[T2P]) < 1 then
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+  else
+    GetDataMinMax RESULT_REG[T2P], 1
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(OBJ_MAX)+" W"
+    if (OBJ_MAX > MinT2PowerMax) AND (OBJ_MAX < MaxT2PowerMax)  then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+    endif
+  endif
+
+  ! 11. Steady Turbo2 power
+  !--------------------------------------
+  ! DESCRIPTION: turbo power limit after both turbos on.
+  !              to make sure that the turbos must be stable
+  !              the first third of this time frame is not evaluated
+  InsTabRow  RESULT_REG[1], TestResultTab
+  testrow=11
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "Turbo2 Power Steady state"
+  SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", "< "+VAL$(MaxT2PowerSS)+" W"
+  !SetTabText RESULT_REG[1], TestResultTab, testrow, "Unit", "W"
+  Row1=RowByText(RESULT_REG[1], "PumpDownTab",,"Event", "i=", "Turbo2 ON")
+  if Row1=-1 then
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", None$
+  else
+    Index1= TabVal(RESULT_REG[1], "PumpDownTab", Row1, "Index")
+    Index2= DataCols(RESULT_REG[T2P])
+    ! get only two third of this interval to make sure the turbo should be stable
+    Index1= Index1 + TRUNC( (Index2-Index1) *1/3 )
+    GetDataMinMax RESULT_REG[T2P], 1, Index1:Index2
+    SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(OBJ_MAX)+" W"
+    if (OBJ_MAX < MaxT2PowerSS ) then
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", passed$
+    endif
+  endif
+endif !* if MSD_46 = 1
+  
+CheckError:
+  ! 12. check logged errors 
+  !-------------------------
+  ! DESCRIPTION: interprete the error table including the instrument access failure
+  !              and the turbo pump warning and error information
+  if ObjHdrType(RESULT_REG[1], "ErrorTab") <> 99 then
+    errnum=TabHdrVal(RESULT_REG[1], ErrorTab, "NumberOfRows")
+    if errnum > 0 then
+      InsTabRow  RESULT_REG[1], TestResultTab
+      testrow=TabHdrVal(RESULT_REG[1], TestResultTab, "NumberOfRows")
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Text", "Detected faults during test:"
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Range", ""
+      !SetTabText RESULT_REG[1], TestResultTab, testrow, "Unit", ""
+      !SetTabText RESULT_REG[1], TestResultTab, testrow, "Value", VAL$(ErrNum)
+      SetTabText RESULT_REG[1], TestResultTab, testrow, "Result", dgMsVacEvaluateFault$()
+    endif
+  endif
+
+  ! display result
+
+  PrintMac$="dgMsPrintTest VacReport, VacRes, VacChart, , 14.7, 3, ""%-33s"", ""%+17s"", ""%+16s"",""%+8s"""
+  Result$=dgMsGetTestResults$("VacChart","VacRes", PrintMac$)
+
+  return Result$
+
+endmacro
+
+
+!***************************************************************************!
+name dgMsVacCleanUp
+!
+! 04/21/03 JZ  Remove abort handler for vacuum test.
+!***************************************************************************!
+  Local AbortCmd$
+  Local Pos, LenAbort, LenCmd
+
+  ! restore driver state
+  if msexternalopcall("notidle_state") = 1 then
+    ret=msexternalopcall("notidle_reset")
+  endif
+  
+  ! alert user about LC's status:
+  _button = Alert("The LC may have been turned off as part of the MSD Vacuum Test." + chr$(13) + \
+                  "To turn it on, select ""System On"" from the Diagnosis menu.",3)
+  AtunePrint "The LC may have been turned off as part of the MSD Vacuum Test. To turn it on, select ""System On"" from the Diagnosis menu."
+
+  ! JZ DELETE CLEAN UP MACRO FROM _ABORT$ STRING
+  AbortCmd$="dgMsVacCleanUp;"
+  Pos=InStr(_abort$,Abortcmd$)
+  IF Pos>0 THEN
+    LenAbort=Len(_abort$)
+    LenCmd=Len(AbortCmd$)
+    if Pos=1 THEN
+      _abort$= _abort$[Pos+LenCmd:LenAbort]
+    else
+      if (Pos+LenCmd)<LenAbort
+        _abort$= _abort$[1:Pos-1] + _abort$[Pos+LenCmd:LenAbort]
+      else
+        _abort$= _abort$[1:Pos-1]
+      endif
+    endif
+  ENDIF
+
+endmacro
+
+!***************************************************************************!
+
+print "dgVacTst.mac v. " + dgVacVer$ + " loaded."
+
+!********* end of file ******************************************************
+
+
+
+
+
+
+

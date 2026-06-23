@@ -1,0 +1,495 @@
+!=============================================================================
+! MSTOP.MAC: Toplevel Macros, Autostart Macro for Triathlon
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!==============================================================================
+!* $Header: /cag/triath1b/partsmac/top/mstop.mc 1.67 2003-07-15 14:55:54-07 mmarx Exp $
+!==============================================================================
+!* MACROS :    MSTop                to initialize the Addon part for MS
+!*             MSTopClose           to close the MS Addon part 
+!*             MSTop_CheckLoadDLC	loads HPLCMS00.DLC
+!*             LoadMacroMcxOrMac    to load an mcx-file (if it exists) otherwise
+!*                                  the mac-file.
+!*             MSOnlyConfigCheck    checks if the MSD is conf. as single module
+!*             MSTop_LoadCPCom      to load HPCOM_01 and registers the CP-COM
+!*                                  server in the ROT.           
+!*************************************************************************************
+! 06/07/01 PHC Added msmodeloptions number for G1946D with RF for tunepath assignment.
+! 11/11/05 BW  Added support for Lassen models
+! 02/10/06 CPL Update header information
+!*************************************************************************************
+!############################################################################
+name MSTop_MultiFIAHook
+!  Puts a Hook to PostAcq.
+!  In this manner the varaiable _MULTIFIAON is set to 0 every-time the method
+!  runs successfully. If there is an error or any user abort condition, we
+!  can check if this variable has been reset. If not reset the user can be
+!  posted with their own abort message....
+!############################################################################
+      _MULTIFIAON = 0
+     
+endmacro ! MSTop_MultiFIAHook
+!############################################################################
+!
+!############################################################################
+name MSTop_LoadCPCom
+	LOCAL sname$ , mychannel
+        local i, sFile$, iTotal
+!  Loads HPCOM_01.DLC if not already loaded.
+!  Used for LCMS CP System Variables
+!############################################################################
+      if _OFFLINE = 1 then 
+	 iTotal = 0
+      	 for i=1 to 9
+             sFile$ = _TEMPPATH$ + "\seqinfo.00" + val$(i) 
+        	if FileStat (Mode, sFile$) <> -1
+           	    iTotal = iTotal + 1
+        	endif
+      	 next i
+              if iTotal > 1 then
+	          return
+      	      endif
+	 sname$ = ""
+	 sname$ = ProfileString$(("PCS,"+val$(_Instrument)),"_DDEOnline")
+	      if sname$ = "" then
+	          _CpCom = InstallCmds(_AutoMSPath$ + "HPCOM_01.DLC")
+        	  _InitCpOleSrv " "
+	      else
+	          On Error goto COM_LABEL
+		  mychannel = DDeInitiate( sname$,"cpnowait")
+		  DDeTerminate mychannel	
+	      endif
+      else
+
+      COM_LABEL:
+        _CpCom = InstallCmds(_AutoMSPath$ + "HPCOM_01.DLC")
+        _InitCpOleSrv " "
+      endif
+      On Error
+endmacro ! MSTop_LoadCPCom
+!############################################################################
+!
+!############################################################################
+name MSTop_CheckLoadDLC
+!  Loads HPMDUI01.DLC if not already loaded.
+!  Used for LCMS CP System Variables
+!############################################################################
+   if Check(FUNCTION, EdMSDAParms) = 0
+      DAUI_Cmds = InstallCmds(_AutoMSPath$ + "HPMDUI01.DLC")
+   endif
+endmacro ! MSTop_CheckLoadDLC
+name About_Triathlon
+!############################################################################
+! Load DLC if needed
+  MSTop_CheckLoadDLC
+  AboutLCMS
+  return
+endmacro
+!############################################################################
+!
+!############################################################################
+name MSOnlyConfigCheck
+!  Checks if the MSD is the only module configured.
+!  Used in top.mac in macro GotoStandby.
+!############################################################################
+  local var$ 
+  if (TabHdrVal(_config[1],ModuleInfo,NumberOfRows) = 1) then
+    var$ = TabText$(_config[1], \
+                    Modules,     \
+			        TabVal(_config[1],ModuleInfo,1,"nameRef"), \
+			        "var" )
+	if var$ = "MSD" then
+	  return(1)
+	endif
+  endif
+  return(0)
+endmacro ! MSOnlyConfigCheck
+!############################################################################
+!
+!############################################################################
+name LoadMacroMcxOrMac
+  parameter File$                    ! file to be loaded without extension
+  parameter StartMacro$ default ""   ! Macro to be executed after loading
+! Loads an mcx file, if it exists. Otherwise it tries to load a mac file.
+!############################################################################
+  if filestat(MODE, File$ + ".mcx") = 1   ! exists - is a file
+    print "Loading " + File$ + ".mcx..."
+    ! evaluate "macro " + File$ + ".mcx"
+     cmdpath$ = "macro " + chr$(34) + File$ + ".mcx" +chr$(34)
+     evaluate cmdpath$
+  else  ! mcx file does not exist try mac file (without test)
+    print "Loading " + File$ + ".mac..."
+    ! evaluate "macro " + File$ + ".mac"
+     cmdpath$ = "macro " + chr$(34) + File$ + ".mac" +chr$(34)
+     evaluate cmdpath$
+  endif
+  Evaluate StartMacro$
+endmacro
+!############################################################################
+!
+!############################################################################
+name MSTopClose
+! This is the LC/MS close macro.
+!############################################################################
+   !* Check if exit from Manual MS Calibrate view 
+   if tabhdrtext$(_config[1],"Window","CurrentView") = "MSDC" then
+     if check(macro,mstn_ExitRoutine) = 1 then
+       mstn_ExitRoutine
+     endif  
+   endif  
+   MSAcqClose
+endmacro
+!############################################################################
+!
+!############################################################################
+name defBVDialog
+! This macro added on 8/20/2001. JZ
+! This is the macro to creat the dialog box to remind the users to open up 
+! the Ballast Valve if they vented the system before closing down ChemStation
+! last time.
+! BW, 03/18/2002, Fixed SCR #1971 and some slight change on layout
+!############################################################################
+Local  ID_SUPPORTMACFILES_BVMSGBOX_110
+local ID_SUPPORTMACFILES_CHECK_BALLAST_111
+Local  ID_SUPPORTMACFILES_PLEASE_OPEN_TH_112
+Local  ID_SUPPORTMACFILES_FULLY__COUNTER_113
+Local  ID_SUPPORTMACFILES_SYSTEM_FOR_OPE_114
+Local  ID_SUPPORTMACFILES_CLICK_OK_WHEN_115
+Local  ID_SUPPORTMACFILES__OK_116
+Local  ID_SUPPORTMACFILES__DON_T_SHOW_TH_117
+ID_SUPPORTMACFILES_BVMSGBOX_110                    =  17110  
+ID_SUPPORTMACFILES_CHECK_BALLAST_111               =  17111
+ID_SUPPORTMACFILES_PLEASE_OPEN_TH_112              =  17112  
+ID_SUPPORTMACFILES_FULLY__COUNTER_113              =  17113  
+ID_SUPPORTMACFILES_SYSTEM_FOR_OPE_114              =  17114  
+ID_SUPPORTMACFILES_CLICK_OK_WHEN_115               =  17115  
+ID_SUPPORTMACFILES__OK_116                         =  17116  
+ID_SUPPORTMACFILES__DON_T_SHOW_TH_117              =  17117  
+   BeginDialog ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_BVMSGBOX_110), 100,50,180,122, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHECK_BALLAST_111)
+   StaticText 10,10,160,60, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PLEASE_OPEN_TH_112) + chr$(13) + \
+                            ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_FULLY__COUNTER_113) + chr$(13) + \
+                            ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SYSTEM_FOR_OPE_114) + chr$(13) + chr$(13) + \
+                            ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CLICK_OK_WHEN_115)
+   noshowresult = 0
+   OkButton 66,95,48,16, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__OK_116) ! BW, the OK button should have focus at beginning
+   CheckBox 10,75,160,12, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__DON_T_SHOW_TH_117), noshowresult
+   EndDialog
+   Return
+endmacro ! defBVDialog
+
+!############################################################################
+name MSTop
+! This is the LC/MS startup macro.
+!############################################################################
+Local RowIndex, ModuleInfoIndex
+Local ret, FType$
+Local bvflag1, bvflag2, temp
+   ! Check of base installation/configuration requirement for LC/MSD
+Local  ID_SUPPORTMACFILES_IN_ORDER_TO_RU_118
+Local  ID_SUPPORTMACFILES_INSTRUMENT_TYP_119
+Local  ID_SUPPORTMACFILES_PLEASE_CHECK_Y_120
+Local  ID_SUPPORTMACFILES_IN_ORDER_TO_RU_121
+Local  ID_SUPPORTMACFILES_PLEASE_CHECK_Y_122
+ID_SUPPORTMACFILES_IN_ORDER_TO_RU_118              =  17118  
+ID_SUPPORTMACFILES_INSTRUMENT_TYP_119              =  17119  
+ID_SUPPORTMACFILES_PLEASE_CHECK_Y_120              =  17120  
+ID_SUPPORTMACFILES_IN_ORDER_TO_RU_121              =  17121  
+ID_SUPPORTMACFILES_PLEASE_CHECK_Y_122              =  17122  
+
+
+
+   !TT issue 20683 
+   !  LC/MS startup corrupts data structures in config.reg and also conf_off.reg 
+   !  when started with no licenses entered (
+   !  even entering the license does not fix the problem anymore later at next startup.
+   !  this is necessary, since investigation showed, that basic sepctra macros and functionality
+   !  must be loaded in order for MS addon to be fully initializing correctly
+   !  in other words: no MS addins/hooks can be when basic UV spectra functions are not setup
+   !  in top.mac with : macro "hpspc1.mcx",go
+   !  MS startup would actually fail in MSDA_MSDefsInit where is does: AddReportStyle
+   !  which then causes a bad reportstyle table to remain in _config register, which is always persisted
+   !  therefore return right here
+   if TabHdrVal (_Config[1], "Features", "SpectraAllowed") = 0 
+       _MassSpec=0
+       !print "No Spectra feature enabled for Mass Spectrometry !"
+       ret = ALERT(ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_IN_ORDER_TO_RU_121) + chr$(13),3,Alert3Title$)
+       return
+   endif
+
+
+   if Check (Variable, _MassSpec) = 1 then
+     if _MassSpec = 0 then
+       print "No Mass Spectrometry configured !"
+       return
+     endif
+   endif
+
+   FType$ = UpperCase$(_Features$)
+   if (FType$ <> "LC3D") AND (FType$ <> "LCMS") AND (FType$<>"CEMS") then
+	 ret = ALERT(ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_IN_ORDER_TO_RU_118) + chr$(13) + \
+	 			 ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_INSTRUMENT_TYP_119) + chr$(13) + \ 
+				 ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PLEASE_CHECK_Y_120) \
+	              ,3,Alert3Title$)
+	 bye   ! Stop the boot process 
+     return
+   endif
+   !initialize the path to the triathlon modules (needed later on)
+   
+        if Check (Variable, _AutoMSPath$) = 0 then
+            _AutoMSPath$ = AddOnPath$
+        endif
+   
+   !* Initialize the tunepath if the MSD instrument is configured
+   ! JZ SpriteII Changes
+   ! Set the default tune direcotry for the new Instruments 1956A and 1956B
+   
+        if Dev1946MSD > 0 then
+             if (msmodeloptions = 6) or (msmodeloptions = 7) or \
+                 (msmodeloptions = 8) or (msmodeloptions = 9) then
+                 _TunePath$   = _InstPath$+"1946DTUN\"
+             else 
+                  if (MSModelOptions = 4)  OR (MSModelOptions = 5) then
+                      _TunePath$   = _InstPath$+"1946CTUN\"
+                  else
+	               if (MSModelOptions = 10) OR (MSModelOptions = 11) then
+                           _TunePath$ = _InstPath$+"1956ATUN\"
+                       else
+                            if (MSModelOptions = 12) OR (MSModelOptions = 13) then
+                                _TunePath$ = _InstPath$+"1956BTUN\"
+                            else
+                                 if (MSModelOptions = 14) OR (MSModelOptions = 15) then
+                                     _TunePath$ = _InstPath$+"6110ATUN\"
+                                 else
+                                      if (MSModelOptions = 16) OR (MSModelOptions = 17) then
+                                          _TunePath$ = _InstPath$+"6130ATUN\"
+                                      else
+                                           if (MSModelOptions = 18) OR (MSModelOptions = 19) then
+                                               _TunePath$ = _InstPath$+"6120ATUN\"
+                                           else
+                                                if (MSModelOptions = 20) OR (MSModelOptions = 21) then
+                                                    _TunePath$ = _InstPath$+"6140ATUN\"
+                                                else
+                                                     if (MSModelOptions = 22) OR (MSModelOptions = 23) then
+                                                         _TunePath$ = _InstPath$+"6130BTUN\"
+                                                     else
+                                                          if (MSModelOptions = 24) OR (MSModelOptions = 25) then
+                                                              _TunePath$ = _InstPath$+"6120BTUN\"
+                                                          else 
+                                                               if (MSModelOptions = 26) OR (MSModelOptions = 27) then
+                                                                   _TunePath$ = _InstPath$+"6150BTUN\"
+                                                               else
+                                                                   _TunePath$   = _InstPath$+"1946TUNE\"
+                                                               endif
+                                                          endif
+                                                     endif
+                                                endif
+                                            endif
+                                        endif
+                                    endif
+                                endif
+                            endif
+                        endif
+                    endif
+   
+! LL 4/1/03 fixed SCR3481. moved pat's change to be within the top if...endif block.
+   ! Set global MSD model variables
+
+     ! Set the VL variable:
+       ! 4 or 5 = G1946C, 10 or 11 = G1956A, 14 or 15 = G6110A, 18 or 19 = G6120A, or 24 or 25 = G6120B
+       if (MSModeloptions = 4)  or (MSModeloptions = 5)  or \
+          (MSModeloptions = 10) or (MSModeloptions = 11) or \
+          (MSModeloptions = 14) or (MSModeloptions = 15) or \
+          (MSModeloptions = 18) or (MSModeloptions = 19) or \
+          (MSModeloptions = 24) or (MSModeloptions = 25) then
+         MSD_VL = 1
+       else
+         MSD_VL = 0
+       endif
+
+     ! Set the SL variable:
+       ! 6 or 7 = G1946D, 8 or 9 = G1946D+L2RF, 12 or 13 = G1956B, 16 or 17 = G6130A, 22 or 23 = G6130B
+       if (MSModeloptions = 6)  or (MSModeloptions = 7)  or \
+          (MSModeloptions = 8)  or (MSModeloptions = 9)  or \
+          (MSModeloptions = 12) or (MSModeloptions = 13) or \
+          (MSModeloptions = 16) or (MSModeloptions = 17) or \
+          (MSModeloptions = 22) or (MSModeloptions = 23) then 
+          MSD_SL = 1
+          MS_SQ_SL = 1
+       else
+         MSD_SL = 0
+         MS_SQ_SL = 0
+       endif
+       
+     ! Set the HT variable:
+       ! 20 or 21 = G6140A, 26 or 27 = B6150B
+       if (MSModeloptions = 20) or (MSModeloptions = 21) or \
+          (MSModeloptions = 26) or (MSModeloptions = 27) then  
+          MSD_HT = 1
+          MS_SQ_SL = 1
+       else
+         MSD_HT = 0
+       endif ! G6140A HT model
+
+     ! Set the L2RF variable:
+       if (MSModeloptions = 8)  or (MSModeloptions = 9)  or \
+          (MSModeloptions = 12) or (MSModeloptions = 13) or \
+          (MSModeloptions = 16) or (MSModeloptions = 17) or \
+          (MSModeloptions = 20) or (MSModeloptions = 21) or \
+          (MSModeloptions = 22) or (MSModeloptions = 23) or \
+          (MSModeloptions = 26) or (MSModeloptions = 27) then
+         MSD_RF = 1
+       else
+         MSD_RF = 0
+       endif
+
+     ! Set the G1946 variable:
+       if (MSModeloptions < 10) then
+         MSD_46 = 1
+       else
+         MSD_46 = 0
+       endif
+    endif
+
+   ! Set the _TARGETMASSSEP$ variable: 
+   ! MM 6/23/03 Added
+     _TargetMassSep$ = ";"
+     
+   ! After loading the hpmdui01.dlc, the cp system variables will
+   ! exist, and the licenses will have been checked.
+   MSTop_CheckLoadDLC
+   if _MassSpec = 0
+      ret = ALERT(ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_IN_ORDER_TO_RU_121) + chr$(13) + \ 
+               ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PLEASE_CHECK_Y_122) \
+               ,3,Alert3Title$)
+      bye   ! Stop the boot process 
+      return
+   endif
+
+   !Load the NLS register and macros first
+   LoadNLSRegister "MS", AddOnPath$
+   ! --> From now on we can use NLSed strings on macro level
+   ! Register help aliases
+   ! Alias MSD (_automspath$ + "help"+_Lang$ + "\hpms1946.hlp") is registered by the driver.
+   RegisterHelpSubSystem _automspath$ + "help"+_Lang$ + "\hpmscmd.hlp", "hpmscmd"
+   RegisterHelpSubSystem _automspath$ + "help"+_Lang$ + "\hpmscore.hlp", "hpmscore"
+   !  Load toplevel MCX macros, DLC and set hooks
+   LoadMacroMcxOrMac _AutoMSPath$ + "hpmstop"
+
+   !* Build menu Tables and add hook for existing menus
+   MSTop_BuildMenuTables
+   SetHook "PreViewMenu", "MSTop_MenuHookServer"
+   !set the hook for the close macros
+   SetHook "CloseApp", "MSTopClose"
+   !*
+   !* Initialize the various parts of triathlon
+   !* Initialize MSD acquisition additions
+
+   LoadMacroMcxOrMac _AutoMSPath$ + "hpmsacq", "MSAcqInit"
+   !* Agus's code here
+   !* 12/28/00 YD  Removed the following three lines of code since they are no longer to be used.
+   ! print installcmds(_AutoMSPath$+"impcsv.dlc")
+   ! vialLocation$=""         !initialize global variable 
+   ! macro _AutoMSPath$+"vialloc.mac"
+
+   !* Initialize only if MSD driver correctly loaded
+   if Dev1946MSD > 0 then
+     !* Initialize MS Diagnose
+     _DiagnosisEnabled= _DiagnosisEnabled + Dev1946MSD
+     LoadMacroMcxOrMac _AutoMSPath$ + "hpmsdgvw"
+     SetHook "DiagAddModule", "LoadMacroMcxOrMac _AutoMSPath$ + ""hpmsdgui""; dgMsDiagAddModule"
+     View_AddSwitchHook DIAGNOSE, dgMsOpenViewMac,110, dgMsCloseViewMac, 90
+     !2-22-02pdr(PVCS1717) faster startup(20% less), move this to OpenDiagnoseView: mstnDiagnosis
+     ! Initialize LC/MSD Non-volatile RAM register
+     InitNVR ,1
+
+     !* Initialize Manual MS Calibrate view 
+     LoadMacroMcxOrMac _AutoMSPath$ + "hpmscal", "MSDCalInitView" 
+     !* Initialize FIA for method and runctrl
+     if _HPCE = 0 then
+         LoadMacroMcxOrMac _AutoMSPath$ + "hpmsfia", "FIAInit" 
+     endif
+
+     !* Add MSDPrintMethod hook if no 1100 modules are configured
+     if DEVLeoAccess = 0 and devGCI = 0 then
+       SetHook "PrintInstMethod","MSDPrintMethod 1", 120
+     endif
+     !* Initialize the system GUI extensions for the MSD
+     LoadMacroMcxOrMac _AutoMSPath$ + "hpmssgui", "SGuiMsdInit"
+     !* Initialize the Inject and RunStop Hook 
+     NewHook "MSInject", "", "InjectIndex"
+     NewHook "MSRunStop"
+   endif ! Driver conditional initialization
+
+   !* Set hook to load MSD Instrument Verification (OQ/PV) tests
+   SetHook "OQPVAddTests", "IVAddTests _AutoMSPath$ + ""msiv.reg"""
+   !* Initialize MS data analysis additions
+   LoadMacroMcxOrMac _AutoMSPath$ + "hpmsda", "MSDaInit"
+   LoadMacroMcxOrMac _AutoMSPath$ + "hpmslbsr", "HpMsLibSrc"
+   !* load the CP-COM server & register it with ROT
+   !MSTop_LoadCPCom   
+   !* set the initial value of _MULTIFIAON to 0
+   _MULTIFIAON = 0
+   !* Set the hook...
+   SetHook "PostAcq","MSTop_MultiFIAHook"
+
+   ! JZ Changes made on 8/20/2001 to add Ballast Valve dialog box.
+   bvflag1 = 0
+   bvflag2 = 0 
+   temp = ObjHdrType(_config[2], MSshowBVMsg)
+   if (temp <> 99) then
+     bvflag1 = ObjHdrVal(_config[2], MSshowBVMsg)
+     bvflag2 = ObjHdrVal(_config[2], MSNoshowBVMsg)
+   else
+     SetObjHdrVal _config[2], MSshowBVMsg, 0
+     SetObjHdrVal _config[2], MSNOshowBVMsg, 0
+   endif
+   if bvflag1=1 AND bvflag2=0 then
+     defBVDialog
+	   if showDialog("BVMsgBox") = 1 then
+	      SetObjHdrVal _config[2], MSshowBVMsg, 0
+	      if noshowresult=1 then
+          SetObjHdrVal _config[2], MSNoshowBVMsg, 1
+        endif
+     endif
+     RemoveDialog "BVMsgBox" ! BW, 03/18/2002
+  endif
+  ! end of changes. jz
+
+  ! Set variables with the min and max masses for the instrument
+  if Dev1946MSD > 0 then
+     MSD_MIN_MASS = MSINSTRPARM(MINMASS)
+     MSD_MAX_MASS = MSINSTRPARM(MAXMASS)
+  else
+     MSD_MIN_MASS = 50
+     MSD_MAX_MASS = 3000
+  endif
+
+  ! BW, 05/31/02 Load Analyst Support module
+  on error print
+  if filestat(MODE, _AutoMSPath$ + "Analyst.mac") = 1 then ! exists - is a file
+    macro _AutoMSPath$ + "Analyst.mac"
+    if check(macro, InstallAnalystServer) = 1 then
+      InstallAnalystServer
+    endif
+  endif
+  ! Adding pid2.mac and running pidinit1 
+  LoadMacroMcxOrMac _AutoMSPath$ + "pid2", "pidinit1"
+  on error
+endmacro
+

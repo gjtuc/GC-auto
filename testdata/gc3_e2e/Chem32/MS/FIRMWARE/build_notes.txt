@@ -1,0 +1,108 @@
+# Build_0046 completed at Mon Apr  5 16:51:51 PDT 2010 on firma
+# These build_notes were derived from adm/build_notes.txt
+# 
+ 
+ Knute Kresie (KK) writes about this Smart3plus Firmware build (Build_0046):
+                                                      
+    ===============================
+    SUMMARY: This firmware set is for 5973N/5973inert/Carrera/Sumo(5975)
+             using SC3.2 or SC3+ or a SC3 having 36MB DSP DRAM.
+             This is the first GCMS firmware Build fully compatible
+             with SmartCard3.2 (SC3.2).
+
+             To conserve space and limit the count of tags on each file,
+             Build_0042 was removed from the archive and the builds
+             publication site: mustangts01\gcms\Projects\Smart3Plus\Firmware\*.
+
+
+    ===============================
+    Regarding this build of MSSC.O:
+
+
+    Modified mssc/mse73/src/prog/Pmsc.c
+
+    30Mar2010 KK  Modified initCOM2Driver() to detect GPMIG when FCB is also
+              responding to the start-up probe of the COM2 port.
+
+    Modified mssc/mse73/src/init/rev.c to specify MSSC version "5.02.07".
+
+
+    =========================================================
+    Regarding the DSP (AE) component of this build of MSSC.O:
+    No changes since the previous build.
+
+    ==============================
+    Regarding this build of LUI.O:
+
+    Modified lui/lui.c
+
+    29Mar2010 KK  Modified LUIhttp_get() to improve display of its received
+              message after LUISetDebug().
+              Added #include(s) to reduce "implicit" warnings for socket funcs.
+    
+    05Apr2010 KK  Adds this advisory NOTE:
+           The current version of LUI.O will cause a harmless warning
+           "Undefined symbol: diskFlash2" message on the VxWorks serial port
+           during start-up "ld < LUI.O" on a SmartCard3+ running BSP 1.2/22T.
+           That warning does not appear when "ld < LUI.O" on a SmartCard3.2
+           running BSP 1.2/26T.  The diskFlash2() is not invoked when the
+           LUI.O is running on a SmartCard3+ (BSP 1.2/22T). The diskFlash2()
+           was introduced in BSP 1.2/26T to provide some protection from
+           the disaster of loading old an BSP onto a newer SmartCard3.2 .
+           Because of the expansion of "/flash/" in BSP 1.2/26T, installing
+           that BSP onto SmartCard3,3+ cards is laborious.
+
+
+    This LUI displays user-visible Front Panel version "03.206.20100405" and
+    includes file version string "lui.c,v 1.26 2010-04-05 14:30:20-07".
+    This LUI requires MSSC 5.02.06 or greater.
+
+    ===============================
+    Regarding this build of httpd.o
+    No changes since the previous build.
+
+    =====================================
+    Regarding this build of wdsmall_run.o
+    No changes since the previous build.
+
+    ===================================
+    Regarding the firmware build tools and process:
+
+    Modified  build/flash_writer/msupdate.exe
+
+    05Apr2010 KK
+    msupdate version 3.98 (msupdate.cpp: version 05Apr2010 11:48)
+    copied here from smart3plus/pctools/msupdate/msupdate.exe
+
+    ===================================================
+    Regarding the firmware installation tool (msupdate)
+
+    Modified smart3plus/pctools/msupdate/msupdate.cpp
+         and smart3plus/pctools/msupdate/msupdate.exe
+
+    Checked-in current versions of smart3plus/pctools/msupdate/msupdate.opt,
+    msupdate.sln, msupdate.vcproj
+
+    The msupdate version 3.98 has an internal version string,
+    viewable by HPUX "what" or my Linux "showstr" of:
+    "msupdate.cpp: version 05Apr2010 11:48".
+    The msupdate.exe was built using Microsoft Visual Studio 2005
+    on Windows XP.
+
+    31Mar2010 KK  Modified ip_ping() to add a "tries" parameter used to
+              specify how many ping tests are done per Windows ping invocation.
+              This allows use of tries="3" during initial "network testing"
+              (network infrastructure response to initial ping request may be
+              very (e.g. 15 sec) slow) and use of tries="1" to give quick
+              detection of ping response failure during instrument power cycle
+              action near the end of the firmware update process.
+              Also corrected the ping command to use the preferred syntax
+              of "-n tries" before the target IPaddress.
+              Modified updateBootrom() to add boolean interactive parameter
+              to enable adding new "bootrom!" non-interactive bootrom update
+              option.  For R&D testing, changed VERSION_STRING to "3.97A" and
+              in main() print file_id.
+    05Apr2010 KK  Changed VERSION_STRING to "3.98".  
+
+
+ Modified  adm/build_notes.txt  (this file).

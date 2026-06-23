@@ -1,0 +1,1538 @@
+
+!********************************************************
+!     List GC parameters for 6850,6890 and 5890
+!
+!
+!********************************************************
+!  $Header: /cag/DRIVERS/leodef/gc/misc/GCinfo.mac 1.7 2003-04-30 11:32:06-07 lindalin Exp $
+!     Rev 0 (14-Apr-03) Original release
+!     Rev 1 (17-Apr-03) Added reporting of G2614 tray firmware
+!     Rev 2 (22-Apr-03) Checks for online GC session before proceeding
+!     Rev 3 (25-Apr-03) Declared 'Local' for all variables
+!     Rev 4 (27-Feb-07) Added code to handle 7890 and Gen GC
+!     Rev 5 (21-Mar-07) Added code to handle File #33 already open
+!
+!********************************************************
+!  This macro is to be run from within an instrument session
+!  and will interrogate the GC and ALS for the current settings.
+!
+!  The macro will work for 5890 series I, II with 2 and 6
+!  channel EPP, 6890A/N and 6850.
+! 
+!  The 5890 will report the physical setup
+!  The 6890/6850 will report the setup as currently defined
+!  in the method.
+!
+!  The 7890 detection will alert the user to use the LMD software for help
+!
+!  If none of the above, an alert will be shown to declare non-support
+!
+!
+!  The autosamplers will report the firmware revisions of each
+!  autosampler and the controller.  It will also report the
+!  presence of a tray and bar code reader.
+!
+!*********************************************************
+!  Louis James
+!  Technical Support Engineer
+!  Little Falls Site
+!  Telnet 633-8308  FAX 302-T633-8913
+!  louis_james@agilent.com 
+!*********************************************************
+!  To run:
+!  macro "gcinfo.mac" ,go
+!    or
+!    macro "gcinfo.mac"
+!    gcinfo
+!*********************************************************
+
+Name GCinfo
+Local wfi$,ser_num$,id$,gc_type$,pu_cfg$,pu_factor,ov_cfg$,ov_type$,ov_max$
+Local cryo_type$,if_cfg$,if_type$,if_htr$,if_epc$,if_pres$,if_gas$,if__cfg$
+Local if__htr$,if__epc$,if__pres,if__gas$,ib_cfg$,ib_type$,ib_htr$,ib_epc$
+Local ib_pres$,ib_gas$,ib__cfg$,ib__htr$,ib__epc$,ib__pres$,ib__gas$,c1_cfg$
+Local c1_length$,c1_dia$,c1_f_thick$,c1_in$,c1_out$,c1_opcv$,c1_vac$,c1_opc$
+Local c2_length$,c2_dia$,c2_f_thick$,c2_in$,c2_out$,c2_opcv$,c2_vac$,c2_opc$
+Local c2_cfg$,df_cfg$,df_type$,df_htr$,df_epc$,df_u_gas$,df_m_gas$,df__type$
+Local df__htr$,df__epc$,db_cfg$,db_type$,db_htr$,db_epc$,db_u_gas$,db_m_gas$
+Local db__type$,db__htr$,db__epc$,a1_cfg$,a1_type$,a1_htr$,a2_cfg$,a2_type$
+Local a2_htr$,a3_cfg$,a4_cfg$,a5_cfg$,a3_gas$,a4_gas$,a5_gas$,a3_p_pres$
+Local v1_cfg$,v2_cfg$,v3_cfg$,v4_cfg$,v5_cfg$,v6_cfg$,v7_cfg$,v8_cfg$
+Local v1_type$,v2_type$,v3_type$,v4_type$,v5_type$,v6_type$,v7_type$,v8_type$
+Local v1_l_vol$,v2_l_vol$,v3_l_vol$,v4_l_vol$,v5_l_vol$,v6_l_vol$,v7_l_vol$
+Local v8_l_vol$,v1_inlet$,v2_inlet$,v3_inlet$,v4_inlet$,v5_inlet$,v6_inlet$
+Local v7_inlet$,v8_inlet$,samp_cfg$,samp1$,samp2$,cntrl$,tray$,bcr$,t2614$
+Local a$,version,det_a$,det_b$,flow_sensor$,i_a_zone$,i_b_zone$,d_a_zone$
+Local d_b_zone$,aux_gas$,epp_a$,epp_b$,inlet_a$,inlet_b$,aux_c$,aux_d$
+Local aux_e$,aux_f$,oven_type$,RetVal,didErr
+
+ID_ASTXDRIVERSMACFILES______PARAMETER_86           =  17086
+ID_ASTXDRIVERSMACFILES______PARAMETER_87           =  17087
+ID_ASTXDRIVERSMACFILES_SERIAL_NUMBER_88            =  17088
+ID_ASTXDRIVERSMACFILES_FIRMWARE_REVIS_89           =  17089
+ID_ASTXDRIVERSMACFILES_PRESSURE_UNITS_90           =  17090
+ID_ASTXDRIVERSMACFILES_OVEN_PARAMETER_91           =  17091
+ID_ASTXDRIVERSMACFILES_REGULAR_OVEN_92             =  17092
+ID_ASTXDRIVERSMACFILES_FAST_OVEN_93                =  17093
+ID_ASTXDRIVERSMACFILES____CRYO_94                  =  17094
+ID_ASTXDRIVERSMACFILES___OVEN_MAX_95               =  17095
+ID_ASTXDRIVERSMACFILES_DEGREES_96                  =  17096
+ID_ASTXDRIVERSMACFILES_FRONT_INLET_CO_97           =  17097
+ID_ASTXDRIVERSMACFILES_INLET_CONFIGUR_98           =  17098
+ID_ASTXDRIVERSMACFILES_NOT_PRESENT_99              =  17099
+ID_ASTXDRIVERSMACFILES_PRESENT_100                 =  17100
+ID_ASTXDRIVERSMACFILES_INLET_TYPE_101              =  17101
+ID_ASTXDRIVERSMACFILES___CARRIER_IS_102            =  17102 
+ID_ASTXDRIVERSMACFILES_MAX_PRESSURE_103            =  17103
+ID_ASTXDRIVERSMACFILES___HEATER_ZONE_104           =  17104
+ID_ASTXDRIVERSMACFILES_REAR_INLET_CON_105          =  17105 
+ID_ASTXDRIVERSMACFILES_COLUMN_1_CONFI_106          =  17106
+ID_ASTXDRIVERSMACFILES_COLUMN_CONFIGU_107          =  17107 
+ID_ASTXDRIVERSMACFILES_LENGTH_108                  =  17108
+ID_ASTXDRIVERSMACFILES_METERS__DIAMET_109          =  17109
+ID_ASTXDRIVERSMACFILES_UM__FILM_THICK_110          =  17110
+ID_ASTXDRIVERSMACFILES_UM_111                      =  17111
+ID_ASTXDRIVERSMACFILES_VACUUM_CORRECT_112          =  17112
+ID_ASTXDRIVERSMACFILES_PRESSURE_CORRE_113          =  17113
+ID_ASTXDRIVERSMACFILES___PRESSURE_COR_114          =  17114
+ID_ASTXDRIVERSMACFILES_COLUMN_IN_115               =  17115
+ID_ASTXDRIVERSMACFILES___COLUMN_OUT_116            =  17116
+ID_ASTXDRIVERSMACFILES_____COLUMN_1_N_117          =  17117
+ID_ASTXDRIVERSMACFILES_COLUMN_2_CONFI_118          =  17118  
+ID_ASTXDRIVERSMACFILES_____COLUMN_2_N_119          =  17119  
+ID_ASTXDRIVERSMACFILES_FRONT_DETECTOR_120          =  17120  
+ID_ASTXDRIVERSMACFILES_DETECTOR_CONFI_121          =  17121  
+ID_ASTXDRIVERSMACFILES_DETECTOR_TYPE_122           =  17122  
+ID_ASTXDRIVERSMACFILES_MAKE_UP_GAS_123             =  17123  
+ID_ASTXDRIVERSMACFILES___UTILITY_GAS_124           =  17124  
+ID_ASTXDRIVERSMACFILES_____FRONT_DETE_125          =  17125  
+ID_ASTXDRIVERSMACFILES_REAR_DETECTOR_126           =  17126  
+ID_ASTXDRIVERSMACFILES_____REAR_DETEC_127          =  17127  
+ID_ASTXDRIVERSMACFILES_AUX_ZONES_CONF_128          =  17128  
+ID_ASTXDRIVERSMACFILES_AUX_1_HEATER_N_129          =  17129  
+ID_ASTXDRIVERSMACFILES_AUX_1_130                   =  17130  
+ID_ASTXDRIVERSMACFILES_AND_CONFIGURED_131          =  17131  
+ID_ASTXDRIVERSMACFILES_HEATER_132                  =  17132  
+ID_ASTXDRIVERSMACFILES_AUX_2_HEATER_N_133          =  17133  
+ID_ASTXDRIVERSMACFILES_AUX_2_134                   =  17134  
+ID_ASTXDRIVERSMACFILES____PNEUMATIC_A_135          =  17135  
+ID_ASTXDRIVERSMACFILES_____AUX_3_136               =  17136  
+ID_ASTXDRIVERSMACFILES_____AUX_4_137               =  17137  
+ID_ASTXDRIVERSMACFILES_____AUX_5_138               =  17138  
+ID_ASTXDRIVERSMACFILES_____PNEUMATIC_139           =  17139  
+ID_ASTXDRIVERSMACFILES_VALVE_CONFIGUR_140          =  17140  
+ID_ASTXDRIVERSMACFILES_VALVE_1_TYPE_I_141          =  17141  
+ID_ASTXDRIVERSMACFILES_ML___CONNECTED_142          =  17142  
+ID_ASTXDRIVERSMACFILES_VALVE_1_TYPE_I_143          =  17143  
+ID_ASTXDRIVERSMACFILES_VALVE_1_NOT_IN_144          =  17144  
+ID_ASTXDRIVERSMACFILES_VALVE_2_TYPE_I_145          =  17145  
+ID_ASTXDRIVERSMACFILES_VALVE_2_TYPE_I_146          =  17146  
+ID_ASTXDRIVERSMACFILES_VALVE_2_NOT_IN_147          =  17147  
+ID_ASTXDRIVERSMACFILES_VALVE_3_TYPE_I_148          =  17148  
+ID_ASTXDRIVERSMACFILES_VALVE_3_TYPE_I_149          =  17149  
+ID_ASTXDRIVERSMACFILES_VALVE_3_NOT_IN_150          =  17150  
+ID_ASTXDRIVERSMACFILES_VALVE_4_TYPE_I_151          =  17151  
+ID_ASTXDRIVERSMACFILES_VALVE_4_TYPE_I_152          =  17152  
+ID_ASTXDRIVERSMACFILES_VALVE_4_NOT_IN_153          =  17153  
+ID_ASTXDRIVERSMACFILES_VALVE_5_TYPE_I_154          =  17154  
+ID_ASTXDRIVERSMACFILES_VALVE_5_TYPE_I_155          =  17155  
+ID_ASTXDRIVERSMACFILES_VALVE_5_NOT_IN_156          =  17156  
+ID_ASTXDRIVERSMACFILES_VALVE_6_TYPE_I_157          =  17157  
+ID_ASTXDRIVERSMACFILES_VALVE_6_TYPE_I_158          =  17158  
+ID_ASTXDRIVERSMACFILES_VALVE_6_NOT_IN_159          =  17159  
+ID_ASTXDRIVERSMACFILES_VALVE_7_TYPE_I_160          =  17160  
+ID_ASTXDRIVERSMACFILES_VALVE_7_TYPE_I_161          =  17161  
+ID_ASTXDRIVERSMACFILES_VALVE_7_NOT_IN_162          =  17162  
+ID_ASTXDRIVERSMACFILES_VALVE_8_TYPE_I_163          =  17163  
+ID_ASTXDRIVERSMACFILES_VALVE_8_TYPE_I_164          =  17164  
+ID_ASTXDRIVERSMACFILES_VALVE_8_NOT_IN_165          =  17165    
+ID_ASTXDRIVERSMACFILES_INJECTOR_1_NOT_167          =  17167  
+ID_ASTXDRIVERSMACFILES_INJECTOR_NOT_I_168          =  17168  
+ID_ASTXDRIVERSMACFILES_INJECTOR_2_NOT_169          =  17169  
+ID_ASTXDRIVERSMACFILES_NO_170                      =  17170  
+ID_ASTXDRIVERSMACFILES_AUTOSAMPLER_CO_171          =  17171  
+ID_ASTXDRIVERSMACFILES_AUTOSAMPLER_NO_172          =  17172  
+ID_ASTXDRIVERSMACFILES_CONTROLLER_FIR_173          =  17173  
+ID_ASTXDRIVERSMACFILES_FRONT_INJECTOR_174          =  17174  
+ID_ASTXDRIVERSMACFILES_BACK_INJECTOR_175           =  17175  
+ID_ASTXDRIVERSMACFILES_INJECTOR_FIRMW_176          =  17176  
+ID_ASTXDRIVERSMACFILES_TRAY_NOT_INSTA_177          =  17177  
+ID_ASTXDRIVERSMACFILES_TRAY_FIRMWARE_178           =  17178  
+ID_ASTXDRIVERSMACFILES_TRAY_IS_INSTAL_179          =  17179  
+ID_ASTXDRIVERSMACFILES_BAR_CODE_READE_180          =  17180  
+ID_ASTXDRIVERSMACFILES_BAR_CODE_READE_181          =  17181  
+ID_ASTXDRIVERSMACFILES_BAR_CODE_READE_182          =  17182  
+ID_ASTXDRIVERSMACFILES______PARAMETER_183          =  17183  
+ID_ASTXDRIVERSMACFILES_SERIES_II__2_C_184          =  17184  
+ID_ASTXDRIVERSMACFILES_SERIES_II__6_C_185          =  17185  
+ID_ASTXDRIVERSMACFILES_FLOW_SENSOR_NO_186          =  17186  
+ID_ASTXDRIVERSMACFILES_FLOW_SENSOR_PR_187          =  17187  
+ID_ASTXDRIVERSMACFILES_INJECTOR_A_HEA_188          =  17188  
+ID_ASTXDRIVERSMACFILES_INJECTOR_A_HEA_189          =  17189  
+ID_ASTXDRIVERSMACFILES_DETECTOR_A_HEA_190          =  17190  
+ID_ASTXDRIVERSMACFILES_DETECTOR_A_HEA_191          =  17191  
+ID_ASTXDRIVERSMACFILES_INJECTOR_B_HEA_192          =  17192  
+ID_ASTXDRIVERSMACFILES_INJECTOR_B_HEA_193          =  17193  
+ID_ASTXDRIVERSMACFILES_DETECTOR_B_HEA_194          =  17194  
+ID_ASTXDRIVERSMACFILES_DETECTOR_B_HEA_195          =  17195  
+ID_ASTXDRIVERSMACFILES_AUX_GAS_NOT_PR_196          =  17196  
+ID_ASTXDRIVERSMACFILES_AUX_GAS_PRESEN_197          =  17197  
+ID_ASTXDRIVERSMACFILES_EPP_A_NOT_PRES_198          =  17198  
+ID_ASTXDRIVERSMACFILES_EPP_A_PRESENT_199           =  17199  
+ID_ASTXDRIVERSMACFILES_EPP_B_NOT_PRES_200          =  17200  
+ID_ASTXDRIVERSMACFILES_EPP_B_PRESENT_201           =  17201  
+ID_ASTXDRIVERSMACFILES_AUX_F_NOT_PRES_202          =  17202  
+ID_ASTXDRIVERSMACFILES_AUX_F_PRESENT_203           =  17203  
+ID_ASTXDRIVERSMACFILES_AUX_E_NOT_PRES_204          =  17204  
+ID_ASTXDRIVERSMACFILES_AUX_E_PRESENT_205           =  17205  
+ID_ASTXDRIVERSMACFILES_AUX_D_NOT_PRES_206          =  17206  
+ID_ASTXDRIVERSMACFILES_AUX_D_PRESENT_207           =  17207  
+ID_ASTXDRIVERSMACFILES_AUX_C_NOT_PRES_208          =  17208  
+ID_ASTXDRIVERSMACFILES_AUX_C_PRESENT_209           =  17209  
+ID_ASTXDRIVERSMACFILES_DETECTOR_A_210              =  17210  
+ID_ASTXDRIVERSMACFILES_DETECTOR_B_211              =  17211  
+ID_ASTXDRIVERSMACFILES_INLET_A_IS_212              =  17212  
+ID_ASTXDRIVERSMACFILES_INLET_B_IS_213              =  17213  
+ID_ASTXDRIVERSMACFILES_THIS_MACRO_ONL_214          =  17214  
+ID_ASTXDRIVERSMACFILES_USE_LMD_SOFTWARE_313             = 17313						
+ID_ASTXDRIVERSMACFILES_7890_INFO_314									  = 17314
+ID_ASTXDRIVERSMACFILES_CONFIGURED_GC_NOT_SUPPORTED_315	= 17315
+ID_ASTXDRIVERSMACFILES_7890_INVALID_GC_316							= 17316
+
+
+NLSFileName_astxmac$ = "astxmac"
+  
+! Is this an online GC session?
+If ((_license$ = "GC") And (_OFFLINE = 0)) Then
+  
+  If Valid_GC(retval) = 4 Then
+    !RetVal=Alert("Please use the LMD software to obtain information about the 7890 GC",2,"7890 Information")
+    RetVal=Alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_USE_LMD_SOFTWARE_313),2, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_7890_INFO_314))
+    Goto end
+  EndIf
+  If Valid_GC(retval) = 0 Then
+    !RetVal=Alert("Configured GC is not supported for information",3,"Invalid GC")
+     RetVal=Alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_CONFIGURED_GC_NOT_SUPPORTED_315),3, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_7890_INVALID_GC_316))
+    Goto end
+  EndIf
+  
+didErr=0
+On Error didErr=1
+
+! Yes it is, proceed  
+  Open _TEMPPATH$+"GCinfo.txt" For output as #33
+  ! Was there a problem opening the output file?
+  If(didErr=1) Then
+    ! Yes, try to close it
+    didErr=0
+    Close #33
+    ! Was there a problem closing the output file?
+    If(didErr=0) Then
+      ! No, now open it
+      Open _TEMPPATH$+"GCinfo.txt" For output as #33
+    Else
+      ! Yes, Tilt and get out
+      RetVal=Alert("ERROR *** Filenum 33 is inaccessable",3,"File Open Problem")
+      Goto end
+    EndIf
+  EndIf
+
+!   
+! What kind of a GC are we talking to?
+!
+  if (testfordevice("GC",0,"")) = 0 then !Is it not a 5890?
+    if (testfordevice("68GC",0,"")) <> 0 then  !Is it a 6890?
+      GC_type$ = "68GC"
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES______PARAMETER_86)
+    else                                       !Must be a 6850
+      GC_type$ = "6850GC"
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES______PARAMETER_87)
+    endif
+    print #33, " "
+    wfi$ = SendModule$ (GC_type$, "CCIW ?")
+    wfi$=shift$(wfi$)
+    wfi$=shift$(wfi$)
+    wfi$=shift$(wfi$)
+    wfi$=shift$(wfi$)
+    Ser_num$=stripval$(wfi$)
+    print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SERIAL_NUMBER_88),ser_num$
+    ID$ = SendModule$ (GC_type$, "CCID")
+    id$=stripcmd$(id$)
+    Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FIRMWARE_REVIS_89),ID$
+    PU_cfg$ = SendModule$ (GC_type$, "GCPU ?")
+    pu_cfg$=stripcmd$(pu_cfg$)
+    pu_factor=68947.57
+    If pu_cfg$ = "1" Then
+      pu_factor=1000000
+    EndIf
+    If pu_cfg$ = "2" Then
+      pu_factor=10000
+    EndIf
+    Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRESSURE_UNITS_90), conv_pu$(val(PU_cfg$))
+      
+        
+  ! Process oven information     
+    OV_cfg$ = SendModule$ (GC_type$, "OVCW ?")
+    ov_cfg$ = stripcmd$(ov_cfg$)     
+    ov_type$=stripval$(OV_cfg$)
+    OV_cfg$=shift$(ov_cfg$)
+    ov_cfg$=shift$(ov_cfg$)
+    cryo_type$=stripval$(ov_cfg$)
+    ov_cfg$=shift$(ov_cfg$)
+    ov_max$=ov_cfg$
+    print #33," "
+    Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OVEN_PARAMETER_91)
+    oven_type$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_REGULAR_OVEN_92)
+    If ov_type$ = "0" Then
+      oven_type$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FAST_OVEN_93)
+    endif
+    Print #33,oven_type$,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES____CRYO_94),(Conv_cryo$(Val(cryo_type$))),\
+    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___OVEN_MAX_95),ov_max$,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DEGREES_96)
+      
+  ! Process Inlet information
+    Print #33," "
+    If gc_type$ = "68GC" Then
+      Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FRONT_INLET_CO_97)
+    Else
+      Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INLET_CONFIGUR_98)
+    EndIf
+    IF_cfg$ = SendModule$ (GC_type$, "IFCW ?")
+    if_cfg$=stripcmd$(if_cfg$)
+    if_type$=stripval$(if_cfg$)
+    if_cfg$=shift$(if_cfg$)
+    if_htr$=stripval$(if_cfg$)
+    if_cfg$=shift$(if_cfg$)
+    if_epc$=stripval$(if_cfg$)
+    if_cfg$=shift$(if_cfg$)
+    if_pres$=stripval$(if_cfg$)
+    if_cfg$=shift$(if_cfg$)
+    if_gas$=stripval$(if_cfg$)
+    if__cfg$=conv_inlet$(Val(if_type$))
+    if__htr$=conv_zone_present$(Val(if_htr$))
+    if__epc$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NOT_PRESENT_99)
+    If if_epc$ = "1" Then
+      if__epc$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRESENT_100)
+    EndIf
+    if__pres=(Val(if_pres$)/pu_factor)
+    if__gas$=conv_gas$(Val(if_gas$))
+    Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INLET_TYPE_101),if__cfg$,"| EPC",if__epc$,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___CARRIER_IS_102),if__gas$
+    print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MAX_PRESSURE_103),trunc(if__pres),Conv_pu$(Val(PU_cfg$)),\
+    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___HEATER_ZONE_104),if__htr$
+    If GC_type$ = "68GC" Then
+      print #33," "
+      Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_REAR_INLET_CON_105)
+      IB_cfg$ = SendModule$ (GC_type$, "IBCW ?")
+      ib_cfg$=stripcmd$(ib_cfg$)
+      ib_type$=stripval$(ib_cfg$)
+      ib_cfg$=shift$(ib_cfg$)
+      ib_htr$=stripval$(ib_cfg$)
+      ib_cfg$=shift$(ib_cfg$)
+      ib_epc$=stripval$(ib_cfg$)
+      ib_cfg$=shift$(ib_cfg$)
+      ib_pres$=stripval$(ib_cfg$)
+      ib_cfg$=shift$(ib_cfg$)
+      ib_gas$=stripval$(ib_cfg$)
+      ib__cfg$=conv_inlet$(Val(ib_type$))
+      ib__htr$=conv_zone_present$(Val(ib_htr$))
+      ib__epc$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NOT_PRESENT_99)
+      If ib_epc$ = "1" Then
+        ib__epc$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRESENT_100)
+      EndIf
+      ib__pres=(Val(ib_pres$)/pu_factor)
+      ib__gas$=conv_gas$(Val(ib_gas$))
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INLET_TYPE_101),ib__cfg$,"| EPC",ib__epc$,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___CARRIER_IS_102),ib__gas$
+      print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MAX_PRESSURE_103),trunc(ib__pres),Conv_pu$(Val(PU_cfg$)),\
+      ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___HEATER_ZONE_104),ib__htr$
+    EndIf
+        
+  ! Process column information 
+    Print #33," "
+    If gc_type$ = "68GC" Then
+      Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_COLUMN_1_CONFI_106)
+    Else
+      Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_COLUMN_CONFIGU_107)
+    EndIf
+    C1_cfg$ = SendModule$ (GC_type$, "C1CW ?")
+    c1_cfg$=stripcmd$(c1_cfg$)
+    c1_length$=stripval$(c1_cfg$)
+    c1_cfg$=shift$(c1_cfg$)
+    c1_dia$=stripval$(c1_cfg$)
+    c1_cfg$=shift$(c1_cfg$)
+    c1_f_thick$=stripval$(c1_cfg$)
+    c1_cfg$=shift$(c1_cfg$)
+    c1_in$=stripval$(c1_cfg$)
+    c1_cfg$=shift$(c1_cfg$)
+    c1_out$=stripval$(c1_cfg$)
+    c1_cfg$=shift$(c1_cfg$)
+    c1_opcv$=stripval$(c1_cfg$)
+    c1_cfg$=shift$(c1_cfg$)
+    c1_vac$=stripval$(c1_cfg$)
+    c1_cfg$=shift$(c1_cfg$)
+    c1_opc$=stripval$(c1_cfg$)
+    if c1_in$ <> "5" then
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_LENGTH_108),(Val(c1_length$)/100),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METERS__DIAMET_109),\
+      Val(c1_dia$),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_UM__FILM_THICK_110),(Val(c1_f_thick$)/100),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_UM_111)
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VACUUM_CORRECT_112),(Conv_on_off$(Val(c1_vac$)))
+      If c1_opc$ = "0" Then
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRESSURE_CORRE_113),(Conv_on_off$(Val(c1_opc$)))
+      Else
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRESSURE_CORRE_113),(Conv_on_off$(Val(c1_opc$))),\
+        ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___PRESSURE_COR_114),(Val(c1_opcv)/pu_factor),\
+        Conv_pu$(Val(pu_cfg$))
+      EndIf
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_COLUMN_IN_115),Conv_col_in$(Val(c1_in$)),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___COLUMN_OUT_116),\
+      Conv_col_det$(Val(c1_out$))
+    Else
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_____COLUMN_1_N_117)
+    EndIf
+    
+    If GC_type$ = "68GC" Then
+      print #33," "
+      Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_COLUMN_2_CONFI_118)
+      C2_cfg$ = SendModule$ (GC_type$, "C2CW ?")
+      c2_cfg$=stripcmd$(c2_cfg$)
+      c2_length$=stripval$(c2_cfg$)
+      c2_cfg$=shift$(c2_cfg$)
+      c2_dia$=stripval$(c2_cfg$)
+      c2_cfg$=shift$(c2_cfg$)
+      c2_f_thick$=stripval$(c2_cfg$)
+      c2_cfg$=shift$(c2_cfg$)
+      c2_in$=stripval$(c2_cfg$)
+      c2_cfg$=shift$(c2_cfg$)
+      c2_out$=stripval$(c2_cfg$)
+      c2_cfg$=shift$(c2_cfg$)
+      c2_opcv$=stripval$(c2_cfg$)
+      c2_cfg$=shift$(c2_cfg$)
+      c2_vac$=stripval$(c2_cfg$)
+      c2_cfg$=shift$(c2_cfg$)
+      c2_opc$=stripval$(c2_cfg$)
+      if c2_in$ <> "5" then
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_LENGTH_108),(Val(c2_length$)/100),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METERS__DIAMET_109),\
+        Val(c2_dia$),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_UM__FILM_THICK_110),(Val(c2_f_thick$)/100),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_UM_111)
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VACUUM_CORRECT_112),(Conv_on_off$(Val(c2_vac$)))
+        If c2_opc$ = "0" Then
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRESSURE_CORRE_113),(Conv_on_off$(Val(c2_opc$)))
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRESSURE_CORRE_113),(Conv_on_off$(Val(c2_opc$))),\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___PRESSURE_COR_114),(Val(c2_opcv)/pu_factor),\
+          Conv_pu$(Val(pu_cfg$))
+        EndIf
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_COLUMN_IN_115),Conv_col_in$(Val(c2_in$)),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___COLUMN_OUT_116),\
+        conv_col_det$(val(c2_out$))
+      Else
+            Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_____COLUMN_2_N_119)
+      EndIf
+    EndIf
+      
+  ! Process Detector information
+    print #33," "
+    If gc_type$="68GC" Then
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FRONT_DETECTOR_120)
+    Else
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_CONFI_121)
+    EndIf
+    DF_cfg$ = SendModule$ (GC_type$, "DFCW ?")
+    df_cfg$=stripcmd$(df_cfg$)
+    df_type$=stripval$(df_cfg$)
+    if df_type$ <> "15" then
+      df_cfg$=shift$(df_cfg$)
+      df_htr$=stripval$(df_cfg$)
+      df_cfg$=shift$(df_cfg$)
+      df_epc$=stripval$(df_cfg$)
+      df_cfg$=shift$(df_cfg$)
+      df_cfg$=shift$(df_cfg$)
+      df_cfg$=shift$(df_cfg$)
+      df_cfg$=shift$(df_cfg$)
+      df_u_gas$=stripval$(df_cfg$)
+      df_cfg$=shift$(df_cfg$)
+      df_m_gas$=df_cfg$
+      df__type$=conv_det$(Val(df_type$))
+      df__htr$=conv_zone_present$(Val(df_htr$))
+      df__epc$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NOT_PRESENT_99)
+      If df_epc$ = "1" Then
+        df__epc$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRESENT_100)
+      EndIf
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_TYPE_122),df__type$,"| EPC",df__epc$,\
+      ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___HEATER_ZONE_104),df__htr$
+      If ((df__type$="FID")Or(df__type$="NPD")Or(df__type$="FPD"))Then
+        Print#33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MAKE_UP_GAS_123),conv_makeup_gas$(Val(df_m_gas$)),\
+        ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___UTILITY_GAS_124),conv_util_gas$(Val(df_u_gas$))
+      EndIf
+      If ((df__type$="TCD")Or(df__type$="ECD")Or(df__type$="uECD"))Then
+        Print#33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MAKE_UP_GAS_123),conv_makeup_gas$(Val(df_m_gas$))
+      EndIf
+    Else
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_____FRONT_DETE_125)
+    endif
+    If gc_type$="68GC" Then
+      print #33," "
+      Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_REAR_DETECTOR_126)
+      Db_cfg$ = SendModule$ (GC_type$, "DBCW ?")
+      db_cfg$=stripcmd$(db_cfg$)
+      db_type$=stripval$(db_cfg$)
+      if db_type$ <> "15" then
+        db_cfg$=shift$(db_cfg$)
+        db_htr$=stripval$(db_cfg$)
+        db_cfg$=shift$(db_cfg$)
+        db_epc$=stripval$(db_cfg$)
+        db_cfg$=shift$(db_cfg$)
+        db_cfg$=shift$(db_cfg$)
+        db_cfg$=shift$(db_cfg$)
+        db_cfg$=shift$(db_cfg$)
+        db_u_gas$=stripval$(db_cfg$)
+        db_cfg$=shift$(db_cfg$)
+        db_m_gas$=db_cfg$
+        db__type$=conv_det$(Val(db_type$))
+        db__htr$=conv_zone_present$(Val(db_htr$))
+        db__epc$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NOT_PRESENT_99)
+        If db_epc$ = "1" Then
+          db__epc$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PRESENT_100)
+        EndIf
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_TYPE_122),db__type$,"| EPC",db__epc$,\
+        ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___HEATER_ZONE_104),db__htr$
+        If ((db__type$="FID")Or(db__type$="NPD")Or(db__type$="FPD"))Then
+          Print#33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MAKE_UP_GAS_123),conv_makeup_gas$(Val(db_m_gas$)),\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES___UTILITY_GAS_124),conv_util_gas$(Val(db_u_gas$))
+        EndIf
+        If ((db__type$="TCD")Or(db__type$="ECD")Or(db__type$="uECD"))Then
+          Print#33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MAKE_UP_GAS_123),conv_makeup_gas$(Val(db_m_gas$))
+        EndIf
+      Else
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_____REAR_DETEC_127)
+      endif
+    EndIf
+      
+  ! Process Thermal AUX information
+    Print #33," "
+    Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_ZONES_CONF_128)
+    a1_cfg$=SendModule$(GC_type$,"A1CW ?")
+    a1_cfg$=stripcmd$(a1_cfg$)
+    a1_type$=stripval$(a1_cfg$)
+    a1_cfg$=shift$(a1_cfg$)
+    a1_htr$=a1_cfg$
+    If a1_htr$ = "0" Then
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_1_HEATER_N_129)
+    Else
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_1_130),conv_zone_present$(Val(a1_htr$)), \
+      ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AND_CONFIGURED_131),Conv_therm_aux$(Val(a1_type$)),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HEATER_132)
+    EndIf
+    If GC_type$ = "68GC" Then
+      a2_cfg$=SendModule$(GC_type$,"A2CW ?")
+      a2_cfg$=stripcmd$(a2_cfg$)
+      a2_type$=stripval$(a2_cfg$)
+      a2_cfg$=shift$(a2_cfg$)
+      a2_htr$=a2_cfg$
+      If a2_htr$ = "0" Then
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_2_HEATER_N_133)
+      Else
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_2_134),conv_zone_present$(Val(a2_htr$)), \
+        ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AND_CONFIGURED_131),Conv_therm_aux$(Val(a2_type$)),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HEATER_132)
+      EndIf
+    EndIf
+      
+        
+  ! Process Pneumatic AUX Information
+    if gc_type$ = "68GC" then
+      a3_cfg$=SendModule$(gc_type$,"A3CW ?")
+      a3_cfg$=stripcmd$(a3_cfg$)
+      a3_p_pres$=stripval$(a3_cfg$)
+      If a3_p_pres$ = "1" Then
+        a3_cfg$=shift$(a3_cfg$)
+        a3_cfg$=shift$(a3_cfg$)
+        a3_gas$=stripval$(a3_cfg$)
+        a4_cfg$=SendModule$(gc_type$,"A4CW ?")
+        a4_cfg$=shift$(a4_cfg$)
+        a4_cfg$=shift$(a4_cfg$)
+        a4_cfg$=shift$(a4_cfg$)
+        a4_gas$=stripval$(a4_cfg$)
+        a5_cfg$=SendModule$(gc_type$,"A5CW ?")
+        a5_cfg$=shift$(a5_cfg$)
+        a5_cfg$=shift$(a5_cfg$)
+        a5_cfg$=shift$(a5_cfg$)
+        a5_gas$=stripval$(a5_cfg$)
+        Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES____PNEUMATIC_A_135)
+        Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_____AUX_3_136),conv_gas$(Val(a3_gas$)),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_____AUX_4_137),\
+        conv_gas$(Val(a4_gas$)),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_____AUX_5_138),conv_gas$(Val(a5_gas$))
+      Else
+        print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_____PNEUMATIC_139)
+      EndIf
+    EndIf
+    
+  ! Process Valve settings
+    Print #33," "
+    print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_CONFIGUR_140)
+  !    Valve 1
+    v1_cfg$=SendModule$(gc_type$,"V1CW ?")
+    v1_cfg$=stripcmd$(v1_cfg$)
+    v1_type$=stripval$(v1_cfg$)
+    If v1_type$ <> "0" Then
+      If v1_type$ = "2" Then
+        v1_cfg$=shift$(v1_cfg$)
+        v1_l_vol$=stripval$(v1_cfg$)
+        v1_cfg$=shift$(v1_cfg$)
+        v1_inlet$=stripval$(v1_cfg$)
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_1_TYPE_I_141),Val(v1_l_vol$),\
+        ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ML___CONNECTED_142),conv_gsv$(Val(v1_inlet$))
+      Else
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_1_TYPE_I_143),Conv_valve_type$(Val(v1_type$))
+      EndIf
+    Else
+      Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_1_NOT_IN_144)
+    EndIf
+    If gc_type$ = "68GC" Then
+  !    Valve 2    
+      v2_cfg$=SendModule$(gc_type$,"V2CW ?")
+      v2_cfg$=stripcmd$(v2_cfg$)
+      v2_type$=stripval$(v2_cfg$)
+      If v2_type$ <> "0" Then
+        If v2_type$ = "2" Then
+          v2_cfg$=shift$(v2_cfg$)
+          v2_l_vol$=stripval$(v2_cfg$)
+          v2_cfg$=shift$(v2_cfg$)
+          v2_inlet$=stripval$(v2_cfg$)
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_2_TYPE_I_145),Val(v2_l_vol$),\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ML___CONNECTED_142),conv_gsv$(Val(v2_inlet$))
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_2_TYPE_I_146),Conv_valve_type$(Val(v2_type$))
+        EndIf
+      Else
+        Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_2_NOT_IN_147)
+      EndIf
+  !    Valve 3
+      v3_cfg$=SendModule$(gc_type$,"V3CW ?")
+      v3_cfg$=stripcmd$(v3_cfg$)
+      v3_type$=stripval$(v3_cfg$)
+      If v3_type$ <> "0" Then
+        If v3_type$ = "2" Then
+          v3_cfg$=shift$(v3_cfg$)
+          v3_l_vol$=stripval$(v3_cfg$)
+          v3_cfg$=shift$(v3_cfg$)
+          v3_inlet$=stripval$(v3_cfg$)
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_3_TYPE_I_148),Val(v3_l_vol$),\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ML___CONNECTED_142),conv_gsv$(Val(v3_inlet$))
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_3_TYPE_I_149),Conv_valve_type$(Val(v3_type$))
+        EndIf
+      Else
+        Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_3_NOT_IN_150)
+      EndIf
+  !    Valve 4
+      v4_cfg$=SendModule$(gc_type$,"V4CW ?")
+      v4_cfg$=stripcmd$(v4_cfg$)
+      v4_type$=stripval$(v4_cfg$)
+      If v4_type$ <> "0" Then
+        If v4_type$ = "2" Then
+          v4_cfg$=shift$(v4_cfg$)
+          v4_l_vol$=stripval$(v4_cfg$)
+          v4_cfg$=shift$(v4_cfg$)
+          v4_inlet$=stripval$(v4_cfg$)
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_4_TYPE_I_151),Val(v4_l_vol$),\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ML___CONNECTED_142),conv_gsv$(Val(v4_inlet$))
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_4_TYPE_I_152),Conv_valve_type$(Val(v4_type$))
+        EndIf
+      Else
+        Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_4_NOT_IN_153)
+      EndIf
+  !    Valve 5
+      v5_cfg$=SendModule$(gc_type$,"V5CW ?")
+      v5_cfg$=stripcmd$(v5_cfg$)
+      v5_type$=stripval$(v5_cfg$)
+      If v5_type$ <> "0" Then
+        If v5_type$ = "2" Then
+          v5_cfg$=shift$(v5_cfg$)
+          v5_l_vol$=stripval$(v5_cfg$)
+          v5_cfg$=shift$(v5_cfg$)
+          v5_inlet$=stripval$(v5_cfg$)
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_5_TYPE_I_154),Val(v5_l_vol$),\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ML___CONNECTED_142),conv_gsv$(Val(v5_inlet$))
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_5_TYPE_I_155),Conv_valve_type$(Val(v5_type$))
+        EndIf
+      Else
+        Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_5_NOT_IN_156)
+      EndIf
+  !    Valve 6
+      v6_cfg$=SendModule$(gc_type$,"V6CW ?")
+      v6_cfg$=stripcmd$(v6_cfg$)
+      v6_type$=stripval$(v6_cfg$)
+      If v6_type$ <> "0" Then
+        If v6_type$ = "2" Then
+          v6_cfg$=shift$(v6_cfg$)
+          v6_l_vol$=stripval$(v6_cfg$)
+          v6_cfg$=shift$(v6_cfg$)
+          v6_inlet$=stripval$(v6_cfg$)
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_6_TYPE_I_157),Val(v6_l_vol$),\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ML___CONNECTED_142),conv_gsv$(Val(v6_inlet$))
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_6_TYPE_I_158),Conv_valve_type$(Val(v6_type$))
+        EndIf
+      Else
+        Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_6_NOT_IN_159)
+      EndIf
+  !    Valve 7
+      v7_cfg$=SendModule$(gc_type$,"V7CW ?")
+      v7_cfg$=stripcmd$(v7_cfg$)
+      v7_type$=stripval$(v7_cfg$)
+      If v7_type$ <> "0" Then
+        If v7_type$ = "2" Then
+          v7_cfg$=shift$(v7_cfg$)
+          v7_l_vol$=stripval$(v7_cfg$)
+          v7_cfg$=shift$(v7_cfg$)
+          v7_inlet$=stripval$(v7_cfg$)
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_7_TYPE_I_160),Val(v7_l_vol$),\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ML___CONNECTED_142),conv_gsv$(Val(v7_inlet$))
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_7_TYPE_I_161),Conv_valve_type$(Val(v7_type$))
+        EndIf
+      Else
+        Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_7_NOT_IN_162)
+      EndIf
+  !    Valve 8
+      v8_cfg$=SendModule$(gc_type$,"V8CW ?")
+      v8_cfg$=stripcmd$(v8_cfg$)
+      v8_type$=stripval$(v8_cfg$)
+      If v8_type$ <> "0" Then
+        If v8_type$ = "2" Then
+          v8_cfg$=shift$(v8_cfg$)
+          v8_l_vol$=stripval$(v8_cfg$)
+          v8_cfg$=shift$(v8_cfg$)
+          v8_inlet$=stripval$(v8_cfg$)
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_8_TYPE_I_163),Val(v8_l_vol$),\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ML___CONNECTED_142),conv_gsv$(Val(v8_inlet$))
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_8_TYPE_I_164),Conv_valve_type$(Val(v8_type$))
+        EndIf
+      Else
+        Print #33, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_8_NOT_IN_165)
+      EndIf
+    EndIf
+    
+  ! Process Sampler Information
+    a$=SendModule$(GC_type$,"CCPO 4")
+    samp_cfg$=SendModule$(GC_type$,"04CONFIG")
+    samp_cfg$=stripsampcmd$(samp_cfg$)
+    If samp_cfg$[1:1] = ";" Then
+      if gc_type$ = "68GC" then
+        samp1$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTOR_1_NOT_167)
+      Else
+        samp1$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTOR_NOT_I_168)
+      EndIf
+      samp_cfg$=samp_cfg$[2:Len(samp_cfg$)]
+    Else
+      samp1$=stripval$(samp_cfg$[1:(Instr(samp_cfg$,";"))-1])
+      samp_cfg$=samp_cfg$[Instr(samp_cfg$,";")+1:Len(samp_cfg$)]
+    EndIf
+    If samp_cfg$[1:1] = ";" Then
+      samp2$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTOR_2_NOT_169)
+      samp_cfg$=samp_cfg$[2:Len(samp_cfg$)]
+    Else
+      samp2$=stripval$(samp_cfg$[1:(Instr(samp_cfg$,";"))-1])
+      samp_cfg$=samp_cfg$[Instr(samp_cfg$,";")+1:Len(samp_cfg$)]
+    EndIf
+    If samp_cfg$[1:1] = "," Then
+      cntrl$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NO_170)
+      samp_cfg$=samp_cfg$[2:Len(samp_cfg$)]
+    Else
+      cntrl$=stripval$(samp_cfg$)
+      samp_cfg$=shift$(samp_cfg$)
+    EndIf
+    tray$=stripval$(samp_cfg$)
+    samp_cfg$=shift$(samp_cfg$)
+    bcr$=shift$(samp_cfg$)
+    print #33," "
+    Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUTOSAMPLER_CO_171)
+    If cntrl$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NO_170) Then
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUTOSAMPLER_NO_172)
+    Else
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_CONTROLLER_FIR_173),cntrl$
+      if GC_type$="68GC" then
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FRONT_INJECTOR_174),samp1$
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BACK_INJECTOR_175),samp2$
+      Else
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTOR_FIRMW_176),samp1$
+      EndIf
+    EndIf
+    If gc_type$="68GC" Then
+      If tray$ = "0" Then
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TRAY_NOT_INSTA_177)
+      Else
+        if cntrl$[1:5] <> "G1512" then
+          T2614$=SendModule$(gc_type$,"04CPTR 00xxID")
+          print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TRAY_FIRMWARE_178),T2614$[15:len(t2614$)]
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TRAY_IS_INSTAL_179)
+        EndIf
+      EndIf
+      If bcr$ = "0" Then
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BAR_CODE_READE_180)
+      Else
+        If bcr$ = "2" Then
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BAR_CODE_READE_181)
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BAR_CODE_READE_182)
+        EndIf
+      EndIf
+    EndIf
+    a$=SendModule$(GC_type$,"CCPC 4")
+  Else
+    Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES______PARAMETER_183)
+    Print #33, " "
+    a$=SendModule$("GC","IC")
+    If Len(a$)= 11 Then
+      version=0   !series 1
+    EndIf
+    If Len(a$)= 16 Then
+      version=1    !series II 2 chan
+      print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SERIES_II__2_C_184)
+    EndIf
+    If Len(a$)= 20 Then
+      version= 2  !series II 6 chan
+      print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SERIES_II__6_C_185)
+    EndIf 
+    det_a$=cnv_det_5890$(val(a$[5:5]))
+    det_b$=cnv_det_5890$(val(a$[6:6]))
+    If val(a$[7:7]) = 0 Then
+      flow_sensor$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FLOW_SENSOR_NO_186)
+    Else
+      flow_sensor$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FLOW_SENSOR_PR_187)
+    EndIf
+    If val(a$[8:8]) = 0 Then
+      i_a_zone$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTOR_A_HEA_188)
+    Else
+      i_a_zone$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTOR_A_HEA_189)
+    EndIf
+    If val(a$[9:9]) = 0 Then
+      d_a_zone$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_A_HEA_190)
+    Else
+      d_a_zone$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_A_HEA_191)
+    EndIf
+    If val(a$[10:10]) = 0 Then
+      i_b_zone$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTOR_B_HEA_192)
+    Else
+      i_b_zone$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTOR_B_HEA_193)
+    EndIf
+    If val(a$[11:11]) = 0 Then
+      d_b_zone$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_B_HEA_194)
+    Else
+      d_b_zone$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_B_HEA_195)
+    EndIf
+    If version <>0 Then
+      If Val(a$[12:12]) = 0 Then
+        aux_gas$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_GAS_NOT_PR_196)
+      Else
+        aux_gas$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_GAS_PRESEN_197)
+      EndIf
+      If Val(a$[13:13]) = 0 Then
+        epp_a$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_EPP_A_NOT_PRES_198)
+      Else
+        epp_a$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_EPP_A_PRESENT_199)
+      EndIf
+      If Val(a$[14:14]) = 0 Then
+        epp_b$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_EPP_B_NOT_PRES_200)
+      Else
+        epp_b$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_EPP_B_PRESENT_201)
+      EndIf
+      If Val(a$[15:15]) = 0 Then
+        inlet_a$="S/S"
+      Else
+        inlet_a$="PCOC"
+      EndIf
+      If Val(a$[16:16]) = 0 Then
+        inlet_b$="S/S"
+      Else
+        inlet_b$="PCOC"
+      EndIf
+      If version = 2 Then
+        If Val(a$[17:17]) = 0 Then
+          Aux_f$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_F_NOT_PRES_202)
+        Else
+          aux_f$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_F_PRESENT_203)
+        EndIf
+        If Val(a$[18:18]) = 0 Then
+          aux_e$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_E_NOT_PRES_204)
+        Else
+          aux_e$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_E_PRESENT_205)
+        EndIf
+        If Val(a$[19:19]) = 0 Then
+          aux_d$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_D_NOT_PRES_206)
+        Else
+          aux_d$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_D_PRESENT_207)
+        EndIf
+        If Val(a$[20:20]) = 0 Then
+          aux_c$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_C_NOT_PRES_208)
+        Else
+          aux_c$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_C_PRESENT_209)
+        EndIf
+      EndIf
+    EndIf
+    Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_A_210),det_a$
+    Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_B_211),det_b$
+    Print #33,flow_sensor$
+    Print #33,i_a_zone$
+    Print #33,i_b_zone$
+    Print #33,d_a_zone$
+    Print #33,d_b_zone$
+    If version <>0 Then
+      Print #33,aux_gas$
+      Print #33,epp_a$
+      Print #33,epp_b$
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INLET_A_IS_212),inlet_a$
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INLET_B_IS_213),inlet_b$
+      If version = 2 Then
+        Print #33,aux_c$
+        Print #33,aux_d$
+        Print #33,aux_e$
+        Print #33,aux_f$
+      EndIf
+    EndIf
+    
+!  Check for autosampler
+    If (testfordevice("INJ",0,"")) <> 0 Then
+      samp_cfg$=SendModule$("INJ","CONFIG")
+      samp_cfg$=strip73sampcmd$(samp_cfg$)
+      If samp_cfg$[1:1] = ";" Then
+        samp1$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTOR_1_NOT_167)
+        samp_cfg$=samp_cfg$[2:Len(samp_cfg$)]
+      Else
+        samp1$=stripval$(samp_cfg$[1:(Instr(samp_cfg$,";"))-1])
+        samp_cfg$=samp_cfg$[Instr(samp_cfg$,";")+1:Len(samp_cfg$)]
+      EndIf
+      If samp_cfg$[1:1] = ";" Then
+        samp2$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INJECTOR_2_NOT_169)
+        samp_cfg$=samp_cfg$[2:Len(samp_cfg$)]
+      Else
+        samp2$=stripval$(samp_cfg$[1:(Instr(samp_cfg$,";"))-1])
+        samp_cfg$=samp_cfg$[Instr(samp_cfg$,";")+1:Len(samp_cfg$)]
+      EndIf
+      If samp_cfg$[1:1] = "," Then
+        cntrl$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NO_170)
+        samp_cfg$=samp_cfg$[2:Len(samp_cfg$)]
+      Else
+        cntrl$=stripval$(samp_cfg$)
+        samp_cfg$=shift$(samp_cfg$)
+      EndIf
+      tray$=stripval$(samp_cfg$)
+      samp_cfg$=shift$(samp_cfg$)
+      bcr$=shift$(samp_cfg$)
+      print #33," "
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUTOSAMPLER_CO_171)
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_CONTROLLER_FIR_173),cntrl$
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FRONT_INJECTOR_174),samp1$
+      Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BACK_INJECTOR_175),samp2$
+      If tray$ = "0" Then
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TRAY_NOT_INSTA_177)
+      Else
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TRAY_IS_INSTAL_179)
+      EndIf
+      If bcr$ = "0" Then
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BAR_CODE_READE_180)
+      Else
+        If bcr$ = "2" Then
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BAR_CODE_READE_181)
+        Else
+          Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BAR_CODE_READE_182)
+        EndIf
+      EndIf
+    Else
+        Print #33,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUTOSAMPLER_NO_172)
+    EndIf
+  EndIf
+  close #33
+!  ExecNoWait "NotePad "+_TEMPPATH$+"GCinfo.txt", 1
+
+   cmdpath$ = chr$(34) +  _TEMPPATH$ + "GCinfo.txt" + chr$(34) 
+   ExecNoWait "NotePad "+ cmdpath$, 1
+
+Else
+  Print ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_THIS_MACRO_ONL_214)
+EndIf
+
+Goto End
+End:
+
+endmacro
+
+!  Strip the next value off of the string
+Name stripval$
+Parameter tempval$
+  local stripped_val$
+  if instr(tempval$,",")<>0 then
+    Stripped_val$= tempval$[1:(Instr(tempval$,",")-1)]
+  Else
+    stripped_val$=tempval$
+  EndIf
+  Return stripped_val$
+EndMacro
+
+!  Shift the string to expose the next value
+Name shift$
+Parameter tempval$
+  if instr(tempval$,",")<>0 then
+    tempval$=tempval$[Instr(tempval$,",")+1:Len(tempval$)]
+  Endif
+  Return tempval$
+EndMacro 
+
+!  Strip the returned command off of the string
+Name stripcmd$
+Parameter tempval$
+  tempval$=tempval$[6:Len(tempval$)]
+  Return tempval$
+EndMacro
+
+!  Strip the returned sampler command off of the string
+Name stripsampcmd$
+Parameter tempval$
+  tempval$=tempval$[10:Len(tempval$)]
+  Return tempval$
+EndMacro
+
+!  Strip the returned sampler command off of the string
+Name strip73sampcmd$
+Parameter tempval$
+  tempval$=tempval$[8:Len(tempval$)]
+  Return tempval$
+EndMacro
+
+     
+!  Convert the inlet code
+Name conv_inlet$
+Parameter Inlet_code
+
+  local inlet$
+  ID_ASTXDRIVERSMACFILES_UNKNOWN_215                 =  17215 
+  ID_ASTXDRIVERSMACFILES_NONE_216                    =  17216  
+  
+NLSFileName_astxmac$ = "astxmac"
+
+     inlet$= "---"
+     if (inlet_code) = 0 then 
+          Inlet$ = "P/P"
+     endif
+     if (inlet_code) = 1 then
+          Inlet$ = "COC"
+     endif
+     if (inlet_code) = 2 then
+          inlet$ = "S/S"
+     endif
+     if (inlet_code) = 3 then
+          inlet$ = "PTV"
+     endif
+     if (inlet_code) = 4 then
+          inlet$ = "P/P w/o EPC"
+     endif
+     if (inlet_code) = 5 then
+          inlet$ = "COC w/o EPC"
+     endif
+     if (inlet_code) = 6 then
+          inlet$ = "S/S w/o EPC"
+     endif
+     if (inlet_code) = 7 then
+          inlet$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_UNKNOWN_215)
+     endif
+     if (inlet_code) = 8 then
+          inlet$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_216)
+    EndIf
+    If (Inlet_code) = 12 Then
+      inlet$ = "PTV"
+    EndIf
+    If (Inlet_code) = 13 Then
+      inlet$ = "AC Sim Dist"
+    EndIf
+      If (Inlet_code) = 16 Then
+      inlet$ = "Volatile Inlet"
+    EndIf
+        
+return Inlet$
+EndMacro
+
+!Convert the detector code for 68xx
+Name conv_det$
+Parameter Det_code
+  local det$
+  ID_ASTXDRIVERSMACFILES_NONE_216                    =  17216  
+  NLSFileName_astxmac$ = "astxmac"
+  
+     det$="---"
+     if (det_code) = 1 then
+          Det$ = "FID"
+     endif
+     if (det_code) = 2 then
+          Det$ = "TCD"
+     endif
+     if (det_code) = 3 then
+          Det$ = "ECD"
+     endif
+     if (det_code) = 4 then
+          Det$ = "NPD"
+     endif
+     if (det_code) = 5 then
+          Det$ = "FPD"
+     endif
+     if (det_code) = 6 then
+          Det$ = "AID"
+     EndIf
+     If (Det_code) = 7 Then
+       Det$ = "uECD"
+     EndIf
+     If (Det_code) = 13 Then
+       Det$ = "OEM AIB"
+     EndIf
+     If (Det_code) = 14 Then
+       Det$ = "OEM FID"
+     EndIf
+     if (det_code) = 15 then
+          Det$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_216)
+     endif
+return Det$
+EndMacro
+
+!  Convert the detector end of the column code 
+Name Conv_col_det$
+Parameter Col_det_code
+  local col_det$
+  ID_ASTXDRIVERSMACFILES_UNKNOWN_215                 =  17215 
+  ID_ASTXDRIVERSMACFILES_FRONT_DETECTOR_217          =  17217 
+  ID_ASTXDRIVERSMACFILES_BACK_DETECTOR_218           =  17218  
+  
+NLSFileName_astxmac$ = "astxmac"
+  
+     col_det$="---"
+     if (Col_det_code) = 0 then
+          Col_det$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FRONT_DETECTOR_217)
+     endif
+     if (Col_det_code) = 1 then
+          Col_det$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BACK_DETECTOR_218)
+     endif
+     if (Col_det_code) = 2 then
+          Col_det$ = "MSD"
+     endif
+     if (Col_det_code) = 3 then
+          Col_det$ = "AED"
+     endif
+     if (Col_det_code) = 4 then
+          Col_det$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_UNKNOWN_215)
+     endif
+return Col_det$
+EndMacro
+
+!  Convert the inlet end of the column code 
+Name Conv_col_in$
+Parameter Col_in_code
+  local col_in$
+  ID_ASTXDRIVERSMACFILES_NONE_216                    =  17216  
+  ID_ASTXDRIVERSMACFILES_FRONT_INLET_219             =  17219  
+  ID_ASTXDRIVERSMACFILES_BACK_INLET_220              =  17220
+  ID_ASTXDRIVERSMACFILES_AUX_3_221                   =  17221 
+  ID_ASTXDRIVERSMACFILES_AUX_4_222                   =  17222  
+  ID_ASTXDRIVERSMACFILES_AUX_5_223                   =  17223  
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+     col_in$="---"
+     if (Col_in_code) = 0 then
+          Col_in$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FRONT_INLET_219)
+     endif
+     if (Col_in_code) = 1 then
+          Col_in$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BACK_INLET_220)
+     endif
+     if (Col_in_code) = 2 then
+          Col_in$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_3_221)
+     endif
+     if (Col_in_code) = 3 then
+          Col_in$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_4_222)
+     endif
+     if (Col_in_code) = 4 then
+          Col_in$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_5_223)
+     endif
+     if (Col_in_code) = 5 then
+          Col_in$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_216)
+     endif
+return Col_in$
+EndMacro
+
+!  Convert the cryo code 
+Name Conv_cryo$
+Parameter Cryo_code
+  local cryo$
+  ID_ASTXDRIVERSMACFILES_NONE_216                    =  17216  
+  ID_ASTXDRIVERSMACFILES_N2_CRYO_224                 =  17224  
+  ID_ASTXDRIVERSMACFILES_CO2_CRYO_225                =  17225  
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+     cryo$="---"
+     if (Cryo_code) = 0 then
+          Cryo$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_216)
+     endif
+     if (Cryo_code) = 1 then
+          Cryo$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_N2_CRYO_224)
+     endif
+     if (Cryo_code) = 2 then
+          Cryo$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_CO2_CRYO_225)
+     endif
+return Cryo$
+EndMacro
+
+!  Convert the carrier gas code
+Name conv_gas$
+Parameter gas_code
+  local gas$
+  ID_ASTXDRIVERSMACFILES_UNKNOWN_215                 =  17215  
+  ID_ASTXDRIVERSMACFILES_NOT_CONFIGURED_226          =  17226  
+  ID_ASTXDRIVERSMACFILES_NITROGEN_227                =  17227  
+  ID_ASTXDRIVERSMACFILES_HYDROGEN_228                =  17228  
+  ID_ASTXDRIVERSMACFILES_HELIUM_229                  =  17229  
+  ID_ASTXDRIVERSMACFILES_ARGON_METHANE_230           =  17230  
+  ID_ASTXDRIVERSMACFILES_OXYGEN_231                  =  17231  
+  ID_ASTXDRIVERSMACFILES_AIR_232                     =  17232
+  ID_ASTXDRIVERSMACFILES_ARGON_233                   =  17233
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+  
+     Gas$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NOT_CONFIGURED_226)
+     if (gas_code) = 0 then
+          gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NITROGEN_227)
+     endif
+     if (gas_code) = 1 then
+          gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HYDROGEN_228)
+     endif
+     if (gas_code) = 2 then
+          gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HELIUM_229)
+     endif
+     if (gas_code) = 3 then
+          gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ARGON_METHANE_230)
+     endif
+     if (gas_code) = 4 then
+          gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OXYGEN_231)
+     endif
+     if (gas_code) = 5 then
+          gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AIR_232)
+     endif
+     if (gas_code) = 6 then
+          gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ARGON_233)
+     endif
+     if (gas_code) = 7 then
+          gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_UNKNOWN_215)
+     endif
+return gas$
+EndMacro
+
+!  Convert the gas sample valve code
+Name conv_gsv$
+Parameter gsv_code
+Local gsv$
+  ID_ASTXDRIVERSMACFILES_NONE_216                    =  17216  
+  ID_ASTXDRIVERSMACFILES_FRONT_INLET_219             =  17219  
+  ID_ASTXDRIVERSMACFILES_BACK_INLET_220              =  17220  
+  ID_ASTXDRIVERSMACFILES_AUX_4_222                   =  17222  
+  ID_ASTXDRIVERSMACFILES_AUX_5_223                   =  17223 
+  ID_ASTXDRIVERSMACFILES_AUX_3_234                   =  17234 
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+     gsv$="---"
+     if (gsv_code) = 0 then
+          gsv$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_FRONT_INLET_219)
+     endif
+     if (gsv_code) = 1 then
+          gsv$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BACK_INLET_220)
+     endif
+     if (gsv_code) = 2 then
+          gsv$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_3_234)
+     endif
+     if (gsv_code) = 3 then
+          gsv$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_4_222)
+     endif
+     if (gsv_code) = 4 then
+          gsv$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AUX_5_223)
+     endif
+     if (gsv_code) = 5 then
+          gsv$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_216)
+     endif
+return gsv$
+EndMacro
+
+!  Convert the makeup gas code
+Name conv_makeup_gas$
+Parameter makeup_gas_code
+  local makeup_gas$
+  ID_ASTXDRIVERSMACFILES_UNKNOWN_215                 =  17215  
+  ID_ASTXDRIVERSMACFILES_NITROGEN_227                =  17227  
+  ID_ASTXDRIVERSMACFILES_HYDROGEN_228                =  17228  
+  ID_ASTXDRIVERSMACFILES_HELIUM_229                  =  17229  
+  ID_ASTXDRIVERSMACFILES_ARGON_METHANE_230           =  17230  
+  ID_ASTXDRIVERSMACFILES_OXYGEN_231                  =  17231  
+  ID_ASTXDRIVERSMACFILES_AIR_232                     =  17232
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+     makeup_gas$="---"
+     if (makeup_gas_code) = 0 then
+          makeup_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NITROGEN_227)
+     endif
+     if (makeup_gas_code) = 1 then
+          makeup_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HYDROGEN_228)
+     endif
+     if (makeup_gas_code) = 2 then
+          makeup_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HELIUM_229)
+     endif
+     if (makeup_gas_code) = 3 then
+          makeup_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ARGON_METHANE_230)
+     endif
+     if (makeup_gas_code) = 4 then
+          makeup_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OXYGEN_231)
+     endif
+     if (makeup_gas_code) = 5 then
+          makeup_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AIR_232)
+     endif
+     if (makeup_gas_code) = 6 then
+          makeup_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_UNKNOWN_215)
+     endif
+return makeup_gas$
+EndMacro
+
+!  Convert on/off code
+Name Conv_on_off$
+Parameter on_off
+Local on_off$
+  ID_ASTXDRIVERSMACFILES_OFF_235                     =  17235
+  ID_ASTXDRIVERSMACFILES_ON_236                      =  17236 
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+  on_off$="---"
+  If (on_off) = 0 Then
+    on_off$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OFF_235)
+  Else
+    on_off$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ON_236)
+  EndIf
+  Return on_off$
+EndMacro
+ 
+!  Convert the pressure units 
+Name Conv_pu$
+Parameter pu_code
+  local pu$
+     pu$="---"
+     if (pu_code) = 0 then
+          pu$ = "psi"
+     endif
+     if (pu_code) = 1 then
+          pu$ = "bar"
+     endif
+     if (pu_code) = 2 then
+          pu$ = "kPa"
+     endif
+return pu$
+EndMacro
+
+!  Convert the thermal aux code 
+Name Conv_therm_aux$
+Parameter therm_aux_code
+  Local therm_aux$
+  ID_ASTXDRIVERSMACFILES_NONE_216                    =  17216 
+  ID_ASTXDRIVERSMACFILES_VALVE_BOX_237               =  17237 
+  ID_ASTXDRIVERSMACFILES_UNKNOWN_AUX_238             =  17238  
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+     therm_aux$="---"
+     if (therm_aux_code) = 0 then
+          therm_aux$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVE_BOX_237)
+     endif
+     if (therm_aux_code) = 1 then
+          therm_aux$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_UNKNOWN_AUX_238)
+     endif
+     if (therm_aux_code) = 2 then
+          therm_aux$ = "MSD"
+     endif
+     if (therm_aux_code) = 3 then
+          therm_aux$ = "AED"
+     endif
+     if (therm_aux_code) = 4 then
+          therm_auxt$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NONE_216)
+     endif
+return therm_aux$
+EndMacro
+
+!  Convert the utility gas code
+Name conv_util_gas$
+Parameter util_gas_code
+  local util_gas$
+  ID_ASTXDRIVERSMACFILES_UNKNOWN_215                 =  17215  
+  ID_ASTXDRIVERSMACFILES_NITROGEN_227                =  17227  
+  ID_ASTXDRIVERSMACFILES_HYDROGEN_228                =  17228  
+  ID_ASTXDRIVERSMACFILES_HELIUM_229                  =  17229  
+  ID_ASTXDRIVERSMACFILES_ARGON_METHANE_230           =  17230
+  ID_ASTXDRIVERSMACFILES_OXYGEN_231                  =  17231  
+  ID_ASTXDRIVERSMACFILES_AIR_232                     =  17232
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+     util_gas$="---"
+     if (util_gas_code) = 0 then
+          util_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NITROGEN_227)
+     endif
+     if (util_gas_code) = 1 then
+          util_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HYDROGEN_228)
+     endif
+     if (util_gas_code) = 2 then
+          util_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HELIUM_229)
+     endif
+     if (util_gas_code) = 3 then
+          util_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ARGON_METHANE_230)
+     endif
+     if (util_gas_code) = 4 then
+          util_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OXYGEN_231)
+     endif
+     if (util_gas_code) = 5 then
+          util_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_AIR_232)
+     endif
+     if (util_gas_code) = 6 then
+          util_gas$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_UNKNOWN_215)
+     endif
+return util_gas$
+endmacro
+ 
+!  Convert the valve type code 
+Name Conv_valve_type$
+Parameter valve_type_code
+Local valve_type$
+  ID_ASTXDRIVERSMACFILES_NO_VALVE_239                =  17239 
+  ID_ASTXDRIVERSMACFILES_MULTIPOSITION_240           =  17240 
+  ID_ASTXDRIVERSMACFILES_GAS_SAMPLING_241            =  17241
+  ID_ASTXDRIVERSMACFILES_SWITCHING_242               =  17242 
+  ID_ASTXDRIVERSMACFILES_OTHER_243                   =  17243 
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+     valve_type$="---"
+     if (valve_type_code) = 0 then
+          valve_type$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NO_VALVE_239)
+     endif
+     if (valve_type_code) = 1 then
+          valve_type$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MULTIPOSITION_240)
+     endif
+     if (valve_type_code) = 2 then
+          valve_type$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_GAS_SAMPLING_241)
+     endif
+     if (valve_type_code) = 3 then
+          valve_type$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SWITCHING_242)
+     endif
+     if (valve_type_code) = 4 then
+          valve_type$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OTHER_243)
+     endif
+return valve_type$
+endmacro
+
+!  Convert the heated zone present code
+Name conv_zone_present$
+Parameter zone_present_code
+Local zone_present$
+  ID_ASTXDRIVERSMACFILES_HEATER_NOT_PRE_244          =  17244
+  ID_ASTXDRIVERSMACFILES_MISSING_SENSOR_245          =  17245 
+  ID_ASTXDRIVERSMACFILES_INVALID_HEATER_246          =  17246  
+  ID_ASTXDRIVERSMACFILES_HEATER_PRESENT_247          =  17247  
+  ID_ASTXDRIVERSMACFILES_HEATER_PRESENT_248          =  17248
+  ID_ASTXDRIVERSMACFILES_HEATER_PRESENT_249          =  17249  
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+     zone_present$="---"
+     if (zone_present_code) = 0 then
+          zone_present$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HEATER_NOT_PRE_244)
+     endif
+     if (zone_present_code) = 1 then
+          zone_present$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MISSING_SENSOR_245)
+     endif
+     if (zone_present_code) = 2 then
+          zone_present$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INVALID_HEATER_246)
+     endif
+     if (zone_present_code) = 3 then
+          zone_present$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HEATER_PRESENT_247)
+     EndIf
+     If (zone_present_code) = 7 Then
+       zone_present$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HEATER_PRESENT_247)
+     EndIf
+     If (zone_present_code) = 11 Then
+       zone_present$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HEATER_PRESENT_248)
+     EndIf
+     If (zone_present_code) = 19 Then
+       zone_present$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HEATER_PRESENT_249)
+     EndIf
+     
+return zone_present$
+endmacro
+!Convert the detector code for 5890
+Name cnv_det_5890$
+Parameter Det_code
+Local det$
+  ID_ASTXDRIVERSMACFILES_NOT_INSTALLED_250           =  17250  
+  
+  NLSFileName_astxmac$ = "astxmac"
+  
+     det$="---"
+     if (det_code) = 0 then
+          Det$ = "FID"
+     endif
+     if (det_code) = 1 then
+          Det$ = "TCD"
+     endif
+     if (det_code) = 2 then
+          Det$ = "NPD"
+     endif
+     if (det_code) = 3 then
+          Det$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NOT_INSTALLED_250)
+     endif
+     if (det_code) = 4 then
+          Det$ = "ECD"
+     endif
+     if (det_code) = 5 then
+          Det$ = "FPD"
+     EndIf
+     If (Det_code) = 6 Then
+       Det$ = "AIB"
+     EndIf
+return Det$
+EndMacro
+
+!Check to see if the GC is valid
+Name Valid_GC
+parameter xx
+Local GC_Value
+  GC_Value=0
+  If (testfordevice("GC",0,""))<>0 Then
+    GC_Value=1 !5890
+  EndIf
+  If (testfordevice("68GC",0,""))<>0 Then
+    GC_Value=2 !6890
+  EndIf
+  If (testfordevice("6850GC",0,""))<>0 Then
+    GC_Value=3 !6850
+  EndIf
+  If (testfordevice("7890",0,""))<>0 Then
+    GC_Value=4 !7890
+  EndIf
+  Return GC_Value
+EndMacro
+
+!############################################################################
+name MyTestForDevice
+!********************************************
+!  OBSOLETE    
+Parameter deviceName$, count, serialNumber$
+Local result
+
+ result = TestForDevice(deviceName$, count, serialNumber$)
+
+  return result
+EndMacro
+
+Name start_macro
+  GCinfo
+EndMacro
+
+

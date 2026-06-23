@@ -1,0 +1,778 @@
+!***********************************************************************************
+!*
+!* Copyright (C) 2004 Agilent Technologies, Inc.
+!*
+!* FILE:  OffLnDA.mac
+!*
+!* DESCRIPTION:  Support offline reporting to improve cycle time
+!*
+!* $Header: /cag/PHX3D/parts/macros/OffLnDA.mac 1.18 2002-09-11 14:19:09-07 robertcl Exp $
+!***********************************************************************************
+!*
+!* MACROS
+!* ------
+!* OfflineDA_Start
+!* OfflineDA_PostAcq
+!* OfflineDA_Error
+!* OfflineDA_PostRun
+!* OfflineDA_Close           Close the dde link
+!* OfflineDA_PrepOffline
+!* OfflineDA_UpdateStatus
+!* OfflineDA_AddReport
+!* OfflineDA_ProcessQueue
+!* OfflineDA_SeqInfo
+!* OfflineDA_DoReport
+!* OfflineDA_CloseOffline
+!* OfflineDA_InitMenus
+!* OfflineDA_Init            Do initialization for offline data analysis
+!*
+!***********************************************************************************
+
+!***********************************************************************************
+!*
+!*   Online session macros
+!*
+!***********************************************************************************
+
+! Need to add error checking in start and post acq macros to see if the offline
+! session is still running.  If not revert back to online data analysis and
+! record in the log book.  Need to add proceedure for setting up post acq/run
+! macros for the user to the ERS and help!
+
+!----------------------------------------------------------------------------
+Name OfflineDA_Start
+!  
+! Run this on the online system to get ready for offline data analysis.
+!  
+!----------------------------------------------------------------------------
+
+local Section$, OfflineDDE$, iCount
+local strTemp$
+
+   ID_PHX3DSUPPORTFILES_AN_OFFLINE_CHE_185            =  17185  
+   ID_PHX3DSUPPORTFILES_STARTING_OFFLI_186            =  17186  
+   ID_PHX3DSUPPORTFILES__RUNCONTROL_187               =  17187  
+   ID_PHX3DSUPPORTFILES_OFFLINE__DATA_188             =  17188  
+   ID_PHX3DSUPPORTFILES_ERROR_STARTING_189            =  17189  
+   ID_PHX3DSUPPORTFILES_ERROR_STARTING_190            =  17190  
+   ID_PHX3DSUPPORTFILES_ERROR_STARTING_191            =  17191  
+   NLSFileName_phx3dsupport$="phx3dsupport"
+   
+   on error goto ODA_Start_Error
+
+   if (check(VARIABLE, OfflineDADDEChnl) = 1) then
+      OfflineDA_Close
+   else
+      ! Start the offline ChemStation and setup DDE link
+      Section$ = "PCS,"+val$(_Instrument)
+      OfflineDDE$ = PrivateProfileString$(Section$, "_DDEOffLine", "CHEMSTATION.INI", "")
+      if (OfflineDDE$ = "") then         
+        cmdpath$ = chr$(34) +  _ExePath$ + "CHEMMAIN.EXE" + chr$(34) 
+        strTemp$ = "CMD /C " + cmdpath$ + " " + val$(_Instrument) + "" 
+        SetCWD  _ExePath$
+        ExecNoWait strTemp$
+         iCount = 0
+         while ((OfflineDDE$ = "") and (iCount < 12))
+            iCount = iCount + 1
+            sleep 10
+            OfflineDDE$ = PrivateProfileString$(Section$, "_DDEOffLine", "CHEMSTATION.INI", "")
+         endwhile
+      else
+         print alert(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_AN_OFFLINE_CHE_185))
+         OfflineDDE$ = "used"
+      endif
+    
+      if (OfflineDDE$ <> "") then
+         if (OfflineDDE$ <> "used") then
+            OfflineDADDEChnl = 0
+            OfflineDADDEChnl = DDEInitiate (OfflineDDE$, "CPNOWAIT")
+            if (OfflineDADDEChnl > 0) then
+               WriteToLogbook ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_STARTING_OFFLI_186)
+               MenuState ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__RUNCONTROL_187), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OFFLINE__DATA_188), Checked
+               DDEExecute OfflineDADDEChnl, "SwitchView ""TOP"""
+               sleep 10
+               DDEExecute OfflineDADDEChnl, "OfflineDA_PrepOffline"
+            else
+               print alert (ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_ERROR_STARTING_189)+val$(OfflineDADDEChnl))
+               remove OfflineDADDEChnl
+            endif
+         endif
+      else
+         print alert (ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_ERROR_STARTING_190))
+      endif
+   endif
+
+   return
+   
+ODA_Start_Error:
+  on error
+  OfflineDA_Error
+  print alert (ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_ERROR_STARTING_191))
+  remove OfflineDADDEChnl
+
+endmacro ! OfflineDA_Start
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_ShowQueue
+!  
+! Shows the queue in the offline session for debugging.
+!  
+!----------------------------------------------------------------------------
+  DDEExecute OfflineDADDEChnl, "EdTab 3, OfflineDA[1], ""Queue"""
+endmacro ! OfflineDA_ShowQueue
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_PostAcq
+!  
+! Do the offline data analysis for this run, the online portion
+!  
+!----------------------------------------------------------------------------
+local temp$, TempSubDir$, TempSeqInfo$
+local TempEndOfSeq$, TempStartOfSeq$
+
+  ID_PHX3DSUPPORTFILES_DOING_OFFLINE_192             =  17192    
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  
+  
+   on error OfflineDA_Error
+  
+  ! do not do anything unless DA is selected in the run time checklist
+  if (RUN_DA = 1) then 
+    if (check(VARIABLE, OfflineDADDEChnl) = 1) then
+      ! save run da state
+      OfflineDA_SaveRunDA = RUN_DA
+      RUN_DA = 0
+
+      OfflineDA_SaveRunCustDA = RUN_CustDA
+      RUN_CustDA = 0
+
+      ! start the offline report
+      if (_SequenceOn = 1) then
+        TempSubDir$ = _DataSeqSubDir$
+      else
+        TempSubDir$ = _DataSubDir$
+      endif
+      if (len(TempSubDir$) > 0) then
+        TempSubDir$ = TempSubDir$ + "\"
+      endif
+      TempSubDir$ = _DataPath$ + TempSubDir$
+        
+      ! Sequence info 
+      if (_SequenceOn = 1) then
+        TempSeqInfo$ = _SeqPath$ + _SeqFile$
+        ! Is it start of the sequence
+        if _seqindex =1 and _replicate =1 then 
+          TempStartOfSeq$ = val$(1)
+        else
+          TempStartOfSeq$ = val$(0)
+        endif
+        ! Is it end of the sequence
+        nSeqLines = TabhdrVal(_Sequence[1],"SeqTable1","NumberOfRows")
+        if nSeqLines > 0 then
+          nInjNum = TabVal(_Sequence[1],"SeqTable1",nSeqLines,"InjVial")
+        endif	
+        if (_seqIndex = nSeqLines and _replicate = nInjNum) then
+          TempEndOfSeq$ = val$(1)
+        else
+          TempEndOfSeq$ = val$(0)
+        endif
+      else
+        TempSeqInfo$ = ""
+      endif
+      
+      ! Added parsing Target Mass info
+      if Check(Variable,_TargetMass$) = 0
+        _TargetMass$=""
+      endif
+      
+      ! set the offline session status to busy
+      WriteToLogbook ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DOING_OFFLINE_192)+_datafile$
+      ! Added parsing current target mass from online to offlineDA
+      ! Added parsing flags of start/end of sequence to offlineDA
+      temp$ = """"+_methpath$ + """,""" + _methfile$ + """,""" + TempSubDir$ + """,""" + _datafile$ + """,""" + TempSeqInfo$ + """,""" + _TargetMass$+ ""","""+ TempStartOfSeq$ + ""","""+ TempEndOfSeq$ + """"
+      DDEExecute OfflineDADDEChnl, "OfflineDA_AddReport " + temp$
+    endif
+  endif
+
+endmacro ! OfflineDA_PostAcq
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_Error
+!  
+! Handle errors setting up or runing the offline session
+!  
+!----------------------------------------------------------------------------
+
+   ID_PHX3DSUPPORTFILES_ERROR_IN_OFFLI_193            =  17193  
+   NLSFileName_phx3dsupport$="phx3dsupport"
+  
+   on error print
+
+   WriteToLogbook ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_ERROR_IN_OFFLI_193)
+   
+   OfflineDA_PostRun
+   OfflineDA_Close
+   
+endmacro ! OfflineDA_Error
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_PostRun
+!
+! If DA has been disabled in the method in the last run, restore the settings  
+!  
+!----------------------------------------------------------------------------
+
+  if (check(VARIABLE, OfflineDA_SaveRunDA) = 1) then
+    ! restore original RUN_DA setting
+    RUN_DA = OfflineDA_SaveRunDA
+    remove OfflineDA_SaveRunDA
+  endif
+
+  if (check(VARIABLE, OfflineDA_SaveRunCustDA) = 1) then
+    ! restore original RUN_DA setting
+    RUN_CustDA = OfflineDA_SaveRunCustDA
+    remove OfflineDA_SaveRunCustDA
+  endif
+
+endmacro ! OfflineDA_PreRun
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_Close
+!  
+!  
+!----------------------------------------------------------------------------
+  ID_PHX3DSUPPORTFILES__RUNCONTROL_187               =  17187  
+  ID_PHX3DSUPPORTFILES_OFFLINE__DATA_188             =  17188  
+  ID_PHX3DSUPPORTFILES_CLOSING_OFFLIN_194            =  17194  
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  
+  ! Send the close command to the offline DA
+  on error print
+  MenuState ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__RUNCONTROL_187), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OFFLINE__DATA_188), Unchecked
+  if (check(VARIABLE, OfflineDADDEChnl) = 1) then
+    WriteToLogbook ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CLOSING_OFFLIN_194)
+    DDEExecute OfflineDADDEChnl, "_METHODCHANGED=0"
+    DDEExecute OfflineDADDEChnl, "OfflineDA_ClosedByOnline=1"
+    DDEExecute OfflineDADDEChnl, "ClosePhx 1"
+    sleep 5
+    DDETerminate OfflineDADDEChnl
+    remove OfflineDADDEChnl
+  endif
+   
+endmacro ! OfflineDA_Close
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_ClosedByOffline
+!  
+!  
+!----------------------------------------------------------------------------
+  
+  ID_PHX3DSUPPORTFILES__RUNCONTROL_187               =  17187  
+  ID_PHX3DSUPPORTFILES_OFFLINE__DATA_188             =  17188  
+  ID_PHX3DSUPPORTFILES_OFFLINE_DATA_A_195            =  17195  
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  
+  ! Send the close command to the offline DA
+  on error print
+  MenuState ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__RUNCONTROL_187), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OFFLINE__DATA_188), Unchecked
+  if (check(VARIABLE, OfflineDADDEChnl) = 1) then
+    WriteToLogbook ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OFFLINE_DATA_A_195)
+    DDETerminate OfflineDADDEChnl
+    remove OfflineDADDEChnl
+  endif
+   
+endmacro ! OfflineDA_ClosedByOffline
+
+
+!***********************************************************************************
+!*
+!*   Offline session macros
+!*
+!***********************************************************************************
+!----------------------------------------------------------------------------
+Name OfflineDA_PrepOffline
+!
+! Prep the offline system for use.  
+! 
+!----------------------------------------------------------------------------
+local Section$, OnlineDDE$
+
+  ID_PHX3DSUPPORTFILES__RUNCONTROL_187               =  17187  
+  ID_PHX3DSUPPORTFILES_OFFLINE_DATA_A_196            =  17196  
+  ID_PHX3DSUPPORTFILES__FILE_197                     =  17197  
+  ID_PHX3DSUPPORTFILES__INSTRUMENT_198               =  17198  
+  ID_PHX3DSUPPORTFILES__METHOD_199                   =  17199  
+  ID_PHX3DSUPPORTFILES__SEQUENCE_200                 =  17200  
+  ID_PHX3DSUPPORTFILES__VIEW_201                     =  17201  
+  ID_PHX3DSUPPORTFILES__HELP_202                     =  17202  
+  ID_PHX3DSUPPORTFILES_A_NALYST_203                  =  17203  
+  ID_PHX3DSUPPORTFILES__PURIFY_204                   =  17204  
+  ID_PHX3DSUPPORTFILES__EASY_210                     =  17210
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  
+   ! set title
+   AppTitle ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OFFLINE_DATA_A_196)
+   
+   NavBarShow  OFF
+
+   ! switch off easy sequence UI
+   AESequenceTemplateTab off
+   AEQueueTab off
+   AESequenceTab off
+   
+   ! turn off toolsbars, command line, sampling diagram, system diagram
+   OfflineDASaveTB = TOP_TB
+   !TLB_GOMHideToolBar
+
+   tlbrsetpropertyval "main", "topacqtb", , "visible", 0 
+   tlbrsetpropertyval "main", guistatusbar$, , "visible", 0
+   tlbrsetpropertyval "main", "ecmacq", , "visible", 0
+
+   OfflineDASaveSB = TOP_SB
+   !TLB_GOMHideStatusBar
+   
+   OfflineDASaveSysD = GUIDiagramStateForMenu
+   GUIShowSystemDiagram 2
+
+   OfflineDASaveSampD = GUISampleAreaStateForMenu
+   GUIShowSamplingDiagram ,5
+   
+   ! Remove CTC sampling diagram
+   if Check(macro, CTCRemoveSamplingDiag) = 1 then
+     CTCRemoveSamplingDiag
+   endif
+
+   ! Close CTC status window   
+   if Check(Command, CTCShowStatus) = 1 then
+     CTCShowStatus 0
+   endif
+   
+   CmdLine off
+   
+   ! minimal menu
+   menudelete ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__FILE_197)
+   menudelete ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__RUNCONTROL_187)
+   menudelete ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__INSTRUMENT_198)
+   menudelete ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__METHOD_199)
+   menudelete ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__SEQUENCE_200)
+   menudelete ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__VIEW_201)
+   menudelete ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__HELP_202)
+   menudelete ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_A_NALYST_203)
+   menudelete ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__PURIFY_204)
+   menudelete ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__EASY_210)
+      
+   ! setup the offline da status toolbar
+   GOMLoad _exepath$+"800\oda_stat.ini"
+   GOMShow ,"ODAStat"
+   
+   ! Check if the da macros are loaded
+   if Check (Macro, DoRunDAMethod) = 0 then
+      LoadMacro "rundamth.mcx"
+   endif
+
+   ! setup abort handler to clear queue checking flag
+   if (check(Variable, _abort$) = 0) then
+     _abort$ = ""
+   endif
+   _abort$ = "OfflineDA_Abort;"+_abort$
+   
+   ! set hook to cleanup when the offline session is closed
+   Sethook "CloseApp", "OfflineDA_CloseOffline", 90
+
+   ! set hook to add sequence info if needed
+   Sethook "DASignalsLoaded", "OfflineDA_SeqInfo", 90
+
+   ! setup the register for the queue
+   NewObj OfflineDA,1,0,0
+   NewTab OfflineDA[1],"Queue"
+   NewColText OfflineDA[1], "Queue", "MethPath"
+   NewColText OfflineDA[1], "Queue", "MethFile"
+   NewColText OfflineDA[1], "Queue", "DataPath"
+   NewColText OfflineDA[1], "Queue", "DataFile"
+   NewColText OfflineDA[1], "Queue", "SeqFile"
+   NewColText OfflineDA[1], "Queue", "TargetMass"
+   NewColVal OfflineDA[1], "Queue", "StartOfSeq"
+   NewColVal OfflineDA[1], "Queue", "EndOfSeq"
+   NewColText OfflineDA[1], "Queue", "Command"
+   
+   ! Setup global variables for the offline session
+   OfflineDA_ClosedByOnline = 0
+   OfflineDA_CurFile$ = ""
+   
+   ! Setup Cp to print the report
+   CPStart "CP_CTI"
+   OfflineDACheckQueue = 1
+   CPRequest "CP_CTI", OfflineDA_ProcessQueue
+   
+   ! Update the status line to show Offline DA is ready
+   OfflineDA_UpdateStatus
+   
+endmacro ! OfflineDA_PrepOffline
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_UpdateStatus
+!  
+! Add a report to the queue
+!  
+!----------------------------------------------------------------------------
+local Temp$, lines
+
+   ID_PHX3DSUPPORTFILES_1_REPORT_QUEUE_205            =  17205  
+   ID_PHX3DSUPPORTFILES__REPORTS_QUEUE_206            =  17206    
+   ID_PHX3DSUPPORTFILES_READY_207                     =  17207
+   NLSFileName_phx3dsupport$="phx3dsupport"
+   
+    ! Show the remaining items in the queue
+   Lines = TabHdrVal(OfflineDA[1], "Queue", "NumberOfRows")
+
+   if (Lines >= 1) then
+      GOMSetval , "ODAStat", "QueueSize", "bkcolor", 0+(0*256)+(255*256*256)
+      GOMSetval , "ODAStat", "QueueSize", "textcolor", 255+(255*256)+(255*256*256)
+   else
+      GOMSetval , "ODAStat", "QueueSize", "bkcolor", 0+(255*256)+(0*256*256)
+      GOMSetval , "ODAStat", "QueueSize", "textcolor", 0
+   endif
+   if (Lines = 1) then
+      Temp$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_1_REPORT_QUEUE_205)
+   else
+      Temp$ = val$(Lines) + ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__REPORTS_QUEUE_206)
+   endif
+   GOMSetText , "ODAStat", "QueueSize", "text1", Temp$
+ 
+   ! Show the current data file name
+   if (len(OfflineDA_CurFile$) > 0) then
+      Temp$ = OfflineDA_CurFile$
+      GOMSetval , "ODAStat", "CurrentFile", "bkcolor", 0+(0*256)+(255*256*256)
+      GOMSetval , "ODAStat", "CurrentFile", "textcolor", 255+(255*256)+(255*256*256)
+   else
+      Temp$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_READY_207)
+      GOMSetval , "ODAStat", "CurrentFile", "bkcolor", 0+(255*256)+(0*256*256)
+      GOMSetval , "ODAStat", "CurrentFile", "textcolor", 0
+   endif
+      
+   GOMSetText , "ODAStat", "CurrentFile", "text1", Temp$
+  
+
+endmacro   ! OfflineDA_UpdateStatus
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_AddReport
+!  
+! Add a report or a command to the queue
+!  
+!----------------------------------------------------------------------------
+parameter ODAMethPath$, ODAMethFile$, ODADataPath$, ODADataFile$, ODASeqFile$, ODATargetMass$
+parameter ODAStartOfSeq$, ODAEndOfSeq$
+parameter ODACmdStr$
+local Line
+   print "OfflineDA_AddReport starts"
+   InsTabRow OfflineDA[1], "Queue"
+   Line = TabHdrVal(OfflineDA[1], "Queue", "NumberOfRows")
+   
+   ! set method path and file
+   SetTabText OfflineDA[1], "Queue", Line, "MethPath", ODAMethPath$
+   SetTabText OfflineDA[1], "Queue", Line, "MethFile", ODAMethFile$
+  
+   ! set the data path and file
+   SetTabText OfflineDA[1], "Queue", Line, "DataPath", ODADataPath$
+   SetTabText OfflineDA[1], "Queue", Line, "DataFile", ODADataFile$
+
+   ! Added sequence info
+   SetTabText OfflineDA[1], "Queue", Line, "SeqFile", ODASeqFile$
+
+   ! Added target mass 
+   SetTabText OfflineDA[1], "Queue", Line, "TargetMass", ODATargetMass$
+   
+   ! Added command string
+   SetTabText OfflineDA[1], "Queue", Line, "Command", ODACmdStr$
+
+   ! Added Start/End of Sequence flag
+   if len(ODAStartOfSeq$) = 0 then
+    SetTabVal OfflineDA[1], "Queue", Line, "StartOfSeq",-1
+   else
+   	SetTabVal OfflineDA[1], "Queue", Line, "StartOfSeq",val(ODAStartOfSeq$)
+   endif
+   if len(ODAEndOfSeq$) = 0 then
+   	SetTabVal OfflineDA[1], "Queue", Line, "EndOfSeq",-1
+   else
+    SetTabVal OfflineDA[1], "Queue", Line, "EndOfSeq",val(ODAEndOfSeq$)
+   endif  
+   
+   ! make sure the process is running to check the queue
+   if (OfflineDACheckQueue <> 1) then
+      OfflineDACheckQueue = 1         
+      CPRequest "CP_CTI", "OfflineDA_ProcessQueue"      
+   endif
+   
+   OfflineDA_UpdateStatus
+   
+endmacro ! OfflineDA_AddReport
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_ProcessQueue
+!  
+! Check the queue of report or command to run
+!
+! ODASeqFile$ is a global, it will be removed by OfflineDA_SeqInfo
+!  
+!----------------------------------------------------------------------------
+local ODAMethPath$, ODAMethFile$, ODADataPath$, ODADataFile$
+local Line
+local ODACmdStr$
+   on error print "Error in OfflineDA_ProcessQueue"
+   while (OfflineDACheckQueue = 1)
+      Line = TabHdrVal(OfflineDA[1], "Queue", "NumberOfRows")
+      if (Line >= 1) then        
+        !if Len(sCmdStr$) <=0 then
+         ODAMethPath$ = TabText$(OfflineDA[1], "Queue", 1, "MethPath")
+         ODAMethFile$ = TabText$(OfflineDA[1], "Queue", 1, "MethFile")
+         ODADataPath$ = TabText$(OfflineDA[1], "Queue", 1, "DataPath")
+         ODADataFile$ = TabText$(OfflineDA[1], "Queue", 1, "DataFile")
+         ODASeqFile$  = TabText$(OfflineDA[1], "Queue", 1, "SeqFile")        
+         
+         ! Set global var for Target mass based on the value in queue
+         _TargetMass$ = TabText$(OfflineDA[1], "Queue", 1, "TargetMass")         
+         
+         ! Set global var for OfflineDA for the flags of Start/End of Sequence
+         ODA_StartOfSeq = TabVal(OfflineDA[1], "Queue", 1, "StartOfSeq")
+         ODA_EndOfSeq = TabVal(OfflineDA[1], "Queue", 1, "EndOfSeq")
+         
+         ! Get command string
+         ODACmdStr$ =  TabText$(OfflineDA[1], "Queue", 1, "Command")   
+         
+         OfflineDA_CurFile$ = ODADataFile$        
+        
+         DelTabRow OfflineDA[1], "Queue", 1
+         OfflineDA_UpdateStatus 
+        
+        ! Either execute the command parsed from online session, or do the DA report.
+        if len(ODACmdStr$) > 0 then          
+          on error print "Error executing command parsed from online: " + ODACmdStr$
+          evaluate ODACmdStr$
+          on error print "Error in OfflineDA_ProcessQueue"
+        else
+         OfflineDA_DoReport ODAMethPath$, ODAMethFile$, ODADataPath$, ODADataFile$ !, ODA_StartOfSeq, ODA_EndOfSeq
+        endif
+         OfflineDA_CurFile$ = ""
+         OfflineDA_UpdateStatus    
+      endif
+      sleep 5
+   endwhile
+   
+endmacro ! OfflineDA_CheckQueue
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_SeqInfo
+!  
+! Add sequence info to the report
+!  
+!----------------------------------------------------------------------------
+
+  if (len(ODASeqFile$) > 0) then
+    SetObjHdrText ChromRes[1], "SeqPathAndFile", ODASeqFile$
+  endif
+  Remove ODASeqFile$
+
+endmacro ! OfflineDA_SeqInfo
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_DoReport
+!  
+! Do the offline data analysis for this run, the offline portion
+!  
+!----------------------------------------------------------------------------
+parameter ODAMethPath$, ODAMethFile$, ODADataPath$, ODADataFile$
+
+   ! check if needed macros are loaded
+   SeeIfReportLoaded
+   
+   ! set method path and file
+   _MethPath$ = ODAMethPath$
+   _MethFile$ = ODAMethFile$
+   LoadMethParams
+   LoadDAMethod
+   ExecHook "LoadMethod"
+  
+   ! set the data path and file
+   DADataPath$ = ODADataPath$
+   DADataFile$ = ODADataFile$
+   _DataFile$ = ODADataFile$
+   
+   ! Set the shared _DataPath$ as the full path since OfflineDA doesn't check it's sequence or not.
+   _DataPath$= ODADataPath$
+   _DataSubDir$ = ""
+   _DataSeqSubDir$ = ""
+   
+   ! start report
+   RunSingleDAMethod
+   _METHODCHANGED = 0
+   _sequencechanged = 0
+
+endmacro ! OfflineDA_DoReport
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_Abort
+!  
+! Handle an abort on the offline session
+!  
+!----------------------------------------------------------------------------
+local iResult
+
+  ID_PHX3DSUPPORTFILES_OFFLINE_DATA_A_196            =  17196  
+  ID_PHX3DSUPPORTFILES_REMOVE_ALL_QUE_208            =  17208  
+  NLSFileName_phx3dsupport$="phx3dsupport"
+
+  OfflineDACheckQueue=0
+  OfflineDA_CurFile$ = ""
+
+  if (TabHdrVal(OfflineDA[1], "Queue", "NumberOfRows") >= 1) then
+    iResult = alert(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_REMOVE_ALL_QUE_208), 4, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OFFLINE_DATA_A_196))
+    if (iResult = 1) then
+      ! remove all rows from the queue and disable queue processing
+      DelTabRow OfflineDA[1], "Queue", -1
+    else
+      ! continue with remaining reports
+      OfflineDACheckQueue = 1
+      CPRequest "CP_CTI", OfflineDA_ProcessQueue
+    endif
+  
+  endif
+
+  OfflineDA_UpdateStatus
+
+endmacro ! OfflineDA_Abort
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_CloseOffline
+!  
+! Restore the UI for the next time on offline session is started
+! Warn user if closig with items left in the queue!!!
+!  
+!----------------------------------------------------------------------------
+local Section$, OnlineDDE$, OnlineDADDEChnl
+
+   on error print
+
+   ! Kill the Cp that prints the reports
+   OfflineDACheckQueue = 0
+   sleep 10
+   CPTerminate "CP_CTI"
+
+   ! If not closed by the online session then let the online session know about the event
+   on error goto Keep_Closing
+   if (OfflineDA_ClosedByOnline <> 1) then
+      Section$ = "PCS,"+val$(_Instrument)
+      OnlineDDE$ = PrivateProfileString$(Section$, "_DDEOnLine", "CHEMSTATION.INI", "")
+      if (OnlineDDE$ <> "") then
+        OnlineDADDEChnl = 0
+        OnlineDADDEChnl = DDEInitiate (OnlineDDE$, "CPNOWAIT")
+        if (OnlineDADDEChnl > 0) then
+            DDEExecute OnlineDADDEChnl, "OfflineDA_ClosedByOffline"
+            DDETerminate OnlineDADDEChnl
+        endif
+      endif
+   endif
+
+Keep_Closing:   
+   on error print
+
+   ! Restore the UI
+   !if (OfflineDASaveTB = 3) then
+   !   TLB_ToggleTopTB ,_TB
+   !endif
+
+   !if (OfflineDASaveSB = 3) then
+   !   TLB_ToggleTopTB ,_SB
+   !endif
+
+   if (OfflineDASaveSysD = 3) then
+      GUIShowSystemDiagram
+   endif
+
+   if (OfflineDASaveSampD = 3) then
+      GUIShowSamplingDiagram
+   endif
+   
+   CmdLine on
+
+   ! remove the offline da status toolbar
+   GOMDelete ,"ODAStat"
+
+   remove OfflineDASaveTB
+   remove OfflineDASaveSB
+   remove OfflineDASaveSysD
+   remove OfflineDASaveSampD
+  
+endmacro ! OfflineDA_CloseOffline
+
+
+!***********************************************************************************
+!*
+!*   Initialization macros
+!*
+!***********************************************************************************
+!----------------------------------------------------------------------------
+Name OfflineDA_InitMenus
+!  
+!  
+!----------------------------------------------------------------------------
+Local ActView$
+
+  ID_PHX3DSUPPORTFILES_START_OFFLINE_209             =  17209  
+  ID_PHX3DSUPPORTFILES__RUNCONTROL_187               =  17187
+  ID_PHX3DSUPPORTFILES_OFFLINE__DATA_188             =  17188
+  NLSFileName_phx3dsupport$="phx3dsupport"
+
+  ! Get the actual view
+  ActView$ = TabHdrText$(_config[1], "Window", "CurrentView")
+  If (ActView$= "TOP" or ActView$ = "") Then
+     MenuAdd ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__RUNCONTROL_187), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OFFLINE__DATA_188), "OfflineDA_Start",, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_START_OFFLINE_209),,,,4002105
+  EndIf
+   
+!PVCS 9326- Check if security pack is present.
+!If present, diasble the menu item "Offline Data Analysis" under "RunControl" in Online session    
+ 
+  If CheckSecPack() > 0 then 
+   MenuState ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__RUNCONTROL_187), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OFFLINE__DATA_188), Insensitive
+  EndIf 
+
+EndMacro   ! OfflineDA_InitMenus
+
+
+!----------------------------------------------------------------------------
+Name OfflineDA_Init
+!
+! Initialization when the online ChemStation is started
+!
+!----------------------------------------------------------------------------
+
+   ! add hooks for the online session to control offline data analysis
+   if (_Offline <> 1) then
+    if Check(SYSTEM_VARIABLE,  _FEATURES$) = 1
+      if InStr(_FEATURES$, "LCMS") > 0
+      Sethook "PreviewMenu", "OfflineDA_InitMenus", 100
+      EndIf
+    EndIf  
+      Sethook "PostAcq",     "OfflineDA_PostAcq", 100
+      Sethook "PostRun",     "OfflineDA_PostRun", 100
+      Sethook "CloseApp",    "OfflineDA_Close", 100
+   endif
+
+endmacro ! OfflineDA_Start
+
+
+!***************************  END  ******************************************
+

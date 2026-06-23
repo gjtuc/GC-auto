@@ -1,0 +1,1723 @@
+!===============================================================================
+! EnuTnMS.mac  Macros to support functions in MSD Tune View 
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+!===============================================================================
+! Macros : MSTN_InitCalibrant              MSTN_FindPressure
+!          MSTN_Calibrant                  MSTN_InitTable
+!          MSTN_CalibrantDialog            MSTN_Rev
+!          MSTN_ChangePolarity             MSTN_PWidths
+!          MSTN_ChangeScanMode             MSTN_SetPWidths
+!          MSTN_ErrPolarity                MSTN_ShowStatus
+!          MSTN_ChkIonAP                   MSTN_ToggleScanType
+!          MSTN_DoMode                     MSTN_BuildMSParmFile
+!          MSTN_ErrBuildParmFile           MSTN_TurnOff
+!          MSTN_EsShowMSTest               MSTN_ZonesOff
+!          MSTN_FindMass                   MSTN_EdParms
+!					 MSTN_ChangeIMode
+!          
+!=============================================================================================== 
+! GLOBAL VARIABLES:
+!   _button 
+!   _datafile1$
+!   _datapath$
+!   _datasubdir$
+!   msdatafile$
+!   msdatapath$
+!
+!============================================================================== 
+!  SETUSER VARIABLES:
+!  10   default = 4 or 5 liters/min sets drying gas flow for APCI/APPI or ES
+!  11   default = 350 C             sets drying gas temperature
+!  12   default = 60 psi            sets the nebulizing gas flow
+!  13   default = 100 C             sets quad temperature
+!
+!===============================================================================
+name MSTN_InitCalibrant
+! Initialize the the calibrant status from the _Config
+!===============================================================================
+  MSCalValve ValState
+  MSTN_CalA = 1
+  MSTN_CalB = 1
+  MSTN_CalN = 1
+  if ValState = 0 then
+       MSTN_CalN = 3
+  else
+       if ValState = 1 then
+            MSTN_CalA = 3
+       else
+            if ValState = 2 then
+                 MSTN_CalB = 3
+            endif
+      endif
+  endif
+    
+  if ObjHdrType(_Config[1],"View_MSDC") = 4 then
+       if TabHdrType (_Config[1],"View_MSDC","CalState") = 99 then
+            ! Last state of cal valve not saved in _config register
+            ! Initialize to off
+            NewTabHdrVal _Config[1], "View_MSDC", "CalState",1,1,3,1,3
+       endif
+       SetTabHdrVal _Config[1],"View_MSDC", "CalState", ValState+1
+  endif
+    
+endmacro     !MSTN_InitCalibrant
+
+
+!====================================================================
+Name MSTN_Calibrant
+Parameter NewState      ! 1 = off, 2 = A, 3 = B
+! Set Cal Valve according to NewState
+! In case of G6100 models 2 = A is the on state, 1 = off is the off state
+! In case of ChipCube and NanoSource, Calibrant is always off = 1.
+! This routine will call the macro to update the tune view status
+! bar according to the calibrant state.
+!
+! Globals:
+!  Assumes the following exist already:
+!  register _Config, table View_MSDC, table header "CalState"
+!  
+!====================================================================
+Local CurrentState
+Local ID_TUNEMAC_NO_CALIBRANT_W_798
+Local ID_TUNEMAC_CALIBRANT_A_WI_799
+Local ID_TUNEMAC_CALIBRANT_B_WI_800
+Local ID_TUNEMAC_Calibrant_On_1070
+Local lDebug;	lDebug =0;
+Local lInstalledSource$
+ID_TUNEMAC_NO_CALIBRANT_W_798                      =  17798  
+ID_TUNEMAC_CALIBRANT_A_WI_799                      =  17799  
+ID_TUNEMAC_CALIBRANT_B_WI_800                      =  17800  
+ID_TUNEMAC_Calibrant_On_1070                       =  18070
+
+  If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+      Print "enutnms.mac:MSTN_Calibrant: called with NewState =", NewState
+  Endif
+  ! No A/B for Lassen as it has only 1 calibrant bottle. Just On/Off allowed.
+  ! No calibrant at all, when ion source is ChipCube or nano source.
+  If ( pre6100() <> 1 ) then ! so it is a new G6100 or higher model
+    If (NewState > 1) then
+      NewState = 2
+      lInstalledSource$ = ConvertText$( UPPER, MSGetIonSrc$())
+      If ( lInstalledSource$ = "CHIPCUBE" ) or \
+          ( lInstalledSource$ = "NANOESI"  ) then
+          NewState = 1
+      Endif
+    Endif
+  Endif
+  If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+      Print "enutnms.mac:MSTN_Calibrant: modified NewState =", NewState
+  Endif
+
+  SetAbort Off
+  on error print
+  !* CurrentState = TabHdrVal (_Config[1],"View_MSDC","CalState")
+  MSCalValve CurrentState
+  CurrentState = CurrentState + 1
+  if CurrentState <> NewState or NewState = 1 then
+    ! Valve is to be closed
+    MSCalValve, 0
+    MSTN_CalA = 1
+    MSTN_CalB = 1
+    MSTN_CalN = 3
+    message ReadResource$("tunemac",ID_TUNEMAC_NO_CALIBRANT_W_798)
+  endif
+  if  (NewState = 2) then
+    ! Calibrant A is chosen or Calibrant is turned on for Lassen MSD
+    MSCalValve, 1
+    mstn_CalA = 3
+    mstn_CalB = 1
+    mstn_CalN = 1
+      If ( pre6100() = 1 ) then    ! Shasta MSD
+          Message ReadResource$( "tunemac", ID_TUNEMAC_CALIBRANT_A_WI_799 )
+      Else                                          ! Lassen MSD
+          Message ReadResource$( "tunemac", ID_TUNEMAC_Calibrant_On_1070 )
+      Endif
+  else
+    if NewState = 3 then
+        !Calibrant B is chosen
+        MSCalValve, 2
+        mstn_CalA = 1
+        mstn_CalB = 3
+        mstn_CalN = 1
+        message ReadResource$("tunemac",ID_TUNEMAC_CALIBRANT_B_WI_800)
+    endif 
+  endif
+  SetAbort On
+  SetTabHdrVal _Config[1],"View_MSDC","CalState", NewState
+  if Check(macro,MSTN_UpdateStatusBar) = 1 then
+    MSTN_UpdateStatusBar
+  endif
+
+endmacro     !MSTN_Calibrant
+
+!====================================================================
+name MSTN_CalibrantDialog
+!====================================================================
+local choice, HelpIndex, title$, text$, _button
+
+    choice = TabHdrVal (_Config[1],"View_MSDC","CalState") !* initialize dialog box
+
+    Local  ID_TUNEMAC__HELP_283
+    ID_TUNEMAC__HELP_283                               =  17283  
+    if choice > 3 or choice < 1 then
+         !* Choice falls outside of valid range
+         choice = 1
+    endif  
+    
+    !=== Build a Dialog Box ===
+     HelpIndex = HelpSubSystemTopic("msd") + 9026
+     MSTN_CPSafeStart "CP2"
+
+    if DialogExists("DlgCalOn")= 0 then
+         title$ = "Turn on calibrant"
+         text$ = "Select which calibrant to use"
+         BeginDialog "DlgCalOn", 6, 40, 182, 100,title$
+              StaticText 10, 10, 180, 12, text$
+              OptionGroup choice
+              OptionButton 10, 30, 90, 12, "Off"
+              OptionButton 10, 45, 90, 12, "A"
+              OptionButton 10, 60, 90, 12, "B"
+              ! Standard button size was dx 32, dy 16
+              ! Standard button size is dx 50, dy 14
+              OKButton  10,80,50,14
+              CancelButton 66,80,50,14
+              ExecPushButton 122, 80, 50, 14, ReadResource$("tunemac",ID_TUNEMAC__HELP_283),CP2,"Help " + sprintf$(HelpIndex,"%f")
+              !PushButton  122, 80, 50, 14, "&Help",2   
+         EndDialog
+    endif
+    
+     _button = ShowDialog("DlgCalOn", HelpIndex)
+
+    RemoveDialog("DlgCalOn")
+    if _button = 1 then
+         if  choice <> TabHdrVal (_Config[1],"View_MSDC","CalState") 
+             MSTN_Calibrant choice
+        endif
+    endif
+
+endmacro     !MSTN_CalibrantDialog
+!====================================================================
+name MSTN_ChangePolarity
+parameter SelectedPolarity     ! 0 = positive, 1 = negative
+parameter DoSave default 1
+!
+! Loads tune either positive or negative tune file from
+! _tunepath$.  Will eventually be loading from *.tun directory
+! given by tunefilename$
+!====================================================================
+local oldEcho, CurrentPolarity, IonMode$, Inlet$, NewPolarity
+local Status, _button, MSTN_Polarity$
+
+Local  ID_TUNEMAC_SAVE_CURRENT_T_801
+Local  ID_TUNEMAC_VALUES_FOR_802
+ID_TUNEMAC_SAVE_CURRENT_T_801                      =  17801  
+ID_TUNEMAC_VALUES_FOR_802                          =  17802  
+  if check(variable, MS_ECHO) = 1 then
+     oldEcho = MS_ECHO
+  else
+     oldEcho = -1
+  endif  
+  MS_ECHO = 0
+
+  MSParm ionpolarity, CurrentPolarity
+  
+  !* Only change polarity if it is different
+  if ((CurrentPolarity = 0 or CurrentPolarity = 2) and SelectedPolarity = 0) or \
+     ((CurrentPolarity = 1 or CurrentPolarity = 3) and SelectedPolarity = 1) then
+       if oldEcho <> -1
+         MS_ECHO = oldEcho
+       else
+         Remove MS_ECHO
+       endif  
+       return
+  endif  
+
+  MSGetMode IonMode$,Inlet$
+  
+  if SelectedPolarity = 0 then          ! Switching from Negative to Positive mode
+    if CurrentPolarity = 1 then
+      MSTN_Polarity$ = "POSITIVE"
+      NewPolarity = 0
+    else
+      MSTN_Polarity$ = "FASTPOS"
+      NewPolarity = 2
+    endif
+  else                                  ! Switching from Positive to Negative mode
+    if CurrentPolarity = 0 then
+      MSTN_Polarity$ = "NEGATIVE"
+      NewPolarity = 1
+    else
+      MSTN_Polarity$ = "FASTNEG"
+      NewPolarity = 3
+    endif
+  endif
+  on error MSTN_ErrPolarity
+
+  !* Check if desired polarity exists
+  Status = FileStat(PERM,tunefilepath$+tunefilename$+"\"+MSTN_Polarity$ + ".U")
+
+  !* Assume that status of desired polarity is true for current polarity
+  if Status = 6 or Status = 4 then
+    if DoSave = 1
+       _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_SAVE_CURRENT_T_801),4)
+       if _button = 1 then 
+           if Status = 6
+                !* Writable file: save as given name
+                MSSaveTuneFile tunefilename$
+           else
+                if Status = 4 then
+                     !* Read-only file: bring up save as dialog box
+                     MSTN_DoSaveTuneFile
+                endif   
+           endif
+       endif
+      endif
+  endif
+  if Status <> -1 then
+       !* Polarity file exists
+       MSGetTuneFile tunefilename$,NewPolarity,,1    !* Load the tune file; will set tunefilename$
+       MSMode IonMode$,,1                      !* Force the mode to match the previous polarity
+  else
+       !* Polarity file does not exist
+       _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_VALUES_FOR_802) + MSTN_Polarity$ + " do not exist!",3)
+  endif
+ 
+  MSTN_UpdateMenuPolarity
+
+  if oldEcho <> -1
+      MS_ECHO = oldEcho
+  else
+      Remove MS_ECHO
+  endif
+  MSTN_ChangeMasses IonMode$,NewPolarity  
+  MSTN_UpdateStatusBar
+endmacro     !MSTN_ChangePolarity
+
+
+!====================================================================
+name MSTN_ChangeScanMode
+PARAMETER SelectedScanMode     ! 0 = standard, 1 = fast
+PARAMETER DoSave default 1
+!
+! Loads either standard or fast scan tune file from _tunepath$.
+!====================================================================
+local oldEcho, CurrentPolarity, IonMode$, Inlet$
+local MSTN_Polarity$, NewPolarity, Status, _button
+
+Local  ID_TUNEMAC_SAVE_CURRENT_T_804
+Local  ID_TUNEMAC_VALUES_FOR_802
+ID_TUNEMAC_SAVE_CURRENT_T_804                      =  17804  
+ID_TUNEMAC_VALUES_FOR_802                          =  17802  
+  if check(variable, MS_ECHO) = 1 then
+     oldEcho = MS_ECHO
+  else
+     oldEcho = -1
+  endif  
+  MS_ECHO = 0
+
+  MSParm ionpolarity, CurrentPolarity
+  
+  !* Only change scan mode if it is different
+  if ((CurrentPolarity = 0 or CurrentPolarity = 1) and SelectedScanMode = 0) or \
+     ((CurrentPolarity = 2 or CurrentPolarity = 3) and SelectedScanMode = 1) then
+       if oldEcho <> -1
+         MS_ECHO = oldEcho
+       else
+         Remove MS_ECHO
+       endif  
+       return
+  endif
+
+  MSGetMode IonMode$,Inlet$
+  
+  if SelectedScanMode = 0 then          ! Switching from Fast to Standard scan mode
+    if CurrentPolarity = 2 then
+      MSTN_Polarity$ = "POSITIVE"
+      NewPolarity = 0
+    else
+      MSTN_Polarity$ = "NEGATIVE"
+      NewPolarity = 1
+    endif
+  else                                  ! Switching from Standard to Fast scan mode
+    if CurrentPolarity = 0 then
+      MSTN_Polarity$ = "FASTPOS"
+      NewPolarity = 2
+    else
+      MSTN_Polarity$ = "FASTNEG"
+      NewPolarity = 3
+    endif
+  endif
+  on error MSTN_ErrPolarity
+
+  !* Check if desired polarity exists
+  Status = FileStat(PERM,tunefilepath$+tunefilename$+"\"+MSTN_Polarity$ + ".U")
+
+  !* Assume that status of desired polarity is true for current polarity
+  if Status = 6 or Status = 4 then
+    if DoSave = 1
+       _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_SAVE_CURRENT_T_804),4)
+       if _button = 1 then 
+           if Status = 6
+                !* Writable file: save as given name
+                MSSaveTuneFile tunefilename$
+           else
+                if Status = 4 then
+                     !* Read-only file: bring up save as dialog box
+                     MSTN_DoSaveTuneFile
+                endif   
+           endif
+       endif
+      endif
+  endif
+
+  if Status <> -1 then
+       !* Polarity file exists
+       MSGetTuneFile tunefilename$,NewPolarity,,1    !* Load the tune file; will set tunefilename$
+       MSMode IonMode$,,1                      !* Force the mode to match the previous polarity
+       !* Set global variable:
+         if _offline = 0 then                    ! It's an online session
+           mmcMenuEnable = 1
+           if (NewPolarity=0) or (NewPolarity=1) then
+             mmcMenuEnableFS = 1                ! Enabled if Standard Scan tune loaded
+           else
+             mmcMenuEnableFS = 0                ! Grayed out if Fast Scan tune loaded
+           endif
+         else
+           mmcMenuEnable = 0
+           mmcMenuEnableFS = 0  ! JZ FastScan Changes
+         endif
+  else
+       !* Polarity file does not exist
+       _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_VALUES_FOR_802) + MSTN_Polarity$ + " do not exist!",3)
+  endif
+
+  MSTN_UpdateMenuScanMode
+
+  if oldEcho <> -1
+      MS_ECHO = oldEcho
+  else
+      Remove MS_ECHO
+  endif
+  MSTN_ChangeMasses IonMode$,NewPolarity
+  MSTN_UpdateStatusBar
+endmacro     !MSTN_ChangeScanMode
+
+!===============================================================================
+Name MSTN_ChangeIMode
+Parameter       pIMode$ default ""
+!===============================================================================
+! Wrapper for MSTN_ChangeIonMode
+! Makes sure that the right calibrant is selected for the ion mode of the source
+! ueff 061012
+!===============================================================================
+Local lDebug;		lDebug = 0
+    If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+        Print "MSTN_ChangeIMode: Ion Mode =", pIMode$
+    Endif
+    MSTN_ChangeIonMode pIMode$
+    MSTN_CheckCal
+    Return
+EndMacro        ! MSTN_ChangeIMode
+!===============================================================================
+name MSTN_ErrPolarity
+! Error handler for changing polarities;
+! Will force an update of the status bar
+!====================================================================
+local button
+
+Local  ID_TUNEMAC_ERROR_CHANGING_805
+ID_TUNEMAC_ERROR_CHANGING_805                      =  17805  
+  button = Alert (ReadResource$("tunemac",ID_TUNEMAC_ERROR_CHANGING_805) +_errmsg$,3)
+  MSTN_UpdateStatusBar
+  stop
+
+
+
+endmacro     !MSTN_ErrPolarity
+
+
+!====================================================================
+name MSTN_ChkIonAP
+!  Check if the current ionization is atmospheric pressure techniques
+!  API_ES, APCI etc.  The parameter isAPI is set to 1 if TRUE, else
+!  it is set to 0.
+!  Pre-conditions:
+!
+!    This routine assumes that the tune DLL is installed and that
+!    the code can talk to the MSD instrument.  
+!    Assumes that if the MSD is in API mode that MSGetMode will return
+!    "API_ES","APCI","APPI","MM-ES+APCI","MM-ES", "MM-APCI", or "AJS-ES"
+!
+!  Post-conditions:
+!   Returns whether the tune DLL reports a known API mode. 
+!   Will return either 0 (not API mode) or 1 (is API mode)
+!   
+!  Known problems:
+!    This routine depends on MSGetMode returning "API_ES","APCI","APPI",
+!    "MM-ES+APCI","MM-ES","MM-APCI" or "AJS-ES"
+!
+! 10/19/09 CPL Added AJS-ES source type 
+!====================================================================
+    local ionmode$
+    MSGetMode ionmode$
+    ionmode$ = ConvertText$(upper,ionmode$)
+    if (instr(ionmode$,"API") > 0) or (instr(ionmode$,"APCI") > 0 ) \
+     or (instr(ionmode$,"APPI") > 0 ) or (instr(ionmode$,"MM") > 0 ) or (instr(ionmode$,"X") > 0) then
+      return 1
+    else
+      return 0
+    endif  
+endmacro     !MSTN_ChkIonAP
+
+!====================================================================
+name MSTN_DoMode
+! Wrapper macro around the MSMode command, which
+! sets up tune to operate in a particular ionization mode
+! and inlet.
+!
+! Global variables
+!   _button = 0  Cancel was pressed
+!             1  OK was pressed
+!             2  an error occurred
+!  Pre-conditions:
+!    This routine assumes that the tune DLL is installed and that
+!    the code can talk to the MSD instrument.
+!
+!  Post-conditions:
+!
+!  Known problems:
+!    This routine gives the name of the file in the comment.
+!====================================================================
+    !* Bring up the mode dialog provided by the tune DLL.
+    MSMode 
+    if (_button = 1)
+         !* The user exited the dialog with the OK button, so
+         !* change the application title
+         MSTN_UpdateStatusBar
+    endif
+
+    return
+
+endmacro     !MSTN_DoMode
+
+
+!====================================================================
+name mstn_ErrBuildParmFile
+PARAMETER name$
+!====================================================================
+Local  ID_TUNEMAC_ERROR_467
+ID_TUNEMAC_ERROR_467                               =  17467  
+  on error print
+  close #MSFILEINSTRNUM
+  delete name$, DONTASK
+  DelReg TmpMSDiag
+  print Alert(ReadResource$("tunemac",ID_TUNEMAC_ERROR_467) +_errmsg$ + ". The MSParms.txt file could not be built.",3,"Error")
+  stop
+
+endmacro  !mstn_ErrBuildParmFile
+
+!====================================================================
+name mstn_BuildMSParmFile
+parameter PostAcq default 0
+parameter Path$ default ""
+parameter File$ default ""
+!====================================================================
+local name$, row, i, TabName$, nLen, TuneFile$, Polarity$, NumberOfTables
+local TuneValues$, IndexTable, format$, nItems, SubtableFormat$, SubtableLine$
+local description$, value$, ValTabName$, nTabType, nTabSize, j, bMultiSignal
+
+
+Local  ID_TUNEMAC_____WAS_NOT_CR_807
+Local  ID_TUNEMAC_THE_MSDIAG_REG_808
+Local  ID_TUNEMAC_THIS_DATA_WAS_809
+Local  ID_TUNEMAC_THIS_MSPARMS_T_810
+Local  ID_TUNEMAC_MAY_BE_MISSING_811
+Local  ID_TUNEMAC_VALUES_FROM_DA_812
+Local  ID_TUNEMAC_FILE_492
+Local  ID_TUNEMAC_OPERATOR_493
+Local  ID_TUNEMAC_DATE_ACQUIRED_494
+Local  ID_TUNEMAC_INSTRUMENT_495
+Local  ID_TUNEMAC_TUNE_FILE_813
+Local  ID_TUNEMAC_SAMPLE_INFORMA_496
+Local  ID_TUNEMAC_SAMPLE_NAME_497
+Local  ID_TUNEMAC_MISC_INFO_498
+Local  ID_TUNEMAC_OPERATOR_814
+Local  ID_TUNEMAC_DATE_ACQUIRED_815
+Local  ID_TUNEMAC_INSTRUMENT_816
+
+
+
+Local  ID_TUNEMAC_SAMPLE_NAME_817
+Local  ID_TUNEMAC_MISC_INFO_818
+Local  ID_TUNEMAC_MASS_463
+ID_TUNEMAC_____WAS_NOT_CR_807                      =  17807  
+ID_TUNEMAC_THE_MSDIAG_REG_808                      =  17808  
+ID_TUNEMAC_THIS_DATA_WAS_809                       =  17809  
+ID_TUNEMAC_THIS_MSPARMS_T_810                      =  17810  
+ID_TUNEMAC_MAY_BE_MISSING_811                      =  17811  
+ID_TUNEMAC_VALUES_FROM_DA_812                      =  17812  
+ID_TUNEMAC_FILE_492                                =  17492  
+ID_TUNEMAC_OPERATOR_493                            =  17493  
+ID_TUNEMAC_DATE_ACQUIRED_494                       =  17494  
+ID_TUNEMAC_INSTRUMENT_495                          =  17495  
+ID_TUNEMAC_TUNE_FILE_813                           =  17813  
+ID_TUNEMAC_SAMPLE_INFORMA_496                      =  17496  
+ID_TUNEMAC_SAMPLE_NAME_497                         =  17497  
+ID_TUNEMAC_MISC_INFO_498                           =  17498  
+ID_TUNEMAC_OPERATOR_814                            =  17814  
+ID_TUNEMAC_DATE_ACQUIRED_815                       =  17815  
+ID_TUNEMAC_INSTRUMENT_816                          =  17816  
+ID_TUNEMAC_TUNE_FILE_813                           =  17813  
+ID_TUNEMAC_SAMPLE_INFORMA_496                      =  17496  
+ID_TUNEMAC_SAMPLE_NAME_817                         =  17817  
+ID_TUNEMAC_MISC_INFO_818                           =  17818  
+ID_TUNEMAC_MASS_463                                =  17463  
+
+    if (MSD_VL = 1) AND (MSModelOptions < 14) then
+      bMultiSignal = 0
+    else
+      bMultiSignal = 1
+    endif
+    
+    if (len(Path$) = 0 or PostAcq = 1) then      
+        if _SEQUENCEON <> 0 then        
+                if (len(_DataSeqSubDir$) > 0) then     
+                !* Assert: _DataSeqSubDir$ does not have a terminating slash
+
+           Path$ = _DataPath$ + _DataSeqSubDir$ + "\" 
+        else
+           Path$ = _DataPath$
+        endif
+      else
+        if (len(_DataSubDir$) > 0) THEN                
+        !* Assert: _DataSubDir$ does not have a terminating slash
+           Path$ = _DataPath$ + _DataSubDir$ + "\"         
+        else           
+           Path$ = _DataPath$        
+
+        endif      
+      endif          
+    endif
+    if (len(File$) = 0) or (PostAcq = 1) then
+      File$ = _DataFile1$
+    endif
+    name$ = Path$ + File$ + "\msparms.tmp"   
+    
+    if regsize (TmpMSDiag) <> -1 then
+      DelReg TmpMSDiag
+    endif
+    if filestat (MODE, Path$ + File$ + "\MSDIAG.REG") = 1 then
+      on error goto error_exit
+      loadobj Path$ + File$ + "\MSDIAG.REG",, TmpMSDiag
+      if regsize (TmpMSDiag) < 1 then
+         DelReg TmpMSDiag
+         goto error_exit
+      else
+         if ObjHdrType (TmpMSDiag, "TuneValues") <> 4 then
+           DelReg TmpMSDiag
+           goto error_exit
+         endif
+         if (bMultiSignal = 1) then
+           if ObjHdrType (TmpMSDiag, "TuneValuesNeg") <> 4 then
+             DelReg TmpMSDiagNeg
+             goto error_exit
+           endif
+         endif
+      endif
+    else  
+error_exit:
+      !* If the MSDIAG.REG doesn't exist, return!!!
+      WriteToLogbook ReadResource$("tunemac",ID_TUNEMAC_____WAS_NOT_CR_807)
+      WriteToLogbook ReadResource$("tunemac",ID_TUNEMAC_THE_MSDIAG_REG_808)
+      return
+    endif   
+    On Error  mstn_ErrBuildParmFile name$
+      
+    !* Add a column for the table name for variable values
+    NewColText TmpMSDiag, "TuneValues", "ValueTable"
+    if (bMultiSignal = 1) then
+      NewColText TmpMSDiag, "TuneValuesNeg", "ValueTable"
+    endif
+
+    !* Look for variable lens and save tables as appropriate
+    row = -1
+    repeat
+      row = RowByText (TmpMSDiag, "TuneValues",row,"Values", "i=", "Variable")
+      if row > 0 then
+         TabName$ = TabText$(TmpMSDiag,"TuneValues",row,"Description")
+         nLen = Len(TabName$)
+                 repeat
+                   !* Replace spaces in name with underscore to get name of table
+             i = instr(TabName$," ")
+             if i > 0 then
+               TabName$ = TabName$[1:i-1] + "_" + TabName$[i+1:nLen]
+             endif
+         until i = 0
+
+         SetTabText TmpMSDiag, "TuneValues", row, "ValueTable",TabName$
+                 row = row + 1                         !continue search with next row
+      endif
+    until row = -1
+
+    !* For 1946B or SL Instruments
+    if (bMultiSignal = 1) then
+      row = -1
+      repeat
+        row = RowByText (TmpMSDiag, "TuneValuesNeg",row,"Values", "i=", "Variable")
+        if row > 0 then
+           TabName$ = TabText$(TmpMSDiag,"TuneValuesNeg",row,"Description")
+           nLen = Len(TabName$)
+           repeat
+             !* Replace spaces in name with underscore to get name of table
+             i = instr(TabName$," ")
+             if i > 0 then
+               TabName$ = TabName$[1:i-1] + "_" + TabName$[i+1:nLen]
+             endif
+           until i = 0
+ 
+           SetTabText TmpMSDiag, "TuneValuesNeg", row, "ValueTable",TabName$
+           row = row + 1                         !continue search with next row
+      endif
+      until row = -1
+    endif
+
+
+    ! Save the tune file
+    TuneFile$ = "Unknown"          !* Default to "unknown"
+    if TabHdrType (TmpMSDiag,"TuneValues","TuneFileName") = 0 then
+      TuneFile$ = TabHdrText$(TmpMSDiag,"TuneValues","TuneFileName")
+      if TabHdrType (TmpMSDiag,"TuneValues","TuneFilePath") = 0 then
+        TuneFile$ = TabHdrText$(TmpMSDiag,"TuneValues","TuneFilePath") + TuneFile$
+      endif
+    endif
+   
+    open name$ for output as #MSFILEINSTRNUM
+       
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_THIS_DATA_WAS_809)
+    print using #MSFILEINSTRNUM,"The MSD parameters were saved in the msdiag register file./"
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_THIS_MSPARMS_T_810)
+    print using #MSFILEINSTRNUM,"Some parameters normally reported under MSData acquisition in Tune /"
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_MAY_BE_MISSING_811)
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_VALUES_FROM_DA_812)
+    print using #MSFILEINSTRNUM," /"
+    print using #MSFILEINSTRNUM," /"
+    print using #MSFILEINSTRNUM," /"
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_FILE_492), Path$ + File$
+    if PostAcq = 1 then
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_OPERATOR_493), _Operator$
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_DATE_ACQUIRED_494), time$()
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_INSTRUMENT_495),_INSTNAME$
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_TUNE_FILE_813),TuneFile$
+      print using #MSFILEINSTRNUM," /"
+      print using #MSFILEINSTRNUM," /"
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_SAMPLE_INFORMA_496)
+      print using #MSFILEINSTRNUM,"----------------------------------/"
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_SAMPLE_NAME_497),_DATANAME1$
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_MISC_INFO_498),_SAMPINFO1$
+    else
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_OPERATOR_814)
+      if ObjHdrType(TmpMSDiag,DateTime)= 0 then
+        print using #MSFILEINSTRNUM,"Date acquired            :   %/",ObjHdrText$(TmpMSDiag,DateTime)
+      else  
+        print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_DATE_ACQUIRED_815)
+      endif  
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_INSTRUMENT_816)
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_TUNE_FILE_813),TuneFile$
+      print using #MSFILEINSTRNUM," /"
+      print using #MSFILEINSTRNUM," /"
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_SAMPLE_INFORMA_496)
+      print using #MSFILEINSTRNUM,"----------------------------------/"
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_SAMPLE_NAME_817)
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_MISC_INFO_818)
+    endif
+
+
+
+    !** Check for different text 
+    ! All Lassen are multi-signals
+    if (bMultiSignal = 0) then
+      !** 1946C Instrument
+      Polarity$ = TabHdrText$(TmpMSDiag,"StartStopTable","Polarity")
+      NumberOfTables = 1
+    else
+      !** 1946B or SL Instrument
+      Polarity$ = "Positive"
+      NumberOfTables = 2  ! Positive and Negative
+    endif
+    TuneValues$ = "TuneValues"
+    
+    !** Display the tune parameters
+    FOR IndexTable = 1 TO NumberOfTables
+      print using #MSFILEINSTRNUM," /"
+      print using #MSFILEINSTRNUM," /"
+      print using #msfileinstrnum,"MS parameters - " + Polarity$ + "/"
+      print using #msfileinstrnum,"----------------------------------/"
+    
+      if ObjHdrType (TmpMSDiag, TuneValues$) = 4 then
+        !* Format of this section is 
+        !* description : value
+        format$ = "%%%%%%%%%%%%%%%%%%%%%%%%%   :    %/"
+      
+        !* Get the number of items in TuneValues to print
+        nItems = TabHdrVal(TmpMSDiag,TuneValues$,"NumberOfRows")
+        format$ = "%%%%%%%%%%%%%%%%%%%%%%   :    %%%%%%%%%%/"
+        SubtableFormat$ = "                              %%%%%%%%%%   :   %%%%%%%%%/"                
+        SubtableLine$   = "                                 --------------------------/"                
+      
+        !* Print out everything in the TuneValues table
+        if nItems > 0 then
+          for i = 1 to nItems
+            description$ = TabText$(TmpMSDiag,TuneValues$,i,"Description")            
+            if len(description$) > 0
+             value$ = TabText$(TmpMSDiag,TuneValues$,i,"Values")
+             print using #MSFILEINSTRNUM, format$, description$, value$
+
+
+             !* Print the contents of the table listed in the ValueTable column
+             !* if the entry is not blank
+             ValTabName$ = TabText$(TmpMSDiag,TuneValues$,i,"ValueTable")
+             if len(ValTabName$) > 0 then
+               evaluate "nTabType = ObjHdrType(TmpMSDiag," + ValTabName$ + ")"
+               if nTabType = 4 then
+                 evaluate "nTabSize = TabHdrVal(TmpMSDiag," + ValTabName$ + ",""NumberOfRows"")"
+                 print using #MSFILEINSTRNUM, SubtableFormat$, ReadResource$("tunemac",ID_TUNEMAC_MASS_463), "Value"
+                 print using #MSFILEINSTRNUM, SubtableLine$
+                 for j = 1 to nTabSize
+                   evaluate "description$ = TabText$(TmpMSDiag," + ValTabName$ + ",j,""Mass"")"
+                   evaluate "value$ = TabText$ (TmpMSDiag," + ValTabName$ + ",j,""Values"")"
+                   print using #MSFILEINSTRNUM, SubtableFormat$, description$, value$
+                 next j
+                 print using #MSFILEINSTRNUM, SubtableLine$
+                 endif
+              endif
+            endif  
+          next i
+        endif
+      endif
+      ! Next For/Next Loop
+      Polarity$ = "Negative"
+      TuneValues$ = "TuneValuesNeg"
+    Next IndexTable
+    !**
+    on error                              !* Reset the error trap
+    close #MSFILEINSTRNUM
+    copy name$, path$ +file$+"\MSPARMS.txt", DONTASK
+    delete name$, DONTASK
+    DelReg TmpMSDiag
+endmacro         !* mstn_BuildMSParmFile
+
+
+!====================================================================
+name MSTN_EsShowMSText
+parameter title$ default "Read MSD Tune Parameters"
+! Call notepad to display the msparms.txt file
+! Globals:
+!  msdatapath$
+!  msdatafile$
+!  _datapath$
+!  _datasubdir$
+!  _datafile1$
+!
+! Pre-conditions:
+!   Assumes that the Windows environment is able to call
+!   both write and notepad.
+!   Assumes the existance of _datapath$, _datasubdir$, _datafile1$.
+!   Assumes that the msparms.txt is under the current msdatafile$
+!   and if that msdatafile$ is not defined, then the msparms.txt file
+!   is under the current default data path.
+!
+! Post conditions
+!   Will reset msdatapath$ and msdatafile$ if msdatafile$ is undefined
+!   If successful, will execute either notepad or write
+!
+! Known problems
+!   This routine hard-codes the error message.
+!   It also calls notepad.exe or write.exe without checking to see if
+!   these programs exist.
+!   This routine hard-codes the name of the msparms.txt file.
+!   This routine hard-codes the maximum file size handled by notepad.exe
+!====================================================================
+  local MSDPath$, MSDFile$, file$, done, msTextName$
+
+  ! LL Globalization 
+  local ID_TUNEMAC_Select_Data_1129
+  local ID_TUNEMAC_Read_MSD_1130
+  ID_TUNEMAC_Select_Data_1129 = 18129
+  ID_TUNEMAC_Read_MSD_1130    =18130
+  
+  ! LL Globalization 
+  if len(title$) > 0 then
+    if title$ = "Read MSD Tune Parameters" and uppercase$(_Lang$)<> "ENU" then
+      title$ = ReadResource$("tunemac",ID_TUNEMAC_Read_MSD_1130)
+    endif
+  endif
+  
+    if ObjHdrType(_Config[1],"View_MSDC") = 4 then
+         if TabHdrType (_Config[1],"View_MSDC","MSDataFile") = 99 then
+              NewTabHdrText _Config[1], "View_MSDC", "MSDataFile",_datafile1$
+         endif
+
+         if TabHdrType (_Config[1],"View_MSDC","MSDataPath") = 99 then
+              NewTabHdrText _Config[1], "View_MSDC", "MSDataPath",_datapath$+_datasubdir$
+         endif
+         MSDPath$ =  TabHdrText$(_Config[1],"View_MSDC","MSDataPath")
+         MSDFile$ =  TabHdrText$(_Config[1],"View_MSDC","MSDataFile")
+    else  
+         MSDFile$ = _datafile1$    
+         MSDPath$ = _datapath$ + _datasubdir$
+    endif
+
+
+    file$ = "\msparms.txt"
+    done = 0
+        while done = 0 do
+       ! LL Globalization PVCS#12846
+       if 0 <> SelectFile(2,ReadResource$("tunemac",ID_TUNEMAC_Select_Data_1129),"*.d",MSDPath$,MSDFile$) then           
+    
+       !* Is this an MSD data file?
+       msTextName$ = MSDPath$+MSDFile$+file$
+       if filestat(MODE,msTextName$) = 1 then
+          !* This data file is from Tune acquisition          
+          !* Show parameters and quit
+             MSTN_ViewFile msTextName$
+             done = 1
+       else
+          !* Build the name of the msparms.txt path and file name
+          !* See if this data file has parameters
+             if filestat(MODE,MSDPath$+MSDFile$+"\MSDIAG.REG") = 1 then
+               mstn_BuildMSParmFile 0, MSDPath$, MSDFile$
+               msTextName$ = MSDPath$+MSDFile$+file$
+               if filestat(MODE,MSDPath$+MSDFile$+"\msparm.txt") = 1 then
+                  MSTN_ViewFile msTextName$
+                  done = 1
+               else
+                  goto pick_another   
+               endif   
+                         else
+pick_another:   
+                           print Alert("The MSDiag register file that saves the MSD parameters " + \
+                                       "for data acquisition from Method and Run Control is missing information.  " + chr$(13)+chr$(13)+\
+                           "The data file: " + MSDPath$+MSDFile$ +chr$(13)+ " does not have associated tune parameters." +\
+                           " Please select another file.",3,title$)
+             endif
+        endif
+       else
+         done = 1 
+       endif   
+   endwhile
+   SetTabHdrText _Config[1],"View_MSDC","MSDataPath", MSDPath$ 
+   SetTabHdrText _Config[1],"View_MSDC","MSDataFile", MSDFile$ 
+
+
+endmacro     !MSTN_EsShowMSText
+
+
+
+!====================================================================
+Name MSTN_FindMass
+    parameter fmass default -1
+! Parameter fmass determines whether to prompt
+! the user for a mass
+!
+! Global variables: NONE
+!
+! Pre-conditions:
+!  The Tune commands DLL is assumed loaded, and the system must be
+!   able to talk to the MSD.
+!
+! Post-conditions:
+!   Finds the mass and plots the data in a window.
+!
+! Known problems:
+!  User interface strings are hard-coded.
+!====================================================================
+    local m, a, _button
+Local  ID_TUNEMAC_ENTER_A_MASS_V_820
+Local  ID_TUNEMAC_PEAK_NOT_PRESE_821
+ID_TUNEMAC_ENTER_A_MASS_V_820                      =  17820  
+ID_TUNEMAC_PEAK_NOT_PRESE_821                      =  17821  
+    if fmass<0 then
+         _button = input (ReadResource$("tunemac",ID_TUNEMAC_ENTER_A_MASS_V_820),fmass$)
+         if _button = 1 then
+              fmass = val(fmass$)
+         else
+              return
+         endif 
+    endif
+
+    a=0
+    m=0
+    MSFindMass fmass,,m,a       !* Finds the mass and plots the data.    
+    if m=0 and a=0 then
+         print ReadResource$("tunemac",ID_TUNEMAC_PEAK_NOT_PRESE_821)
+    endif
+
+
+endmacro     !MSTN_FindMass
+
+!====================================================================
+name MSTN_FindPressure 
+parameter flow
+!====================================================================
+local pressure, MinDiff, xw, xd, y, ydiff
+ pressure = 0
+ MinDiff = 1000                       !Start with a huge difference
+                                      !to make program set the first ydiff
+ if RegSize(PolyTable) <> -1 then
+      for xw = 1 to 10
+           for xd = 1 to 10
+                y = Data (PolyTable,xw,xd)
+                ydiff = abs(flow - y)
+                if ydiff < MinDiff then
+                     MinDiff = ydiff
+                     !Remember to subtract 1 from indices
+                     pressure = (xw-1) + (xd-1)/10
+                endif
+           next xd
+      next xw
+ endif
+
+ return pressure
+
+endmacro     !MSTN_FindPressure
+
+!====================================================================
+name MSTN_InitTable
+!==================================================================== 
+local ErrorCorrectionFactor,a,b,c,d,e,f
+local x,i,y,xw,xd
+
+
+ ErrorCorrectionFactor = 0.005
+
+ if RegSize(PolyTable) <> -1 then
+      DelReg PolyTable
+     
+      NewObj PolyTable,2,10,10
+   
+      a = 0.0932561814796463           !intercept of polynomial
+      b = 0.72205513083462             !coeff. for first order term
+      c =-0.0405900893450206           !coeff. for second order term
+      d = 0.00152162498742646          !coeff. for third order term
+      e =-0.000026612753294766         !coeff. for fourth order term
+      f = 0.0000001757035257343        !coeff. for fifth order term
+   
+      x = 0
+      i = 0
+      while(i < 100)
+           y = a+b*x+c*sqr(x)+d*x*sqr(x)+e*sqr(sqr(x))+f*x*sqr(sqr(x))
+           xw = trunc(x + ErrorCorrectionFactor)
+           xd = trunc(((x-xw) + ErrorCorrectionFactor)*10.0)        
+           SetData PolyTable, xw+1,xd+1,y
+
+           x= x + 0.1
+           i = i + 1
+      endwhile
+ endif
+endmacro     !MSTN_InitTable
+!====================================================================
+name MSTN_Rev
+!====================================================================
+ local screv$, pdbrev$, cgrev$, igrev$, tpcrev$, sbrev$
+
+ MSSCwrite "*IDN?",screv$
+ MSSCwrite "msc:nrt:id? pdb",pdbrev$
+ MSSCwrite "msc:nrt:id? cg", cgrev$
+ MSSCwrite "msc:nrt:id? cg", igrev$
+ MSSCwrite "msc:nrt:id? cg", tpcrev$
+ MSSCwrite "msc:nrt:id? cg", sbrev$
+ return
+
+endmacro     !MSTN_Rev
+
+!====================================================================
+name MSTN_PWidths
+!====================================================================
+local defaultTarget, defaultTolerance
+    MSPWidths 1,defaultTarget,,defaultTolerance
+    msat_widths defaultTarget,defaultTolerance
+
+endmacro  !MSTN_PWidths
+
+!====================================================================
+name MSTN_SetPWidths
+! Put up a dialog box to set the peak width target
+! parameters
+!
+! Known problems:
+!  User interface strings are hard-coded.
+!====================================================================
+  local defaultTarget, title$, HelpIndex, _button
+
+
+    !* Use target set for first mass as the default.
+Local  ID_TUNEMAC_WIDTH_TARGET_822
+Local  ID_TUNEMAC__HELP_283
+ID_TUNEMAC_WIDTH_TARGET_822                        =  17822  
+ID_TUNEMAC__HELP_283                               =  17283  
+    MSPWidths 1,defaultTarget
+    if DialogExists("DlgPWidths")<>0 then
+         !* Need new dialog box to show new values
+         RemoveDialog "DlgPWidths"
+    endif
+
+    MSMassSort           !Sort the masses
+
+    !===== Create Dialog Box ======
+    
+    title$ = "Mass Peak Width Target"   !*The title must match the menu item
+    HelpIndex =  HelpSubSystemTopic("msd")+ 9052
+    MSTN_CPSafeStart "CP2"
+
+    BeginDialog "DlgPWidths", 6, 40, 180, 120,title$
+   
+         StaticText  10,30,50,24, ReadResource$("tunemac",ID_TUNEMAC_WIDTH_TARGET_822)
+         NumberBox  100,30,45,12, defaultTarget
+         OKButton  10,100,50,14
+         CancelButton 66,100,50,14
+         ExecPushButton 122,100,50,14, ReadResource$("tunemac",ID_TUNEMAC__HELP_283),CP2,"Help " + sprintf$(HelpIndex,"%f")
+         !PushButton  122, 100, 50, 14, "&Help",2 
+    EndDialog
+    _button = ShowDialog("DlgPWidths", HelpIndex)
+    if (_button=1) then
+         !* User pressed OK, so set user chosen values
+         msat_SetAllWidths defaultTarget,   
+    endif
+    RemoveDialog "DlgPWidths"
+    return
+
+endmacro     !MSTN_SetPWidths
+
+
+!====================================================================
+name MSTN_ShowStatus
+! Reads temperatures, pressures, flows and status
+! Updated 11/2002 for G1956 support. Also removed outdated code. PHC
+!====================================================================
+  local qtemp$, dtemp$, forline$, hivac$, nebpress$, dgpress$
+  local t1power$, t1speed$, t2power$, t2speed$
+  local qtemp, dtemp, forline, hivac, nebpress, dgpress
+  local t1power, t1speed, t2power, t2speed
+  local a, b, c, d, e, f, dgasflow
+  local for_mBar$, hi_mBar$, ionoff
+
+Local  ID_TUNEMAC_NEBULIZER_PRES_823
+Local  ID_TUNEMAC_DRYING_GAS_FLO_825
+Local  ID_TUNEMAC_HIVAC_ION_GAUG_826
+Local  ID_TUNEMAC_DRYING_GAS_TEM_827
+Local  ID_TUNEMAC_QUADRUPOLE_TEM_829
+Local  ID_TUNEMAC_TURBO__1_POWER_830
+Local  ID_TUNEMAC_TURBO__1_SPEED_832
+Local  ID_TUNEMAC_TURBO__2_POWER_833
+Local  ID_TUNEMAC_TURBO__2_SPEED_834
+ID_TUNEMAC_NEBULIZER_PRES_823                      =  17823  
+ID_TUNEMAC_DRYING_GAS_FLO_825                      =  17825  
+ID_TUNEMAC_HIVAC_ION_GAUG_826                      =  17826  
+ID_TUNEMAC_DRYING_GAS_TEM_827                      =  17827  
+ID_TUNEMAC_QUADRUPOLE_TEM_829                      =  17829  
+ID_TUNEMAC_TURBO__1_POWER_830                      =  17830  
+ID_TUNEMAC_TURBO__1_SPEED_832                      =  17832  
+ID_TUNEMAC_TURBO__2_POWER_833                      =  17833  
+ID_TUNEMAC_TURBO__2_SPEED_834                      =  17834  
+  on error MSTN_Error         
+  MSGClear
+
+
+  MSSCQuery "sens? quad",qtemp$
+  MSSCQuery "sens? dgas",dtemp$
+  MSSCquery "sens? forepres", forline$
+  MSSCQuery "sens? highpres", hivac$
+  MSSCQuery "sens? nebpres", nebpress$
+  MSSCQuery "sens? dgasflow", dgpress$
+  MSSCQuery "sens? turbo1pw", t1power$
+  MSSCQuery "sens? turbo1sp", t1speed$
+  if MSD_46 = 1 then              ! Only G1946 MSD's have turbo2
+    MSSCQuery "sens? turbo2pw", t2power$
+    MSSCQuery "sens? turbo2sp", t2speed$
+  endif
+  qtemp = val(qtemp$)
+  dtemp = val(dtemp$)
+  forline = val(forline$)
+  hivac = val(hivac$)
+  nebpress = val(nebpress$)
+  dgpress = val(dgpress$)
+  t1power = val(t1power$)
+  t1speed = val(t1speed$)
+  if MSD_46 = 1 then              ! Only G1946 MSD's have turbo2
+    t2power = val(t2power$)
+    t2speed = val(t2speed$)
+  endif
+
+  !* Convert power and speed from lonbuilder units
+  t1power = t1power / 10
+  t1speed = t1speed / 2
+  if MSD_46 = 1 then              ! Only G1946 MSD's have turbo2
+    t2power = t2power / 10
+    t2speed = t2speed / 2
+  endif
+
+
+  !* Convert Flows
+!--------------------------------------------------------------------------------------------------
+!Flow Control Module (FCM) flow curve has two sections: non-linear(<10 psig) and linear(10-50 psig)
+!Non-linear section is represented by a fifth order polynomial fit
+!PolyTable stores the (non-linear) calculated flow rate values in a 2-dim 'array'
+!--------------------------------------------------------------------------------------------------
+!Conversion of pressure to flow for drying gas flow rate setting:
+
+
+  IF dgpress > 0 AND dgpress <= 99 
+       a = 0.0932561814796463         !intercept of polynomial
+       b = 0.72205513083462             !coefficient for first order term
+       c =-0.0405900893450206           !coefficient for second order term
+       d = 0.00152162498742646          !coefficient for third order term
+       e =-0.000026612753294766         !coefficient for fourth order term
+       f = 0.0000001757035257343        !coefficient for fifth order terma 
+
+      !* Fifth order polynomial curve from multiple regression analysis:
+      dgasflow = a+b*dgpress+c*sqr(dgpress)+d*dgpress*sqr(dgpress)+e*sqr(sqr(dgpress))+f*dgpress*sqr(sqr(dgpress))
+  ELSE
+      IF dgpress > 99 AND dgpress <= 500
+           dgasflow = (0.223 * dgpress)  + 2.33        !linear section of flow curve
+      ELSE
+           IF dgpress > 500 
+                 dgasflow = 13.5                          !sets/limits maximum flow
+           ELSE          
+                !* case of dgpress <= 0
+                dgasflow = 0.0
+                dgpress = 0
+          ENDIF  
+      ENDIF
+  ENDIF
+
+  dgpress$ = val$ (dgpress)
+  dgpress$ = "liters/min or " + dgpress$  + " psi"
+  
+  !* Convert from Torr to Millibar
+  for_mBar$ = val$(forline/.00750064)
+  forline$ = "Foreline pressure is " + forline$ + " Torr or " + for_mBar$ + " millibar"
+  hi_mBar$ = val$(hivac/.00750064)
+  hivac$ = "High vacuum pressure is " + hivac$ + " Torr or " + hi_mBar$ + " millibar"
+
+
+  !* Display message that hivac ion gauge is off if that is the case
+  if hivac > 0.00005 then
+      ionoff = 1
+  else  
+      ionoff = 0
+  endif
+
+  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_NEBULIZER_PRES_823),nebpress, "psi",5,0
+  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_FLO_825),dgasflow, dgpress$,5,2
+  MSWindDisp forline$,,,5,4
+  if ionoff = 0
+      MSWindDisp hivac$, ,hivac$,5,6
+  else
+      MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_HIVAC_ION_GAUG_826),,,5,6
+  endif
+
+
+  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TEM_827),dtemp,"deg C",5,8
+  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_QUADRUPOLE_TEM_829),qtemp,"deg C",5,10
+  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_TURBO__1_POWER_830),t1power,"watts",5,12
+  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_TURBO__1_SPEED_832),t1speed,"%",5,16
+  if MSD_46 = 1 then              ! Only G1946 MSD's have turbo2
+    MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_TURBO__2_POWER_833),t2power,"watts",5,14
+    MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_TURBO__2_SPEED_834),t2speed,"%",5,18
+  endif
+
+  return 
+
+endmacro     !MSTN_ShowStatus
+
+!====================================================================
+name MSTN_ToggleScanType
+!  Toggle the scan type and set the menu appropriately
+!
+! Pre-conditions:
+!  The Tune commands DLL is assumed loaded, and the system must be
+!   able to talk to the MSD.
+!
+! Post-conditions:
+!  Will toggle the scan type menu item
+!
+! Known problems:
+!  User interface strings are hard-coded.
+!====================================================================
+  local type
+
+    !* Check the scan type
+    MSScanparm scantype, type
+    
+    if type = 0 then
+         !* Currently in condensed mode, toggle to full
+         !* Check the menu based on the toggle state
+         MSToggleScanState = 0x3
+         MSScanparm scantype,,1
+         MSPeakParm ,1
+    else 
+        !* Currently in full mode; toggle to Condensed
+        !* Uncheck the menu based on the toggle state
+        MSToggleScanState = 0x1
+        MSScanParm scantype,,0
+        MSPeakParm ,0
+    endif  
+          
+endmacro     !MSTN_ToggleScanType
+
+!====================================================================
+name MSTN_TurnOff
+! turns off spray chamber without overriding defaults
+!====================================================================
+
+!* Set Stream selection valve to waste
+Local  lSheathGasTemp
+Local  ID_TUNEMAC_STREAM_SELECTI_835
+Local  ID_TUNEMAC_DRYING_GAS_TEM_836
+Local  ID_TUNEMAC_VAPORIZER_TEMP_837
+Local  ID_TUNEMAC_NEBULIZER_PRES_838
+Local  ID_TUNEMAC_DRYING_GAS_FLO_839
+Local  ID_TUNEMAC_THE_SPRAY_CHAM_840
+ID_TUNEMAC_STREAM_SELECTI_835                      =  17835  
+ID_TUNEMAC_DRYING_GAS_TEM_836                      =  17836  
+ID_TUNEMAC_VAPORIZER_TEMP_837                      =  17837  
+ID_TUNEMAC_NEBULIZER_PRES_838                      =  17838  
+ID_TUNEMAC_DRYING_GAS_FLO_839                      =  17839  
+ID_TUNEMAC_THE_SPRAY_CHAM_840                      =  17840
+  
+    msscquery "msc:sens? vapor",lSheathGasTem
+    MSDoStream ,1
+    print ReadResource$("tunemac",ID_TUNEMAC_STREAM_SELECTI_835)
+    sleep 1
+
+!* Set Drying gas temp to 0
+    MSSCWrite ":zone:name dgas; set 0"
+    print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TEM_836)
+    sleep 1
+    
+!* If APCI, APPI, MM-ES+APCI, or AJS-ES set vaporizer to 0
+    
+    if (ConvertText$(UPPER,msgetionsrc$()) = "APCI") or (ConvertText$(UPPER,msgetionsrc$()) = "APPI")\
+    or (ConvertText$(UPPER,msgetionsrc$()) = "MM-ES+APCI") or (ConvertText$(UPPER,msgetionsrc$()) = "AJS-ES") then
+       MSSCWrite ":zone:name vapor; set 0"
+       print ReadResource$("tunemac",ID_TUNEMAC_VAPORIZER_TEMP_837)
+      if lSheathGasTemp > 250
+        Sleep 240
+      else 
+       sleep 1
+      endif
+    endif     
+
+!*  Turn NebPres off
+    MSSCWrite ":zone:name nebpres; set 0"
+    print ReadResource$("tunemac",ID_TUNEMAC_NEBULIZER_PRES_838)
+    sleep 1
+        
+!*  Set drying gas flow to 3L/min  
+    MSSCWrite ":zone:name dgasflow; set 3"
+    print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_FLO_839)
+    sleep 1
+
+!*!* If AJS-ES set sheath gas flow off
+    MSSCWrite ":zone:name sgasflow; set 0"
+    print "Sheath Gas Flow turned off."
+    sleep 1
+
+    message ReadResource$("tunemac",ID_TUNEMAC_THE_SPRAY_CHAM_840)
+    return
+
+endmacro     !MSTN_TurnOff
+
+
+!====================================================================
+name MSTN_ZonesOff
+! turns off temperature zones without overriding defaults to prepare 
+! for Vent or Shut Down.
+!====================================================================
+
+!* Set Stream selection valve to waste
+Local  ID_TUNEMAC_STREAM_SELECTI_835
+Local  ID_TUNEMAC_DRYING_GAS_TEM_836
+Local  ID_TUNEMAC_VAPORIZER_TEMP_837
+Local  ID_TUNEMAC_NEBULIZER_PRES_838
+Local  ID_TUNEMAC_DRYING_GAS_FLO_839
+Local  ID_TUNEMAC_THE_SPRAY_CHAM_840
+ID_TUNEMAC_STREAM_SELECTI_835                      =  17835  
+ID_TUNEMAC_DRYING_GAS_TEM_836                      =  17836  
+ID_TUNEMAC_VAPORIZER_TEMP_837                      =  17837  
+ID_TUNEMAC_NEBULIZER_PRES_838                      =  17838  
+ID_TUNEMAC_DRYING_GAS_FLO_839                      =  17839  
+ID_TUNEMAC_THE_SPRAY_CHAM_840                      =  17840  
+    MSDoStream ,1
+    print ReadResource$("tunemac",ID_TUNEMAC_STREAM_SELECTI_835)
+    sleep 1
+
+!* Set Drying gas temp to 0
+    MSSCWrite ":zone:name dgas; set 0"
+    print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TEM_836)
+    sleep 1
+
+!* Set Quadrupole temp to 0
+    MSSCWrite ":zone:name quad; set 0"
+    print "Quadrupole heater turned off."
+    sleep 1    
+    
+    
+!* If APCI, APPI, MM-ES+APCI, or AJS-ES set vaporizer to 0
+    
+    if (ConvertText$(UPPER,msgetionsrc$()) = "APCI") or (ConvertText$(UPPER,msgetionsrc$()) = "APPI")\
+    or (ConvertText$(UPPER,msgetionsrc$()) = "MM-ES+APCI") or (ConvertText$(UPPER,msgetionsrc$()) = "AJS-ES") then
+       MSSCWrite ":zone:name vapor; set 0"
+       print ReadResource$("tunemac",ID_TUNEMAC_VAPORIZER_TEMP_837)
+      if lSheathGasTemp > 250
+        Sleep 240
+      else 
+       sleep 1
+      endif
+    endif   
+
+!*  Set NebPres to 15 psi
+    MSSCWrite ":zone:name nebpres; set 15"
+    sleep 1
+        
+!*  Set drying gas flow to 3L/min  
+    MSSCWrite ":zone:name dgasflow; set 3"
+
+!*!* If AJS-ES set sheath gas flow to 7L/min
+    MSSCWrite ":zone:name sgasflow; set 7"
+
+    sleep 1
+
+    message "All temperature zones shut off.  Instrument may now be shut down"
+    return
+
+endmacro     !MSTN_ZonesOff
+
+!===================================
+name mstn_EdParms
+! Wrapper macro around mstn_editParms to update
+! calibrant UI
+!===================================
+local HideStatus, HideTool, oldEcho, CurrentState
+
+  if MSDC_SB = 3 then
+    HideStatus = 1
+  else  
+    HideStatus = 0
+  endif  
+  
+  if MSDC_TB = 3 then
+    HideTool = 1
+  else  
+    HideTool = 0
+  endif  
+  
+  if HideStatus = 1 then  
+    TLB_ToggleTopTB , _SB
+  endif
+  if HideTool = 1 then  
+    TLB_ToggleTopTB , _TB
+  endif
+  
+  MSEdParms
+  if HideTool = 1 then  
+    TLB_ToggleTopTB , _TB
+  endif
+  if HideStatus = 1 then  
+    TLB_ToggleTopTB , _SB
+  endif
+  
+  if check(variable, MS_ECHO) = 1 then
+     oldEcho = MS_ECHO
+  else
+     oldEcho = -1
+  endif  
+  MS_ECHO = 0
+  
+  MSCalValve CurrentState
+  
+  if oldEcho <> -1
+     MS_ECHO = oldEcho
+  else
+     Remove MS_ECHO
+  endif  
+  
+  CurrentState = CurrentState + 1
+  if (CurrentState = 1) then
+      ! Valve is to be closed
+      MSTN_CalA = 1
+      MSTN_CalB = 1
+      MSTN_CalN = 3
+  else    
+      if  (CurrentState = 2) then
+      !Calibrant A is chosen
+         mstn_CalA = 3
+         mstn_CalB = 1
+         mstn_CalN = 1
+      else
+         if (CurrentState = 3) then
+         !Calibrant B is chosen
+           mstn_CalA = 1
+           mstn_CalB = 3
+           mstn_CalN = 1
+         endif 
+      endif
+  endif
+  mstn_UpdateStatusBar
+endmacro
+!===============================================================================
+Name MSTN_CalX 
+!===============================================================================
+Parameter pCalibrant$   Default ""
+! Inform user to exchange the calibrant
+! Validate calibrant if user onfirmed the exchange.
+! Make Logbook entry
+! Version ueff 061012
+!===============================================================================
+Local lRet 
+Local lDebug;		lDebug = 0
+
+    If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+	Print "MSTN_CalX: Calibrant exchange to", pCalibrant$
+    EndIf
+    If ( Check( VARIABLE, MSTN_CalValid$ ) < 1 ) then
+	MSTN_CalValid$ = ""
+    Endif
+
+    lRet = Alert( ReadResource$( "tunemac", 18078 ) + pCalibrant$ \
+		+ ReadResource$( "tunemac", 18079 ), 4,\
+		  ReadResource$( "tunemac", 18013 ))
+    If ( lRet > 0 ) then
+	MSTN_CalValid$ = "validated"
+	MSTN_LogBCalX pCalibrant$
+    Else
+	MSTN_CalValid$ = "invalid"
+    Endif
+Endmacro
+!===============================================================================
+Name MSTN_LogBCalx
+! Makes entry in current instrument logbook about calibrant change
+! Makes entry about calibrant exchanged in MSDLogbook object 
+! Makes maintenance logbook entry about calibrant exchange
+! Skips logbook entry, when offline.
+! Skips logbook entry, when logbook object is not found.
+Parameter pCalibrant$   Default ""
+!                       Name of the calibrant
+!                       Allowed strings: "ES (G2421)" | "APCI (G2422)"
+!===============================================================================
+Local lRows, lMaintText
+Local lMaxEntries               ! Maximum number of entries in Logbook
+Local ID_STR_Offset 
+Local ID_Tunemac_NoLogB_Offl_1071
+Local ID_Tunemac_NoLogB_MSD_1072
+ID_STR_Offset     = 17000
+ID_Tunemac_NoLogB_Offl_1071    = 1071 + ID_STR_Offset
+ID_Tunemac_NoLogB_MSD_1072     = 1072 + ID_STR_Offset
+lMaxEntries = 999               ! Macro deletes oldest entry when reached.
+
+    lMaintText$ = "Calibrant " + pCalibrant$ + " installed"
+    WriteToLogBook lMaintText$
+
+    If ( _Offline = 1 ) then
+        ! No Logbook entry when system is offline."
+        Print ReadResource$( "tunemac", ID_Tunemac_NoLogB_Offl_1071 )
+        Return
+    Endif
+
+    If ( RegSize( MSDLogBook ) < 1 ) then
+        ! No Logbook entry when MSD logbook does not exist.
+        Return
+    Endif
+!       A LogBook for the MS is not availbale as well as there is no
+!       NVRAM variable to store the last calibrant installation
+!       So, it will be written to a header line in the MSDLogBook object.
+    If ( ObjHdrType( MSDLogBook, "Calibrant" ) = 99 ) then
+        NewObjHdrText MSDLogBook, "Calibrant", "", 0
+    Endif
+    SetObjHdrText MSDLogBook, "Calibrant", pCalibrant$
+    SaveObj MSDLogbook, _INSTPATH$+"MSDLogBK.reg", New
+
+    If ( ObjHdrType( MSDLogBook, "Maintenance" ) <> 4 ) then
+        ! MSD Maintenance Logbook does not exist
+        Print ReadResource$( "tunemac", ID_Tunemac_NoLogB_MSD_1072 )
+        Return
+    EndIf
+    lRows = tabhdrVal( MSDlogbook, "Maintenance", "NumberOfRows" )
+    If ( lRows > lMaxEntries ) then
+        DelTabRow MSDLogBook, Maintenance, 1
+    Endif
+    InsTabRow MSDLogbook, "Maintenance"
+    lRows = tabhdrVal( MSDlogbook, "Maintenance", "NumberOfRows" )
+    SetTabVal Msdlogbook, "Maintenance", lRows, Time, Time()
+    SetTabText Msdlogbook, "Maintenance", lRows, "String", lMaintText$
+    SetTabText Msdlogbook, "Maintenance", lRows, "Operator", _Operator$
+
+EndMacro        ! MSTN_LogBCalX
+!===============================================================================
+Name MSTN_GetCal$
+!   Tries to get the type of calibrant installed in the system from the Logbook
+!===============================================================================
+Local lCalEntry$        ! Whole entry for calibrant logbook 
+Local lDebug           	; lDebug = 0
+    If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+	Print "MSTN_GetCal$: called."
+    EndIf
+    ! Trying to get value from MSD LogBook
+    If ( RegSize( MSDLogBook ) > 0 ) then   ! MSDLogBook exists
+	If ( lDebug > 0 ) or ( Getverbose() > 0 ) then
+	    Print "MSTN_GetCal$: MSDLogBook exists"
+	EndIf
+	If ( ObjHdrType( MSDLogBook, "Calibrant" ) = 0 ) then ! String exists
+	    lCalEntry$ = ObjHdrText$( MSDLogBook, "Calibrant" )
+	    If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+		Print "MSTN_GetCal$: Calibrant in MSD Logbook exists:",\
+                       lCalEntry$
+	    EndIf
+	    Return lCalEntry$
+	Endif
+    Endif
+    ! Calibrant was not found in logbook. 
+    If ( lDebug > 0 ) or ( Getverbose() > 0 ) then
+        Print "MSTN_GetCal$: Calibrant not found in Logbook."
+    Endif
+    MSTN_CalValid$ = "invalid"          ! Calibrant knowlege is unsafe/invalid
+    Return ""
+Endmacro
+!===============================================================================
+Name MSTN_CheckCal
+!
+! MS TuNe CHECKs for correct CALibrant
+! The required calibrant is taken for TuneMixReg, Headeritem = RequiredTMix
+! If that value is not available, it is derived from the ion mode.
+!    global variables: 
+!       MSTN_CalValid$       Is correct calibrant validated by user?
+!               "validated": User has exchanged or validated correct calibrant.
+!                            User will not be asked again to validate calibrant.
+!               <other>    : User will be asked to validate installed calibrant.
+! Version ueff 061016       
+!===============================================================================
+Local lRet
+Local lIonMode$ 
+Local lDebug;		lDebug = 0
+Local lCalibrant$       ! Installed calibrant
+Local lCalRequired$     ! required calibrant
+Local lRegIndex         ! Point to TuneMixReg element that holds source data.
+Local ID_STR_Offset, ID_Tunemac_Correct_Cal_Q, ID_Tunemac_Correct_Header
+    ID_STR_Offset     = 18000
+    ID_Tunemac_Correct_Cal_Q  = 1 + ID_STR_Offset
+    ID_Tunemac_Correct_Header = 2 + ID_STR_Offset
+    ID_Tunemac_Cal_APCI_Q     = 3 + ID_STR_Offset
+    ID_Tunemac_Cal_ES_Q       = 4 + ID_STR_Offset
+
+    ! Avoid being called for wrong MS type
+    ! Get the instrument model e.g.: 6140A
+    If ( pre6100() = 1 ) then 
+        If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+            ! Internal error message. Do not globalize.
+            Print "MSTN_CheckCal: MS_Type is not 4 (G6100/Lassen)."
+        EndIf
+        Return ! do nothing test is not valid for MS other then G6100 models
+    Endif
+
+    ! Try to get the required tune mix from the tune mix register
+    lCalRequired$ = ""
+    lRegIndex = MSAT_SelectTuneMix( "auto" )
+    If ( lRegIndex > 1 ) then 
+        lRet = ObjHdrType( TuneMixReg[ lRegIndex ], "RequiredTMix" )
+        If ( lRet = 0 ) then
+            lCalRequired$ = ObjHdrText$( TuneMixReg[ lRegIndex ], RequiredTMix )
+        Endif
+    Endif ! The required tune mix is now set from register or empty.
+
+    If ( lCalRequired$ = "" ) then ! Required tune mix wasn't found in register.
+	MSGetMode lIonMode$        ! Derive required mix from ion mode.
+	If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+	    Print "MSTN_CheckCal: IonMode is", lIonMode$
+	Endif
+	If ( Instr( lIonMode$, "API" ) > 0 ) then
+	    lCalRequired$ = "ES"
+	Endif
+	If ( Instr( lIonMode$, "APCI" ) > 0 ) then
+	    lCalRequired$ = "APCI"
+	Endif
+	If ( Instr( lIonMode$, "APPI" ) > 0 ) then
+	    lCalRequired$ = "APCI"
+	Endif
+	If ( Instr( lIonMode$, "MM-" ) > 0 ) then
+	    lCalRequired$ = "APCI"
+	Endif
+	If ( Instr( lIonMode$, "NANOESI" ) > 0 ) then
+	    lCalRequired$ = "ES"
+	Endif
+	If ( Instr( lIonMode$, "CHIPCUBE" ) > 0 ) then
+	    lCalRequired$ = "ES"
+	Endif
+	If ( Instr( lIonMode$, "AJS-ES" ) > 0 ) then
+	    lCalRequired$ = "ES"  
+        Endif
+	If ( lDebug = 1 ) or ( GetVerbose() > 0 ) then
+	    Print "MSTN_CheckCal: Required Calibrant =", lCalRequired$
+	Endif
+    Endif
+		
+    ! Avoid to bother user when correct calibrant is validated
+    ! Look if calibrant is validated
+    If ( Check( VARIABLE, MSTN_CalValid$ ) <> 1 ) then
+        MSTN_CalValid$ = "";    ! Create variable if it did not exist.
+    Endif
+    lCalibrant$ = MSTN_GetCal$();
+    If ( lDebug = 1 ) or ( GetVerbose() > 0 ) then
+        Print "MSTN_CheckCal:Calibrant user validated =""" \
+               + MSTN_CalValid$ + """"
+        Print "MSTN_CheckCal: Calibrant in use =""" + lCalibrant$ + """"
+        Print "MSTN_CheckCal: Calibrant required = """ + lCalRequired$ + """"
+    Endif
+
+    ! If the required and the validated actual calibrant match, do nothing
+    If ( lCalibrant$ = lCalRequired$ ) AND ( MSTN_CalValid$ = "validated" ) then
+        Return
+    EndIf
+    ! If required and the actual calibrant don't match, exchange calibrant
+    If ( lCalibrant$ <> lCalRequired$ ) then
+        MSTN_CalX lCalRequired$
+        Return
+    EndIf
+    ! The calibrant matches required according to the Logbook.
+    ! But actual calibrant is not validated in this Chemstation instance.
+    ! Ask user for confirmation/validation or stop.
+    lRet = Alert( ReadResource$( "tunemac", 18076 ) \
+                + lCalRequired$ \
+                + ReadResource$( "tunemac", 18077 ), 4, \
+                  ReadResource$( "tunemac", 18013 )) 
+    If ( lRet = 0 ) then        ! User answered no
+        MSTN_CalX lCalRequired
+    Else                        ! User answered yes
+        MSTN_CalValid$ = "validated";
+    Endif
+    Return
+EndMacro        ! MSTN_CheckCal
+!============================ END MACRO FILE ==================================

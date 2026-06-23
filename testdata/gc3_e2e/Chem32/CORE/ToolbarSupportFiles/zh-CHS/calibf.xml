@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="CalibF" PosStyle="TOP" DockRow="1" DockCol="0" Caption="校正" PanelName="Chem">
+		<PushButton Name="NewTable" Help="从当前色谱图中新建校正表" Command="ExecVeneer_MenuInstrFnParm ExecHook_GetInstrument$(),&quot;NewCalTab&quot;,NewTable,0" NewGroup="1" ImageName="Calib_NewTable20" ImageNameDisabled="Calib_NewTable20_d"/>
+		<PushButton Name="ReCalib" Help="重新校正当前色谱图" Command="CAL_TLBFunction ReCalib,1" ImageName="Calib_Recalibrate20" ImageNameDisabled="Calib_Recalibrate20_d"/>
+		<PushButton Name="AddLevel" Help="从当前色谱图中添加新级别" Command="CAL_TLBFunction AddLevel,1" ImageName="Calib_Add_NewLevel20" ImageNameDisabled="Calib_Add_NewLevel20_d"/>
+		<PushButton Name="AddPeak" Help="从当前色谱图中添加新峰" Command="CAL_TLBFunction AddPeak,1" ImageName="Calib_Add_NewPeak20" ImageNameDisabled="Calib_Add_NewPeak20_d"/>
+		<PushButton Name="SigDetails" Help="编辑当前方法信号" Command="CAL_TLBFunction SigDetails,1" ImageName="Calib_SignalDetails20" ImageNameDisabled="Calib_SignalDetails20_d"/>
+		<!-- ==================================================================== -->
+		<Static Name="ReportText" Text="报告: " Help="" NewGroup="1" Width="100" Enable="1" Border="NoBorder"/>
+		<StatusList Name="ActualRpt" Text="短格式" Font="Microsoft Sans Serif, 8, Regular" BkColor="White" Help="当前报告格式" Width="100" Enable="1" Border="NoBorder"/>
+		<PushButton Name="ReportOptions" Help="指定报告计算和打印格式" Command="MenuRptParm" ImageName="Report_Settings20" ImageNameDisabled="Report_settings20_d"/>
+		<PushButton Name="ReportPreview" Help="识别峰，计算和预览结果" Command="MenuQuantify SCREEN" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="ReportBrowser" Help="查看已保存的报告文件" Command="RPTV_ViewReportNewUI InteractiveInjRptGrp" ImageName="Browse_Run_Report20" ImageNameDisabled="Browse_Run_Report20_d"/>
+		<PushButton Name="ReportPrint" Help="识别峰，计算结果和打印报告" Command="MenuQuantify PRINTER" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="XMLExport" Help="识别峰，计算结果并将结果文件上载到远程服务器" Command="XML_ManualExportUpload" ImageName="Upload_Results20" ImageNameDisabled="Upload_Results20_d"/>
+	</toolbar>
+</graphical_object>

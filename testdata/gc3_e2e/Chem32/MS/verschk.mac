@@ -1,0 +1,171 @@
+!*******************************************************************************
+! VersChk.mac - Checks LC/MS Interface Card Version
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+! Macros
+!   ErrVersChk      : Error handler for VersionChk
+!   VersionChk      : Checks SmartCard Version
+
+!*******************************************************************************
+
+
+!*******************************************************************************
+name ErrVersChk
+! This routine defines a global flag to tell versionchk to return
+! after this without calling stop to the calling macro; effectively
+! it resumes to the caller of versionchk
+!
+!*******************************************************************************
+local _button
+Local  ID__ERROR__CANNOT_89
+ID__ERROR__CANNOT_89 =  17089  
+      _button=Alert(ReadResource$("MsMacFiles",ID__ERROR__CANNOT_89),2)
+      SkipVerChk = 1
+      return
+endmacro
+
+
+!*******************************************************************************
+name  VersionChk
+! This routine queries the SmartCard and truncates the returned string to return
+! the SmartCard firmware revision and instrument number.
+!
+! Global variables:
+! _offline
+! _button
+
+!*******************************************************************************
+  local i,l
+  local bVerCheck
+  local ExpectedSC2ID, ExpectedSC3ID, ExpectedSC3ID$
+  local SmartCardId$, SCReply$
+  local SmartCardId, HPCE$, SCSubID
+    
+  Local  ID__THE_INSTRUMENT_90
+  Local  ID__THE_MS_INTERFA_92
+  Local  ID__THE_MS_INTERFA_94
+  local ID__IS_NOT_SUPPO_91
+  local ID__MSD_FIRMWARE_V_93
+  local ID__PLEASE__CLOSE_96
+  local ID___OR_LATER_97
+  ID__THE_INSTRUMENT_90 =  17090  
+  ID__THE_MS_INTERFA_92 =  17092  
+  ID__THE_MS_INTERFA_94 =  17094  
+  ID__IS_NOT_SUPPO_91 = 17091
+  ID__MSD_FIRMWARE_V_93 = 17093
+  ID__PLEASE__CLOSE_96 = 17096
+  ID___OR_LATER_97 = 17097
+
+  if _offline = 1       !* don't execute if offline
+    return
+  endif
+
+  ExpectedSC2ID  = 20721         !* SmartCard2 version number
+  ExpectedSC3ID  = 30224         !* SmartCard3 version number, A=65, B=66 ..., not case sensitive
+                                 !* 30209.65 = 3.02.09A
+  !ExpectedSC3ID$ = "3.02.24"    !* SmartCard3 version string for B.04.01
+  !ExpectedSC3ID$ = "3.02.27"    !* SmartCard3 version string for B.04.02
+  !ExpectedSC3ID$ = "3.02.30"    !* SmartCard3 version string for B.04.02 + Orion patch
+  ExpectedSC3ID$ = "3.02.38"     !* SmartCard3 version string for B.04.02-SP2 & B.04.03  
+
+  !* Query the SmartCard
+  on error errVersChk
+
+  msscquery "*idn?", SCReply$
+  
+  !* Only continuer if the CkipVerChk flag is not set.
+  if Check(variable,SkipVerChk)=0 then
+   
+    ! CPL 12/7/09 Added G61xxA and G61xxB series to the Supported Instrument List
+    ! Removed G1946x series instruments from the Supported Instrument List    
+    ! Check to see if the instrument is a G1946x, G1956x
+
+    if (InStr(SCReply$,"G1956A") = 0) AND (InStr(SCReply$,"G1956B") = 0) AND \
+       (InStr(SCReply$,"G1946C") = 0) AND (InStr(SCReply$,"G6110A") = 0) AND \
+       (InStr(SCReply$,"G6120A") = 0) AND (InStr(SCReply$,"G6130A") = 0) AND \
+       (InStr(SCReply$,"G6140A") = 0) AND (InStr(SCReply$,"G6120B") = 0) AND \
+       (InStr(SCReply$,"G6130B") = 0) AND (InStr(SCReply$,"G6150B") = 0) AND \
+       (InStr(SCReply$,"G1946D") = 0) then
+       _button = alert (ReadResource$("MsMacFiles",ID__THE_INSTRUMENT_90)+SCReply$+ ReadResource$("MsMacFiles",ID__IS_NOT_SUPPO_91),2)
+      return
+    endif
+              
+    !* Check "MSModelOptions"
+    if Check (variable, MSModelOptions) = 0 then
+      MSModelOptions = 0
+    endif
+    
+    i = INSTR(SCReply$,".")             ! find the dot
+    l = LEN(SCReply$)
+    SmartCardId$ = SCReply$[i-1:l] 
+    ! Create a number from String
+    SmartCardId = val(SCReply$[i-1]) * 10000 + val(SCReply$[i+1:i+2]) * 100 + val(SCReply$[i+4:l])
+    
+    if (LEN(SmartCardId$) > 7) then
+      ! Get sub id of 3rd version number, it is last char
+      l = LEN(SmartCardId$)
+      SCSubID = ASC(ConvertText$(upper,SmartCardId$[l]))
+    
+      if (SCSubID > 57) OR (SCSubID < 48) then
+        SmartCardId = SmartCardId + SCSubID / 100.0
+      endif
+    endif
+          
+    if MSModelOptions  = 0 then
+      ! Smartcard2
+      if SmartCardId < ExpectedSC2ID then
+        _button = alert (ReadResource$("MsMacFiles",ID__THE_MS_INTERFA_92), 4, ReadResource$("MsMacFiles",ID__MSD_FIRMWARE_V_93))
+        if _button = 1
+          msscinit 1   ! force download
+        endif
+      endif
+    else
+      ! Smartcard 3
+      if SmartCardId < ExpectedSC3ID then
+        print alert (ReadResource$("MsMacFiles",ID__THE_MS_INTERFA_94) + SmartCardId$ + "." + chr$(10) + ReadResource$("MsMacFiles",ID__PLEASE__CLOSE_96) + ExpectedSC3ID$ + ReadResource$("MsMacFiles",ID___OR_LATER_97), 3, ReadResource$("MsMacFiles",ID__MSD_FIRMWARE_V_93))
+      else
+        msscquery ":CONFIG:INFO:OPTS:DESC? 5",HPCE$
+        if (_HPCE <> 0) AND (HPCE$ <> "CE") then
+          ! For CE, lower the drying gas temperature
+          sctimeout=10
+          msscwrite ":CONFIG:OPTS:DESC 5,CE;:ZONE:NAME DGAS;PSET 150"
+          remove sctimeout
+        else 
+          if (_HPCE = 0) AND (HPCE$ <> "NORM") then
+            ! For LC, raise the drying gas temperature
+            sctimeout=10
+            msscwrite ":CONFIG:OPTS:DESC 5,NORM;:ZONE:NAME DGAS;PSET 300"
+            remove sctimeout
+          endif !(_HPCE = 0) AND (HPCE$ <> "NORM")
+        endif ! (_HPCE <> 0) AND (HPCE$ <> "CE")
+      endif ! SmartCardId < ExpectedSC3ID
+    endif ! MSModelOptions  = 0
+  else
+    Remove SkipVerChk
+  endif  !Check(variable,SkipVerChk)=0
+  return
+endmacro
+

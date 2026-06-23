@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="CeCalibF" PosStyle="TOP" DockRow="1" DockCol="0" Caption="Calibration" PanelName="Chem">
+		<PushButton Name="NewTable" Help="New Calibration Table from current Electropherogram" Command='ExecVeneer_MenuInstrFnParm ExecHook_GetInstrument$(),"NewCalTab",NewTable,0' NewGroup="1" ImageName="Calib_NewTable20" ImageNameDisabled="Calib_NewTable20_d"/>
+		<PushButton Name="ReCalib" Help="Recalibrate current Electropherogram" Command="MTC_MenuReCalib" ImageName="Calib_Recalibrate20" ImageNameDisabled="Calib_Recalibrate20_d"/>
+		<PushButton Name="CECALparam" Help="Edit current method signals" Command="MTC_CalibParam" ImageName="Calib_SignalDetails20" ImageNameDisabled="Calib_SignalDetails20"/>
+		<!-- ==================================================================== -->
+		<Static Name="ReportText" Text="Report: " Help="" NewGroup="1" Width="100" Enable="1" />
+		<StatusList Name="ActualRpt" Text="Short" Font="Microsoft Sans Serif, 8, Regular" BkColor="White" Help="Current Report Style" Width="100" Enable="1" Border="NoBorder"/>
+		<PushButton Name="ReportOptions" Help="Specify Report Calculation and Print Style" Command="CAL_TLBFunction RptParm,1" ImageName="Report_Settings20" ImageNameDisabled="Report_settings20_d"/>
+		<PushButton Name="ReportPreview" Help="Identify Peaks, calculate and preview Results" Command="MenuQuantify SCREEN" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="ReportBrowser" Help="View saved Report File(s)" Command="RPTV_ViewReportNewUI InteractiveInjRptGrp" ImageName="Browse_Run_Report20" ImageNameDisabled="Browse_Run_Report20_d"/>
+		<PushButton Name="ReportPrint" Help="Identify Peaks, calculate Results and print Report" Command="MenuQuantify PRINTER" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+	</toolbar>
+</graphical_object>

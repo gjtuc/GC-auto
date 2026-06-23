@@ -1,0 +1,1027 @@
+!******************************************************************************
+!*
+!* FILE:  dgnoise.mac 
+!*
+!* DESCRIPTION:
+!* Macro to test for MSD electronic and analyzer noise
+!*
+!* MACROS:
+!*       dgMSNoiseTest$       : main macro to start noise test
+!*       dgMSCalcNoise        : controls sequence of sub tests
+!*       dgMsInitNoise        : generate tables and user defined object
+!*       dgMsNoiseGetScan     : runs scan of a sub test and evaluates the result
+!*       dgMsClearSolventPath : clear solvent path (not implemented)
+!*       dgMsCleanUpNoise     : reset MSD and delete register
+!*       dgMSNoiseSpike       : Spike detection routine
+!*
+!******************************************************************************
+!* 
+ dgNoiseVer$ = "$Header: /cag/triath1b/partsmac/diag/dgnoise.mac 1.35 2003-06-23 15:39:11-07 julie_zhao Exp $"
+ verIx = instr(dgNoiseVer$, ".mac") + 5
+ dgNoiseVer$ =  dgNoiseVer$[verIx:VerIx + instr(dgNoiseVer$[VerIx:len(dgNoiseVer$)]," ") - 1] 
+ remove verIx
+!* 
+!******************************************************************************
+name dgMSNoiseTest$
+PARAMETER AbundLimit default 1000, AbundThresh default 200, nSpikes default 10
+!
+! 04/21/03 JZ  Setup abort handler in _ABORT$ string
+!******************************************************************************
+local Result$, PrintMac$, resp, SrcMode$
+
+  ! for debugging or report generation only
+  ! if NoiseReg exists, use it's data for simulation
+  if (_offline = 1) and (RegSize(NoiseReg) < 1) then
+    if check(variable, PRTestVer$) <> 0 then
+       resp = alert("System is offline.  To test the Noise Test, " + \
+                 "load a stored noise test in NoiseReg", 4, "Noise Test")
+    endif
+    ! RETURN "Failed: offline"
+    return NlsMsDiag$("FailedOffline")  
+  endif
+
+  if Check( VARIABLE, EnableViewSwitch) = 1 then
+    if EnableViewSwitch = 0 then
+      return " "
+    endif
+  endif
+
+  ! JZ Setup Abort routine
+  if (check(Variable, _abort$) = 0) then
+     _abort$ = ""
+   endif
+  _abort$ = "dgMsCleanUpNoise;"+_abort$
+
+  ! If the tune file is for the wrong spray chamber, change tune file mode
+  ! This should be restored in the cleanup routine
+  if dgMsCheckTuneMode() <> 1 then
+     MSGetMode dgMSNoiseIonMode$
+     SrcMode$ = MSGetIonSrc$()
+     MSMode SrcMode$
+     !if dgMSNoiseIonMode$ = "APCI" then
+     !   MSMode "API-ES"
+     !else
+     !   MSMode "APCI"
+     !endif
+  else
+     dgMSNoiseIonMode$ = ""
+  endif
+  
+  if check(variable, ms_echo) = 1 then  
+     dgMSNoiseEcho = ms_echo
+  else 
+     dgMSNoiseEcho = -1
+  endif
+  ms_echo = 0
+  
+  ! Initialization routine 
+  if dgMsInitNoise(AbundLimit, AbundThresh, nSpikes) = -1 then
+    ! return NlsMsDiag$("Failed")
+    RETURN "Initialization Failed"
+  endif
+
+  ON ERROR print "MSD Test Error: LC Pump couldn't be turned off."
+  Ret$=SendModule$(LPMP, "PUMP 2")
+  ON ERROR
+     
+  ! acquire and evaluate data
+  dgMSCalcNoise
+  
+  ! Test report parameters defined
+  ! For numerical results
+  PrintMac$ = "dgMsPrintTest NoiseReport, NoiseResults, NoiseChart, , " + \
+              "12, 4, ""%-34s"","""","""", ""%-30s"""
+  
+  SetObjHdrText Result_Reg, "PrintProcedure", PrintMac$
+
+  ! Final processing of test register
+  result$ = dgMsGetTestResults$("NoiseChart","NoiseRes", PrintMac$)
+  
+  dgMsCleanUpNoise
+
+  RETURN Result$
+  
+endmacro
+!******************************************************************************
+
+!******************************************************************************
+name dgMsCalcNoise
+
+! Run basic noise tests
+!******************************************************************************
+local testNumber, CritNumber, testName$, printMac$, xMin, xMax
+local printWinSize, i, row
+
+   ON ERROR GOTO errortrap
+
+   ! 1. Initial Scan
+   !---------------
+   testName$ = "Initial Scan" !  Tune file name: "+ _DiagTuneFile$
+   testNumber = 1
+   dgMsNoiseGetScan testNumber, TestName$
+
+   ! No Flow test: analyzer or electronic noise only
+   ! Solvent flow off, samples=4, filter=off
+   ! dgMsClearSolventPath ! commented out to speed things up
+
+   ! 2. Analyzer Noise
+   !------------------
+   testName$ = "High Mass Analyzer Noise"
+   testNumber = testNumber + 1
+   dgMsNoiseGetScan testNumber, TestName$
+  
+   ! if Analyzer Noise fails, scan low mass and turn HED off
+   if InStr(TabText$(RESULT_REG[1], TestResultTab, TestNumber, "Result"), \
+           "FAILED") > 0 then
+           
+      ! 3. Low Mass Analyzer Noise
+      !---------------------------
+      TestName$ = "Low Mass Analyzer Noise"
+      TestNumber = TestNumber + 1
+      ! set to lower mass range
+      dgMsNoiseGetScan testNumber, TestName$
+      ! 4. HED Off Analyzer Noise
+      !--------------------------
+      TestName$ = "High Mass HED Off Analyzer Noise"
+      TestNumber = TestNumber + 1 
+      dgMsNoiseGetScan testNumber, TestName$
+
+      ! 5. Electronic Noise
+      !--------------------
+      ! Electronic noise test (Same as analyzer noise test, but with Gain off)
+      testNumber = testNumber + 1
+      testName$ = "High Mass Electronic Noise"
+      dgMsNoiseGetScan testNumber, TestName$
+
+      ! If Electronic Noise Fails
+      if InStr(TabText$(RESULT_REG[1], TestResultTab, TestNumber, "Result"), \
+              "FAILED") > 0 then
+
+         ! 6. Low Mass Electronic Noise
+         !-----------------------------
+         TestName$ = "Low Mass Electronic Noise"
+         TestNumber = TestNumber+1
+         dgMsNoiseGetScan testNumber, TestName$
+
+         ! 7.HED Off Electronic Noise
+         !---------------------------
+         TestName$ = "High Mass HED Off Electronic Noise"
+         TestNumber = TestNumber + 1 
+         dgMsNoiseGetScan testNumber, TestName$
+      endif
+   endif 
+   
+   ! Append criteria to results table  
+   for row = TestNumber + 1 to TestNumber + 5
+      InsTabRow  Result_Reg, "TestResultTab", row
+      SetTabText Result_Reg, "TestResultTab", row, "Result", ""
+   next row
+   SetTabText Result_Reg, "TestResultTab", TestNumber + 2, "Text", \
+                          "Passing Criteria:"
+   
+   ! Analyzer Noise Abundance Criteria
+   row = TestNumber + 3   
+   SetTabText Result_Reg, "TestResultTab", row, "Text", \
+                          "Analyzer Noise"
+   TestNumber = RowByText(Result_Reg, "TestResultTab",, "Text", "in", \
+                          "Analyzer Noise") 
+   CritNumber = RowByText(Result_Reg, "TestResults",, "ShortName", "in", \
+                          "Max Abund.") 
+   SetTabText Result_Reg, "TestResultTab", row, "Result", \
+                "Max Abund." + TabText$(Result_Reg, "TestResults", CritNumber, \
+                "Condition") + val$(TabVal(Result_Reg, "TestResults", \
+                CritNumber, "C" + val$(TestNumber)))
+  
+   ! Analyzer Noise Spike Criteria
+   row = row + 1 
+   ! TestNumber same as above
+   CritNumber = RowByText(Result_Reg, "TestResults",, "ShortName", "in", \
+                          "# Spikes") 
+   SetTabText Result_Reg, "TestResultTab", row, "Result", \
+                "# Spikes over " + val$(TabVal(Result_Reg, TestResults, \
+                RowByText(Result_Reg, "TestResults",, "ShortName", "in", \
+                "Abund Thresh"), "C" + val$(TestNumber))) + \
+                TabText$(Result_Reg, "TestResults", CritNumber, \
+                "Condition") + val$(TabVal(Result_Reg, "TestResults", \
+                CritNumber, "C" + val$(TestNumber)))
+   
+   ! Electronic Noise Abundance Criteria
+   row = row + 1
+   SetTabText Result_Reg, "TestResultTab", row, "Text", \
+                          "Electronic Noise"
+   TestNumber = RowByText(Result_Reg, "TestResultTab",, "Text", "in", \
+                          "Electronic Noise") 
+   CritNumber = RowByText(Result_Reg, "TestResults",, "ShortName", "in", \
+                          "Max Abund.") 
+   SetTabText Result_Reg, "TestResultTab", row, "Result", \
+                "Max Abund." + TabText$(Result_Reg, "TestResults", CritNumber, \
+                "Condition") + val$(TabVal(Result_Reg, "TestResults", \
+                 CritNumber, "C" + val$(TestNumber)))
+
+   RETURN
+   
+   errortrap:  
+     ON ERROR
+     dgMsPrintError    
+     SetTabText RESULT_REG[1], TestResultTab, TestNumber, Result, "Error"
+     SetObjHdrText RESULT_REG[1], "ErrMsg", _ErrMsg$
+     SetObjHdrText RESULT_REG[1], "ErrMacro", _ErrMacro$
+     Generate Error 55555,  "MSD Test ("+_ErrMacro$+"):"+_ErrMsg$
+
+endmacro                                ! dgMsCalcNoise
+!***************************************************************************
+
+!***************************************************************************
+name dgMsInitNoise
+PARAMETER AbundLimit default 1000, AbundThresh default 200, nSpikes default 10
+!   Macro to initialize RESULT_REG[1].  Each test case will have a different
+!   register to hold the test parameters and the test result.  The initial  
+!   register will use the existing tune values; all tests will vary one or  
+!   more parameters, acquire the data, and declare a pass/fail.             
+!                                                                           
+!   The following tables are defined:                                       
+!       TestResultTab: summary result table                                 
+!       TestParms: list of parameters used for each test                    
+!       TestResults: Numerical test results                                 
+!       DynamicsParm: table of dynamically ramped parameters                
+!   Return:
+!    -1 error during the initialization
+!     0 done successfully
+!
+!   Info: the first object is temporary and will be copied and deleted in
+!         the macro dgMsNoiseGetScan with parameter "1".
+!***************************************************************************!
+local value$, val, dynamic, i, ionMode$, ionPolarity, row
+
+   delreg RESULT_REG
+   delreg DiagTestResult
+
+   ! define a user object with no data block
+   NewObj RESULT_REG[1], 1, 1, 1
+
+   ! suppress drawing for initialization
+   SetObjHdrVal RESULT_REG[1], "NoDraw", -1
+
+   ! Create object header items
+   SetObjHdrText RESULT_REG[1], "Title", "MS Noise Test Register"
+   SetObjHdrText RESULT_REG[1], "TestCondition", "Initial Conditions"
+   SetObjHdrVal  RESULT_REG[1], "TestNumber", 1
+   SetObjHdrText RESULT_REG[1], "TestResult","Not Done"
+   IonPolarity = dgMsCheckTunePol()       ! Will switch to Standard scan mode if in Fast mode
+   if IonPolarity = 0 then
+      SetObjHdrText RESULT_REG[1], "IonPol", "Positive Ion"
+   else
+      SetObjHdrText RESULT_REG[1], "IonPol", "Negative Ion"
+   endif
+
+   dgMsTestInfo "NoiseChart", \
+                "dgMsDisplayTest NoiseChart, NoiseRes, NoiseReport", \
+                 dgNoiseVer$,  "RESULT_REG[1]"
+
+   !***************************************
+   ! Test Result Summary Table
+   !***************************************
+   ! TestNumber: 1..7
+   ! Text: Test Name, will be displayed with the test result table
+   ! Result: evaluated result (failed, passed, error, not evaluated)
+
+   ! Create test table; index of tests run, used to call up the correct
+   ! test object in the register.  This should be maintained in RESULT_REG[1]
+   NewTab RESULT_REG[1], TestResultTab
+   NewColVal  RESULT_REG[1], TestResultTab, "TestNumber"
+   NewColText RESULT_REG[1], TestResultTab, "Text", ""
+   NewColText RESULT_REG[1], TestResultTab, "Result", "Error"
+   InsTabRow  RESULT_REG[1], TestResultTab, 
+   SetTabText RESULT_REG[1], TestResultTab, 1, "Text", "Initialize Noise Test"
+   
+   !ON ERROR GoTo errortrap
+   !MsOn
+   
+   ! Hide the MS Tune display window
+   MSGDisplay 0
+
+   ! Initialize data logging
+   MSBufsize , 65064
+   MSLogData oldLogDataState, 1  ! msTuneData register is used
+     
+   !***************************************
+   ! Dynamics Parameter Table
+   !***************************************
+   ! Parameter: name of the dynamic parameter
+   ! ParamString: dynamic settings
+   dgMsGetDynamicsParmTab 1
+
+   !***************************************
+   ! MS Parameter Table
+   !***************************************
+   dgMsGetTestParmsTab 1
+   SetObjHdrText RESULT_REG[1], "Scan_or_Capture", "Scan"
+
+   ! T1..T7: readback of the parameter in each test
+   ! Define MS Parameters for each Test in row T#
+   ! the test parameters are based on the parameters of the previous test
+
+   ! 1. Initial Scan
+   CopyTabCol RESULT_REG[1], TestParms, "Original", RESULT_REG[1], \
+                             TestParms, "T1"
+
+   ! 2.  High Mass Analyzer Noise
+   ! set Vcap to 0 to suppress ionization
+   CopyTabCol RESULT_REG[1], TestParms, "T1", RESULT_REG[1], TestParms, "T2"   
+   row = RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "VCap")
+   SetTabVal RESULT_REG[1], TestParms, row, "T2", 0
+   MSGetMode ionMode$  
+  
+   
+   ! set corona to 0 if in APCI mode to suppress ionization
+   if ionMode$ = "APCI" then
+      row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "Corona")
+      SetTabVal RESULT_REG[1], TestParms, row, "T2", 0
+   endif
+ 
+   ! explicitly turn on the EM in case it's at a non-standard value
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "Gain")   
+   SetTabVal RESULT_REG[1], TestParms, row, "T2", 1
+
+   ! explicitly turn on the HED in case it's at a non-standard value
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "HED")   
+   SetTabVal RESULT_REG[1], TestParms, row, "T2", 10000
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "LowScanMass")   
+   SetTabVal RESULT_REG[1], TestParms, row, "T2", MsInstrParm("MaxMass")-1000
+   
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "HighScanMass")
+   SetTabVal RESULT_REG[1], TestParms, row, "T2",MsInstrParm("MaxMass")
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "MsSamples")
+   SetTabVal RESULT_REG[1], TestParms, row, "T2", 4
+   
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "MSAverages")
+   SetTabVal RESULT_REG[1], TestParms, row, "T2", 1
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "ScanType")
+   SetTabVal RESULT_REG[1], TestParms, row, "T2", 2
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "MSStepSize")
+   SetTabVal RESULT_REG[1], TestParms, row, "T2", 0.1
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "MSFilterMass")
+   SetTabVal RESULT_REG[1], TestParms, row, "T2", 0.2
+
+   ! 3. Low Mass Analyzer Noise
+   CopyTabCol RESULT_REG[1], TestParms, "T2", RESULT_REG[1], TestParms, "T3"
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "LowScanMass")
+   SetTabVal RESULT_REG[1], TestParms, row, "T3",MsInstrParm("MinMass")
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "HighScanMass")
+   SetTabVal RESULT_REG[1], TestParms, row, "T3",MsInstrParm("MinMass")+1000
+
+   ! 4. High Mass HED Off Analyzer Noise 
+   CopyTabCol RESULT_REG[1], TestParms, "T2", RESULT_REG[1], TestParms, "T4"
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "HED")
+   SetTabVal RESULT_REG[1], TestParms, row, "T4", 0
+
+   ! 5.	High Mass Electronic Noise - same as 2-4, but with Gain = 0
+   CopyTabCol RESULT_REG[1], TestParms, "T2", RESULT_REG[1], TestParms, "T5"
+   
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "Gain")
+   SetTabVal RESULT_REG[1], TestParms, row, "T5", 0
+
+
+   ! 6. Low Mass Electronic Noise
+   CopyTabCol RESULT_REG[1], TestParms, "T5", RESULT_REG[1], TestParms, "T6"
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "LowScanMass")
+   SetTabVal RESULT_REG[1], TestParms, row, "T6",MsInstrParm("MinMass")
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "HighScanMass")
+   SetTabVal RESULT_REG[1], TestParms, row, "T6", MsInstrParm("MinMass")+1000
+   			      
+   ! 7.	HED Off Analyzer Noise
+   CopyTabCol RESULT_REG[1], TestParms, "T5", RESULT_REG[1], TestParms, "T7"
+
+   row=RowByText (RESULT_REG[1], TestParms,,"Item", "i=", "HED")
+   SetTabVal RESULT_REG[1], TestParms, row, "T7", 0
+  
+   !***************************************
+   ! detailed Test Result Table
+   !***************************************
+   ! Name:  name of the test parameter
+   ! ShortName: Truncated name for results table
+   ! Units: applied units of the parameter
+   ! Condition: test condition for the evaluation
+   ! T1..T7: Test value
+   ! C1..C7: Condition limit of the test
+   ! R1..R7: evaluated result of the specific test value
+
+   ! Define the detailed test results table
+   NewTab     RESULT_REG[1], TestResults
+   NewColText RESULT_REG[1], TestResults, "ShortName"
+   NewColText RESULT_REG[1], TestResults, "Name", ""
+   NewColText RESULT_REG[1], TestResults, "Units",""
+   NewColText RESULT_REG[1], TestResults, "Condition", " < "
+   FOR i=1 To 7
+     ! condition of the test number i
+     NewColVal  RESULT_REG[1], TestResults, "C"+VAL$(i), -1
+     ! value out of test number i
+     NewColVal  RESULT_REG[1], TestResults, "T"+VAL$(i),-1
+     ! result of test number i
+     NewColText RESULT_REG[1], TestResults, "R"+VAL$(i), "not done"
+   NEXT i
+
+   InsTabRow  RESULT_REG[1], TestResults, 1:12
+   row =  1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Max Abund."
+   SetTabText RESULT_REG[1], TestResults, row, "Name", \
+                                               "Scan Base Peak Abundance"
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Max Abund."
+   SetTabText RESULT_REG[1], TestResults, row, "Units","Counts"
+   
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Max Abund. m/z"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", \
+                                             "Scan Base Peak Mass Assignment"
+   SetTabText RESULT_REG[1], TestResults, row, "Units","amu"
+
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Abund Thresh"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", \
+                                             "Abundance Threshold"
+   SetTabText RESULT_REG[1], TestResults, row, "Units","Counts"
+
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Cap. Mean"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", "Capture Mean Abundance"
+   SetTabText RESULT_REG[1], TestResults, row, "Units","Counts"
+   
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Cap. Min"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", "Capture Min Abundance"
+   SetTabText RESULT_REG[1], TestResults, row, "Units","Counts"
+   
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Cap. Max"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", "Capture Max Abundance"
+   SetTabText RESULT_REG[1], TestResults, row, "Units","Counts"
+   
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Cap. StdDev"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", \
+                            "Capture Standard Deviation"
+   SetTabText RESULT_REG[1], TestResults, row, "Units","Counts"
+
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Cap. RSD"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", \
+                            "Capture Relative Standard Deviation"
+   SetTabText RESULT_REG[1], TestResults, row, "Units","%" 
+   
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "# Spikes"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", "Number of Spikes"
+
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Mean Spike Ht"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", "Mean Spike Height"
+   SetTabText RESULT_REG[1], TestResults, row, "Units","Counts"
+   
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Lo Spike Thresh"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", "Low Spike Threshold"
+   SetTabText RESULT_REG[1], TestResults, row, "Units","Counts"
+
+   row = row + 1
+   SetTabText RESULT_REG[1], TestResults, row, "ShortName", "Hi Spike Thresh"
+   SetTabText RESULT_REG[1], TestResults, row, "Name", "High Spike Threshold"
+   SetTabText RESULT_REG[1], TestResults, row, "Units","Counts"
+
+   ! 2., 3., 4.  Analyzer Tests
+   ! set abundance criterion: scan abundance < AbundLimit
+   row=  RowByText (RESULT_REG[1], TestResults, , "Name", "in", \
+                                                  "Peak Abundance")
+   SetTabVal RESULT_REG[1], TestResults, row, "c2", AbundLimit
+   SetTabVal RESULT_REG[1], TestResults, row, "c3", AbundLimit
+   SetTabVal RESULT_REG[1], TestResults, row, "c4", AbundLimit
+   
+   ! set abundance threshold: Spike algorithm will use this to threshold
+   ! spikes
+   row = RowByText (RESULT_REG[1], TestResults, , "Name", "in", \
+                                                  "Abundance Threshold")
+   SetTabVal RESULT_REG[1], TestResults, row, "c2", AbundThresh
+   SetTabVal RESULT_REG[1], TestResults, row, "c3", AbundThresh
+   SetTabVal RESULT_REG[1], TestResults, row, "c4", AbundThresh
+
+   ! set number of spikes (between abundThresh and AbundLimit)
+   row=  RowByText (RESULT_REG[1], TestResults, , "Name", "in", \
+                                                  "Number of Spikes")
+   SetTabVal RESULT_REG[1], TestResults, row, "c2", NSpikes
+   SetTabVal RESULT_REG[1], TestResults, row, "c3", NSpikes
+   SetTabVal RESULT_REG[1], TestResults, row, "c4", NSpikes
+
+   ! 5., 6., 7. Electronic Noise Tests (criteria hard-coded here)
+   row=  RowByText (RESULT_REG[1], TestResults, , "Name", "in", \
+                                                  "Peak Abundance")
+   SetTabVal RESULT_REG[1], TestResults, row, "c5", 50
+   SetTabVal RESULT_REG[1], TestResults, row, "c6", 50
+   SetTabVal RESULT_REG[1], TestResults, row, "c7", 50
+
+   ! delete test result table row for initialization
+   DelTabRow  RESULT_REG[1], TestResultTab, -1
+   DelObjHdr  RESULT_REG[1], "NoDraw"
+   
+   ! save CDS state and turn it off
+   MsCalValve val, 0
+   SetObjHdrVal RESULT_REG[1], "MsCalValve", val
+
+   RETURN 0
+
+   errortrap:  
+     ON ERROR
+     dgMsPrintError    
+     if RegSize(RESULT_REG) > 0 then
+        SetTabText RESULT_REG[1], TestResultTab, 1, Result, "Error"
+        SetObjHdrVal  RESULT_REG[1], "NoDraw", 1
+        SetObjHdrText RESULT_REG[1], "ErrMsg", _ErrMsg$
+        SetObjHdrText RESULT_REG[1], "ErrMacro", _ErrMacro$
+     endif
+     Generate Error 55555,  "MSD Test ("+_ErrMacro$+"):"+_ErrMsg$
+     return -1
+   
+endmacro  ! dgMSInitNoise
+!***************************************************************************!
+
+!***************************************************************************!
+name dgMsNoiseGetScan   
+PARAMETER TestId
+PARAMETER TestName$
+! This aquires a scan using the parameters in the TestParms table and
+! evaluates the result against the specs table
+!
+!***************************************************************************!
+local i, result, Row, CapCur$, TestCol$, CritCol$, ResCol$, CritNumber
+local result$, result_nls$, LowScanMass, HighScanMass, Samples
+local xMin, xMax, LoThresh, HiThresh, annotIndex, nSpikes, AbundThresh
+local nSpikes$
+   InsTabRow  RESULT_REG[1], TestResultTab, 
+   SetTabText RESULT_REG[1], TestResultTab, TestId, "Text", TestName$
+   SetTabVal  RESULT_REG[1], TestResultTab, TestId, "TestNumber", TestId
+
+   print ">>>> Getting scan #", TestId, ": ", TestName$
+   TestCol$ = "T" + Val$(TestId)
+   CritCol$ = "C" + val$(TestId)
+   ResCol$  = "R" + val$(TestId)
+   dgMsSetTestParms 1, TestCol$
+
+   if _offline = 0 then 
+      ! Read and record capillary current
+      CapCur$= dgMsQuery$("sens? capilcur")
+      MSOff
+   else
+      CapCur$ = "-1"
+   endif  
+   row= RowByText (RESULT_REG[1], TestParms, , "Item", "i=", "CapCur")
+   SetTabVal RESULT_REG[1], TestParms, row, TestCol$, Val(CapCur$)
+
+   ! scan with zero threshold, don't clear display
+   row= RowByText (RESULT_REG[1], TestParms, , "Item", "i=", "LowScanMass")
+   LowScanMass= TabVal( RESULT_REG[1], TestParms, row, TestCol$ )
+   row= RowByText (RESULT_REG[1], TestParms, , "Item", "i=", "HighScanMass")
+   HighScanMass= TabVal( RESULT_REG[1], TestParms, row, TestCol$ )
+   row= RowByText (RESULT_REG[1], TestParms, , "Item", "i=", "MsSamples")
+   Samples= TabVal( RESULT_REG[1], TestParms, row, TestCol$ )
+   
+   ! Get the scan 
+   if _offline = 0 then
+      MSScan LowScanMass, HighScanMass, Samples, 0, 0 
+   else    ! offline, looks for noisereg as a source of data
+      DelObj  MSTuneData[1]
+      if regSize(NoiseReg) < i then
+         CopyObj NoiseReg(regSize(NoiseReg)), MSTuneData[1]
+      else
+         CopyObj NoiseReg[TestId], MSTuneData[1]
+      endif
+      print "NoiseReg[" + val$(TestId) + "] copied to MSTuneData[1]"
+   endif
+   
+   
+   ! Store results in the TestResult table
+   GetDataMinMax MSTuneData[1], 1
+
+   ! Max abundance   
+   row = RowByText (RESULT_REG[1], TestResults, , "Name", "in",\
+                   "Peak Abundance")
+   SetTabVal RESULT_REG[1], TestResults, row, TestCol$, OBJ_MAX
+   ! m/z of max abundance (no criterion for this)
+   row = RowByText (RESULT_REG[1], TestResults, , "Name", "in", \
+                   "Peak Mass Assignment")
+   SetTabVal RESULT_REG[1], TestResults, row, TestCol$, OBJ_X_MAX
+
+   ! Count spikes if Abundance Threshold > -1 and the Max Abundance passed
+   if OBJ_MAX < TabVal(Result_Reg[1], TestResults, RowByText(Result_Reg[1], \
+                       TestResults, , "Name", "in", "Peak Abundance"), \
+                       CritCol$) then 
+      AbundThresh =  TabVal(Result_Reg[1], TestResults, \
+                RowByText(Result_Reg[1], TestResults, , "Name", "in", \
+               "Abundance Threshold"), CritCol$)
+      if AbundThresh <> -1 then
+         nSpikes = dgMSNoiseSpike("MSTuneData", 1,,, AbundThresh)
+         ! number of spikes above AbundThresh
+         nSpikes = ObjHdrVal(SpikeReg[1], "NumPosSpikes")
+         row = RowByText (RESULT_REG[1], TestResults, , "Name", "in", \
+                         "Number of Spikes")
+         SetTabVal RESULT_REG[1], TestResults, row, TestCol$, nSpikes
+      endif
+   endif
+ 
+   ! Evaluate pass/fail criteria
+   ! step through the dgNoiseSpecs table; if any criteria fail, set test
+   ! result to fail. 
+   !print ">>>> dgMsNoiseGetScan with TestId=", TestId
+
+   for i = 1 to TabHdrVal(RESULT_REG, TestResults, NumberOfRows)  
+      ! if value = -1 then the criterion is not applied         
+      if ( TabVal(RESULT_REG[1], TestResults, i, CritCol$ ) <> -1) then
+
+         test$=val$(TabVal(RESULT_REG[1], TestResults, i, TestCol$))+\
+               TabText$(   RESULT_REG[1], TestResults, i, "Condition")+\
+               val$(TabVal(RESULT_REG[1], TestResults, i, CritCol$))  
+         evaluate "if "+test$+" then; result$ = ""PASSED"";else; " + \ 
+                  "result$ = ""FAILED"";endif;" 
+         SetTabText RESULT_REG[1], "TestResults", i, ResCol$, result$
+      endif
+   next i
+
+   ! get object to save data block
+   if RegSize(RESULT_REG) < TestId then
+      NewObj  RESULT_REG[TestId], 1, 1, DataCols(MSTuneData[1])
+   else
+      NewObj  RESULT_REG[2], 1, 1, DataCols(MSTuneData[1])
+      CopyTab RESULT_REG[1], TestResultTab, RESULT_REG[2], TestResultTab
+      CopyTab RESULT_REG[1], TestResults,   RESULT_REG[2], TestResults
+      CopyTab RESULT_REG[1], TestParms,     RESULT_REG[2], TestParms
+      CopyTab RESULT_REG[1], DynamicsParm,  RESULT_REG[2], DynamicsParm
+      SetObjHdrText RESULT_REG[2], "IonMode", \
+                    ObjHdrText$(RESULT_REG[1], "IonMode")
+      SetObjHdrText RESULT_REG[2], "IonPol", \
+                    ObjHdrText$(RESULT_REG[1], "IonPol")
+      SetObjHdrText RESULT_REG[2], "Scan_or_Capture", \
+                    ObjHdrText$(RESULT_REG[1],"Scan_or_Capture")
+      SetObjHdrVal  RESULT_REG[2], "OldQuadFreq", \
+                    ObjHdrVal(RESULT_REG[1], "OldQuadFreq")
+
+      DelObj RESULT_REG[1]
+      dgMsTestInfo "NoiseChart", \
+                   "dgMsDisplayTest NoiseChart, NoiseRes, NoiseReport", \
+                    dgNoiseVer$,  "RESULT_REG[1]"
+   endif
+
+   ! Post the test results.  If any criterion is failed, the test fails
+   ! Otherwise, if any criterion is passed, it a pass; if no pass or fail
+   ! is found, then it's done or not evaluated
+   row = RowByText(RESULT_REG[1], "TestResults", , \
+                  "R"+VAL$(TestId), "i=", "FAILED")
+   ! Give data for failures
+   if row > 0 then
+      ResultStr$ = "FAILED: " + TabText$(Result_Reg[1], "TestResults", row, \
+                   "ShortName") + " = " + val$(TabVal(Result_Reg[1], \
+                   "TestResults", row, TestCol$))
+      result$ = "Failed"
+      repeat
+         row = RowByText(RESULT_REG[1], "TestResults", row + 1, \
+                         "R"+VAL$(TestId), "i=", "FAILED")
+         if row > 0 then
+            ResultStr$ = ResultStr$ + "; " + TabText$(Result_Reg[1], \
+                        "TestResults", row, "ShortName") + " = " + \
+                         val$(TabVal(Result_Reg[1], "TestResults", row, \
+                         TestCol$))
+         endif
+      until (row < 1)
+      
+      SetTabText RESULT_REG[1], "TestResultTab", TestId, "Result", \
+                    ResultStr$
+      SetObjHdrText Result_Reg[TestId], "Result", "FAILED"
+   else 
+      if RowByText(RESULT_REG[1], "TestResults", , \
+                  "R"+VAL$(TestId), "i=", "PASSED") >0 then
+         SetTabText RESULT_REG[1], "TestResultTab", TestId, "Result", "PASSED"
+         SetObjHdrText Result_Reg[TestId], "Result", "PASSED"
+         result$ = "Passed"
+      else
+         if TestId=1 then
+            ! initial scan (test 1) is not part of the test evaluation.
+            SetTabText RESULT_REG[1], "TestResultTab", TestId, "Result", \
+                                      "done"
+            SetObjHdrText Result_Reg[TestId], "Result", "done"
+            result$ = "done"
+         else
+            SetTabText RESULT_REG[1], "TestResultTab", TestId, "Result", \
+                                      "not evaluated"
+            SetObjHdrText Result_Reg[TestId], "Result", "not evaluated"
+            result$ = "not evaluated"
+         endif
+      endif
+   endif
+
+   SetObjHdrText RESULT_REG[TestId], "Title", TestName$
+
+   ! copy scan data block to result register
+   CopyDataRow MSTuneData[1], 0,, RESULT_REG[TestId], 0
+   CopyDataRow MSTuneData[1], 1,, RESULT_REG[TestId], 1
+   
+   ! Annotate
+   result_nls$=NlsMsDiag$(result$)
+   CritNumber = RowByText(Result_Reg, "TestResults",, "ShortName", "in", \
+                          "# Spikes")
+   if NSpikes <> 0 then
+      NSpikes$ = "; # Spikes over " + val$(TabVal(Result_Reg, TestResults, \
+                  RowByText(Result_Reg, "TestResults",, "ShortName", "in", \
+                  "Abund Thresh"), CritCol$)) + " = " + val$(nSpikes)
+   else
+      NSpikes$ = ""
+   endif
+
+   GetDataMinMax Result_Reg[TestId], 1    
+   i = NewTextAnn(RESULT_REG[TestId], testName$ + ": " + result_nls$ + \
+                  "   Base peak: m/z "+ val$(OBJ_X_MAX) + \
+                  ";  Max Abund: " + val$(OBJ_MAX) + nSpikes$,,,, 1)
+
+   ! Get Abundance Threshhold level
+   row = RowByText(Result_Reg[1], TestResults,, "Name", "in", \
+                  "Abundance Threshold")
+   LoThresh = TabVal(RESULT_REG[1], TestResults, row, "C"+VAL$(TestId))
+   
+   if LoThresh <> -1 then   
+      xMin = MSInstrParm("MinMass")
+      xMax = MSInstrParm("MaxMass")                      
+
+      ! draw horizontal lines at two threshholds
+      annotIndex = NewPolyAnn(Result_Reg[TestId], 2)
+      SetPolyAnnVal Result_Reg[TestId], annotIndex, 1, xMin, LoThresh
+      SetPolyAnnVal Result_Reg[TestId], annotIndex, 2, xMax, LoThresh
+   endif
+
+   ! Get Maximum Abundance level
+   row = RowByText(Result_Reg[1], TestResults,, "Name", "in", \
+                  "Peak Abundance")
+   HiThresh = TabVal(RESULT_REG[1], TestResults, row, "C"+VAL$(TestId))
+   
+   if HiThresh <> -1 then   
+      annotIndex = NewPolyAnn(Result_Reg[TestId], 0)
+      SetPolyAnnVal Result_Reg[TestId], annotIndex, 1, xMin, HiThresh
+      SetPolyAnnVal Result_Reg[TestId], annotIndex, 2, xMax, HiThresh
+   endif
+                     
+   print "    ", result$                     
+   ! print ">>>> dgMsNoiseGetScan done"
+   
+endmacro                    ! dgMsNoiseGetScan
+!***************************************************************************!
+
+!***************************************************************************!
+name dgMsCleanUpNoise
+
+! Clean up variables, restore instrument state and return PASS or FAIL
+! result
+!
+! 04/21/03 JZ  Remove noise test cleanup routine from _ABORT$ string.
+!***************************************************************************!
+! global variable: dgOrigPol
+  local result$ ,i, valOld, val 
+  Local AbortCmd$
+  Local Pos, LenAbort, LenCmd
+
+  ! dummy error trap to see no error during clean up
+  ON ERROR i=1
+
+  
+  ! Restore ionization mode
+  if dgMSNoiseIonMode$ <> "" then
+     MSMode dgMSNoiseIonMode$
+  endif
+  Remove dgMSNoiseIonMode$
+  
+  ! Restore original scan mode, if necessary
+  if (dgOrigPol = 2) or (dgOrigPol = 3) then    ! Test started in Fast scan mode
+    MSParm IonPolarity,,dgOrigPol
+!   MSGetTuneFile _tunepath$ + _DiagTuneFile$, dgOrigPol,,0
+  endif
+
+  ! Restore log state
+  if CHECK( Variable, oldLogDataState) = 1 then
+    MSLogData ,oldLogDataState
+    remove oldLogDataState
+  endif
+    
+  if dgMSNoiseEcho = -1 then
+     Remove ms_echo
+  else
+     ms_echo = dgMSNoiseEcho
+  endif
+  Remove dgMSNoiseEcho 
+  
+  ! clean up windows
+  MSGDisplay 1
+
+  ! Store last noise test
+  if RegSize(RESULT_REG) <> 0 then
+
+    ! Restore CDS state
+    if ObjHdrType(RESULT_REG[1], "MsCalValve") <> 99 then
+      MsCalValve val
+      valOld= TabHdrVal(RESULT_REG[1], "MsCalValve")
+      if (valOld <> val) then
+         MSCalValve ,valOld
+      endif
+    endif
+    
+    ! Restore parameters to initial conditions
+    dgMsSetTestParms 1, "Original"
+
+    SaveObj RESULT_REG, _TunePath$+"dgnoise.reg",NEW
+    ! DelReg (RESULT_REG)  ! ER 9/28/97
+  endif
+
+  ! JZ DELETE CLEAN UP MACRO FROM _ABORT$ STRING
+  AbortCmd$="dgMsCleanUpNoise;"
+  Pos=InStr(_abort$,Abortcmd$)
+  IF Pos>0 THEN
+    LenAbort=Len(_abort$)
+    LenCmd=Len(AbortCmd$)
+    if Pos=1 THEN
+      _abort$= _abort$[Pos+LenCmd:LenAbort]
+    else
+      if (Pos+LenCmd)<LenAbort
+        _abort$= _abort$[1:Pos-1] + _abort$[Pos+LenCmd:LenAbort]
+      else
+        _abort$= _abort$[1:Pos-1]
+      endif
+    endif
+  ENDIF
+
+  ! clean message line
+  print " "
+
+endmacro
+!***************************************************************************!
+
+!******************************************************************************
+name dgMSNoiseSpike
+PARAMETER SpikeReg$, RegIndex
+PARAMETER SpikeThresh default 5, despike default 0, AbundThresh default 0
+!* 
+!* The object that is passed to this macro will contain the following 
+!* header items:
+!*     SpikeThreshold: multiple of standard deviation for thresholding
+!*     Mean:           mean of either processed data (if despiked) or
+!*                     original data (not despiked)
+!*     StdDev:         Standard deviation of either processed data (if despiked)
+!*                     or original data (not despiked)
+!*     Min:            minimum value of original, unprocessed data
+!*     Max:            maximum value of original, unprocessed data
+!*     AbundThresh:    No spikes smaller than this are counted  
+!*                                        (absolute abundance)
+!*     HighThreshold:  upper spike threshold
+!*     LowThreshold:   lower spike threshold
+!*     Despiked:       object was modified (spikes replaced with mean value)
+!*     NumPosSpikes:   number of positive spikes
+!*     MeanPosSpike:   mean value of positive spikes
+!*     NumNegSpikes:   number of negative spikes
+!*     MeanNegSpike:   mean value of negative spikes
+!*     SpikeExecTime:  execution time of spike macro
+!*     SpikeVersion:   version string of spike macro used
+!*
+!* Syntax: Spike RegObj$, regIndex, [spikeThreshold], [despike]
+!*         defaults: spikeThreshold=5; despike=0 [or NO, or FALSE]
+!* Example: nSpikes = despike(MSTuneData, 9, 5, TRUE)
+!*
+!
+!******************************************************************************
+local registerSize, StatObj, Mean, StdDev, LoThresh, HiThresh, Timer, spikeErr
+local NumPosSpikes, NumNegSpikes, MeanPosSpike, MeanNegSpike, preDeSpiked
+local regIndex$
+
+!  On Error spikeErr = -1; goto err
+  Timer = MTime()
+  spikeVer$ = "NoiseSpike 100397"
+  regIndex$ = "[" + val$(regIndex) + "]"
+    
+  ! create a local copy of the object
+  if RegSize(SpikeReg) > 0 then
+     delObj SpikeReg
+  endif
+  evaluate "CopyObj " + SpikeReg$ + regIndex$ + ", SpikeReg"
+
+  ! make a copy for despiking
+  CopyObj SpikeReg, SpikeReg
+  StatObj = 3     ! index of regression object
+  
+  ! find out if this object's been treated before
+  if ObjHdrType(SpikeReg[1], "Despiked") <> 99 then
+     preDespiked = ObjHdrVal(SpikeReg[1], "Despiked")
+  else
+     preDespiked = 0
+  endif
+
+  NumPosSpikes = 0; MeanPosSpike = 0
+  NumNegSpikes = 0; MeanNegSpike = 0
+  
+  GetDataMinMax SpikeReg[2], 1
+  RegressObj SpikeReg[2], 1, ,, SpikeReg, 0
+  Mean =  TabHdrVal(SpikeReg[StatObj], Regress, K1)
+  StdDev = TabHdrVal(SpikeReg[StatObj], Regress, StdDevK1)
+  HiThresh = Mean + (SpikeThresh * StdDev)
+  LoThresh = Mean - (SpikeThresh * StdDev)
+  ! don't allow negative numbers for abundances
+  LoThresh = Max(0, LoThresh)
+  
+  SetObjHdrVal  SpikeReg[1], "SpikeThreshold", SpikeThresh
+  SetObjHdrVal  SpikeReg[1], "Mean",           Mean
+  SetObjHdrVal  SpikeReg[1], "StdDev",         StdDev
+  SetObjHdrVal  SpikeReg[1], "Min",            OBJ_Min
+  SetObjHdrVal  SpikeReg[1], "Max",            OBJ_Max
+  SetObjHdrVal  SpikeReg[1], "AbundThreshold", AbundThresh
+  SetObjHdrVal  SpikeReg[1], "HighThreshold",  HiThresh
+  SetObjHdrVal  SpikeReg[1], "LowThreshold",   LoThresh
+  SetObjHdrVal  SpikeReg[1], "Despiked",       preDespiked + deSpike
+  SetObjHdrVal  SpikeReg[1], "NumPosSpikes",   0
+  SetObjHdrVal  SpikeReg[1], "MeanPosSpike",   0
+  SetObjHdrVal  SpikeReg[1], "NumNegSpikes",   0
+  SetObjHdrVal  SpikeReg[1], "MeanNegSpike",   0
+  SetObjHdrVal  SpikeReg[1], "SpikeExecTime",  0
+  SetObjHdrText SpikeReg[1], "SpikeVersion",   spikeVer$
+    
+  GetDataMinMax SpikeReg[2], 1
+  while (((OBJ_MIN < LoThresh) or (OBJ_MAX > HiThresh)) and \
+                                  (OBJ_MAX >= AbundThresh))
+     if OBJ_Min < LoThresh then
+        NumNegSpikes  = NumNegSpikes + 1
+        MeanNegSpike = MeanNegSpike + (OBJ_Min - Mean)
+        ! replace with mean
+        ! print "Neg spike of ", OBJ_MIN, " detected"
+        SetData SpikeReg[2], 1, DataIndex(SpikeReg[2], OBJ_X_Min), Mean  
+        print obj_x_mIN, Data(spikereg[2], 1, OBJ_X_MIN), mean
+     endif                ! neg spike found
+
+     if OBJ_Max > HiThresh and (OBJ_MAX >= AbundThresh) then ! spikes detected
+        NumPosSpikes  = NumPosSpikes + 1
+        MeanPosSpike = MeanPosSpike + (OBJ_MAX - Mean)
+        ! replace with mean
+        ! print "Pos spike of ", OBJ_MAX, " detected at ", OBJ_X_MAX
+        SetData SpikeReg[2], 1, DataIndex(SpikeReg[2], OBJ_X_MAX), Mean
+     endif                ! pos spike found
+
+     GetDataMinMax SpikeReg[2], 1
+  endwhile   ! end while spikes are detected
+  
+  if numNegSpikes > 0 then
+     meanNegSpike = meanNegSpike / numNegSpikes
+  endif         ! if negative spikes found
+  if numPosSpikes > 0 then
+     meanPosSpike = meanPosSpike / numPosSpikes
+  endif         ! if positive spikes found 
+
+  SetObjHdrVal SpikeReg[1], "NumPosSpikes", numPosSpikes
+  SetObjHdrVal SpikeReg[1], "MeanPosSpike", meanPosSpike
+  SetObjHdrVal SpikeReg[1], "NumNegSpikes", numNegSpikes
+  SetObjHdrVal SpikeReg[1], "MeanNegSpike", meanNegSpike
+  
+  ! if despiking occurred, copy despiked data over original data
+  if Despike > 0 then
+     CopyDataRow SpikeReg[2], 1,, SpikeReg[1], 1  
+     ! record new mean and standard deviation
+     DelObj SpikeReg[3]
+     RegressObj SpikeReg[2], 1, ,, SpikeReg, 0
+     SetObjHdrVal SpikeReg[1], "Mean", \
+                  TabHdrVal(SpikeReg[StatObj], Regress, K1)
+     SetObjHdrVal SpikeReg[1], "StdDev", \
+                  TabHdrVal(SpikeReg[StatObj], Regress, StdDevK1)
+     SetObjHdrVal SpikeReg[1], "Despiked", PreDespiked + 1
+  endif
+  
+  ! Copy object back to source object
+  evaluate "CopyObj SpikeReg[1], " + SpikeReg$ + regIndex$
+  ! Delete source object (net effect: header items added to source
+  ! object; source object despiked if requested
+  evaluate "DelObj " + SpikeReg$ + "[" + val$(regIndex + 1) + "]"
+  Timer = (MTime() - Timer) / 1000
+  evaluate "SetObjHdrVal " + SpikeReg$ + regIndex$ + \
+                  ", SpikeExecTime, " + val$(Timer)
+  SetObjHdrVal SpikeReg[1], "SpikeExecTime", Timer
+  
+  err:
+  if SpikeErr = -1 then
+     print "Error occurred in macro Spike"
+     RETURN -1
+  endif
+  
+  print "dgMSNoiseSpike found ", numPosSpikes + numNegSpikes, " spikes."
+  RETURN numPosSpikes + numNegSpikes
+  
+endmacro         ! dgMSNoiseSpike
+!***************************************************************************!
+
+print "dgNoise.mac v. " + dgNoiseVer$ + " loaded."
+
+!********************* end of file *****************************************!

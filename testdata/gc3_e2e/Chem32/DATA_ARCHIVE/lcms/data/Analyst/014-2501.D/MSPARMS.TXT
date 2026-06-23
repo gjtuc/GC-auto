@@ -1,0 +1,98 @@
+This data was acquired in Method&Run Control.
+The MSD parameters were saved in the msdiag register file.
+This msparms.txt file was built using the values from the msdiag register.
+Some parameters normally reported under MSData acquisition in Tune 
+may be missing from this msparms.txt file.  You may be able to read these 
+values from Data Analysis.  These items are marked with an asterisk (*).
+ 
+ 
+ 
+File                     :   D:\HPCHEM\1\DATA\BM090800\014-2501.D
+Operator                 :   Bryan Miller
+Date acquired            :   Fri Sep 08 01:07:35 2000
+Instrument               :   AppSprite1 LC/MS
+Tune File                :   D:\HPCHEM\1\1946DTUN\atunes.tun
+ 
+ 
+Sample information
+----------------------------------
+Sample name              :   QC 100
+Misc info                :   QC 1000 pg
+ 
+ 
+MS parameters - Positive
+----------------------------------
+Skim1                    :    20 V      
+Skim2                    :    Not Applicable
+Ion Energy               :    3.0 V     
+Lens1                    :    2.2 V     
+Lens2                    :    Not Applicable
+Iris                     :    385 V     
+HED                      :    10000 V   
+Width Gain               :    780       
+Width Offset             :    Variable  
+                              Mass         :   Value    
+                                 --------------------------
+                              118.08       :   -79      
+                              622.03       :   -79      
+                              922.01       :   -69      
+                              1521.97      :   -79      
+                              2121.93      :   -79      
+                                 --------------------------
+Mass Gain                :    65.20     
+Mass Offset              :    Variable  
+                              Mass         :   Value    
+                                 --------------------------
+                              118.08       :   0.652    
+                              622.03       :   0.684    
+                              922.01       :   0.682    
+                              1521.97      :   0.648    
+                              2121.93      :   0.652    
+                                 --------------------------
+Quad DC                  :    0.00 V    
+Octopole Peak            :    300 V     
+Octopole Knee            :    300 Da    
+Lens2DC                  :    28.4 V    
+Mass Filter              :    Gaussian  
+Mass Filter Width        :    0.30 Da   
+Time Filter              :    Gaussian  
+Time Filter Width        :    0.075 minutes
+ 
+ 
+MS parameters - Negative
+----------------------------------
+Skim1                    :    20 V      
+Skim2                    :    Not Applicable
+Ion Energy               :    3.0 V     
+Lens1                    :    -2.4 V    
+Lens2                    :    Not Applicable
+Iris                     :    -310 V    
+HED                      :    10000 V   
+Width Gain               :    777       
+Width Offset             :    Variable  
+                              Mass         :   Value    
+                                 --------------------------
+                              118.08       :   -79      
+                              622.03       :   -79      
+                              922.01       :   -69      
+                              1521.97      :   -79      
+                              2121.93      :   -79      
+                                 --------------------------
+Mass Gain                :    65.25     
+Mass Offset              :    Variable  
+                              Mass         :   Value    
+                                 --------------------------
+                              118.08       :   0.652    
+                              622.03       :   0.684    
+                              922.01       :   0.682    
+                              1521.97      :   0.648    
+                              2121.93      :   0.652    
+                                 --------------------------
+Quad DC                  :    0.00 V    
+Octopole Peak            :    300 V     
+Octopole Knee            :    300 Da    
+Lens2DC                  :    20.0 V    
+Mass Filter              :    Gaussian  
+Mass Filter Width        :    0.30 Da   
+Time Filter              :    Gaussian  
+Time Filter Width        :    0.075 minutes

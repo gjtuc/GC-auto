@@ -1,0 +1,129 @@
+[Header]
+LastMod=4 May, 1994 8:34:18 AM
+SampleName=Lysozyme
+BBSetName=Amino Acids
+FileVersion=1
+DefMatchSet=
+BBInsertMode=0
+
+[Globals]
+BBBondAdj=-H2O
+AutoCalcMode=0
+
+[Font Info]
+FaceName=Arial
+Height=8
+Width=0
+Weight=400
+TypeFlags=0
+Family=32
+
+[Sequence Window]
+Format=0
+IndexLabels=10
+WordSize=5
+AutoCleavage=64
+ManualCleavage=32
+ModifiedBB=1
+NonDefaultBB=16
+InterSeqLinks=8
+IntraSeqLinks=4
+DisabledSeqLinks=2
+
+[Reports]
+Margin=1905, 1270, 1270, 1270, 0
+Orientation=0
+
+[Report Layout]
+0=0,0,0
+1=2,7,15
+2=3,7,15
+3=4,7,15
+4=5,7,15
+5=6,7,15
+6=7,12,15
+7=8,7,15
+8=9,7,15
+9=10,7,15
+10=11,7,15
+11=0,7,15
+
+[Elements]
+C=Carbon,     12.00000000:98.890, 13.003355:1.110
+H=Hydrogen,    1.00782506:99.985,  2.014102:0.015
+N=Nitrogen,   14.00307407:99.640, 15.000109:0.360
+O=Oxygen,     15.99491475:99.760, 16.999131:0.040, 17.999159:0.20
+F=Fluorine,   18.99840460:100.00,
+Na=Sodium,    22.98877000:100.00
+Si=Silicon,   27.97692860:92.230, 28.976496:4.670, 29.973772:3.10
+P=Phosphorus, 30.97376300:100.00
+S=Sulfur,     31.97207280:95.020, 32.971459:0.760, 33.967868:4.20, 35.96708:0.02
+Cl=Chlorine,  34.96885300:75.770, 36.965903:24.23
+K=Potassium,  38.96370800:93.260, 39.963999:0.01, 40.961825:6.73
+Cr=Chromium,  49.94604600:4.35,  51.940510:83.79, 52.940651:9.50, 53.938882:2.36
+Fe=Iron,      55.93493900:91.720, 53.939612:5.9, 56.935396:2.1, 57.933277:0.28
+Br=Bromine,   78.91833200:50.690, 80.916290:49.31
+I=Iodine,    126.90447300:100.00
+
+[BB: Amino Acids]
+A=Ala,Alanine,90,C3H7NO2,H0,Unmodified
+R=Arg,Arginine,47,C6H14N4O2,P+,Unmodified
+N=Asn,Asparagine,44,C4H8N2O3,P0,Unmodified
+D=Asp,Aspartic Acid,55,C4H7NO4,P-,Unmodified
+C=Cys,Cysteine,28,C3H7NO2S,H0,Unmodified
+Q=Gln,Glutamine,39,C5H10N2O3,P0,Unmodified
+E=Glu,Glutamic Acid,62,C5H9NO4,P-,Unmodified
+G=Gly,Glycine,75,C2H5NO2,0,Unmodified
+H=His,Histidine,21,C6H9N3O2,P+,Unmodified
+I=Ile,Isoleucine,46,C6H13NO2,H0,Unmodified
+L=Leu,Leucine,75,C6H13NO2,H0,Unmodified
+K=Lys,Lysine,70,C6H14N2O2,P+,Unmodified
+M=Met,Methionine,17,C5H11NO2S,H0,Unmodified
+F=Phe,Phenylalanine,35,C9H11NO2,AH0,Unmodified
+P=Pro,Proline,46,C5H9NO2,H0,Unmodified
+S=Ser,Serine,71,C3H7NO3,P0,Unmodified
+T=Thr,Threonine,60,C4H9NO3,P0,Unmodified
+W=Trp,Tryptophan,11,C11H12N2O2,PAH0,Unmodified
+Y=Tyr,Tyrosine,35,C9H11NO3,PA0,Unmodified
+V=Val,Valine,69,C5H11NO2,H0,Unmodified
+^=NH2,N-Terminal,0,,+,Unmodified
+$=COOH,C-Terminal,0,,-,Unmodified
+
+[CID: Amino Acids]
+Series 1=a,-COOH,1,,
+Series 2=x,-H+CO,0,,
+Series 3=b,-OH,1,,
+Series 4=y,+H,0,,
+Series 5=c,-O+NH2,0,,
+Series 6=z,-NH2,1,,
+
+[BB Modification Types]
+*Unmodified=*,,, ,
+
+[Terminal Modification Types]
+*Unmodified=*,,, ,
+
+[Link Types]
+Cysteine disulfide bond=CC,-H2
+
+[Sequence Chains]
+65=Single Chain,131
+
+[Sequence Terminals]
+65N=NH2,,+
+65C=COOH,,-
+
+[Sequence Symbols]
+65(1,60)=^KVFGRCELAAAMKRHGLDNYRGYSLGNWVCAAKFESNFNTQATNRNTDGSTDYGILQIN
+65(61,120)=SRWWCNDGRTPGSRNLCNIPCSALLSSDITASVNCAKKIVSDGDGMNAWVAWRNRCKGTD
+65(121,131)=VQAWIRGCRL$
+
+[Links and Bridges]
+65(6)=65(127),Cysteine disulfide bond
+65(30)=65(115),Cysteine disulfide bond
+65(64)=65(80),Cysteine disulfide bond
+65(76)=65(94),Cysteine disulfide bond
+
+[Security]
+Signature=WxSqkhM/yjDKBvFGz0BO.HyS
+

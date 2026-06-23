@@ -1,0 +1,54 @@
+This data was acquired in Method&Run Control.
+The MSD parameters were saved in the msdiag register file.
+This msparms.txt file was built using the values from the msdiag register.
+Some parameters normally reported under MSData acquisition in Tune 
+may be missing from this msparms.txt file.  You may be able to read these 
+values from Data Analysis.  These items are marked with an asterisk (*).
+ 
+ 
+ 
+File                     :   C:\HPCHEM\1\DATA\980505\CHININ3.D
+Operator                 :   M. Greiner / HP Waldbronn
+Date acquired            :   Tue May 05 18:01:15 1998
+Instrument               :   CE-MSD
+ 
+ 
+Sample information
+----------------------------------
+Sample name              :   Chinin SO4
+Misc info                :   Conc.: 1 mg/ml  in H2O
+CE Pos Mode 
+
+MS Pos Mode
+ 
+ 
+MS parameters
+----------------------------------
+Tune File                   :    C:\HPCHEM\1\1946TUNE\atunes.tun
+Skim1                       :    Not Applicable
+Skim2                       :    11.0 V    
+Ion Energy                  :    5.0 V     
+Lens1                       :    2.8 V     
+Lens2                       :    22 V      
+Iris                        :    350 V     
+HED                         :    10000 V   
+Width Gain                  :    652       
+Width Offset                :    -130      
+Mass Gain                   :    65.05     
+Mass Offset                 :    Variable  
+                                 Mass         :   Value    
+                                 --------------------------
+                                 118.08       :   0        
+                                 622.03       :   0        
+                                 922.01       :   1        
+                                 1521.97      :   1        
+                                 2121.93      :   0        
+                                 2721.89      :   0        
+                                 --------------------------
+Quad DC                     :    0.00 V    
+Octopole Peak               :    250 V     
+Octopole Knee               :    280 Da    
+Mass Filter                 :    Gaussian  
+Mass Filter Width           :    0.30 Da   
+Time Filter                 :    Gaussian  
+Time Filter Width           :    0.060 minutes

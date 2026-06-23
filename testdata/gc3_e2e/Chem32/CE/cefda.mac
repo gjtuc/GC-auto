@@ -1,0 +1,9 @@
+name BuildProductSpecialMenus
+
+If DevHPCE<>0 Then
+  menuadd "&View","Review &DAD Test...","LoadDADTest",,\
+          "Review previous DAD Test(s)",,118
+EndIf
+
+endmacro
+

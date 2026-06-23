@@ -1,0 +1,52 @@
+Settings before update to new enhanced Spectral / Peak Purity
+Instrument 1 1/13/00 8:37:26 AM 
+
+=====================================================================
+               Spectra Options - Instrument 1
+=====================================================================
+
+ Reference Spectra 
+  None 
+
+ Wavelength Range 
+  Full Range
+
+ Spectrum Normalization 
+  Normalize        :   Maximum
+
+ Spectra per Peak 
+  5   Automatic    -   Threshold   :       1.00 mAU
+
+=====================================================================
+=====================================================================
+               Purity Options - Instrument 1
+=====================================================================
+
+ Reference Spectra 
+  Automatic:  Apex
+
+ Wavelength Range 
+  Full Range
+
+ Spectrum Normalization 
+  Normalize        :   Match
+
+ Spectra per Peak 
+  3   Automatic    -   Threshold   :       5.00 mAU
+
+ Signal Processing 
+  Signals used from data file
+  Signal time range to display     :       4.00 x Peak Width
+  Normalize                        :       Maximum
+  Absorbance threshold for Signals :       2.00 mAU
+
+ Purity Calculation Technique 
+  Similarity curve evaluation done and threshold curves calculated
+  Similarity curve displayed as - Ln ( Similarity & Threshold )
+  Purity factor calculated with - Average Spectrum
+
+ Threshold curve 
+  Calculated standard deviation of noise at 0.00 min
+  with 14 spectra
+
+=====================================================================

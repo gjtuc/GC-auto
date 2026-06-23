@@ -1,0 +1,987 @@
+  
+
+ 
+  
+!*******************************************************************************
+!  AUTO_SN.MAC:  Production test signal to noise macros.
+!  ~~~~~~~~~~~   
+!                
+!     
+!  Agus L. Ong   December 1995
+!  Hewlett Packard Company
+!  Bay Analytical Operation
+!  1601 California Avenue
+!  Palo Alto, CA  94304
+!*******************************************************************************
+!  Macro evolved from rspsig_n.mac to the present algorithm
+!
+!  December 15, 1995:  Modified to do the following:
+!      1. Automatically does computation on extracted ion chromatogram,
+!                          print report, and saves data into a text file.
+!      2. Report printout summarizes each peak detected with
+!         retention time, pk-pk s/n, rms s/n, signal height,
+!         signal area, averages, standard deviation, and %RSD
+!
+!  March 4, 1996:  Modified for myoglobin test.
+!      1. Extract three myoglobin ions and determine signal to noise ratio
+!      2. No longer saves data into text file. Only prints report.
+!      3. Macro will only do calculation for five injections.
+!      4. Does deconvolution and molecular weight determination.
+!
+!  April 12, 1996:  Modified the following:
+!      1. Took out the standard deviation in the report.
+!      2. Increase the %error to 3 decimal places to the left.
+!      3. For deconvolution, average spectrum is takened from +/- .05 from
+!         the retention time instead of just taking the spectrum at the peak
+!         retention time.
+!
+!  April 17, 1996: Gary Jackoway translated auto_sn1 to Asterix
+!
+!  September 12, 1996: Nora Gee translated myo_sn to Asterix, merged with
+!                      Gary's work above. Also modified the following:
+!      1. Optimize do_sn by using the full-range EIC which is already loaded.
+!         Eliminate reloading EICs twice per peak.
+!      2. Create a table to save calculations for each EIC.
+!      3. Reinstate saving signal/noise results to a text file as an option.
+!      4. Add macro AvgMSSpecHalfHeight, which is taken from calcspec.mac.
+!      5. Add macro PlotMSReg, using PlotChrom as a model.
+!      6. Replace main with myo_sn for myoglobin report and rsp_sn for reserpine
+!         report.
+!
+!  October 8, 1996: Rename myo_snt6.mac to auto_sn.mac. Version 1.0
+!
+!  December 11, 1996: Added the option to turn off integration at the beginning
+!         of a run.  This adds a parameter, integ_off_time, to set_int_params
+!         and to rsp_sn.  ER 
+!  12/19/05 LL Globalization changes.
+!*******************************************************************************
+   AutoSNVer$ = "020397"
+!
+!  macros
+!   myo_sn
+!   rsp_sn
+!   sig_n
+!   set_int_params
+!   do_sn
+!   sntab_init
+!   sntab_newrow
+!   sn_report
+!   report_header
+!   check_deconvolution
+!   AvgMSSpecHalfHeight
+!   PlotMSReg
+!   decon_report_part1
+!   decon_report_part2
+!
+!*******************************************************************************
+
+
+!*******************************************************************************
+name myo_sn
+
+  ! Number of myoglobin flow injections made during acquisition.
+  parameter injections default 5
+  ! Flag whether to save report in a text file, default is to NOT save
+  parameter report_text_option default 0
+
+! Myoglobin test.
+! Extract ions 893.3, 1131.3 and 1413.5.
+! Calculate signal/noise for each peak (injection).
+! Print report which includes file header information, EIC plots, and signal/
+! noise calculations.
+! Optionally, write report (without plots) to text file.
+! For each peak, average the spectra across the middle of the peak, integrate,
+! and deconvolute.  
+! Compare deconvolution results with expected MW of myoglobin.
+! Print report which includes file header information, spectral plots, and
+! deconvolution results.
+! Optionally, add the deconvolution results to the text file which contains the
+! signal/noise results.
+!*******************************************************************************
+
+  ! All EICs are added to chromreg, save the positions of the first and last EIC
+  local firstobj, lastobj
+  local reportfile$
+
+  ! Signal/Noise table name, calculation results are stored in a table for each
+  ! EIC object and then combined in a summary report
+  sntab$ = "SignalNoise"
+
+  ! Destroy chromreg to start from scratch
+  delreg chromreg
+
+  ! Perform signal/noise calculations on ion 893.3
+  sig_n injections, 893.3
+  ! Save the position of the first EIC
+  firstobj = regsize(chromreg)
+  ! Perform signal/noise calculations on ion 1131.3
+  sig_n injections, 1131.1
+  ! Perform signal/noise calculations on ion 1413.5
+  sig_n injections, 1413.5
+  ! Save the position of the last EIC
+  lastobj = regsize(chromreg)
+
+  ! Print report of signal/noise results
+  sn_report "PRINTER", firstobj, lastobj
+  ! Optionally, write report to text file
+  if report_text_option > 0
+    reportfile$ = dadatapath$+dadatafile$+"AT" 
+    sn_report reportfile$, firstobj, lastobj
+  else
+    reportfile$ = ""
+  endif
+  remove sntab$
+
+  ! Deconvolute each peak and print a summary of the results
+  ! Optionally, add deconvolution results to the file which contains the
+  ! signal/noise results
+  check_deconvolution injections, 16951.97, reportfile$
+endmacro
+
+
+!*******************************************************************************
+name rsp_sn
+
+  ! Number of reserpine flow injections made during acquisition.
+  parameter injections default 5
+  ! EIC ion mass
+  parameter mass default 609.3
+  ! Flag whether to save report in a text file, default is to NOT save
+  parameter report_text_option default 0
+  parameter integ_off_time default 0
+
+! Reserpine test.
+! Extract ion. 
+! Calculate signal/noise for each peak (injection).
+! Print report which includes file header information, EIC plot, and signal/
+! noise calculations.
+! Optionally, write report (without plots) to text file.
+!*******************************************************************************
+
+  ! Signal/Noise table name, calculation results are stored in a table for each
+  ! EIC object and then combined in a summary report
+  sntab$ = "SignalNoise"
+
+  ! Destroy chromreg to start from scratch
+  delreg chromreg
+
+  ! Perform signal/noise calculations on ion 609.3
+  sig_n injections, mass,,, integ_off_time
+  
+  ! Print report of signal/noise results
+  sn_report "PRINTER", 1, 1
+  ! Optionally, write report to text file
+  if report_text_option > 0
+    sn_report dadatapath$+dadatafile$+"AT", 1, 1 
+  endif
+  remove sntab$
+endmacro
+
+
+
+!*******************************************************************************
+name sig_n 
+
+  ! Number of flow injections, also the number of peaks expected for
+  ! integration results
+  parameter min_peaks default 5
+  ! Mass range is sn_ion-0.3:sn_ion+0.7
+  parameter sn_ion default 609.3
+  ! Time range, default is full time range
+  parameter file_start default 0
+  parameter file_end default 0
+  parameter integ_off_time default 0
+
+! Extract selected ion chromatogram, smooth, integrate, calculate signal/noise
+! and save results in a table with the EIC object
+!*******************************************************************************
+
+  local threshold, objnum, loopout, npeaks, evtab$
+
+  ! Extract selected ion chromatogram
+  loadeic chromreg, file_start:file_end, sn_ion-0.3:sn_ion+0.7
+  objnum = regsize(chromreg)
+
+  !!! To be done - need to select appropriate filter parameters
+  ! Use Gaussian time filter to smooth the data
+  gsmoothobj chromreg[objnum], -3, 0.05, 0.0039
+
+  ! Currently, autointegrate doesn't work well.  Peaks are broad.
+  !autoint objnum
+
+  ! Work with the most specific integration events table that is available
+  evtab$ = "EVENT_MSD1"+EICCalcSignalID$(sn_ion-0.3:sn_ion+0.7)
+  if objhdrtype(_damethod[1],evtab$) <> 4 then
+    evtab$ = "EVENT_MSD"
+    if objhdrtype(_damethod[1],evtab$) <> 4 then
+      evtab$ = "EVENT"
+    endif
+  endif
+
+  !!! To be done - need to verify whether these are appropriate parameter values
+  ! Set all parameters except slope sensitivity to the default settings
+  ! set_int_params evtab$, 0.04, 1.7, 1, 0, 0.6
+   set_int_params evtab$, 0.04, 1.7, 1, , integ_off_time
+  ! Try slope sensitivity starting at half of maximum signal
+  getdataminmax chromreg[objnum], 1
+  threshold = obj_max / 2
+  npeaks = 0
+  loopout = 0
+
+  ! If less than expected number of peaks detected then
+  ! slope sensitivity is lowered until minimum set of peaks is detected.
+  while npeaks<min_peaks and loopout=0 do
+    settabhdrval _damethod[1], evtab$, initthresh, threshold
+    integrateobj chromreg[objnum], file_start:file_end
+    on error npeaks = 0
+    npeaks = tabhdrval(chromreg[objnum], intresults, "numberofrows")
+    on error
+    threshold = threshold/2
+    ! If minimum threshold is reached loop out
+    if threshold < 1e2 then
+      loopout = 1
+    endif
+  endwhile
+
+  ! Refresh the window displaying all the chromatograms loaded so far
+  draw 38, chromreg
+
+  ! Do signal/noise calculations, store results in a table for reporting
+  if (npeaks <> 0)
+    do_sn objnum, sn_ion, npeaks
+  endif
+endmacro
+
+
+!*******************************************************************************
+name set_int_params
+
+  parameter evtab$
+  parameter initwidth
+  parameter initheight
+  parameter initreject
+  parameter shoulderson
+  parameter integ_off_time default 0   ! if greater than zero, integration is
+                                     !  off until this time
+
+!*******************************************************************************
+local i
+
+  print evtab$
+  settabhdrval _damethod[1], evtab$, "initwidth", initwidth
+  settabhdrval _damethod[1], evtab$, "initheight", initheight
+  settabhdrval _damethod[1], evtab$, "initreject", initreject
+  settabhdrval _damethod[1], evtab$, "shoulderson", shoulderson
+
+  ! remove any time table events
+  for i = 1 to tabhdrval(_damethod[1], evtab$, "numberofrows")
+     deltabrow _damethod[1], evtab$, i
+  next i
+
+  if integ_off_time > 0 then
+     instabrow _damethod[1], evtab$, 1:2
+     settabval _damethod[1], evtab$, 1, "Time", 0
+     settabval _damethod[1], evtab$, 1, "EventCode", 6
+     settabval _damethod[1], evtab$, 1, "Value", 0
+     settabval _damethod[1], evtab$, 2, "Time", integ_off_time
+     settabval _damethod[1], evtab$, 2, "EventCode", -6
+     settabval _damethod[1], evtab$, 2, "Value", 1
+  endif
+  
+endmacro
+
+
+!*******************************************************************************
+name do_sn
+
+  parameter objnum  ! chromreg object number for EIC
+  parameter sn_ion  ! EIC nominal mass
+  parameter npeaks  ! number of peaks in EIC
+
+! Signal/Noise calculations, save results in a table with the object
+!*******************************************************************************
+
+  local i, start_time, end_time, point_1, point_2, npts, point
+  local pktopk_noise, sum_noise, avg_noise, sqr_tot, sqr_n, sqr_avg, totalsignal
+  local ravg_pk, ravg_rms, ravg_sig_tot, ravg_noise
+  local rstd_pk, rstd_rms, rstd_sig_tot, rstd_noise
+
+  ! Create SignalNoise table for chromreg[objnum]
+  sntab_init objnum, sn_ion
+
+  ! Objects used for temporarily data storage and for statistic calculations
+  delreg sn_ratio
+  delreg rms_sn
+  delreg sig_tot
+  delreg noise
+  newobj sn_ratio, 1, 1, npeaks
+  newobj rms_sn, 1, 1, npeaks
+  newobj sig_tot, 1, 1, npeaks
+  newobj noise, 1, 1, npeaks
+
+  ! For each peak in the EIC, do signal/noise calculations
+  for i = 1 to npeaks
+    ! Get start time of peak
+    start_time = TabVal(chromreg[objnum], intresults, i, timestart)
+
+    !!! NOTE: The data in chromreg[objnum] is the EIC after smoothing
+
+    ! Get the min and max noise values in the .3 min time window before the peak
+    getdataminmax chromreg[objnum], 1, start_time-.4:start_time-.1
+    ! Calculate Peak-Peak Noise
+    pktopk_noise = obj_max - obj_min
+  
+    if pktopk_noise = 0 then
+       pktopk_noise = 1
+    endif
+
+    setdata noise[1], 1, i, pktopk_noise
+
+    ! Get the spectral indices to the .3 min time window
+    point_1 = dataIndex(chromreg[objnum], start_time-.4)
+    point_2 = dataIndex(chromreg[objnum], start_time-.1)
+    ! Number of points being used
+    npts = point_2 - point_1 + 1
+
+    ! Calculate the average noise within the .3 min time window
+    sum_noise = 0
+    for point = point_1 to point_2 
+      sum_noise = sum_noise + data(chromreg[objnum], 1, point)
+    next point
+    avg_noise = (sum_noise/npts)
+
+    ! Calculate the RMS noise within the .3 min time window
+    sqr_tot = 0
+    for point = point_1 to point_2
+      ! Calculate square of each noise value
+      sqr_n = sqr(data(chromreg[objnum], 1, point) - avg_noise)
+      sqr_tot = sqr_n + sqr_tot
+    next point 
+    sqr_avg = sqr_tot/npts
+    rms_noise = sqrt(sqr_avg)
+
+    ! Get the min and max signal values within the peak
+    end_time = TabVal(chromreg[objnum], intresults, i, timeend)
+    getdataminmax chromreg[objnum], 1, start_time:end_time
+
+    ! Calculate actual signal value
+    totalsignal = obj_max - avg_noise
+    setdata sig_tot[1], 1, i, totalsignal
+
+    ! Calculate RMS S/N
+    !if rms_noise = 0 then
+    !  setdata rms_sn[1], 1, i, 99999
+    !else
+    !  setdata rms_sn[1], 1, i, totalsignal/rms_noise
+    !endif
+
+    if rms_noise = 0 then
+       rms_noise = 1
+    endif
+
+    setdata rms_sn[1], 1, i, totalsignal/rms_noise
+
+    ! Calculate Peak-Peak S/N
+    !if pktopk_noise = 0 then
+    !  setdata sn_ratio[1], 1, i, 99999
+    !else
+    !  setdata sn_ratio[1], 1, i, totalsignal/pktopk_noise
+    !endif
+
+    if pktopk_noise = 0 then
+       pktopk_noise = 1
+    endif
+
+    setdata sn_ratio[1], 1, i, totalsignal/pktopk_noise
+
+    ! Save the calculations for this peak in the S/N table
+    sntab_newrow objnum, i, TabVal(chromreg[objnum], intresults, i, rettime),\
+                 data(sn_ratio[1], 1, i), data(rms_sn[1], 1, i), \
+                 data(sig_tot[1], 1, i), data(noise[1], 1, i)
+  next i
+
+  ! Use regressobj to get mean and std dev
+  regressobj sn_ratio[1],,,,,0
+  regressobj rms_sn[1],,,,,0
+  regressobj sig_tot[1],,,,,0
+  regressobj noise[1],,,,,0
+
+  ! Pick off Average numbers from regression results
+  ravg_pk = round(tabhdrval(sn_ratio[1], regress, k1))
+  ravg_rms = round(tabhdrval(rms_sn[1], regress, k1))
+  ravg_sig_tot =round(tabhdrval(sig_tot[1], regress, k1))
+  ravg_noise = round(tabhdrval(noise[1], regress, k1))
+  ! Save Average calculations in the S/N table, row index is npeaks+1
+  sntab_newrow objnum, npeaks+1, 0, ravg_pk, ravg_rms, ravg_sig_tot, ravg_noise
+
+  ! Pick off Std Dev numbers from regression results
+  rstd_pk = round(tabhdrval(sn_ratio[1], regress, stddev))
+  rstd_rms = round(tabhdrval(rms_sn[1], regress, stddev))
+  rstd_sig_tot = round(tabhdrval(sig_tot[1], regress, stddev))
+  rstd_noise = round(tabhdrval(noise[1], regress, stddev))
+  ! Save Std Dev calculations in the S/N table, row index is npeaks+2
+  sntab_newrow objnum, npeaks+2, 0, rstd_pk, rstd_rms, rstd_sig_tot, rstd_noise
+
+  ! Save %RSD calculations in the S/N table, row index is npeaks+3
+  sntab_newrow objnum, npeaks+3, 0, (round((rstd_pk/ravg_pk)*1000))/10, \
+               (round((rstd_rms/ravg_rms)*1000))/10, \
+               (round((rstd_sig_tot/ravg_sig_tot)*1000))/10, \
+               (round((rstd_noise/ravg_noise)*1000))/10
+
+  ! Delete temporary objects used in this macro
+  delreg sn_ratio
+  delreg rms_sn
+  delreg sig_tot
+  delreg noise
+endmacro
+
+
+!*******************************************************************************
+name sntab_init
+
+  parameter objnum  ! chromreg object number
+  parameter sn_ion  ! mass of ion
+
+! Creates a table to store Signal/Noise calculation results for the object
+!*******************************************************************************
+
+  ! Create a table for the chromatogram object
+  newtab chromreg[objnum], sntab$
+  ! Save the mass value in the header
+  newtabhdrval chromreg[objnum], sntab$, "mass"
+  settabhdrval chromreg[objnum], sntab$, "mass", sn_ion
+
+  ! Set up 5 columns for the calculation results
+  newcolval chromreg[objnum], sntab$, "ret"
+  newcolval chromreg[objnum], sntab$, "sn_ratio"
+  newcolval chromreg[objnum], sntab$, "rms_sn"
+  newcolval chromreg[objnum], sntab$, "sig_tot"
+  newcolval chromreg[objnum], sntab$, "noise"
+endmacro
+
+
+!*******************************************************************************
+name sntab_newrow
+
+  parameter objnum                                 ! chromreg object number
+  parameter index                                  ! row index in table
+  parameter ret, sn_ratio, rms_sn, sig_tot, noise  ! data values for the row
+
+! Add a row to the Signal/Noise table, either to store data for a peak or
+! for statistics
+!*******************************************************************************
+
+  ! Add another row to the table
+  instabrow chromreg[objnum], sntab$ 
+
+  ! Store values
+  settabval chromreg[objnum], sntab$, index, "ret", ret
+  settabval chromreg[objnum], sntab$, index, "sn_ratio", sn_ratio
+  settabval chromreg[objnum], sntab$, index, "rms_sn", rms_sn
+  settabval chromreg[objnum], sntab$, index, "sig_tot", sig_tot
+  settabval chromreg[objnum], sntab$, index, "noise", noise
+endmacro
+
+
+!*******************************************************************************
+name sn_report
+
+  parameter destination$ default "PRINTER"  ! text file name or printer
+  parameter firstobj, lastobj               ! chromreg object range for EICs
+
+! Format Signal/Noise report for either the printer or a text file
+!*******************************************************************************
+
+local ID__PEAK_24         
+local ID__RET__TIME_25      
+local ID__PK_PK_S_N_26         
+local ID__RMS_S_N_27          
+local ID__SIGNAL_HT_28                         
+local ID__PK_PK_NOISE_29                                
+local ID__AVERAGE_30                                   
+local ID__STD_DEV_31                                   
+local ID___RSD_32    
+local ID__MASS_33                                       
+ID__PEAK_24                                        =  17024  
+ID__RET__TIME_25                                   =  17025  
+ID__PK_PK_S_N_26                                   =  17026  
+ID__RMS_S_N_27                                     =  17027  
+ID__SIGNAL_HT_28                                   =  17028  
+ID__PK_PK_NOISE_29                                 =  17029  
+ID__AVERAGE_30                                     =  17030  
+ID__STD_DEV_31                                     =  17031  
+ID___RSD_32                                        =  17032 
+ID__MASS_33                                        =  17033
+  local savexloc
+  local objnum, i, npeaks, filenum
+  local x$, x1$, x3$, x5$, x6$, x13$, x14$, x15$, x16$, x17$, x18$, x30$
+  
+  
+  x$=   ""
+  x1$=  ReadResource$("MsMacFiles",ID__PEAK_24)
+  x3$=  ReadResource$("MsMacFiles",ID__RET__TIME_25)
+  x5$=  ReadResource$("MsMacFiles",ID__PK_PK_S_N_26)
+  x6$=  ReadResource$("MsMacFiles",ID__RMS_S_N_27)
+  x13$= ReadResource$("MsMacFiles",ID__SIGNAL_HT_28)
+  x14$= ReadResource$("MsMacFiles",ID__PK_PK_NOISE_29)
+  x15$= ReadResource$("MsMacFiles",ID__AVERAGE_30)
+  x16$= ReadResource$("MsMacFiles",ID__STD_DEV_31)
+  x17$= ReadResource$("MsMacFiles",ID___RSD_32)
+  x18$= ReadResource$("MsMacFiles",ID__MASS_33)
+  x30$ = "9% 12% 5# 5% 5# 4% 5# 5% 5#/"
+
+  if destination$ = "PRINTER" then
+    filenum = 5
+    opendevice "Printer" as # filenum
+    beginjob
+  else
+    filenum = 4
+    open destination$ for output as # filenum
+  endif
+
+  on error goto sn_report_end
+
+  ! Format header
+  report_header filenum 
+  print # filenum, ""
+
+  ! Plot the chromatograms only for the printer
+  if destination$ = "PRINTER" then
+    savexloc=xloc()
+    ! Use 25% of the vertical space of the paper for the plot
+    PlotChrom ,, 0.25, ,,,, firstobj, lastobj
+    SetPageLoc savexloc
+    print # filenum, ""
+  endif
+
+  ! For each EIC
+  for objnum = firstobj to lastobj
+    ! Format mass of the ion
+    print using # filenum, "8% % 5#.2#/", \
+                           x18$, x$, tabhdrval(chromreg[objnum], sntab$, "mass")
+    ! Format table column headings
+    print using # filenum, "8% % 8% % 8% % 8% % 8% % 8%/", \
+                           x1$, x$, x3$, x$, x5$, x$, x6$, x$, x13$, x$, x14$
+    print # filenum, \
+         "--------   ---------   ---------   --------   ---------   -----------"
+
+    ! Determine number of peaks from the size of the table, the last three rows
+    ! of the table are used to save statistical information
+    on error npeaks = 0
+    npeaks = tabhdrval(chromreg[objnum], sntab$, "numberofrows") - 3
+    on error goto sn_report_end
+
+    if npeaks > 0
+      ! Format results for each peak in the EIC
+      for i = 1 to npeaks
+        print using # filenum, "5# 4% 3#.2# 4% 5# 5% 5# 4% 5# 5% 5#/", \
+                               i, x$, \
+                               tabval(chromreg[objnum], sntab$, i, "ret"), x$, \
+                               tabval(chromreg[objnum], sntab$, i, "sn_ratio"),\
+                               x$, \
+                               tabval(chromreg[objnum], sntab$, i, "rms_sn"), \
+                               x$, \
+                               tabval(chromreg[objnum], sntab$, i, "sig_tot"), \
+                               x$, \
+                               tabval(chromreg[objnum], sntab$, i, "noise")
+      next i
+
+      ! Format Average results
+      i = npeaks+1
+      print using # filenum, x30$, x15$, x$, \
+                           tabval(chromreg[objnum], sntab$, i, "sn_ratio"), x$,\
+                           tabval(chromreg[objnum], sntab$, i, "rms_sn"), x$, \
+                           tabval(chromreg[objnum], sntab$, i, "sig_tot"), x$, \
+                           tabval(chromreg[objnum], sntab$, i, "noise")
+      ! Format Std Dev results
+      i = npeaks+2
+      print using # filenum, x30$, x16$, x$, \
+                           tabval(chromreg[objnum], sntab$, i, "sn_ratio"), x$,\
+                           tabval(chromreg[objnum], sntab$, i, "rms_sn"), x$, \
+                           tabval(chromreg[objnum], sntab$, i, "sig_tot"), x$, \
+                           tabval(chromreg[objnum], sntab$, i, "noise")
+      ! Format %RSD results
+      i = npeaks+3
+      print using # filenum, x30$, x17$, x$, \
+                           tabval(chromreg[objnum], sntab$, i, "sn_ratio"), x$,\
+                           tabval(chromreg[objnum], sntab$, i, "rms_sn"), x$, \
+                           tabval(chromreg[objnum], sntab$, i, "sig_tot"), x$, \
+                           tabval(chromreg[objnum], sntab$, i, "noise")
+      print using # filenum, "/"
+    endif
+  next objnum
+
+  if destination$ = "PRINTER" then
+    endjob
+  endif
+
+sn_report_end:
+  on error
+  close # filenum
+endmacro
+
+
+!*******************************************************************************
+name report_header
+
+  parameter filenum
+
+! Format report header which includes file header items.
+!*******************************************************************************
+Local  ID__FILE_34
+Local  ID__OPERATOR_35
+Local  ID__DATE_ACQUIRED_36
+Local  ID__INSTRUMENT_37
+Local  ID__METHOD_FILE_38
+Local  ID__SAMPLE_NAME_39
+Local  ID__MISC_INFO_40
+Local  ID__VIAL_NUMBER_41
+ID__FILE_34                                        =  17034  
+ID__OPERATOR_35                                    =  17035  
+ID__DATE_ACQUIRED_36                               =  17036  
+ID__INSTRUMENT_37                                  =  17037  
+ID__METHOD_FILE_38                                 =  17038  
+ID__SAMPLE_NAME_39                                 =  17039  
+ID__MISC_INFO_40                                   =  17040  
+ID__VIAL_NUMBER_41                                 =  17041  
+
+  ! Get information from the object header of the chromatogram object
+  print using # filenum,ReadResource$("MsMacFiles",ID__FILE_34), \
+                         objhdrtext$(chromreg[1], RawdataFile)
+  print using # filenum,ReadResource$("MsMacFiles",ID__OPERATOR_35), \
+                         objhdrtext$(chromreg[1], Operator)
+  print using # filenum,ReadResource$("MsMacFiles",ID__DATE_ACQUIRED_36), \
+                         objhdrtext$(chromreg[1], DateTime)
+  !print using # filenum,ReadResource$("MsMacFiles",ID__INSTRUMENT_37), \
+  !                       objhdrtext$(chromreg[1], InstModel)
+  print using # filenum,ReadResource$("MsMacFiles",ID__METHOD_FILE_38), \
+                         objhdrtext$(chromreg[1], MethodFile)
+  print using # filenum,ReadResource$("MsMacFiles",ID__SAMPLE_NAME_39), \
+                         objhdrtext$(chromreg[1], SampleName)
+  !print using # filenum,ReadResource$("MsMacFiles",ID__MISC_INFO_40), \
+  !                       objhdrtext$(chromreg[1], Description)
+  print using # filenum,ReadResource$("MsMacFiles",ID__VIAL_NUMBER_41), \
+                         objhdrval(chromreg[1], Vial)
+endmacro
+
+
+
+!*******************************************************************************
+name check_deconvolution
+
+  ! Number of flow injections, also the number of peaks expected for
+  ! integration results
+  parameter min_peaks default 5
+  ! Expected molecular weight
+  parameter expected_mw default 16951.97
+  ! Text file name for report
+  parameter report_file$ default ""
+
+! Load total ion chromatogram and integrate.
+! For each peak, average the spectra across the middle of the peak, integrate,
+! and deconvolute.  
+! Compare deconvolution results with expected molecular weight.
+! Print report which includes file header information, spectral plots, and
+! deconvolution results.
+! Optionally, add the deconvolution results to a text file.
+!*******************************************************************************
+
+  local ticobj, evtab$, peak, npeaks, threshold, loopout, mweight, bestmatch
+
+  ! Load TIC
+  loadtic chromreg
+  ticobj = regsize(chromreg)
+
+  ! Currently, autointegrate doesn't work well.
+  !autoint ticobj
+
+  ! Work with the most specific integration events table that is available
+  evtab$ = "EVENT_MSD1TIC"
+  if objhdrtype(_damethod[1],evtab$) <> 4 then
+    evtab$ = "EVENT_MSD"
+    if objhdrtype(_damethod[1],evtab$) <> 4 then
+      evtab$ = "EVENT"
+    endif
+  endif
+
+  !!! To be done - need to verify whether these are appropriate parameter values
+  ! Set all parameters except slope sensitivity to the default settings
+  set_int_params evtab$, 0.04, 1.7, 1, 0
+
+  ! Try slope sensitivity starting at half of maximum signal
+  getdataminmax chromreg[ticobj], 1
+  threshold = obj_max / 2
+  npeaks = 0
+  loopout = 0
+
+  ! If less than expected number of peaks detected then
+  ! slope sensitivity is lowered until minimum set of peaks is detected.
+  while npeaks < min_peaks and loopout = 0
+    settabhdrval _damethod[1], evtab$, initthresh, threshold 
+    integrateObj chromreg[ticobj], , , _damethod[1]
+    on error npeaks = 0
+    npeaks = tabhdrval(chromreg[ticobj], intresults, "numberofrows")
+    on error
+    threshold = threshold / 2
+    if threshold < 1e2
+      loopout = 1
+    endif
+  endwhile
+
+  if (npeaks > 0)
+    ! Destroy MS spectral register to start fresh
+    delreg msreg
+
+    SetActualMassSpecRange "MSO_"
+
+    ! Work with the most specific integration events table that is available
+    evtab$ = "EVENT_MSD1SPC"
+    if objhdrtype(_damethod[1],evtab$) <> 4 then
+      evtab$ = "EVENT_SPC"
+      if objhdrtype(_damethod[1],evtab$) <> 4 then
+        evtab$ = "EVENT"
+      endif
+    endif
+
+    !!! To be done - need to verify whether these are appropriate parameter
+    !!! values
+    ! Set all parameters except slope sensitivity to the default settings
+    set_int_params evtab$, 1, 0, 0, 0
+
+    ! For each peak
+    for peak = 1 to npeaks
+      ! Average spectra across half height of peak
+      AvgMSSpecHalfHeight ticobj, peak
+      ! Set slope sensitivity parameter to 10% of the highest peak
+      getdataminmax msreg[peak], 1
+      settabhdrval _damethod[1], evtab$, initthresh, obj_max / 10
+      ! Integrate the resulting spectrum
+      !LDMS_IntegrateSpectra peak, 1
+      LDMS_IntegrateSpectra peak, 0
+      !!! To be done - need criteria here for checking whether integration
+      !!! results will be adequate for deconvolution.
+      !!! If criteria not met, change parameters and repeat integration
+
+    next peak
+
+    opendevice "Printer" as #5 
+    on error goto check_decon_end1
+
+    beginjob
+
+    ! Format report header and plot average spectra for each peak
+    decon_report_part1 5
+
+    delreg decon_mw
+    delreg decon_mwerr
+    newobj decon_mw, 1, 1, npeaks
+    newobj decon_mwerr, 1, 1, npeaks
+
+    on error goto check_decon_end2
+
+    ! For each peak
+    for peak = 1 to npeaks
+      ! Do deconvolution which could only operate on the 1st object in MSReg
+      DEC_Deconvolute
+
+      ! Find the row in the MW table that is the closest match to expected_mw
+      bestmatch = rowbyval(msreg[1], "mw", , "mw", "~", expected_mw)
+      mweight = tabval(msreg[1], "mw", bestmatch, "mw")
+      ! Save MW and %error  for reporting
+      setdata decon_mw[1], 1, peak, mweight
+      setdata decon_mwerr[1], 1, peak, \
+              ((mweight - expected_mw) / expected_mw) * 100
+
+      ! Delete this object to move next object to 1st position for deconvolution
+      delobj msreg[1]
+    next peak
+
+    ! Calculate Average
+    regressobj decon_mw[1],,,,,0
+    regressobj decon_mwerr[1],,,,,0
+
+    ! Format and print 2nd half of report which includes the MW results
+    decon_report_part2 5, npeaks
+
+    endjob
+
+    ! If reporting to text file as well
+    if report_file$ <> ""
+      ! If text file does not exist, write header first
+      if findfile$(report_file$) = ""
+        open report_file$ for output as #4
+        on error goto check_decon_end3
+        report_header 4
+      ! If text file is present, append to the file
+      else
+        open report_file$ for append as #4
+        on error goto check_decon_end3
+      endif
+      ! Format MW results for text file
+      decon_report_part2 4, npeaks
+    
+check_decon_end3:
+      on error goto check_decon_end2
+      close #4 
+    endif
+
+check_decon_end2:
+    on error goto check_decon_end1
+    delreg decon_mw
+    delreg decon_mwerr
+
+check_decon_end1:
+    on error 
+    close #5 
+
+    delreg msreg
+  endif
+endmacro
+
+
+!*******************************************************************************
+Name AvgMSSpecHalfHeight
+
+  parameter objnum default 1  ! chromreg object number
+  parameter peak              ! peak number
+
+! Average the spectra across the half height of the peak in chromreg[objnum],
+!and load into msreg.
+!*******************************************************************************
+Local  ID__FOR_PEAK_AT_42
+local ID___LOAD_FROM_43                                 
+local ID___TO_44 
+ID__FOR_PEAK_AT_42                                 =  17042 
+ID___LOAD_FROM_43                                  =  17043 
+ID___TO_44                                         =  17044  
+  local base, hheight, tstart, tend, trt, index, midindex, done
+
+  ! Calculate half height
+  base = tabval(chromreg[objnum], intresults, peak, baseline)
+  hheight = base + \
+            (tabval(chromreg[objnum], intresults, peak, height) - base)/2
+
+  ! Get mid-point of peak
+  trt = tabval(chromreg[objnum], intresults, peak, rettime)
+  midindex = dataindex(chromreg[objnum], trt)
+
+  ! Start from the beginning of the peak and head toward the middle of the peak
+  done = 0
+  tstart = tabval(chromreg[objnum], intresults, peak, timestart)
+  index = dataindex(chromreg[objnum], tstart)
+  while done = 0 do
+    ! If midpoint reached or half-height crossed
+    if index = midindex OR data(chromreg[objnum], 1, index) >= hheight then
+      ! Stop and save start time for half-height
+      done = 1
+      tstart = data(chromreg[objnum], 0, index)
+    endif
+    index = index + 1
+  endwhile
+
+  ! Start at the end of the peak and head toward the middle of the peak
+  done = 0
+  tend = tabval(chromreg[objnum], intresults, peak, timeend)
+  index = dataindex(chromreg[objnum], tend)
+  while done = 0 do
+    ! If midpoint reached or half-height crossed
+    if index = midindex OR data(chromreg[objnum], 1, index) >= hheight then
+      ! Stop and save end time for half-height
+      done = 1
+      tend = data(chromreg[objnum], 0, index)
+    endif
+    index = index - 1
+  endwhile
+
+  ! Average spectra between half height start and end times
+  print ReadResource$("MsMacFiles",ID__FOR_PEAK_AT_42), trt, ReadResource$("MsMacFiles",ID___LOAD_FROM_43), tstart, ReadResource$("MsMacFiles",ID___TO_44), tend
+  LoadMSSpectrum msreg, tstart:tend
+  drawmsreg
+endmacro
+
+
+
+
+!*******************************************************************************
+Name PlotMSReg
+
+  parameter Destination$ default "PRINTER"
+  parameter XPages default 1                    ! 0<XPages<=1
+  parameter YPages default 1                    ! 0<YPages<=1
+  parameter Orientation default TabHdrVal(_DAMethod[1], RptParm, "Orientation")
+
+!*******************************************************************************
+
+  local Win     ! window number for plot spectra 
+  Win = 26
+  ! set general window parameters
+  SetWinPrintParams Win, Destination$, XPages, YPages, Orientation
+  DrawMSReg Win
+endmacro
+
+
+!*******************************************************************************
+name decon_report_part1
+
+  parameter filenum default 5
+
+! Format first part of the deconvolution report: header and spectral plots
+!*******************************************************************************
+
+  local savexloc
+
+  ! Format header
+  report_header filenum 
+  print # filenum, ""
+
+  savexloc=xloc()
+  ! Use 50% of the vertical space of the paper for the spectral plots
+  PlotMSReg ,,0.5
+  SetPageLoc savexloc
+endmacro
+
+
+!*******************************************************************************
+name decon_report_part2
+
+  parameter filenum default 5
+  parameter npeaks
+
+! Format second part of the deconvolution report: deconvolution results
+!*******************************************************************************
+                                        
+local ID__PEAK_24                                       
+local ID__MOL__WT_45                                     
+local ID____ERROR_46          
+local ID__AVERAGE_98                          
+
+ID__PEAK_24                                        =  17024  
+ID__MOL__WT_45                                     =  17045  
+ID____ERROR_46                                     =  17046
+ID__AVERAGE_98 = 17098
+  local peak
+
+  print # filenum, ""
+  x$ = ""
+  ! Print deconvolution results heading
+  print using # filenum, "9% 4% 8% 4% 8%/", \
+                         ReadResource$("MsMacFiles",ID__PEAK_24), x$, ReadResource$("MsMacFiles",ID__MOL__WT_45), x$, ReadResource$("MsMacFiles",ID____ERROR_46)
+  print # filenum, "---------     ---------      ---------"
+
+  ! For each peak, print results
+  for peak = 1 to npeaks
+    print using # filenum,"9# 4% 5#.2# 4% 3#.3# %/", peak , x$, \
+                          data(decon_mw[1], 1, peak), x$, data(decon_mwerr[1], \
+                          1, peak), "%"
+  next peak
+
+  ! Print average 
+  print using # filenum, "9% 4% 5#.2# 4% 3#.3# %/", ReadResource$("MsMacFiles",ID__AVERAGE_98), x$, \
+                          tabhdrval(decon_mw[1], regress, k1), x$, \
+                          tabhdrval(decon_mwerr[1], regress, k1), "%"
+
+  remove x$
+endmacro
+
+
+

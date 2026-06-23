@@ -1,0 +1,20 @@
+SetSignal 1,ADC1 CHANNEL A
+SetSigSource 1,Signal
+SetUnits 1,uV
+SetScalingFactor 1,1.000000e-002
+SetSlicewidth 1,50
+SetStoptime 1,0.00
+SetDataStorage 1,ALL
+SetDataStart 1,0.00
+SetDataStop 1,0.00
+SetAutoStart 1,0
+EventTableBegin 1
+EventTableEnd 1
+SetSignal 2,ADC1 CHANNEL B
+SetSigSource 2,Signal
+SetUnits 2,uV
+SetScalingFactor 2,1.000000e-002
+SetSlicewidth 2,50
+SetDataStorage 2,ALL
+SetDataStart 2,0.00
+SetDataStop 2,0.00

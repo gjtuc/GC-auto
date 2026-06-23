@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<InstrumentConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://tempuri.org/RCNetConfigurationScheme.xsd">
+  <ConfiguredModules>
+    <ModuleConfig ImportSource="RapidControl.ModuleRegistration.xml" ImportID="Agilent.LC.1200Series.DAD" ConfigID="{b7f8b4fd-e4db-41e3-ae21-4f0952047f01}">
+      <ConnectionInfo>
+        <Type>LAN_IP</Type>
+        <Address>192.168.254.11</Address>
+        <Shared>false</Shared>
+      </ConnectionInfo>
+      <ConfigData>
+        <Data>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;DadConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" schemaVersion="1.0.2"&gt;&lt;DisplayName&gt;1290 Infinity DAD&lt;/DisplayName&gt;&lt;SerialNumber&gt;DE30900103&lt;/SerialNumber&gt;&lt;ModuleType&gt;G4212A&lt;/ModuleType&gt;&lt;ModuleDisplayType&gt;G4212A&lt;/ModuleDisplayType&gt;&lt;ConnectionInfo&gt;&lt;ConnectionType&gt;ConnectionType_IPAddress&lt;/ConnectionType&gt;&lt;IPAddress&gt;192.168.254.11&lt;/IPAddress&gt;&lt;/ConnectionInfo&gt;&lt;FirmwareRevision&gt;U.06.24 [0001]&lt;/FirmwareRevision&gt;&lt;IsExternalContactsBoardInstalled&gt;false&lt;/IsExternalContactsBoardInstalled&gt;&lt;/DadConfig&gt;</Data>
+      </ConfigData>
+      <AutoConfigInfo>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;AutoConfigSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;&lt;ConnectionType&gt;ConnectionType_IPAddress&lt;/ConnectionType&gt;&lt;IPAddress&gt;192.168.254.11&lt;/IPAddress&gt;&lt;DoDetectedCombinedSystems&gt;true&lt;/DoDetectedCombinedSystems&gt;&lt;/AutoConfigSettings&gt;</AutoConfigInfo>
+    </ModuleConfig>
+    <ModuleConfig ImportSource="RapidControl.ModuleRegistration.xml" ImportID="Agilent.LC.1200Series.ColumnComp" ConfigID="{0fc02eda-8965-49f9-a8eb-7529332c5bde}">
+      <ConnectionInfo>
+        <Type>LAN_IP</Type>
+        <Address>192.168.254.11</Address>
+        <Shared>false</Shared>
+      </ConnectionInfo>
+      <ConfigData>
+        <Data>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;ColumnCompConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" schemaVersion="1.0.2"&gt;&lt;DisplayName&gt;1290 Infinity TCC&lt;/DisplayName&gt;&lt;SerialNumber&gt;DE93000194&lt;/SerialNumber&gt;&lt;ModuleType&gt;G1316C&lt;/ModuleType&gt;&lt;ModuleDisplayType&gt;G1316C&lt;/ModuleDisplayType&gt;&lt;ConnectionInfo&gt;&lt;ConnectionType&gt;ConnectionType_IPAddress&lt;/ConnectionType&gt;&lt;IPAddress&gt;192.168.254.11&lt;/IPAddress&gt;&lt;/ConnectionInfo&gt;&lt;FirmwareRevision&gt;A.06.15 [001]&lt;/FirmwareRevision&gt;&lt;IsColumnSwitchingValveInstalled&gt;false&lt;/IsColumnSwitchingValveInstalled&gt;&lt;ColumnValveVersion&gt;9Port8Positions&lt;/ColumnValveVersion&gt;&lt;/ColumnCompConfig&gt;</Data>
+      </ConfigData>
+      <AutoConfigInfo>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;AutoConfigSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;&lt;ConnectionType&gt;ConnectionType_IPAddress&lt;/ConnectionType&gt;&lt;IPAddress&gt;192.168.254.11&lt;/IPAddress&gt;&lt;DoDetectedCombinedSystems&gt;true&lt;/DoDetectedCombinedSystems&gt;&lt;/AutoConfigSettings&gt;</AutoConfigInfo>
+    </ModuleConfig>
+    <ModuleConfig ImportSource="RapidControl.ModuleRegistration.xml" ImportID="Agilent.LC.1200Series.WellplateSampler" ConfigID="{a1bb68a9-8385-46b6-b5e8-ad0b565714aa}">
+      <ConnectionInfo>
+        <Type>LAN_IP</Type>
+        <Address>192.168.254.11</Address>
+        <Shared>false</Shared>
+      </ConnectionInfo>
+      <ConfigData>
+        <Data>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;SamplerConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" schemaVersion="1.0.2"&gt;&lt;DisplayName&gt;1290 Infinity ALS&lt;/DisplayName&gt;&lt;SerialNumber&gt;DE93000141&lt;/SerialNumber&gt;&lt;ModuleType&gt;G4226A&lt;/ModuleType&gt;&lt;ModuleDisplayType&gt;G4226A&lt;/ModuleDisplayType&gt;&lt;ConnectionInfo&gt;&lt;ConnectionType&gt;ConnectionType_IPAddress&lt;/ConnectionType&gt;&lt;IPAddress&gt;192.168.254.11&lt;/IPAddress&gt;&lt;/ConnectionInfo&gt;&lt;FirmwareRevision&gt;A.06.15 [001]&lt;/FirmwareRevision&gt;&lt;IsExternalContactsBoardInstalled&gt;false&lt;/IsExternalContactsBoardInstalled&gt;&lt;IsThermostatInstalled&gt;false&lt;/IsThermostatInstalled&gt;&lt;SyringeVolume&gt;20&lt;/SyringeVolume&gt;&lt;SeatCapillary&gt;1.2&lt;/SeatCapillary&gt;&lt;LoopCapillary&gt;40&lt;/LoopCapillary&gt;&lt;IsBackSeatInstalled&gt;false&lt;/IsBackSeatInstalled&gt;&lt;BackSeatCapillary&gt;0&lt;/BackSeatCapillary&gt;&lt;BackLoopCapillary&gt;0&lt;/BackLoopCapillary&gt;&lt;RinseValveInstalled&gt;false&lt;/RinseValveInstalled&gt;&lt;RinseValveEnabled&gt;false&lt;/RinseValveEnabled&gt;&lt;/SamplerConfig&gt;</Data>
+      </ConfigData>
+      <AutoConfigInfo>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;AutoConfigSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;&lt;ConnectionType&gt;ConnectionType_IPAddress&lt;/ConnectionType&gt;&lt;IPAddress&gt;192.168.254.11&lt;/IPAddress&gt;&lt;DoDetectedCombinedSystems&gt;true&lt;/DoDetectedCombinedSystems&gt;&lt;/AutoConfigSettings&gt;</AutoConfigInfo>
+    </ModuleConfig>
+    <ModuleConfig ImportSource="RapidControl.ModuleRegistration.xml" ImportID="Agilent.LC.1200Series.BinPump" ConfigID="{ecebf5ae-91ca-4135-a898-3366302c4606}">
+      <ConnectionInfo>
+        <Type>LAN_IP</Type>
+        <Address>192.168.254.11</Address>
+        <Shared>false</Shared>
+      </ConnectionInfo>
+      <ConfigData>
+        <Data>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;PumpConfig xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" schemaVersion="1.0.2"&gt;&lt;DisplayName&gt;1290 Infinity BinPump&lt;/DisplayName&gt;&lt;SerialNumber&gt;DE92900133&lt;/SerialNumber&gt;&lt;ModuleType&gt;G4220A&lt;/ModuleType&gt;&lt;ModuleDisplayType&gt;G4220A&lt;/ModuleDisplayType&gt;&lt;ConnectionInfo&gt;&lt;ConnectionType&gt;ConnectionType_IPAddress&lt;/ConnectionType&gt;&lt;IPAddress&gt;192.168.254.11&lt;/IPAddress&gt;&lt;/ConnectionInfo&gt;&lt;FirmwareRevision&gt;U.06.24 [0103]&lt;/FirmwareRevision&gt;&lt;IsExternalContactsBoardInstalled&gt;false&lt;/IsExternalContactsBoardInstalled&gt;&lt;IsSealWashInstalled&gt;true&lt;/IsSealWashInstalled&gt;&lt;IsSolventSelectionValveInstalled&gt;true&lt;/IsSolventSelectionValveInstalled&gt;&lt;IsFlowSensorInstalled&gt;false&lt;/IsFlowSensorInstalled&gt;&lt;FlowSensorVersion&gt;FS1_20microl&lt;/FlowSensorVersion&gt;&lt;PressureUnit&gt;Unit_Bar&lt;/PressureUnit&gt;&lt;/PumpConfig&gt;</Data>
+      </ConfigData>
+      <Settings>
+        <Setting ID="PMP1.GenericUI.Modal.Agilent.LCDrivers.RapidControl.Pump.Actions.ControlUIItem">Heigth=643;Width=470;Left=405;Top=175</Setting>
+      </Settings>
+      <AutoConfigInfo>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;AutoConfigSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"&gt;&lt;ConnectionType&gt;ConnectionType_IPAddress&lt;/ConnectionType&gt;&lt;IPAddress&gt;192.168.254.11&lt;/IPAddress&gt;&lt;DoDetectedCombinedSystems&gt;true&lt;/DoDetectedCombinedSystems&gt;&lt;/AutoConfigSettings&gt;</AutoConfigInfo>
+    </ModuleConfig>
+  </ConfiguredModules>
+  <Settings>
+    <Setting ID="CombinedMethodDialog">Heigth=800;Width=1024;Left=128;Top=97;SplitterDistancePercentage=80;SplitterCollapsed=0;1290 Infinity BinPump|Flow=1;1290 Infinity BinPump|Solvent Ratio A=1;1290 Infinity BinPump|Solvent Ratio B=1;1290 Infinity BinPump|High Pressure Limit=1;1290 Infinity TCC|Left Temperature=1;1290 Infinity TCC|Right Temperature=1;1290 Infinity DAD|Signal A=1;1290 Infinity DAD|Signal B=1;1290 Infinity DAD|Signal C=1;1290 Infinity DAD|Signal D=1;1290 Infinity DAD|Signal E=1;1290 Infinity DAD|Signal F=1;1290 Infinity DAD|Signal G=1;1290 Infinity DAD|Signal H=1</Setting>
+  </Settings>
+  <InstrumentType>LC</InstrumentType>
+</InstrumentConfig>

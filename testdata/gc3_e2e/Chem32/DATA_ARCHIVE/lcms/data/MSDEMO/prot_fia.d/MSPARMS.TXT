@@ -1,0 +1,89 @@
+This data was acquired in Method&Run Control.
+The MSD parameters were saved in the msdiag register file.
+This msparms.txt file was built using the values from the msdiag register.
+Some parameters normally reported under MSData acquisition in Tune 
+may be missing from this msparms.txt file.  You may be able to read these 
+values from Data Analysis.  These items are marked with an asterisk (*).
+ 
+ 
+ 
+File                     :   C:\HPCHEM\1\DATA\00041433.D
+Operator                 :   AZ
+Date acquired            :   Fri Apr 28 12:49:15 2000
+Instrument               :   Sprite 7
+Tune File                :   C:\HPCHEM\1\1946TUNE\atunem.tun
+ 
+ 
+Sample information
+----------------------------------
+Sample name              :    
+Misc info                :    
+ 
+ 
+MS parameters - Positive
+----------------------------------
+Skim1                    :    Not Applicable
+Skim2                    :    7.0 V     
+Ion Energy               :    5.0 V     
+Lens1                    :    2.6 V     
+Lens2                    :    40 V      
+Iris                     :    368 V     
+HED                      :    10000 V   
+Width Gain               :    244       
+Width Offset             :    Variable  
+                              Mass         :   Value    
+                                 --------------------------
+                              118.08       :   -72      
+                              622.03       :   -72      
+                              922.01       :   -72      
+                              1521.97      :   -62      
+                              2121.93      :   -72      
+                              2721.89      :   -72      
+                                 --------------------------
+Mass Gain                :    16.40     
+Mass Offset              :    Variable  
+                              Mass         :   Value    
+                                 --------------------------
+                              118.08       :   1        
+                              622.03       :   1        
+                              922.01       :   1        
+                              1521.97      :   1        
+                              2121.93      :   1        
+                                 --------------------------
+Quad DC                  :    0.00 V    
+Octopole Peak            :    266 V     
+Octopole Knee            :    280 Da    
+Mass Filter              :    Gaussian  
+Mass Filter Width        :    0.50 Da   
+Time Filter              :    Gaussian  
+Time Filter Width        :    0.075 minutes
+ 
+ 
+MS parameters - Negative
+----------------------------------
+Skim1                    :    Not Applicable
+Skim2                    :    6.0 V     
+Ion Energy               :    5.0 V     
+Lens1                    :    -1.6 V    
+Lens2                    :    34 V      
+Iris                     :    136 V     
+HED                      :    10000 V   
+Width Gain               :    244       
+Width Offset             :    -72       
+Mass Gain                :    16.30     
+Mass Offset              :    Variable  
+                              Mass         :   Value    
+                                 --------------------------
+                              118.08       :   1        
+                              622.03       :   1        
+                              922.01       :   1        
+                              1521.97      :   1        
+                              2121.93      :   1        
+                                 --------------------------
+Quad DC                  :    0.00 V    
+Octopole Peak            :    266 V     
+Octopole Knee            :    280 Da    
+Mass Filter              :    Gaussian  
+Mass Filter Width        :    0.50 Da   
+Time Filter              :    Gaussian  
+Time Filter Width        :    0.075 minutes

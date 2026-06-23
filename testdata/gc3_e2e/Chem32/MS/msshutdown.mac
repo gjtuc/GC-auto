@@ -1,0 +1,30 @@
+name msshutdown
+    !* Shutdown macro for MSD allows heated zones to cool before Standby conditions applied.
+    !* CPL 03-24-2008
+
+    local ID_TUNEMAC_DRYING_GAS_TEM_827
+    local ID_TUNEMAC_DEG_C_828
+    local ID_TUNEMAC_VAPORIZER_TEMP_837
+
+
+    ID_TUNEMAC_DRYING_GAS_TEM_827 = 17827
+    ID_TUNEMAC_DEG_C_828          = 17828
+    ID_TUNEMAC_VAPORIZER_TEMP_837 = 17837
+
+
+   !* Set Drying gas temp to 300
+        MSSCWrite ":zone:name dgas; set 300"
+        print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TEM_827) + " 300" \
+        + ReadResource$("tunemac",ID_TUNEMAC_DEG_C_828)
+   sleep 1
+         
+   !* Set Vaporizer to 0 if msgetionsrc$() = APCI, APPI, MM-ES+APCI, or X-ESI
+    
+      if (ConvertText$(UPPER,msgetionsrc$()) = "APCI") or (ConvertText$(UPPER,msgetionsrc$()) = "APPI")\
+        or (ConvertText$(UPPER,msgetionsrc$()) = "MM-ES+APCI") or (ConvertText$(UPPER,msgetionsrc$()) = "AJS-ES") then
+        MSSCWrite ":zone:name vapor; set 0"
+        print ReadResource$("tunemac",ID_TUNEMAC_VAPORIZER_TEMP_837)
+        sleep 300 !* To allow 5 minute cool-down for Vaporizer zone
+      endif   
+    
+endmacro

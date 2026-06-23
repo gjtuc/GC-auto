@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="TopAcqTB" PosStyle="TOP" DockRow="0" DockCol="0" Caption="方法和运行控制" PanelName="Main">
+		<RadioButton Name="TopSeq" Help="选择序列任务" Command="TLB_SwitchAcqTask TopSeq" Group="1" Enable="1" ImageName="Task_Sequence20" NewGroup="1" ImageNameDisabled="Task_Sequence20_d"/>
+		<RadioButton Name="TopRun" Help="选择运行方法任务" Command="TLB_SwitchAcqTask TopRun" Group="1" Enable="1" ImageName="Task_RunMethod20" ImageNameDisabled="Task_RunMethod20_d"/>
+		<Static Name="Methods" Visible="1" Enable="1" Text="方法" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadMethod" Help="调用方法" Command="TLB_LoadMethod" ImageName="Load_method20" ImageNameDisabled="Load_method20_d"/>
+		<PushButton Name="SaveMethod" Help="保存当前方法" Command="TLB_SaveCurrentMethod" ImageName="Save_method20" ImageNameDisabled="Save_method20_d"/>
+		<NonEditCombobox Name="ActualAndPreviousMethods" Help="从最近调用的方法文件中选择" Enable="1" Table="_Config,1,MethodFile" Selection="1" Width="200"/>
+		<Static Name="Sequences" Visible="1" Enable="1" Text="序列" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadSequence" Help="调用序列模板文件" Command="LoadSequenceAuto" ImageName="Load_sequence20" ImageNameDisabled="Load_sequence20_d"/>
+		<PushButton Name="SaveSequence" Help="保存当前序列模板" Command="SaveCurrentSequence" ImageName="Save_sequence20" ImageNameDisabled="Save_sequence20_d"/>
+		<NonEditCombobox Name="ActualAndPreviousSequences" Help="从最近被调用的序列模板文件中选择" Enable="1" Table="_Config,1,SequenceFile" Selection="1" Width="200"/>
+		<RadioButton Name="ViewInstr" Help="按此按钮切换屏幕版面" Command="ACQ_SwitchDisplay Instr" Group="2" Enable="1" State="1" ImageName="MR_LayoutB20" NewGroup="1" ImageNameDisabled="MR_LayoutB20_d"/>
+		<RadioButton Name="ViewSignal" Help="按此按钮切换屏幕版面" Command="ACQ_SwitchDisplay Signal" Group="2" Enable="1" ImageName="MR_LayoutC20" ImageNameDisabled="MR_LayoutC20_d"/>
+		<RadioButton Name="ViewAll" Help="按此按钮切换屏幕版面" Command="ACQ_SwitchDisplay All" Group="2" Enable="1" ImageName="MR_LayoutA20" ImageNameDisabled="MR_LayoutA20_d"/>
+		<PushButton Name="InsLogBook" Help="显示/隐藏当前在线日志" Command="LBK.LOGBOOK" NewGroup="1" ImageName="Logbook20" ImageNameDisabled="Logbook20_d"/>
+		<PushButton Name="SeqLogBook" Help="显示/隐藏序列日志" Command="LBK.OPENSEQLOGBOOK" ImageName="Sequence_logbook20" ImageNameDisabled="Sequence_logbook20_d"/>
+		<PushButton Name="ReportPreview" Help="识别峰，计算和预览结果" Command="MenuQuantify SCREEN" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="ReportPrint" Help="识别峰，计算结果和打印报告" Command="MenuQuantify PRINTER" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="EditEntireMethod" Help="编辑完整方法" Command="EditEntireMethod" ImageName="Edit_entire_method20" ImageNameDisabled="Edit_entire_method20_d"/>
+		<PushButton Name="LCDiagnostics" Help="开始 LC 诊断" Command="StartLABDEV" Visible="0" ImageName="Start_LCDiagnostic20" ImageNameDisabled="Start_LCDiagnostic20_d"/>
+		<PushButton Name="Preferences" Help="打开“首选项”对话框" Command="CpRequest &quot;Cp2&quot;, &quot;DlgPreferences&quot;" Visible="1" ImageName="Preferences20" ImageNameDisabled="Preferences20_d"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="ChemstoreLock" Help="锁定化学工作站会话" Command="ChemStoreLock.ChemStoreSessionLock 1,0" NewGroup="1" Visible="0" ImageName="Chemstore_Lock20" ImageNameDisabled="Chemstore_Lock20_d"/>
+		<PushButton Name="ChemstoreClient" Help="Chemstore 检查客户端" Command="ChemStoreShowReviewClient" Visible="0" ImageName="Chemstore_ReviewClient20" ImageNameDisabled="Chemstore_ReviewClient20_d"/>
+	</toolbar>
+</graphical_object>

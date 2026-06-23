@@ -1,0 +1,316 @@
+
+
+
+
+Name ConvertPAWSlib
+Local path$,file$,doloop,ftype,vers$
+  
+Local  ID_PHX3DSUPPORTFILES_MAXIMA_OF_SPEC_287
+Local  ID_PHX3DSUPPORTFILES_MINIMA_OF_SPEC_288
+Local  ID_PHX3DSUPPORTFILES__IS_NOT_A_CONV_289
+Local  ID_PHX3DSUPPORTFILES_PLEASE_CONVERT_290
+Local  ID_PHX3DSUPPORTFILES_FIRST_291
+Local  ID_PHX3DSUPPORTFILES_LOADING_DATA_F_292
+  
+  ID_PHX3DSUPPORTFILES_MAXIMA_OF_SPEC_287            =  17287  
+  ID_PHX3DSUPPORTFILES_MINIMA_OF_SPEC_288            =  17288  
+  ID_PHX3DSUPPORTFILES__IS_NOT_A_CONV_289            =  17289  
+  ID_PHX3DSUPPORTFILES_PLEASE_CONVERT_290            =  17290  
+  ID_PHX3DSUPPORTFILES_FIRST_291                     =  17291  
+  ID_PHX3DSUPPORTFILES_LOADING_DATA_F_292            =  17292  
+
+ clearwin 2
+ clearwin 3
+ clearwin 4
+ SetWindowSize 2,0,0.6,0,1
+ settabtext _config[1],"window",2,"wintitle",""
+ SetWindowSize 3,0.6,1,0.5,1
+ settabtext _config[1],"window",3,"wintitle",ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_MAXIMA_OF_SPEC_287)
+ SetWindowSize 4,0.6,1,0,0.5
+ settabtext _config[1],"window",4,"wintitle",ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_MINIMA_OF_SPEC_288)
+ 
+ doloop = 1
+ path$ = LIB_DataPath$
+ repeat
+   File$ = ""
+   if SelectFile(1, "Load Converted PASCAL Library File", "*.PLF", \
+                 path$, file$, Ftype) = 0
+     clearwin 2
+     Return         ! end / cancelled
+   endif
+ 
+   ! Check if converted library file
+   open path$+File$ For Input as #5
+   Input #5,vers$
+   close #5
+   print vers$
+   if vers$ <> "! Pascal-Dos Spectral library converion macro Vers. 1.01"
+     value = Alert(path$+file$+ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__IS_NOT_A_CONV_289) + \
+                   ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_PLEASE_CONVERT_290) + \
+                   ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_FIRST_291),3,Alert3Title$)
+   else
+     if len(LIB_DataPath$) = 0
+       LIB_DataPath$ = Path$
+     endif
+     LIB_DataFile$ = file$
+     print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_LOADING_DATA_F_292) + path$+file$
+!     on error print _errmsg$
+       macro path$+file$
+     on error
+   endif
+   clearwin 2
+   clearwin 3
+   clearwin 4
+   settabtext _config[1],"window",2,"wintitle",""
+   settabtext _config[1],"window",3,"wintitle",""
+   settabtext _config[1],"window",4,"wintitle",""
+ until doloop=0
+EndMacro
+
+! BUG for findobjminmax 
+name SpecLibMinMax
+ PARAMETER objnum default 1,AbsThres default 0.1
+ LOCAL x,y,rows,loops
+
+ loops = 0
+
+find:
+ FindObjMinMax Speclibreg[objnum],,AbsThres,5
+
+! BUG !!!!
+!if objnum <> 1
+! deltab speclibreg[objnum],"MaxTable"
+! deltab speclibreg[objnum],"MinTable"
+! copytab speclibreg[1],"MaxTable",speclibreg[objnum],"MaxTable"
+! copytab speclibreg[1],"MinTable",speclibreg[objnum],"MinTable"
+!endif
+
+ if (TabHdrVal(speclibreg[objnum],"MaxTable","NumberOfRows") +         \
+     TabHdrVal(speclibreg[objnum],"MinTable","NumberOfRows") > 10) AND \
+    ( loops < 10)                                                      \
+ then
+   AbsThres = AbsThres * 2
+   loops = loops + 1
+   goto find
+ endif
+
+ edtab 3,Speclibreg[objnum],"MaxTable"
+ edtab 4,Speclibreg[objnum],"MinTable"
+ if TabHdrVal(speclibreg[objnum],"SpecLibInfo","NumberOfRows") > 0
+   delTabRow Speclibreg[objnum],"SpecLibInfo", \
+             1:TabHdrVal(speclibreg[objnum],"SpecLibInfo","NumberOfRows")
+ endif
+
+ ! set the maxima of the table
+ rows = TabHdrVal(speclibreg[objnum],"MaxTable","NumberOfRows")
+ for i = 1 to rows
+   x = tabval(speclibreg[objnum],"MaxTable",i,"x")
+   y = tabval(speclibreg[objnum],"MaxTable",i,"y")
+   InsTabRow speclibreg[objnum],"SpecLibInfo",i:i
+   SetTabVal speclibreg[objnum],"Speclibinfo",i,"WaveLength",x
+   SetTabVal speclibreg[objnum],"Speclibinfo",i,"Absorbance",y
+ next i
+
+ ! set the minima of the table
+ rows = TabHdrVal(speclibreg[objnum],"MinTable","NumberOfRows")
+ for i = 1 to rows
+   x = tabval(speclibreg[objnum],"MinTable",i,"x")
+   y = tabval(speclibreg[objnum],"MinTable",i,"y")
+   InsTabRow speclibreg[objnum],"SpecLibInfo",i:i
+   SetTabVal speclibreg[objnum],"Speclibinfo",i,"WaveLength",x
+   SetTabVal speclibreg[objnum],"Speclibinfo",i,"Absorbance",y
+ next i
+
+endmacro
+
+Name MakeNewSpecObj
+Parameter Start,Step,Points,entry,time,name$,info$
+  
+Local  ID_PHX3DSUPPORTFILES_READING_DATA_O_293
+  ID_PHX3DSUPPORTFILES_READING_DATA_O_293            =  17293  
+  
+ print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_READING_DATA_O_293),name$,"(entry",entry,")"
+ Data_i=1
+ Delreg x
+ newobj x,5,1,Points
+ ! x-axis
+ setdataText x[1],0,"AxisTitle","nm"
+ setdataval  x[1],0,"FieldWidth",-1
+ setdataval  x[1],0,"Precision",0
+ setdataval  x[1],0,"Start",Start
+ setdataval  x[1],0,"Step",Step
+ ! Y-axis
+ setdataText x[1],1,"AxisTitle","mAU"
+ setdataval  x[1],1,"FieldWidth",-1
+ setdataval  x[1],1,"Precision",0
+  
+ ! set object headers to be read by the info template
+ SetobjHdrVal  x[1],"Time",time
+ SetobjHdrVal  x[1],"Index",entry
+ SetobjHdrVal  x[1],"DerivOrder",0
+ SetobjHdrText x[1],"RawDataFile",LibFile$
+ SetobjHdrText x[1],"Title","Lib "+val$(time)+" "+Name$
+ SetobjHdrText x[1],"SampleName",Name$
+ SetobjHdrText x[1],"SampleInfo",Info$
+ SetobjHdrText x[1],"Operator",LibOperator$
+ SetobjHdrText x[1],"DateTime",LibDateTime$
+ SetobjHdrText x[1],"Detector","DAD"
+
+ ! set additional headers for spectrum defaults
+ SetobjHdrVal  x[1],"DataType",1
+ SetobjHdrVal  x[1],"IntegrTime",1
+ SetobjHdrVal  x[1],"SeqLine",0
+ SetobjHdrVal  x[1],"Vial",0
+ SetobjHdrVal  x[1],"Inj",0
+ SetobjHdrVal  x[1],"Attribute",0x004d
+ SetobjHdrText x[1],"MethodFile",""
+ SetobjHdrText x[1],"BarCode",""
+ 
+ ! set the title annotation
+ time = NewTextAnn(x[1],objhdrtext$(x[1],title),0,0,3,1)
+
+ Return
+EndMacro
+ 
+! add a maximum of 10 absorbances values
+Name NewData
+ Parameter x0,x1,x2,x3,x4,x5,x6,x7,x8,x9
+ LOCAL i
+ on error return 
+  for i = 0 to 9
+    evaluate "setdata x[1],1,Data_i+i,x"+val$(i)
+  next i
+  Data_I = Data_I + 10
+ on error
+endmacro
+
+! add the new entry to the librar
+Name AddTheConvEntry
+ PARAMETER ID_Num,ID_Name$
+Local name$,entry,obj_min,obj_max
+  
+Local  ID_PHX3DSUPPORTFILES_ADDED_TO_LIBRA_294
+  
+  ID_PHX3DSUPPORTFILES_ADDED_TO_LIBRA_294            =  17294  
+ getdataminmax x[1:1],1
+ if obj_min <> 0
+   transformobj x[1:1],obj_min:obj_max,0:obj_max-obj_min,"YAXIS"
+ endif
+ name$ = objhdrtext$(x[1],"samplename")
+ print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_ADDED_TO_LIBRA_294),name$
+
+ ! add the entry to the library register
+ value = LibAddEntry(x[1])
+ entry = regsize(speclibreg)-1
+
+ ! reset the sample name and draw spectrum
+ settabhdrval speclibreg[entry],"SpecLibInfo","ID",ID_Num
+ settabhdrtext speclibreg[entry],"SpecLibInfo","ID_Name",ID_Name$
+ settabhdrtext speclibreg[entry],"SpecLibInfo","Sample",""
+ settabtext _config[1],"window",2,"wintitle",name$
+ draw 2,speclibreg[entry]
+
+ ! Add the minima and maxima
+ SpecLibMinMax entry
+
+EndMacro
+
+Name MakeNewConvLibrary
+ PARAMETER file$,LibName$,Operator$,Date$,      \
+           Info1$,Info2$,Info3$,Info4$,Info5$
+           
+Local  ID_PHX3DSUPPORTFILES_LOADING_PASCAL_295
+  
+  ID_PHX3DSUPPORTFILES_LOADING_PASCAL_295            =  17295  
+
+ ! close loaded library
+ if CloseLoadedLibrary()>0 
+  Generate error 1,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_LOADING_PASCAL_295)
+ endif
+
+ ! generate library info header
+ DelReg SpecLibReg
+ newobj speclibreg,1,0,0      ! empty object for NEW header
+ newobj speclibreg,1,0,0      ! empty object for template header
+ copytab _config[2],LibHeaderTemp,speclibreg[1],LibHeaderTemp
+ copytab _config[2],SelectionTable,speclibreg[1],SelectionTable
+
+ ! set the items in the header template
+ SetTabHdrText speclibreg[1],"LibHeaderTemp","File_Name",LIB_dataPath$+File$
+ SetTabHdrText speclibreg[1],"LibHeaderTemp","Changed",time$()
+ SetTabHdrText speclibreg[1],"LibHeaderTemp","Instruments","DAD"
+ SetTabHdrText speclibreg[1],"LibHeaderTemp","Library_Name",LibName$
+ SetTabHdrText speclibreg[1],"LibHeaderTemp","Changed_by",Operator$
+ InsTabRow speclibreg[1],"LibHeaderTemp",1
+ if len(Info2$) > 0
+  Info1$ = Info1$ + chr$(13) + chr$(10) + Info2$
+ endif
+ if len(Info3$) > 0
+  Info1$ = Info1$ + chr$(13) + chr$(10) + Info3$
+ endif
+ if len(Info4$) > 0
+  Info1$ = Info1$ + chr$(13) + chr$(10) + Info4$
+ endif
+ if len(Info5$) > 0
+  Info1$ = Info1$ + chr$(13) + chr$(10) + Info5$
+ endif
+ SetTabText speclibreg[1],"LibHeaderTemp",1,"Item_name","Info"
+ SetTabText speclibreg[1],"LibHeaderTemp",1,"Contents",Info1$
+
+ ! generate and edit the header info block
+ value = libeditheader(,speclibreg[1])
+
+ SetTabHdrVal SpecLibReg[2],LibHeader,FileRevChecked,0
+
+ ! remove the first object (header template)
+ delobj speclibreg[1:1]
+ Return
+EndMacro
+
+Name CloseNewConvLibrary
+Local value,i,nobjs
+  
+Local  ID_PHX3DSUPPORTFILES_THIS_IS_NOT_A_296
+Local  ID_PHX3DSUPPORTFILES__PLEASE_CONVER_297
+Local  ID_PHX3DSUPPORTFILES_NONE_VALID_LIB_298
+Local  ID_PHX3DSUPPORTFILES_LIBRARY_CONTAI_299
+Local  ID_PHX3DSUPPORTFILES_LIBRARY_LOADED_301
+Local  ID_PHX3DSUPPORTFILES__CONTINUE_300
+Local ID_PHX3DSUPPORTFILES__ENTRIES_302
+    
+  ID_PHX3DSUPPORTFILES_THIS_IS_NOT_A_296             =  17296  
+  ID_PHX3DSUPPORTFILES__PLEASE_CONVER_297            =  17297  
+  ID_PHX3DSUPPORTFILES_NONE_VALID_LIB_298            =  17298  
+  ID_PHX3DSUPPORTFILES_LIBRARY_CONTAI_299            =  17299  
+  ID_PHX3DSUPPORTFILES__CONTINUE_300                 =  17300  
+  ID_PHX3DSUPPORTFILES_LIBRARY_LOADED_301            =  17301  
+  ID_PHX3DSUPPORTFILES__ENTRIES_302                  =  17302  
+
+ ! clean up
+ nobjs = regsize(speclibreg)
+ for i=1 to nobjs
+  deltab speclibreg[i],"MaxTable"
+  deltab speclibreg[i],"MinTable"
+ next i
+
+ value = CheckLibrary()       ! check the library
+ if value <> 0 then           ! inconsistency detected
+  if value > 0 then           ! none recoverble error
+   value=Alert(ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_THIS_IS_NOT_A_296)+\
+               ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__PLEASE_CONVER_297),3,Alert3Title$)
+   DelReg SpecLibReg
+   generate error 1,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NONE_VALID_LIB_298)
+  endif
+  if Alert(ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_LIBRARY_CONTAI_299)+a$+ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__CONTINUE_300),4,Alert4Title$)=0
+   DelReg SpecLibReg
+   generate error 0,""
+  endif
+ endif
+ ! initialize some variables
+ LIB_Loaded = 1
+ infoObj    = LIBinfoObject()
+ print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_LIBRARY_LOADED_301)+val$(infoObj-1)+ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__ENTRIES_302)
+ SetTabHdrVal SpecLibReg[InfoObj],"LibHeader","LibraryChanged",0 ! set not changed
+ SaveLibraryAs
+ Return
+EndMacro

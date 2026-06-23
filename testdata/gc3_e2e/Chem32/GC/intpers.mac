@@ -1,0 +1,383 @@
+!============================================================================
+
+! GC Instrument specific personalities for the new enhanced integrator
+
+! intpers.mac
+
+! This macro describes the personalities of the new enhanced integrator.
+! The settings that are made here represent the optimized integration
+! parameters for each detector used with this instrument.
+!============================================================================
+
+
+!############################################################################
+name CopyPersTab
+
+ Parameter FromTable$
+ Parameter ToTable$
+
+! Helper function
+! Do only copy the table if the table does not already exist
+!############################################################################
+local result
+
+ if ObjHdrType(_Config[2],ToTable$)<>4
+  CopyTab _Config[2],FromTable$,_Config[2],ToTable$
+  result = 1
+ else
+  result = 0
+ endif
+
+ return result
+
+endmacro
+
+
+!############################################################################
+name MakePersonalitiesForEvents
+
+ Parameter FromTable$ default "Event12"
+
+! Copy the default template of the integration event table (event12)
+! and and make instrument specific modifications for each detector
+! Store the modified tables as default tables into _Config[2]
+!############################################################################
+local DetectorClass$, ToTable$
+
+!_____________________________________________________________
+
+! Thermal conductivity detector
+ DetectorClass$="TCD"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"InitReject",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitThresh",100.0
+ SetTabHdrVal _Config[2],ToTable$,"InitWidth",0.04
+ SetTabHdrVal _Config[2],ToTable$,"ShouldersOn",0
+ SetTabHdrVal _Config[2],ToTable$,"InitHeight",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitBaseDrift",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SplitSolvThres",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SolventThres",0
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"BaselineClamp",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"BaseResetThres",1.0e+38
+
+ endif
+!_____________________________________________________________
+
+! Analogue to digital converter
+ DetectorClass$="ADC"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"InitReject",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitThresh",20.0
+ SetTabHdrVal _Config[2],ToTable$,"InitWidth",0.04
+ SetTabHdrVal _Config[2],ToTable$,"ShouldersOn",0
+ SetTabHdrVal _Config[2],ToTable$,"InitHeight",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitBaseDrift",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SplitSolvThres",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SolventThres",0
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"BaselineClamp",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"BaseResetThres",1.0e+38
+ endif
+!_____________________________________________________________
+
+! Flame ionization detector
+ DetectorClass$="FID"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"InitReject",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitThresh",50.0
+ SetTabHdrVal _Config[2],ToTable$,"InitWidth",0.04
+ SetTabHdrVal _Config[2],ToTable$,"ShouldersOn",0
+ SetTabHdrVal _Config[2],ToTable$,"InitHeight",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitBaseDrift",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SplitSolvThres",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SolventThres",0
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"BaselineClamp",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"BaseResetThres",1.0e+38
+ endif
+!_____________________________________________________________
+
+! Electron capture detector
+ DetectorClass$="ECD"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"InitReject",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitThresh",100.0
+ SetTabHdrVal _Config[2],ToTable$,"InitWidth",0.08
+ SetTabHdrVal _Config[2],ToTable$,"ShouldersOn",0
+ SetTabHdrVal _Config[2],ToTable$,"InitHeight",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitBaseDrift",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SplitSolvThres",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SolventThres",0
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"BaselineClamp",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"BaseResetThres",1.0e+38
+ endif
+!_____________________________________________________________
+
+! Nitrogen phosphorus detector
+ DetectorClass$="NPD"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"InitReject",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitThresh",500.0
+ SetTabHdrVal _Config[2],ToTable$,"InitWidth",0.04
+ SetTabHdrVal _Config[2],ToTable$,"ShouldersOn",0
+ SetTabHdrVal _Config[2],ToTable$,"InitHeight",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitBaseDrift",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SplitSolvThres",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SolventThres",0
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"BaselineClamp",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"BaseResetThres",1.0e+38
+ endif
+!_____________________________________________________________
+
+! Flame photometric detector
+ DetectorClass$="FPD"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"InitReject",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitThresh",50.0
+ SetTabHdrVal _Config[2],ToTable$,"InitWidth",0.04
+ SetTabHdrVal _Config[2],ToTable$,"ShouldersOn",0
+ SetTabHdrVal _Config[2],ToTable$,"InitHeight",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitBaseDrift",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SplitSolvThres",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SolventThres",0
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"BaselineClamp",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"BaseResetThres",1.0e+38
+ endif
+!_____________________________________________________________
+
+! Micro Electron capture detector
+ DetectorClass$="uECD"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"InitReject",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitThresh",500.0
+ SetTabHdrVal _Config[2],ToTable$,"InitWidth",0.08
+ SetTabHdrVal _Config[2],ToTable$,"ShouldersOn",0
+ SetTabHdrVal _Config[2],ToTable$,"InitHeight",1.0
+ SetTabHdrVal _Config[2],ToTable$,"InitBaseDrift",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SplitSolvThres",0.0
+ SetTabHdrVal _Config[2],ToTable$,"SolventThres",0
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"StartIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegMode",2
+ SetTabHdrVal _Config[2],ToTable$,"EndIntegValue",0
+ SetTabHdrVal _Config[2],ToTable$,"BaselineClamp",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"BaseResetThres",1.0e+38
+ endif
+!_____________________________________________________________
+
+
+endmacro
+
+
+!############################################################################
+name MakePersonalitiesForDetectors
+
+ Parameter FromTable$ default "IntDetect"
+
+! Copy the default template of the integration detector table (intdetect)
+! and and make instrument specific modifications for each detector
+! Store the modified tables as constant tables into _Config[2]
+!############################################################################
+local DetectorClass$, ToTable$
+
+!_____________________________________________________________
+
+! Thermal conductivity detector
+ DetectorClass$="TCD"
+
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"MaxDataLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MaxLinearLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinDataLimit",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinLinearLimit",-1.0e+38
+
+ endif
+!_____________________________________________________________
+
+! Analogue to digital converter
+ DetectorClass$="ADC"
+
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"MaxDataLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MaxLinearLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinDataLimit",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinLinearLimit",-1.0e+38
+ endif
+!_____________________________________________________________
+
+! Flame ionization detector
+ DetectorClass$="FID"
+
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"MaxDataLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MaxLinearLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinDataLimit",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinLinearLimit",-1.0e+38
+ endif
+!_____________________________________________________________
+
+! Electron capture detector
+ DetectorClass$="ECD"
+
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"MaxDataLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MaxLinearLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinDataLimit",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinLinearLimit",-1.0e+38
+ endif
+!_____________________________________________________________
+
+! Nitrogen phosphorus detector
+ DetectorClass$="NPD"
+
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"MaxDataLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MaxLinearLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinDataLimit",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinLinearLimit",-1.0e+38
+ endif
+!_____________________________________________________________
+
+! Flame photometric detector
+ DetectorClass$="FPD"
+
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"MaxDataLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MaxLinearLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinDataLimit",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinLinearLimit",-1.0e+38
+ endif
+!_____________________________________________________________
+
+! Micro Electron capture detector
+ DetectorClass$="uECD"
+
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"MaxDataLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MaxLinearLimit",1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinDataLimit",-1.0e+38
+ SetTabHdrVal _Config[2],ToTable$,"MinLinearLimit",-1.0e+38
+ endif
+!_____________________________________________________________
+
+
+endmacro
+
+
+!############################################################################
+name MakePersonalitiesForMethods
+
+ Parameter FromTable$ default "IntMethodTemp"
+
+! make instrument specific modifications to the template of the
+! integration method table (intmethod)
+!############################################################################
+local ToTable$
+
+ ToTable$="IntMethod"
+ if ObjHdrType(_Config[2],ToTable$)<>4
+  RenTab _Config[2],FromTable$,ToTable$
+
+! Modifications start here...
+ SetTabHdrVal _Config[2],ToTable$,"PeakStartSigma",3.0
+ SetTabHdrVal _Config[2],ToTable$,"PeakEndSigma",4.0
+ SetTabHdrVal _Config[2],ToTable$,"TailingFactor",1.0
+ SetTabHdrVal _Config[2],ToTable$,"BaseLineWidth",1.0
+ SetTabHdrVal _Config[2],ToTable$,"DeadVolTime",0.0
+ SetTabHdrVal _Config[2],ToTable$,"MinimumWidth",0.0
+ SetTabHdrVal _Config[2],ToTable$,"Plates",0.0
+ SetTabHdrVal _Config[2],ToTable$,"PeakWidthBroad",1.0
+ SetTabHdrVal _Config[2],ToTable$,"PeakTopType",1
+ SetTabHdrVal _Config[2],ToTable$,"BaseDetectMode",1
+ SetTabHdrVal _Config[2],ToTable$,"TanSkimMode",2
+ SetTabHdrVal _Config[2],ToTable$,"WidthCalc",4
+ SetTabHdrVal _Config[2],ToTable$,"PlatesCalcMode",0.0
+ SetTabHdrVal _Config[2],ToTable$,"PeakSepCalc",0.0
+
+ endif
+!_____________________________________________________________
+
+endmacro
+
+
+!############################################################################
+name MakeIntegratorPersonalities
+
+!############################################################################
+
+ MakePersonalitiesForEvents
+ MakePersonalitiesForDetectors
+ MakePersonalitiesForMethods
+
+endmacro

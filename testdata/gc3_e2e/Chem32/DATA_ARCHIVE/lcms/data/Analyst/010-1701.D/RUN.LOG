@@ -1,0 +1,26 @@
+ 443 41e0 39b88dd4  202
+Method       Method started:  line# 17 vial# 10 inj# 1      23:57:24 09/07/00
+  67 41e0 39b88dd5    0
+Method       Instrument running calibration Vial 10         23:57:25 09/07/00
+   0 1da8 39b88e22  600
+1100 PMP   1 Pressure = 52.4 bar                            23:58:42 09/07/00
+   0 1da7 39b88e22  600
+1100 THM   1 Column temperature = 32.0 °C                   23:58:42 09/07/00
+   0 1da7 39b88eb8  600
+1100 THM   1 Column temperature = 32.0 °C                   00:01:12 09/08/00
+   0 1da8 39b88eb8  600
+1100 PMP   1 Pressure = 52.6 bar                            00:01:12 09/08/00
+  67 41e0 39b88ebc    0
+Method       Instrument run completed                       00:01:16 09/08/00
+ 875 41e0 39b88ebf    0
+Method       Saving Method RUN.M                            00:01:19 09/08/00
+  67 41e0 39b88ec0    0
+Method       Method completed                               00:01:20 09/08/00
+ 443 41e0 39f67bb5  202
+Method       Method started:  line# 17 vial# 10 inj# 1      23:20:37 10/24/00
+  67 41e0 39f67bb5    0
+Method       Method completed                               23:20:37 10/24/00
+ 443 41e0 3a11cd6b  202
+Method       Method started:  line# 17 vial# 10 inj# 1      15:40:27 11/14/00
+  67 41e0 3a11cd6c    0
+Method       Method completed                               15:40:28 11/14/00

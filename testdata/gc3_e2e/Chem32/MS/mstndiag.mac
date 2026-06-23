@@ -1,0 +1,518 @@
+!***************************************************************************!
+!* FILE: mstnDiag.mac        
+!* These macros allow the use of certain LC/MSD diagnosis view functions in 
+!* other views.
+!*
+!* MACROS :  
+!*       
+!*       mstnDiagnosis      : Loads diagnosis features 
+!*       NoiseTest          : Runs noise test and print report
+!*       AbortNoise         : Noise test cleanup macro
+!*       prQETest           : Runs quad electronics and print report
+!*       AbortQETest        : Quad electronics test cleanup macro
+!*       PrintTestResult    : Executes print command in test register
+!*       PrintTest          : PrintTestResult for command line use
+!*       SignalTest         : Runs signal test and prints report
+!*       AbortSignal        : Signal test cleanup macro
+!*       Vent               : Opens vent panel
+!*       Pumpdown           : Opens pumpdown panel
+!*       DeleteAbortCmd     : Removes abort command from the abort string
+!*       InitDiagWindows    : Adds diagnosis windows to window table
+!*     
+!*
+ mstnDiagVer$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/mstndiag.mac 1.5 2000-02-08 14:24:07-08 ydeng Exp $"
+ verIx = instr(mstnDiagVer$, ".mac ") + 5
+ mstnDiagVer$ =  mstnDiagVer$[verIx:VerIx + instr(mstnDiagVer$[VerIx:len(mstnDiagVer$)]," ") - 1] 
+ remove verIx
+!
+!*
+!****************************************************************************
+
+!****************************************************************************
+NAME mstnDiagnosis
+! Loads diagnosis view features to be used in other views.
+!
+! Revision History:
+! 02/08/00 YD  Added gaincurv.mac call for "Gain Curve Report"
+!****************************************************************************
+LOCAL err, rowNum
+
+!Local  ID_TUNEMAC______DIAGNOSIS_966
+!ID_TUNEMAC______DIAGNOSIS_966                      =  17966  
+  if Check(Variable, PRTestVer$) = 1 then
+     ! Modify the diagnosis view exit hook in the production environment.  
+     ! If the original dgMSCloseViewMac is in the hook table, then 
+     ! substitute the production version prDgMSCloseViewMac.
+     
+     if regSize(Hook) > 0 then 
+        if ObjHdrType(Hook, "vCLOSEDIAGNOSE") = 4 then
+           rowNum = RowByText(Hook, "vCLOSEDIAGNOSE",, "Command", "i=", \
+                             "dgMSCloseViewMac")
+           ! if rowNum > 0 then
+           !    SetTabText Hook, "vCLOSEDIAGNOSE", rowNum, "Command", \
+           !                     "prdgMSCloseViewMac"
+           !    print ReadResource$("tunemac",ID_TUNEMAC______DIAGNOSIS_966)
+           ! endif   
+        endif
+     endif  
+  endif
+
+  ON ERROR err=1
+  if CHECK(MACRO,Load_DiagGUIReg) = 0 then
+    macro diagnose.mcx
+  endif   
+  if CHECK(MACRO,Diag_DispMgr) = 0 then
+    macro diagcore.mcx
+  endif
+
+  macro _AutoMsPath$ + "hpmsdiag.mcx"
+  Load_DiagGUIReg
+
+  ! initialize diagnosis windows
+  InitDiagWindows
+
+  macro _AutoMsPath$ + "hpmsdgui.mcx"
+  macro _AutoMsPath$ + "hpmsdgvw.mcx"
+  ! macro _AutoMsPath$ + "dgbg.mac"              ! test no longer used
+  macro _AutoMsPath$ + "dgfault.mac"
+  macro _AutoMsPath$ + "dgnoise.mac"
+  macro _AutoMsPath$ + "dgioptst.mac"
+  macro _AutoMsPath$ + "dgvactst.mac"
+  macro _AutoMsPath$ + "dgsignal.mac"
+  macro _AutoMSPath$ + "dgqetest.mac"
+  macro _AutoMSPath$ + "dgmsutil.mac"
+  macro _AutoMSPath$ + "gaincurv.mac"
+  print ""
+  
+  _DiagnosePath$ = _InstPath$+"Diagnose\"
+  _DiagTuneFile$ = ConvertText$(UPPER, TuneFileName$)
+  
+  if (TabHdrText$(_Config[1], Window, "CurrentView") = "DIAGNOSE") then
+     ms_echo = 0 
+  else
+     ms_echo = 1
+  endif
+  
+  if Check(Variable, _abort$) = 0 then 
+     _abort$ = ""
+  endif
+  
+  RETURN
+
+endmacro
+
+!****************************************************************************
+!****************************************************************************
+NAME NoiseTest
+PARAMETER SpecLevel default 1, IPMode default 1
+! SpecLevel is used to specify the passing criteria to the noise test.
+!    1:  Final specs: 1000 cts. max, up to 10 spikes over 200 allowed 
+!    2:  First bake specs: 2000 cts. max, up to 20 spikes over 200 allowed.
+! IP Mode is used to define which permutations of ion and quad polarities
+! are used.
+!    1:  Ion polarity mode.  This tests both ion polarities, with the 
+!        quad polarity set by NVRAM.
+!    0:  Quad polarity mode.  This tests two specific scenarios:
+!          A: Pos Ion, QP 1; Neg Ion QP 0
+!
+! The test result is posted in the globals NoiseTestResult1$ and t
+! NoiseTesResult2$ so that a calling program (such as bakeout) can get post 
+! the results.
+! Note: ion polarity and quad polarity are switched and restored directly; 
+! no tune file handling occurs.
+!****************************************************************************
+LOCAL oldIonPolarity, oldQP$, abortStr$
+LOCAL NoiseTestResult1$, NoiseTestResult2$
+
+  ! Get initial ion polarity and quad polarity
+Local  ID_TUNEMAC_FIRST_NOISE_TE_967
+Local  ID_TUNEMAC_NOISE_TEST_COU_968
+Local  ID_TUNEMAC_SECOND_NOISE_T_969
+
+ID_TUNEMAC_FIRST_NOISE_TE_967                      =  17967  
+ID_TUNEMAC_NOISE_TEST_COU_968                      =  17968  
+ID_TUNEMAC_SECOND_NOISE_T_969                      =  17969  
+ID_TUNEMAC_NOISE_TEST_COU_968                      =  17968  
+  MSParm IonPolarity, OldIonPolarity
+  MSSCQuery "msc:parm? quadpol", oldQP$
+
+  abortStr$ = ";AbortNoise " + val$(OldIonPolarity) + ", " + oldQP$
+  On Error evaluate abortStr$
+  
+  ! Clear any previous FirstNoiseTestResult in case of error
+  NoiseTestResult1$ = "Not done"
+  NoiseTestResult2$ = "Not done"
+  
+  _DiagTuneFile$ = tuneFileName$
+
+  ! set abort macro
+  if Check(VARIABLE, _abort$) = 0 then
+    _Abort$ = abortStr$
+  else
+    _Abort$ = _Abort$ + abortStr$
+  endif
+
+  ! Parameter checking
+  ! IPMode is currently either 0 or 1
+  if IPMode <= 0 then 
+     IPMode = 0
+  else 
+     IPMode = 1
+  endif
+  ! SpecLevels 1 and 2 only are currently defined  
+  if SpecLevel < 2 then 
+     SpecLevel = 1
+     NoiseTestStr$ = "result$ = dgMSNoiseTest$()"   ! defaults
+  else 
+     SpecLevel = 2
+     NoiseTestStr$ = "result$ = dgMSNoiseTest$(2000, 200, 20)" 
+  endif
+
+  ! Run first test: Positive ion
+  MSParm IonPolarity,, 0
+  if IPMode = 0 then   ! force QP 1
+     MSSCWrite "msc:parm quadpol, 1"
+  endif
+  evaluate NoiseTestStr$
+  NoiseTestResult1$ = result$       ! global
+  print ReadResource$("tunemac",ID_TUNEMAC_FIRST_NOISE_TE_967) + result$
+  if printTestResult() = 0 then
+     print ReadResource$("tunemac",ID_TUNEMAC_NOISE_TEST_COU_968) + result$
+  endif
+
+  ! Run second test: Negative ion
+  MSParm IonPolarity,, 1
+  if IPMode = 0 then   ! force QP 0
+     MSSCWrite "msc:parm? quadpol, 0"
+  endif
+  evaluate NoiseTestStr$
+  NoiseTestResult2$ = result$       ! global
+  print ReadResource$("tunemac",ID_TUNEMAC_SECOND_NOISE_T_969) + result$
+  if printTestResult() = 0 then
+     print ReadResource$("tunemac",ID_TUNEMAC_NOISE_TEST_COU_968) + result$
+  endif
+
+  ! Restore ion polarity and quad polarity
+  MSParm IonPolarity,, OldIonPolarity
+  MSSCWrite "msc:parm quadpol, " + oldQP$
+  
+  ! clean up abort variable
+  DeleteAbortCmd abortStr$
+
+endmacro
+
+!****************************************************************************
+!****************************************************************************
+NAME AbortNoise
+PARAMETER IonPolarity default -1, QP$ default ""
+!****************************************************************************
+  On Error DgMSPrintError
+  
+  dgMSCleanUpNoise
+  
+  if IonPolarity <> -1 then
+     MSParm IonPolarity,, IonPolarity
+  endif
+  if QP$ <> "" then
+     MSSCWrite "msc:parm quadpol, " + QP$
+  endif
+
+  ! clean up abort variable
+  DeleteAbortCmd ";AbortNoise " + val$(IonPolarity) + ", " + QP$
+  
+endmacro
+!****************************************************************************
+
+!****************************************************************************
+!****************************************************************************
+!****************************************************************************
+NAME QETest
+! Execute and print the quad electronics test
+!****************************************************************************
+LOCAL result$, abortStr$
+
+Local  ID_TUNEMAC_QUAD_ELECTRONI_970
+Local  ID_TUNEMAC_QUAD_ELECTRONI_971
+ID_TUNEMAC_QUAD_ELECTRONI_970                      =  17970  
+ID_TUNEMAC_QUAD_ELECTRONI_971                      =  17971  
+  _DiagTuneFile$ = tuneFileName$
+  abortStr$ = ";AbortQETest"
+
+  ! set abort macro
+  if Check(VARIABLE, _abort$) = 0 then
+    _Abort$ = AbortStr$
+  else
+    _Abort$ = _Abort$ + abortStr$
+  endif
+
+  ! run test
+  result$ = dgMSQETest$()
+  print ReadResource$("tunemac",ID_TUNEMAC_QUAD_ELECTRONI_970) + result$  
+
+  ! clean up abort variable
+  DeleteAbortCmd abortStr$
+
+  if printTestResult() = 0 then
+     print ReadResource$("tunemac",ID_TUNEMAC_QUAD_ELECTRONI_971) + result$
+  endif
+  
+endmacro
+
+!****************************************************************************
+!****************************************************************************
+NAME AbortQETest
+!****************************************************************************
+  dgMSQECleanUp
+
+  ! clean up abort variable
+  DeleteAbortCmd ";AbortQETest"
+  
+endmacro
+!***************************************************************************
+
+!****************************************************************************
+!***************************************************************************
+!****************************************************************************
+NAME SignalTest
+! Execute and print the Signal test
+!****************************************************************************
+LOCAL result$ , abortStr$
+
+Local  ID_TUNEMAC_LC_MSD_SIGNAL_972
+Local  ID_TUNEMAC_SIGNAL_TEST_CO_973
+ID_TUNEMAC_LC_MSD_SIGNAL_972                       =  17972  
+ID_TUNEMAC_SIGNAL_TEST_CO_973                      =  17973  
+  _DiagTuneFile$ = tuneFileName$
+  AbortStr$ = ";AbortSigTest"
+  
+  ! set abort macro
+  if Check(VARIABLE, _abort$) = 0 then
+    _Abort$= AbortStr$
+  else
+    _Abort$= _Abort$ + AbortStr$
+  endif
+
+  if check(macro, dgMSSigTest$) = 0 then
+    Macro  _AutoMSPath$ + "dgsignal.mac"
+  endif
+
+  ! run test
+  result$ = dgMSSigTest$()
+  print ReadResource$("tunemac",ID_TUNEMAC_LC_MSD_SIGNAL_972) + result$  
+
+  ! clean up abort variable
+  DeleteAbortCmd abortStr$
+
+  if printTestResult() = 0 then
+     print ReadResource$("tunemac",ID_TUNEMAC_SIGNAL_TEST_CO_973) + result$
+  endif
+  
+endmacro
+
+!****************************************************************************
+!****************************************************************************
+NAME VacTest
+! Execute and print the vacuum system test
+!****************************************************************************
+LOCAL result$ , abortStr$
+
+Local  ID_TUNEMAC_LC_MSD_VACUUM_974
+Local  ID_TUNEMAC_VACUUM_TEST_CO_975
+ID_TUNEMAC_LC_MSD_VACUUM_974                       =  17974  
+ID_TUNEMAC_VACUUM_TEST_CO_975                      =  17975  
+  _DiagTuneFile$ = tuneFileName$
+  AbortStr$ = ";AbortVacTest"
+  
+  ! set abort macro
+  if Check(VARIABLE, _abort$) = 0 then
+    _Abort$= AbortStr$
+  else
+    _Abort$= _Abort$ + AbortStr$
+  endif
+
+  ! run test
+  result$ = dgMSVacTest$()
+  print ReadResource$("tunemac",ID_TUNEMAC_LC_MSD_VACUUM_974) + result$  
+
+  ! clean up abort variable
+  DeleteAbortCmd abortStr$
+
+  if printTestResult() = 0 then
+     print ReadResource$("tunemac",ID_TUNEMAC_VACUUM_TEST_CO_975) + result$
+  endif
+  
+endmacro
+
+!****************************************************************************
+!****************************************************************************
+NAME AbortSigTest
+!****************************************************************************
+  dgMSSigTestCleanup
+
+  ! clean up abort variable
+  DeleteAbortCmd ";AbortSigTest"
+  
+endmacro
+!***************************************************************************
+
+!****************************************************************************
+!***************************************************************************
+!****************************************************************************
+NAME printTestResult 
+!
+!  This will print the test result.  If DiagTestResult isn't present, it 
+!  will try to copy result_reg over and hopefully print that.
+!  If it can't find the print procedure, it returns a 0.  If it can't find 
+!  any of the test registers, a -1 is returned; if the procedure was found,
+!  then 1 is returned.
+!
+!****************************************************************************
+
+  if regSize(DiagTestResult) < 1 then
+     if regSize(Result_Reg) > 0 then
+         copyObj Result_Reg, DiagTestResult
+     else 
+         RETURN -1
+     endif
+  endif
+
+  if ObjHdrType(DiagTestResult,"PrintProcedure") = 0 then
+     evaluate ObjHdrText$(DiagTestResult, "PrintProcedure")
+     RETURN 1
+  else
+     RETURN 0
+  endif
+
+endmacro
+!****************************************************************************
+
+!****************************************************************************
+!****************************************************************************
+!****************************************************************************
+NAME PrintTest
+!
+!  This is a shorthand call to PrintTestResult() for command-line work.
+!
+!****************************************************************************
+
+Local  ID_TUNEMAC_TEST_PRINTED_976
+Local  ID_TUNEMAC_TEST_COULD_NOT_977
+ID_TUNEMAC_TEST_PRINTED_976                        =  17976  
+ID_TUNEMAC_TEST_COULD_NOT_977                      =  17977  
+  if PrintTestResult() = 1 then
+     print ReadResource$("tunemac",ID_TUNEMAC_TEST_PRINTED_976)
+  else
+     print ReadResource$("tunemac",ID_TUNEMAC_TEST_COULD_NOT_977)
+  endif
+  
+endmacro
+
+!****************************************************************************
+!***************************************************************************
+NAME DeleteAbortCmd
+PARAMETER Cmd$ 
+!****************************************************************************
+LOCAL  LenCmd, LenAbort, Pos
+
+   ! delete clean up macro from _abort$ string
+   Pos = InStr(_abort$,Cmd$)
+   if Pos  >0 THEN
+      LenAbort = Len(_abort$)
+      LenCmd  =Len(Cmd$)
+      if Pos = 1 THEN
+         if LenAbort = LenCmd then
+            _abort$ = ""
+         else
+            _abort$ = _abort$[Pos+LenCmd:LenAbort]
+         endif
+      else
+         _abort$ = _abort$[1:Pos-1] + _abort$[Pos-1+LenCmd:LenAbort]
+      endif
+   endif
+  
+endmacro
+!****************************************************************************
+
+!****************************************************************************
+!****************************************************************************
+!****************************************************************************
+NAME Vent
+! This macro calls the diagnosis view Vent panel
+!****************************************************************************
+
+   dgMSpumpGUI 0, 1
+
+endmacro
+!****************************************************************************
+
+!****************************************************************************
+!****************************************************************************
+!****************************************************************************
+NAME Pumpdown
+! This macro calls the diagnosis view Vent panel
+!****************************************************************************
+
+   dgMSpumpGUI 0, 2
+
+endmacro
+!****************************************************************************
+
+!****************************************************************************
+!****************************************************************************
+!****************************************************************************
+NAME InitDiagWindows
+! This macro is part of Init_Diagnose (diagnose.mac).  Normally, this is
+! executed when first entering diagnosis view.
+!****************************************************************************
+
+  IF CHECK(Variable,DIAG_WinStart) = 0 THEN
+    DIAG_WinStart = TabHdrVal(_CONFIG[1], WINDOW, NumberOfRows) + 1
+    DIAG_WinEnd = DIAG_WinStart + 10
+    InsTabRow _config[1],window,DIAG_WinStart:DIAG_WinEnd
+    SetTabVal _CONFIG, WINDOW, DIAG_WinStart:DIAG_WinEnd, XAxisStyle, 1
+    SetTabVal _CONFIG, WINDOW, DIAG_WinStart:DIAG_WinEnd, YAxisStyle, 2
+    DIAG_WinEnd = DIAG_WinEnd - 4 ! DIAG_WinEnd + 1: used for draw printouts
+              ! DIAG_WinEnd + 2: used for real-time plot
+              ! DIAG_WinEnd + 3: used for test clipboard
+              ! DIAG_WinEnd + 4: used for diagnosis GOM panel (DiagTop)
+    ! Set up window table for test clipboard
+    SetTabVal _CONFIG, WINDOW, DIAG_WinEnd + 3, DefWXLow   , .05
+    SetTabVal _CONFIG, WINDOW, DIAG_WinEnd + 3, DefWXHigh  , .95
+    SetTabVal _CONFIG, WINDOW, DIAG_WinEnd + 3, DefWYLow   , .227
+    SetTabVal _CONFIG, WINDOW, DIAG_WinEnd + 3, DefWYHigh  , .9   
+    SetTabVal _CONFIG, WINDOW, DIAG_WinEnd + 3, HelpContext, 9580
+    ! Set up help index for on-line monitor
+    SetTabVal _CONFIG, WINDOW, DIAG_WinEnd + 2, HelpContext, 7100
+    ! Set up view table for diagnosis GUI
+    DelTabRow _CONFIG[1], VIEW_DIAGNOSE, -1
+    InsTabRow _CONFIG, VIEW_DIAGNOSE
+    SetTabVal _CONFIG, VIEW_DIAGNOSE, 1, WinNum, DIAG_WinEnd + 4
+    SetTabVal _CONFIG, VIEW_DIAGNOSE, 1, Visible, 1 
+  ELSE ! Clean-up view table
+    FOR i = DIAG_WinStart TO DIAG_WinEnd + 3
+      RowNo = RowByVal(_CONFIG, VIEW_DIAGNOSE,, "WinNum", "=", i)
+      IF  RowNo > 0 THEN
+   DelTabRow _CONFIG, VIEW_DIAGNOSE, RowNo
+      ENDIF
+    NEXT i
+    RowNo = RowByVal(_CONFIG, VIEW_DIAGNOSE,, "WinNum", "=", DIAG_WinEnd + 4)
+    IF RowNo < 0 THEN ! restore Diagnosis GUI
+      InsTabRow _CONFIG, VIEW_DIAGNOSE
+      RowNo = TabHdrVal(_CONFIG, VIEW_DIAGNOSE, NumberOfRows)
+      SetTabVal _CONFIG, VIEW_DIAGNOSE, RowNo, WinNum, DIAG_WinEnd + 4
+      SetTabVal _CONFIG, VIEW_DIAGNOSE, RowNo, Visible, 1 
+      SetTabText _CONFIG, WINDOW, DIAG_WinEnd + 4, Command, \
+                 "dgStartDiagnosisGUI"
+      SetTabVal  _CONFIG, WINDOW, DIAG_WinEnd + 4, HelpContext, 8700
+    ELSE 
+      SetTabVal _CONFIG, VIEW_DIAGNOSE, RowNo, Visible, 1 
+    ENDIF 
+  ENDIF
+  
+  SetTabText _CONFIG, WINDOW, DIAG_WinEnd + 4, Command, "dgStartDiagnosisGUI"
+  SetTabVal  _CONFIG, WINDOW, DIAG_WinEnd + 4, HelpContext, 8700
+
+endmacro
+!****************************************************************************
+print "MS diagnosis extensions v. " + mstnDiagVer$ + " loaded."
+!********* end of file ******************************************************

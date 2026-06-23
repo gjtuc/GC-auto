@@ -1,0 +1,2325 @@
+
+!**************************************************************************
+! The Integrator Auto-Integrate tool
+! mods by LHA   February 28, 1997
+!
+! 12-30-96: some CE files for V,C,PRESS have blank SignalDesc in
+!           ChromReg[1]; this causes ParseSigDesc to choke.
+!           test for signal type 0-4,15-24,40 to continue INT_Auto12Tone 
+! 12-31-96: constrain INT_WidthWide to 40% max_points in BL; enlarge max_pts
+! 01-01-97: infinite loop found and removed in pw determination ....
+! 01-02-97: fix more trouble in pw loop - divide by 0,etc
+! 01-06-97: revise LC to detect more pks use 5:1 SN but 2x "Threshold"
+! 01-08-97: begin adding strings from NLSCore
+! 01-13-97: correct "tw undefined" when CEDiag present
+! 01-15-97: "tw" fix reviewed by J. Gearing & L. Bilen 
+! 01-21-97: add _MethodChanged = 1 when AutoInt succeeds, reviewed by KCB
+! 01-24-97: consider first_thrsh and revision of LC mult from 2X to 1.5X
+!           enforce negative or 0 slope in pw:thrsh interpolation
+! 02-03-97: refine threshold clamp using pw*thr product 
+! 02-04-97: drop first,last points from XamineBL
+! 02-05-97: ensure all thr values are positive!
+! 02-06-97: quit if fewer than 100 datapoints
+! 02-07-97: investigate minimum disruption for non-integrable signals
+! 02-13-97: escape from peakwidth loop via escape counter + improve test
+! 02-14-97: changes from 1-24 thru 2-13 reviewed by KCB
+! 02-21-97: comment-out the logging
+! 02-28-97: speed-up mods for pw determination, make vars local
+!  5. 5.98  Added local Integmode to reflect the possibility of integmode 2 or 3. LB.        
+!**************************************************************************
+Name AutoIntegrate
+ Parameter Obj Default -1, TabObj$ Default "_DAMethod[1]", TabName$ Default ""
+ local mode,nobjs, lha$
+
+ nobjs = RegSize(ChromReg)
+ if nobjs < 1
+   print NLSCoreChrom$("ErrIntNoSignal")
+   RETURN
+ else
+   if Obj > nobjs
+     Obj = nobjs
+   endif
+ endif
+
+ ! remove selected lines
+ if FreeWin (TLB_Val(IntResWin)) <> TLB_Val(IntResWin)
+   INT_UnSelAllRowIntRes
+ endif
+
+ ! Genie or 12Tone or convert ?
+ Mode = EEV_GETINTEGRATORMODE(1)
+ if Mode < 0
+  RETURN
+ endif
+
+ if Mode = 0                     ! Old Genie macro
+   INT_AutoGenie Obj
+   on error value = 1
+     zoom 38
+   on error
+ else
+  ! lha$ = "TabObj: " + TabObj$ + " TabName: " + TabName$
+  ! button = Alert(lha$,2,"calling INT_Auto12Tone 10") 
+   INT_Auto12Tone obj,TabObj$,TabName$      ! new 12t macro
+ endif
+
+EndMacro
+
+!**************************************************************************
+! The old Genie Integrator Auto-Integrate tool
+!**************************************************************************
+name INT_AutoGenie
+ Parameter Obj Default -1
+  ! macro runs over the specified or all objects in ChromReg and constructs
+  ! an event table for each signal in the _damethod register for the Genie integrator.
+
+  Local nobj,i,j,Tabname$,CurrTabChanged,KeepCurrTab,NewCurrTab$
+
+  nobj = RegSize(ChromReg)
+  if obj < 1
+    obj = 1
+  else
+    if obj > nobj
+      obj = nobj
+    else
+      nobj = obj
+    endif
+  endif
+
+  CurrTabChanged=0
+  KeepCurrTab=0
+  NewCurrTab$=""
+  for i = obj to nobj
+    j=objhdrval (Chromreg[i],ObjClass)
+    Desc_Valid = 0
+    if (j = 4) or (j = 3)
+      if objhdrtype (ChromReg[i], "SignalDesc") <> 99
+        ParseSigDesc ObjHdrText$ (ChromReg[i], "SignalDesc")
+      endif
+    endif
+    if Desc_Valid = 1 then
+      TabName$ = "Event"
+      if (objhdrtype (ChromReg[i], "Detector") <> 99) AND (objhdrtype (ChromReg[i], "SignalId") <> 99)
+       ! if separate eventtable exists use this else create one
+        if (Desc_Detector$ = ObjHdrText$ (ChromReg[i], "Detector")) AND \
+          (Desc_SignalId$ = ObjHdrText$ (ChromReg[i], "SignalId")) \
+        then
+          TabName$ = "Event_" + Desc_Detector$ + Desc_SignalId$
+        endif
+      endif
+
+      if objhdrtype (_DAMethod[1],TabName$) = 99
+        !The table does not exist,create one
+        CopyTab _config[2],"Event",_DAMethod[1],TabName$
+      else
+        RenTab _DAMethod[1],TabName$,"AutoIntDummy"
+        RenTab _DAMethod[1],"AutoIntDummy",TabName$
+        if Check(variable,EdEvents_CurrentTable$) = 1
+          if EdEvents_CurrentTable$=TabName$
+            KeepCurrTab=1
+          endif
+        endif
+      endif
+
+      INT_DoAutoIntegrateGenie i,TabName$
+      if ObjHdrType (ChromReg[i],"IntResults") <> 4 then
+        ! The signal wasn't integratable.
+        print using NLSCoreChrom$("ErrNoIntegSig"), i
+        ! Therefore the event table shouldn't remain in the method either.
+        DelTab _DAMethod[1], TabName$
+      endif
+      if CurrTabChanged = 0
+        NewCurrTab$=TabName$
+        CurrTabChanged=1
+      endif
+    else
+      print using NLSCoreChrom$("ErrNoIntegSig"), i
+    endif
+  next i
+
+  if (CurrTabChanged = 1) and (KeepCurrTab=0)
+    EdEvents_CurrentTable$=NewCurrTab$
+  endif
+
+  return
+endmacro
+
+!**************************************************************************
+Name INT_DoAutoIntegrateGenie
+!**************************************************************************
+ Parameter obj default 1 , evttab$ default "Event"
+ Local e_thr,yb,ye,e_width,e_reject,tw,low,high,xh,xl,step,onepct,slope,peak_width,npeaks
+ Local DataType, terminate, i, PeakType
+ 
+  local NLSFileName_phx3dsupport$
+  local ID_PHX3DSUPPORTFILES_AUTOINTEGRATIN_182
+  
+  NLSFileName_phx3dsupport$                          =  "phx3dsupport" 
+  ID_PHX3DSUPPORTFILES_AUTOINTEGRATIN_182            =  17182  
+  
+ 
+ Print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_AUTOINTEGRATIN_182)
+ if ObjHdrType (ChromReg[obj], "DataType") = 1 then
+   DataType = ObjHdrVal (ChromReg[obj], "DataType")
+   if DataType > TabHdrVal (_Config[1], "Detector", "NumberOfRows") then
+     DataType = 0
+   endif
+ else
+  DataType = 0
+ endif
+
+ !get time range and deltatime of chromatogram in minutes
+ !get total points and 0.1% of full y-range in chromatogram
+ GetDataMinMax chromreg[obj],1
+ npoints = DataCols(chromreg[obj])
+ step    = DataVal(chromreg[obj],0,"step")
+ slope   = DataVal(chromreg[obj],1,"slope")
+ xl      = Data(chromreg[obj],0,1)
+ xh      = Data(chromreg[obj],0,npoints)
+ ht      = (Obj_Max - Obj_Min) / 1000
+
+ !seek max and minvalue of first percent of chromatogram
+ onepct=(xh-xl)/100
+ GetDataMinMax chromreg[obj],1,xl:xl+onepct
+ yb = Obj_Max - Obj_Min
+ if yb < slope
+   yb = slope
+ endif
+
+ !seek max and minvalue of last percent of chromatogram
+ GetDataMinMax chromreg[obj],1,xh-onepct:xh
+ ye = Obj_Max - Obj_Min
+ if ye < slope
+   ye = slope
+ endif
+
+ !average start and end noise using inverse averaging
+ yb = 2 / ( 1/ye + 1/yb)
+
+ !minimum set peak width is "WidthMin" datapoints
+ e_width = TabVal(_Config[1],"Detector",DataType,"WidthMin") * step
+ !update peakwidth if "WidthPercent" % of run time is larger
+ if ObjHdrType (ChromRes[1], "CEDiag") <> 4 then
+   tw = (xh - xl) * TabVal(_Config[1],"Detector",DataType,"WidthPercent") / 100
+   if (tw > e_width)
+     e_width = tw
+   endif
+ endif
+ if e_width < 0.001
+   e_width = 0.001
+ else
+   if e_width > 100
+     e_width = 100
+   endif
+ endif
+
+ !if 0.1% of full range is greater than calculated noise
+ !update noise with the ratio of the signals raised to the power of "ThresholdAbove"
+ if (ht < slope)
+   ht = slope
+ endif
+ if (ht > yb)
+   yb = yb * exp (TabVal (_Config[1], "Detector", DataType, "ThresholdAbove") \
+           * ln(ht / yb))
+ else
+ !else reduce it by the raising to the power of "ThresholdBelow"
+   yb = yb * exp (TabVal (_Config[1], "Detector", DataType, "ThresholdBelow") \
+           * ln(ht / yb))
+ endif
+ e_thr = 5 + 3.32193*log(yb)
+ if e_thr < -99
+   e_thr = -99
+ else
+   if e_thr > 60
+     e_thr = 60
+   endif
+ endif
+
+ SetTabHdrVal _damethod[1],evttab$,"initwidth",e_width
+ SetTabHdrVal _damethod[1],evttab$,"initthresh",e_thr
+
+ !!now integrate and find the first five peaks if possible
+ terminate = 0
+ repeat ! until peaks found or integrated with initreject=0
+   integrateobj  ChromReg[obj]
+
+   if ObjHdrType(chromreg[obj],"intresults") = 4
+     npeaks=TabHdrVal(chromreg[obj],"intresults","numberofrows")
+     for i = 1 to npeaks
+       ! check whether this peak is a non-solvent peak
+       PeakType = TabVal (ChromReg[obj], "IntResults", i, "PeakType")
+       if (PeakType = 8) or ((PeakType >= 10) and (PeakType <=18)) then
+         goto EndPeakTypeLoop
+       endif
+     next i
+     npeaks=0       ! No non-solvent peak has been found yet
+EndPeakTypeLoop:
+   else
+     ! this is a non-integratable signal
+     return
+   endif
+
+   if npeaks = 0 then
+     e_reject = TabHdrVal (_damethod[1],evttab$,"initreject")
+     if e_reject <= 0 then
+       terminate = 1
+     else
+       if e_reject < 0.001 then
+         e_reject = 0
+       endif
+     endif
+     SetTabHdrVal _damethod[1],evttab$,"initreject", e_reject / 10
+   endif
+ until (npeaks > 0) or (terminate = 1)
+
+ if npeaks > 0
+   e_reject=tabval(chromreg[obj],"IntResults",RowByVal(chromreg[obj],"IntResults",,\
+            "Area","min",0),"Area")/100
+   if e_reject < 0 then
+     e_reject = -e_reject
+   endif
+   SetTabHdrVal _damethod[1],evttab$,"initreject",e_reject
+ else
+   e_reject = TabHdrVal (_damethod[1],evttab$,"initreject")
+ endif
+
+ !update the peakwidth proportionally with the time of the first
+ !five found peaks, counting backwards to make the first peak most important
+ if (npeaks > 5)
+   pks = 5
+ else
+   pks = npeaks
+ endif
+ n = pks
+ while (n >= 1) do
+   peak_width = TabVal(chromreg[obj],"IntResults",n,"width")
+   if peak_width > 0      !peak_width = 0 indicates shoulders
+     e_width = sqrt(e_width*peak_width)
+   endif
+   n = n-1
+ endwhile
+ if e_width < 0.001
+   e_width = 0.001
+ else
+   if e_width > 100
+     e_width = 100
+   endif
+ endif
+ SetTabHdrVal _damethod[1],evttab$,"initwidth",e_width
+
+ !now update peakwidth and final integrate with a 4 times more sensitive
+ !threshold
+ e_thr = 3 + 3.32193*log(yb)
+ if e_thr < -99
+   e_thr = -99
+ else
+   if e_thr > 60
+     e_thr = 60
+   endif
+ endif
+ SetTabHdrVal _damethod[1],evttab$,"initthresh",e_thr
+
+ print NLSCoreChrom$("Integrating")
+ integrateobj ChromReg[obj]
+
+ print NLSCoreChrom$("DoneAutoInt")
+
+endmacro
+
+!**************************************************************************
+! The new Enhanced Integrator Auto-Integrate tool
+!**************************************************************************
+! macro runs over the specified or all objects in ChromReg and constructs
+! an event table for each signal in the _damethod register for the 12-Tone integrator.
+! annotation & mods by LHA                February 21, 1997
+!
+! 12.30.96: check for valid integrable lha_datatype [0-4,15-24,40] or don't
+!           call ParseSignalDesc
+! 01.22.97: added check on _methodchanged, reviewed by Keith Butler
+!           3.104 code appeared to work without this; something broken by 3.149
+!           but only in GC Chemstation - don't know where
+! 02.06.97: abort with error msg if fewer than 100 datapoints
+! 02.07.97: investigate minimum disruption for non-integrable
+! 02.10.97: several types for auto_error
+! 02.21.97: comment-ot the logging
+!  5. 5.98  Added IntegMode to reflect the possibility of integmode 2 or 3. LB.        
+!**************************************************************************
+name INT_Auto12Tone
+ Parameter Obj Default 0, TabObj$ Default "_DAMethod[1]", DefTabName$ Default ""
+ Local nobj,i,class,tabtype,TabName$,lha$,lha_datatype, lha2$,lha_log
+ local lha_integrable, auto_error 
+ local IntegMode
+
+  ! set positive for logging
+  !lha_log = 0
+
+  !if lha_log > 0
+  !   button = Alert("INT_Auto12Tone",2,"startup")
+  !endif
+
+  nobj = RegSize (ChromReg)
+  if obj < 1
+    obj = 1
+  else
+    if obj > nobj
+      obj = nobj
+    else
+      nobj = obj
+    endif
+  endif
+
+  DelReg AutoIntTabReg
+  NewObj AutoIntTabReg,1,0,0
+  evaluate "TabType = objhdrtype (" + TabObj$ + ",""IntMethod"")"
+  if TabType = 99
+    CopyTab _config[2],"IntMethod",AutoIntTabReg[1],"IntMethod"
+  else
+    Evaluate "CopyTab " + TabObj$ + ",""IntMethod"",AutoIntTabReg,""IntMethod"""
+  endif
+  ! Added 5.5.98 to reflect the possibility of integmode 2 or 3. LB.                                           
+  evaluate "IntegMode=ObjHdrVal("+TabObj$+",IntegMode)"
+  SetObjHdrVal AutoIntTabReg,"integmode",IntegMode
+
+  !if (lha_log > 0)
+  !  button=Alert("loop for signal objects  20")
+  !endif
+
+  for i = obj to nobj
+    TabName$ = DefTabName$
+    class = objhdrval (Chromreg[i],ObjClass)
+
+    lha_integrable = 0
+    lha_datatype = objhdrval(ChromReg[i], DataType)
+    if (lha_datatype < 5) OR (lha_datatype = 40) then
+        lha_integrable = 1
+    else
+        if (lha_datatype > 14) AND (lha_datatype < 25) then
+            lha_integrable = 1
+        endif
+    endif
+
+   ! if (lha_log > 0)
+   !    lha$ = "datatype: "+val$(lha_datatype) + " integrable: "+val$(lha_integrable)
+   !    button = Alert(lha$,2,"set")
+   ! endif
+
+
+    !          Datatype: 0   -  4    LC
+    !                   15  -  24   GC
+    !                          40   LC/MS - gary J, Nov 11 1996
+    ! class is 3 = GC, 4 = LC, 4 = LC/MS also! 
+ 
+    Desc_Valid = 0
+    if ((class = 4) or (class = 3)) AND (lha_integrable = 1)
+      if objhdrtype (ChromReg[i], "SignalDesc") = 0
+        ParseSigDesc ObjHdrText$ (ChromReg[i], "SignalDesc")
+      endif
+    endif
+    if Desc_Valid = 1
+      Desc_DetectorClass$ = Desc_Detector$[1:len(Desc_Detector$)-1]
+      ! if separate eventtable exists use this else create one
+      if TabName$ = ""
+        TabName$ = "Event"
+        if (objhdrtype (ChromReg[i], "Detector") = 0) AND (objhdrtype (ChromReg[i], "SignalId") = 0)
+          if (Desc_Detector$ = ObjHdrText$ (ChromReg[i], "Detector")) AND \
+             (Desc_SignalId$ = ObjHdrText$ (ChromReg[i], "SignalId")) \
+          then
+            TabName$ = "Event_" + Desc_Detector$ + Desc_SignalId$
+          endif
+        endif
+      endif
+      DelTab AutoIntTabReg[1],TabName$
+      evaluate "TabType = objhdrtype (" + TabObj$ + ",TabName$)"
+      if TabType = 99
+        !The table does not exist,create one
+        if objhdrtype (_config[2],"Event_"+Desc_DetectorClass$) = 4
+          CopyTab _config[2],"Event_"+Desc_DetectorClass$,AutoIntTabReg[1],TabName$
+        else
+          CopyTab _config[2],"Event12",AutoIntTabReg[1],TabName$
+        endif
+      else
+        Evaluate "CopyTab " + TabObj$ + ",TabName$,AutoIntTabReg,TabName$"
+      endif
+
+    !  if (lha_log > 0) then
+    !    lha$ = "DoAuto12Tone  30   object: "+val$(i) + " class: "+val$(class) 
+    !    lha2$ = "Desc_Det: "+Desc_Detector$+ " Data_Type: "+val$(lha_datatype)
+    !    button=Alert(lha$,2,lha2$)
+    !  endif
+
+      auto_error = 0
+     ! if (lha_log > 0) AND (lha_integrable = 0) then
+     !        lha$ = "datatype: "+val$(lha_datatype)
+     !        button = Alert("HEY: signal NOT integrable!",2,lha$)
+     !  endif
+      INT_DoAuto12Tone i,TabName$,auto_error
+
+      ! Feb 10 97: bailed out of this signal?
+      !            1 = not enuf points; 2 = not integrable
+      !            3 = too few peaks  BUT some param changes made!
+      if (auto_error = 1) OR (auto_error = 2) then
+         goto keep_going
+      endif 
+
+      if ObjHdrType (ChromReg[i],"IntResults") <> 4 then
+        ! The signal wasn't integratable.
+        print using NLSCoreChrom$("ErrNoIntegSig"), i
+      endif
+
+    else
+      ! button = Alert("HEY: signal NOT integrable!",2,"else path")
+      print using NLSCoreChrom$("ErrNoIntegSig"), i
+      ! skip marking of methodchanged and copy/delete operations
+      goto keep_going
+    endif
+
+    on error value = 1
+      zoom 38
+
+      ! 1-21-97 show that method is changed (dirty?)
+      ! may not be necessary on some implementations?
+      if _MethodChanged = 0 then
+           _MethodChanged = 1
+      !     if lha_log > 0 then
+      !         button=Alert("_methodchanged to 1",2,"DoAuto12Tone  39")
+      !     endif
+      endif
+
+      !if (lha_log > 0) then
+      !  lha2$ = "DoAuto12Tone  35" 
+      !  lha$ = "Del Tab "+TabObj$+ ", "+"IntMethod"
+      !  button=Alert(lha$,2,lha2$)
+      !  lha2$ = "DoAuto12Tone  36" 
+      !  lha$ = "Copy Tab AutoIntTabReg, IntMethod, "+TabObj$+ ", "+"IntMethod"
+      !  button=Alert(lha$,2,lha2$)
+      !  lha2$ = "DoAuto12Tone  37" 
+      !  lha$ = "Del Tab "+TabObj$+ ", "+TabName$
+      !  button=Alert(lha$,2,lha2$)
+      !  lha2$ = "DoAuto12Tone  38" 
+      !  lha$ = "Copy Tab AutoIntTabReg, "+TabName$+", "+TabObj$+ ", "+TabName$
+      !  button=Alert(lha$,2,lha2$)
+      !endif
+
+      Evaluate "DelTab " + TabObj$ + ",""IntMethod"""
+      Evaluate "CopyTab AutoIntTabReg,""IntMethod""," + TabObj$ + ",""IntMethod"""
+      Evaluate "DelTab " + TabObj$ + ",TabName$"
+      Evaluate "CopyTab AutoIntTabReg,TabName$," + TabObj$ + ",TabName$"
+  
+    on error
+
+keep_going:
+
+  next i
+
+ DelReg AutoIntTabReg
+
+endmacro
+
+!**************************************************************************
+Name INT_DoAuto12Tone
+! mods by LHA       February 28, 1997
+!  remove references to Detector Table in _Config
+!  three (max) widths from BL
+!  Dec 10: disable Fileinfo check for test purposes
+!  Dec 16: require 10:1 SN for LC,LC-MS
+!  Jan 01: break out of infinite loop for few bad sym peaks at pw determination
+!  Jan 08: cosmetic removal of debris
+!  Jan 13: remove errant test for CEDiag
+!  Jan 14: command line messages from NLSCoreChrom$
+!  Jan 14: terminal message for no peaks found at optimum S/N
+!  Jan 24: consider revision of LC mult down from 2X to 1.5X
+!          enforce negative or zero slope in pw:thrsh interpolation
+!          so that wider peaks get lower thrsh values ALWAYS
+!  Feb 03: refine threshold clamping tests when few pks: use pw*thr product
+!  Feb 05: ensure ALL Thr values are positive
+!  Feb 06: bail out if fewer than 100 datapoints
+!  Feb 10: auto_error:
+!             1: not enough points (<100)
+!             2: not integrable
+!             3: too few pks to continue (<2)
+!  Feb 13: escape counter to exit pw loop
+!  Feb 21: comment-out logging
+!  Feb 27: speed-up for pw determination; save results to object
+!  Feb 28: make local variables where possible 
+!**************************************************************************
+ Parameter obj default 1 ,evttab$ default "Event", auto_error default 0
+ local yslope,DataType,terminate,step,xl,xh,npoints,LoopCounter,i,ratio,intobj
+ local lha$,lha2$,lha_rt,lha_sym,lha_tstart,lha_tend,lha_flag
+ local lha_minw,lha_nbb,lha_nbx,lha_nxb,lha_nxx,j,k,PeakType,lha_escape
+ local lha_is_end, lha_fs_start, lha_ms1_start, lha_ms1_end, avg_pw
+ local bl_count, prior_end, prior_pknum, last_rt, min_width, max_width
+ local m, b, w, class, MinArea, MaxArea, tw, first_thrsh, first_pw, product 
+ local best_slope, best_noise, prev_npeaks, max_sym, min_sym, lha_log
+ local lha_error,ns1,ns2,ns3,ns4,ws1,ws2,ws3,ws4,noise1,noise2,noise3,noise4
+ local INT_AvgWidth, INT_best02, INT_bestswide, INT_bestwwidth, INT_InitHeight
+ local INT_InitReject, INT_InitThreshold, INT_InitWidth, peak_width
+ local avg_noise, avg_s02, avg_sw, oldpks, npeaks, n, gpeaks, row 
+ !local INT_Slope02, INT_SlopeWide, INT_WidthNarrow, INT_WidthWide, INT_Noise
+  
+  local NLSFileName_phx3dsupport$
+  local ID_PHX3DSUPPORTFILES_AUTOINTEGRATIN_182
+  local ID_PHX3DSUPPORTFILES_TOO_FEW_DATAPO_183
+
+  NLSFileName_phx3dsupport$                          =  "phx3dsupport"
+  ID_PHX3DSUPPORTFILES_AUTOINTEGRATIN_182            =  17182  
+  ID_PHX3DSUPPORTFILES_TOO_FEW_DATAPO_183            =  17183  
+  
+
+  Print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_AUTOINTEGRATIN_182)! , evttab$
+
+ lha_log = 0
+
+ ! Nov 11: datatype = 40 is LC/MS may have anomolously LOW values at start
+
+ if ObjHdrType(ChromReg[obj],"DataType") = 1 then
+   DataType = ObjHdrVal(ChromReg[obj],"DataType")
+   class = ObjHdrVal(ChromReg[obj],ObjClass)
+ else
+   DataType = 0
+ endif
+
+ ! Feb 06 97: quit if fewer than 100 npoints
+ !get time range and deltatime of chromatogram in minutes
+ npoints = DataCols(chromreg[obj])
+
+ if npoints < 100 then
+     auto_error = 1
+     print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_TOO_FEW_DATAPO_183)
+     sleep 3
+     return
+ endif
+
+ step = GetStepSize(obj)
+ yslope = DataVal(chromreg[obj],1,"slope")
+ xl = GetStart(obj)
+ xh = Data(chromreg[obj],0,npoints)
+
+ !if (lha_log > 0) then
+ !  lha$ = "npoints: " + val$(npoints) + " step: " + val$(step) + " yslope: "+val$(yslope)
+ !  lha2$ = "DoAuto12  40   datatype: "+val$(DataType)
+ !  button=Alert(lha$,2,lha2$)
+ !  lha$ = " xl: " + val$(xl) + " xh: " + val$(xh)
+ !  button=Alert(lha$,2,"DoAuto12Tone   50")
+ !endif
+
+ ! careful with datatype = 40
+ print NLSCoreChrom$("AutoIntXSE")
+
+ ! get noise at start of signal and 2 threshold/slope sens. values
+ ! nov 26: for datatype = 40 examine VERY closely & reject if close to 0
+ ! dec 6: implement division by sqrt(INT_PctUsed) as 1% or more/less in BL routine
+
+ ns1 = 0
+ ws1 = 0   !  set slopes to zero 
+ noise1 = 0
+
+ INT_EnhExamenBaseLine obj,Data(chromreg[obj],0,1),,1
+
+ INT_InitHeight    = INT_Noise
+ INT_best02        = INT_Slope02
+ INT_bestswide     = INT_SlopeWide
+ INT_bestwwidth    = INT_WidthWide
+ ns1               = INT_Slope02
+ ws1               = INT_SlopeWide
+ noise1            = INT_Noise
+
+ ! must examine closely for near zero starting values if Mass Spec 
+ if datatype = 40 then
+   ! TB 09/2010 Modified to not reset values if signal is an EIC
+   If ObjHdrText$(chromreg[obj], "SignalID") = "TIC" then
+      if (INT_Noise < 2) OR (INT_Slope02 < 1) then
+        !   if lha_log > 0 then
+        !       button = Alert("cancel init MS baseline",2,"near zero values found")
+        !   endif   
+        INT_InitHeight    = 999999999
+        INT_best02        = 999999999
+        INT_bestswide     = 999999999
+        ns1               = 999999999
+        ws1               = 999999999
+      endif
+   endif
+ endif
+
+! if (lha_log > 0) then
+!   lha$ = "60   start Noise: "+val$(INT_Noise)
+!   lha2$ = "s02: "+val$(INT_best02)+" s04: "+val$(INT_bestswide)+" pw: "+val$(INT_bestwwidth) 
+!   button=Alert(lha$,2,lha2$)
+! endif
+
+ ws2 = 0
+ ns2 = 0
+ noise2 = 0
+
+ ! get noise at end of signal
+ INT_EnhExamenBaseLine obj,,Data(chromreg[obj],0,npoints),2
+
+ ns2               = INT_Slope02
+ ws2               = INT_SlopeWide
+ noise2            = INT_Noise
+
+! if (lha_log > 0) then
+!   lha$ = "70   end Noise: "+val$(INT_Noise)
+!   lha2$ = "s02: "+val$(INT_Slope02)+" s04: "+val$(INT_SlopeWide)+" pw: "+val$(INT_WidthWide) 
+!   button = Alert(lha$,2,lha2$)
+! endif
+
+ ! November 07: always seek lowest value for INT_slope
+ ! test and save both pw ranges 
+ ! test for 0 as possible value & EXCLUDE 
+ ! ensure values returned are + and > 0 from ExamenBL 
+
+ ! computed width associated with narrow value is INT_WidthNarrow - target 0.02 
+ if (INT_Slope02 < INT_best02) AND (INT_Slope02 > 0) 
+   INT_best02 = INT_Slope02
+ endif
+
+ if (INT_best02 <= 0) AND (INT_Slope02 > 0)
+   INT_best02 = INT_Slope02
+ endif
+
+ ! computed width associated with INT_WidthWide 
+ if (INT_SlopeWide < INT_bestswide) AND (INT_SlopeWide > 0) 
+   INT_bestswide  = INT_SlopeWide
+   INT_bestwwidth = INT_WidthWide
+ endif
+
+ if (INT_bestswide <= 0) AND (INT_SlopeWide > 0)
+   INT_bestswide  = INT_SlopeWide
+   INT_bestwwidth = INT_WidthWide
+ endif
+
+ ! no ratio for INT_Noise; just take minimum
+ ! check no values of 0 or below
+ ! Dec 19: average Noise if diff is small <2x
+
+ if (INT_InitHeight < INT_Noise) AND (INT_InitHeight > 0) 
+   INT_Noise = INT_InitHeight
+ endif
+
+ if(INT_Noise <= 0) AND (INT_InitHeight > 0)
+   INT_Noise = INT_InitHeight
+ endif
+
+ best_noise = INT_Noise ! save best value B4 integrating
+ 
+ ! Oct 24: slopefac is 1; noisefac was 3 for ALL
+ ! Jan 06 97: for class = 4 - LC,LC-MS go to noisefactor 5
+ ! December 6:  INT_Noise = noise / sqrt(INT_PctUsed)
+
+ ! 01-06-97 change to trim false peaks detection on LC, LC-MS  
+ if class = 3 then     ! GC data
+      INT_InitHeight = (3 * INT_Noise)
+ else                 ! LC data
+      INT_InitHeight = (5 * INT_Noise)
+ endif
+    
+ INT_InitReject =    0
+
+ ! minimum set peak width is "WidthMin"  = 4 datapoints
+
+ INT_InitWidth = 4 * step  ! 2 up, 2 down for detection ; filter used is (5 * step)
+
+ !if (lha_log > 0) then
+ !  lha$ = "Height: "+val$(INT_InitHeight)
+ !  lha$ = lha$ + " Width: "+val$(INT_InitWidth)
+ !  button = Alert(lha$,2,"DoAuto  80")
+ !  lha$ = "Slope02: "+val$(INT_best02)+ " SlopeWide: "+val$(INT_bestswide)
+ !  lha$ = lha$ + " Noise: "+val$(INT_Noise)
+ !  button = Alert(lha$,2,"DoAuto  90")
+ !endif
+
+ !update peakwidth if "WidthPercent" % of run time is larger 
+ ! Oct 24 96:  0.5 for types 1-15; 0.3 to 0.2 for types 16-24
+ ! this is WRONG since initial widths > .16 are possible
+ ! resulting in limited detection of narrower peaks
+ ! should be biased for 0.04 - 0.08 
+
+ ! WidthPercent is 0.5% for LC (datatype < 16) and 0.3 to 0.2 for GC 
+   if (DataType < 15)
+     lha_minw = 0.005
+   else
+     lha_minw = 0.0025
+   endif
+
+   tw=(xh - xl) * lha_minw
+
+ ! Oct 25: remove blind assignment of tw 
+ ! confine tw increase to .08 or lower 
+  ! if lha_log > 0 then
+  !   lha2$ = "tw: "+val$(tw) + " INT_InitWidth: "+val$(INT_InitWidth)
+  !   button = Alert(lha2$,2,"WidthPercent   100")
+  ! endif
+
+   ! Nov 14: first pass Peakwidth for ALL datatypes will be: 0.02 and 0.16
+   if (tw >= 0.08) AND (INT_InitWidth < 0.08) then
+          INT_InitWidth = 0.08
+   else 
+          if (tw > INT_InitWidth) AND (tw < 0.16) then
+              INT_InitWidth = tw
+          else
+              INT_InitWidth = 0.16
+          endif
+   endif
+
+   ! use the greater of 0.02 or INT_WidthNarrow in first trial
+   ! 0.02 will detect almost all GC pks except highly merged fast pks
+   if INT_WidthNarrow > 0.02 then
+        if INT_InitWidth < INT_WidthNarrow then
+             INT_InitWidth = INT_WidthNarrow
+        endif
+   else
+             if INT_InitWidth < 0.02 then
+                  INT_InitWidth = 0.02
+             endif 
+   endif
+
+   !if lha_log > 0 then
+   !  lha$ = " Width: "+val$(INT_InitWidth)
+   !  button = Alert(lha$,2,"110   Width Changed??")
+   !endif
+
+ ! Oct 24: all MinArea & MinHt are 0 EXCEPT MinArea = 1 for type 1
+
+ MinArea = 0
+
+! if lha_log > 0 then
+!   lha$ = "Width: "+val$(INT_InitWidth)
+!   lha$ = lha$ + " Reject: "+val$(INT_InitReject)
+!   lha$ = lha$ + " Height: "+val$(INT_InitHeight)
+!   button = Alert(lha$,2,"130  DoAuto")
+! endif
+
+ SetTabHdrVal AutoIntTabReg[1],evttab$,"initwidth", INT_InitWidth
+
+ ! December 6: interpolate to chose a value for Threshold based on Width
+ ! Dec 19:     consider averaging values if min/max less than 2X
+ ! Dec 20:     on this INITIAL pass, confine to interpolation
+ ! Jan 24:     enforce negative or 0 slope: wider pks = lower thrsh
+ 
+ ! INT_WidthNarrow and INT_WidthWide; check for existence of values
+ ! x = INT_Widths;  y = INT_best..
+ ! y = mx + b   where m = deltaY/deltaX; b = avgY - m*avgX
+
+ if (INT_WidthNarrow > 0) AND (INT_WidthWide > INT_WidthNarrow) then
+     m = (INT_bestswide - INT_best02)/(INT_WidthWide - INT_WidthNarrow)
+     b = (INT_bestswide + INT_best02)/2 - (m * (INT_WidthWide + Int_WidthNarrow)/2)
+
+     ! Jan 24 97: insert a test for slope [m] as positive or 0
+     ! if not, then replace m by zero and b with "average" ??
+     if m > 0 then
+        b = (INT_bestswide + INT_best02)/2
+        m = 0
+     endif
+
+     ! Feb 05 97: use only INT_InitWidth - no changes!
+      w = INT_InitWidth
+
+ !    if lha_log > 0 then
+ !      lha$ = "Thr: m*w + b   m: "+val$(m)+" w: "+val$(w)+" b: "+val$(b)
+ !      lha2$= "WNarow: "+val$(INT_WidthNarrow)+" WWide: "+val$(INT_WidthWide)
+ !      button = Alert(lha$,2,lha2$)
+ !    endif
+
+     INT_InitThreshold = (m * w) + b
+
+     ! Jan 24 97: always use lowest value for widest!
+     if INT_InitWidth > INT_WidthWide then
+           if INT_bestswide < INT_best02 then
+               INT_InitThreshold = INT_bestswide
+           else
+               INT_InitThreshold = INT_best02
+           endif
+     endif
+ else 
+     if INT_InitWidth < INT_WidthNarrow then
+           INT_InitThreshold = INT_best02
+     else 
+           INT_InitThreshold = INT_bestswide
+     endif 
+ endif
+
+ ! Feb 5 97: ensure that have a positive value for SS
+ if INT_InitThreshold <= 0 then
+        INT_InitThreshold = (INT_bestswide + INT_best02)/2
+ endif
+
+ ! Jan 24 97: for LC only, use 1.5 * Thresh
+ if datatype < 5 then
+    INT_InitThreshold = 1.5 * INT_InitThreshold
+ endif
+ ! Jan 24 97: save this for later comparision if few pks
+ first_thrsh = INT_InitThreshold
+ 
+ !if lha_log > 0 then
+ !  lha$ = "interpolate InitThr: "+val$(INT_InitThreshold)+ " based on pw: "+val$(INT_InitWidth)
+ !  button = Alert(lha$,2,"140  selecting Threshold")
+ !endif
+
+ SetTabHdrVal AutoIntTabReg[1],evttab$,"initthresh",INT_InitThreshold
+ SetTabHdrVal AutoIntTabReg[1],evttab$,"initreject",INT_InitReject
+ SetTabHdrVal AutoIntTabReg[1],evttab$,"InitHeight",INT_InitHeight
+
+ !
+ ! begin loop to search for peaks
+ ! Oct 25: LHA modifies loop to reduce rej,ht,thresh on 1st xtra pass
+ !                              increment pw on         2nd xtra pass
+ !                              test against prior #peaks
+ !                              terminate when pw > .64 / thr = 0 /
+ !                              or 5 or more peaks
+ ! Nov 08: tests on usable, symmetric peaks - need 4
+
+ terminate = 0
+ LoopCounter  = 0
+ ws3 = 0
+ ws4 = 0
+ ns3 = 0
+ ns4 = 0
+ noise3 = 0
+ noise4 = 0
+
+ repeat ! until peaks found or integrated with InitHeight = 0
+  integrateobj  ChromReg[obj],,,AutoIntTabReg[1]
+  intobj=1
+
+  if ObjHdrType(chromreg[obj],"intresults") = 4
+    npeaks=TabHdrVal(chromreg[obj],"intresults","numberofrows")
+
+  !  if lha_log > 0
+  !    button=Alert("200  Loop: "+val$(LoopCounter)+" npeaks: "+val$(npeaks))
+  !  endif
+
+    for i = 1 to npeaks
+      ! Oct 29: original logic was WRONG; so recode to wait
+      ! until get "normal" or "tangent" ONLY
+      ! will have to check again, later
+      PeakType = TabVal (ChromReg[obj], "IntResults", i, "PeakType")
+      if (PeakType = 8) or (PeakType = 10) or (PeakType = 25) then
+        goto EndPeakTypeLoop
+      endif
+    next i
+    npeaks=0       ! No normal ot tangent peak has been found yet
+
+    EndPeakTypeLoop:
+
+  else
+    ! this is a non-integratable signal
+    ! Feb 10 -- set auto_error to 2 for non-integrable
+    auto_error = 2
+    return
+  endif
+
+  ! tests to iterate integration params
+  ! testing for < 5 peaks beyond LoopCounter = 0
+
+  if (npeaks = 0) OR ( (npeaks < 5) AND (LoopCounter < 3) ) then
+
+    if ((INT_InitHeight = 0) AND (INT_InitThreshold < 6*yslope)) OR \
+       ((LoopCounter > 0) AND (npeaks > prev_npeaks)) then
+
+      terminate = 1
+   !   if lha_log > 0 then
+   !     lha$ = "210  Term npeaks: "+val$(npeaks) + " prev: "+val$(prev_npeaks)
+   !     lha$ = lha$ + " LoopCtr: "+val$(LoopCounter)
+   !     lha2$ = "InitHt :"+val$(INT_InitHeight)
+   !     lha2$ = lha2$ + " InitThr: " + val$(INT_InitThreshold)
+   !     button = Alert(lha$,2,lha2$)
+   !   endif
+    else
+      if INT_InitHeight < 30*yslope then
+        INT_InitHeight = 0
+      endif
+
+      ! Oct 22: decrease these when makes sense
+      !         but DON'T keep decreasing peak_width !!!
+      !         at least hold pw at 0.04
+
+      INT_InitThreshold = INT_InitThreshold / 2
+      SetTabHdrVal AutoIntTabReg[1],evttab$,"initthresh",INT_InitThreshold
+      INT_InitHeight  = INT_InitHeight / 5
+      SetTabHdrVal AutoIntTabReg[1],evttab$,"InitHeight",INT_InitHeight
+
+      min_width = 0
+      max_width = 0
+
+      if(npeaks > 1) then
+          ! take minimum regardless of type
+          j = RowByVal(chromreg[obj],"IntResults",,"width","min")
+          min_width = TabVal(chromreg[obj],"IntResults",j,"Width")
+
+          ! max value must be reasonably pristine
+          k = 1
+          j = RowByVal(chromreg[obj],"IntResults",,"width","max")
+test4max:
+          PeakType = TabVal (ChromReg[obj], "IntResults", j, "PeakType")
+          if (PeakType = 8) or (PeakType = 10) or (PeakType = 25) then
+             max_width = TabVal(chromreg[obj],"IntResults",j,"Width")
+             max_sym   = TabVal(chromreg[obj],"IntResults",j,"symmetry")
+
+          else
+             ! peak of max_width is unsuitable because of PeakType or symmetry
+             ! so examine NEXT smallest value and repeat as needed
+ 
+             k = k + 1
+         !    if lha_log > 0 then
+         !      lha$ = "PeakType: "+val$(PeakType) + " k: "+val$(k)
+         !      button=Alert(lha$,2,"220  unsuitable for max_width")
+         !    endif
+ 
+             if (npeaks - k) > 0
+               max_sym = TabVal(chromreg[obj],"IntResults",j,"Width")
+               j=RowByVal(chromreg[obj],"IntResults",,"width","~<",max_sym)
+               goto test4max
+             endif
+
+          endif
+      else
+          if (npeaks = 1) then
+            ! take whatever available
+            max_width = TabVal(chromreg[obj],"IntResults",1,"Width")
+          endif
+      endif
+
+      if max_width > 0 then
+          ! noise will have widths < pw/4
+          ! if symmetric peak detected at pw*2 or greater, then
+          ! increase pw, esp if not late in run
+          if (max_width < 2*INT_InitWidth) then
+             goto no_width
+          else
+             ! Oct 29: not considering YET negative effect
+             !         on any narrow peaks shafted by PW increase
+             if ((max_sym < 2) AND (max_sym > .6)) OR \
+                (npeaks = 1)  then
+                 ! try increasing PW within reason ....
+                 if(INT_InitWidth < 0.17) then
+                    INT_InitWidth = INT_InitWidth * 2
+                    SetTabHdrVal AutoIntTabReg[1],evttab$, \
+                    "initwidth",INT_InitWidth
+
+          !          if lha_log > 0 then
+          !            button = Alert("230 Doubled PW: "+val$(INT_InitWidth))
+          !          endif
+
+                 endif
+             endif
+          endif
+      endif
+
+no_width:
+     ! if lha_log > 0      
+     !   lha$ = " Wid: "+val$(INT_InitWidth)
+     !   lha$ = lha$ + " Rej: "+val$(INT_InitReject)
+     !   lha$ = lha$ + " Ht: "+val$(INT_InitHeight)
+     !   lha$ = lha$ + " Thr: "+val$(INT_InitThreshold)
+     !   button = Alert(lha$,2,"240  reducing LoopCt: "+val$(LoopCounter))
+     ! endif
+
+      intobj = 0
+    endif
+  endif
+  LoopCounter = LoopCounter + 1
+  prev_npeaks = npeaks  !  save earlier count
+
+ ! had been: until (npeaks > 0) or (terminate = 1) OR (LoopCounter > 10)
+
+ until (npeaks > 4) or (terminate = 1) OR (LoopCounter > 10)
+
+ ! Jan 31 1997: may have been modified by iterations?
+ first_pw    = INT_InitWidth
+
+ ! 
+ ! end of loop to test & iterate integration params
+ !
+
+ if intobj = 0
+   integrateobj  ChromReg[obj],,,AutoIntTabReg[1]
+ 
+   ! Oct 22; get updated npeaks since re-integrated!
+   if ObjHdrType(chromreg[obj],"intresults") = 4
+     npeaks=TabHdrVal(chromreg[obj],"intresults","numberofrows")
+   endif
+
+ !  if lha_log > 0
+ !    button = Alert("250  another integration",2,"npeaks: "+val$(npeaks))
+ !  endif
+
+ endif
+
+ ! Nov 8: exit from loop with minimum of 5 peaks, MAYBE - but use more if available?
+ max_sym = 1.5
+ min_sym = 0.6
+ if npeaks > 8
+   i = 8
+ else
+   if npeaks > 1 ! Dec 5: must have 2 peaks or more to continue
+     i = npeaks
+   else
+     ! Jan 08 1997: modify to conclude from ending location
+     !              place a wait here to allow message to be read
+     lha_error = 1
+     print NLSCoreChrom$("DoneAIAbortPW")
+     sleep 3
+
+     ! this jump will do final message line
+     goto exit_with_pks
+     ! RETURN
+   endif
+ endif
+
+ ! October 14
+ ! loop to determine number of peaks found with Baseline as separation code
+ ! use the TOTAL # found
+
+ if(npeaks < 2)
+    goto lha_nosegment
+ endif
+
+ print NLSCoreChrom$(AutoIBLsearch)
+
+ lha_nbb = 0
+ lha_nxx = 0
+ lha_nbx = 0
+ lha_nxb = 0
+
+ ! oct 16
+ ! initial segment: for first peak found [j = 1], test if front type is
+ !                  baseline; if TRUE then save starting time
+ !                  as lha_is_end (segment starts at 0)
+ ! final segment:   for last peak found [j = npeaks], test if rear type
+ !                  is baseline; if TRUE then save ending time
+ !                  as lha_fs_start (segment ends at end-of-run)
+ ! middle segment:  using ADJACENT PEAKS [j,j+1] with connecting B...B
+ !                  types, compute the time interval and save the longest
+ !                  lha_ms1_start, lha_ms1_end
+
+ ! Nov 7: can use these to invalidate intial, final 1% values
+ ! run_time = (step)(npoints)*(0.01) or *(0.99)
+ lha_is_end = 0
+ lha_fs_start = 0
+ lha_ms1_start = 0
+ lha_ms1_end = 0
+
+
+ ! november 11 1996: stop looping after find > 1% BL segment
+ 
+ for j = 1 to npeaks
+    k = 0
+    lha_flag   = TabVal(chromreg[obj],"IntResults",j,"flags")
+    if lha_flag > 255 then
+    !  button=Alert("lha_flag: "+val$(lha_flag),2,"300  removing HI bits")
+      lha_flag = mod(lha_flag, 256)
+    endif
+
+    ! are these really needed?    
+    if j = 1 then
+        ! save starting point regardless of type
+        ! button=Alert("j = 1",2, "310  flag: "+val$(lha_flag))
+        lha_is_end = TabVal(chromreg[obj],"IntResults",1,"timestart")
+        ! button = Alert("lha_is_end: "+val$(lha_is_end),2,"320  segments")
+           
+    else
+        if j = npeaks
+            ! save ending point regardless of type
+            ! button=Alert("j = npeaks",2, "330  flag: "+val$(lha_flag))
+            lha_fs_start = TabVal(chromreg[obj],"IntResults",j,"timeend")
+            ! button = Alert("fs_start: "+val$(lha_fs_start),2,"340  segments")
+        endif
+
+    endif
+
+    ! stats arent really needed but do need to set k = j with tests
+    if (lha_flag = 0) then
+       lha_nbb = lha_nbb + 1
+       ! lha$ = "flag = 0   j: "+val$(j) + " lha_nbb: "+val$(lha_nbb)
+       ! button = Alert(lha$,2,"350  inside for loop")
+       k = j
+    else
+        ! 0 - 5 'B' at front; 16 - 21 'P' at front
+        ! Oct 17 - include both 'B' and 'P'
+        if (lha_flag < 22) then
+            lha_nbx = lha_nbx + 1
+            k = j
+        else
+             ! accept both 'B' [16,32,48...] and 'P' [17,33,49,...]
+             lha_flag = floor(lha_flag + 0.2)
+             if mod(lha_flag,16) < 1.5 then
+                 lha_nxb = lha_nxb + 1
+                 k = j
+             else
+                 lha_nxx = lha_nxx + 1
+             endif
+        endif
+    endif
+
+    if k > 0 then
+  
+       ! Oct 17 - get only MINIMUM data
+
+       lha_tstart = TabVal(chromreg[obj],"IntResults",k,"timestart")
+       lha_tend   = TabVal(chromreg[obj],"IntResults",k,"timeend")
+   
+       ! October 17
+       bl_count = bl_count + 1
+
+       if bl_count = 1 then
+          ! test to see if initial peak ends 'B' or 'P'
+          if mod(lha_flag,16) < 1.5 then
+             ! save current peak as prior and leave
+             prior_end = lha_tend
+             prior_pknum = j
+             ! button=Alert("360  nuendpt: "+val$(lha_tend),2,"j: "+val$(j))
+          endif
+
+       else
+         ! to compute a trial segment, this peak# must be 
+         ! equal to prior_pknum + 1 AND current flag must be < 22
+         ! indicating a start on baseline or penetration
+         !
+         if ((prior_pknum+1) = j) AND (lha_flag < 22) then
+         
+         !     then compute the distance and compare with 
+         !     ..ms1_end - ms1_start, if value is greater
+         !     then replace
+         !
+            if (lha_tstart - prior_end) > (lha_ms1_end - lha_ms1_start)
+                lha_ms1_start = prior_end
+                lha_ms1_end   = lha_tstart
+                ! lha$ = "from: "+val$(lha_ms1_start) + " to: "
+                ! lha$ = lha$+val$(lha_ms1_end) + " j: "+val$(j)
+                ! button = Alert(lha$,2,"370  new segment")
+            endif
+ 
+         endif 
+
+       endif
+
+      !         whatever occurs, test rear segment for saving
+      !         and leave
+      !
+      ! test to see if this peak ends on bl or penetration
+      if mod(lha_flag,16) < 1.5 then
+                ! save current peak as prior and leave
+                prior_end = lha_tend
+                prior_pknum = j
+                ! button=Alert("380  nuendpt: "+val$(lha_tend),2,"j: "+val$(j))
+      endif
+
+    endif
+
+ next j
+
+! if lha_log > 0 then
+!   lha2$ = "400  npeaks: "+val$(npeaks) + " xx: "+val$(lha_nxx)
+!   lha$ = "bb: "+val$(lha_nbb) + " xb: "+val$(lha_nxb) + " bx: "+val$(lha_nbx)
+!   button=Alert(lha$, 2, lha2$)
+
+!   lha2$ = "410  Initial & Final clear space [peaks 1,n]"
+!   lha$ = "0 to: "+val$(lha_is_end) + " from: "+val$(lha_fs_start) + " to END"
+!   button=Alert(lha$, 2, lha2$)
+
+!   lha2$ = "420  Longest Baseline Segment"
+!   lha$ = "from: "+val$(lha_ms1_start) + " to: "+val$(lha_ms1_end)
+!   button=Alert(lha$, 2, lha2$)
+! endif
+
+ ! Oct 18
+ ! run INT_EnhExamenBaseLine on best segment to verify SlopeSens
+ ! and Noise calculations mase at start/end
+
+ ! Nov 7: do we have any real segments?
+ if (lha_ms1_start = 0) OR (lha_ms1_end = 0) then
+    goto lha_nosegment 
+ endif
+
+ print NLSCoreChrom$("AutoIntXBLseg")
+
+ ! mode 1 UP from start
+ INT_EnhExamenBaseLine obj, lha_ms1_start,,1       
+
+ ns3               = INT_Slope02
+ ws3               = INT_SlopeWide
+ noise3            = INT_Noise
+
+ ! have we found lower values for noise or slopes?
+ if (INT_Slope02 < INT_best02) then
+     INT_best02 = INT_Slope02
+ endif
+
+ if (INT_SlopeWide < INT_bestswide) then
+     INT_bestswide  = INT_SlopeWide
+     INT_bestwwidth = INT_WidthWide
+ endif
+
+ If (INT_Noise < best_noise) then
+     best_noise = INT_Noise ! new lower value
+ endif
+
+ ! mode 2 DOWN from end
+ INT_EnhExamenBaseLine obj,,lha_ms1_end,2     
+
+ ns4               = INT_Slope02
+ ws4               = INT_SlopeWide
+ noise4            = INT_Noise
+
+ ! have we found lower values for noise or slopes?
+ if (INT_Slope02 < INT_best02) then
+     INT_best02 = INT_Slope02
+ endif
+
+ if (INT_SlopeWide < INT_bestswide) then
+     INT_bestswide  = INT_SlopeWide
+     INT_bestwwidth = INT_WidthWide
+ endif
+
+ If (INT_Noise < best_noise) then
+     best_noise = INT_Noise ! new lower value
+ endif
+
+ !if lha_log > 0 then
+ !  lha$="best02: "+val$(INT_best02) + " bestswide: "+val$(INT_bestswide)
+ !  lha2$="430  best_noise: "+val$(best_noise)
+ !  button=Alert(lha$, 2, lha2$)
+ !endif
+
+ !          then test against Scaled Values for 
+ !          INT_InitHeight and take lowest; do threshold
+ !          Later when have final peakwidth
+
+ ! Jan 6 97: noise multiplier is higher for LC
+ if class = 3 then
+     i = 3
+ else
+     i = 5
+ endif
+
+ ! Dec 19: have 4 values for noise; go for the best N as long
+ !         as not more than 2X the VERY best
+ !         the "other values" are >= best_noise
+
+ n = 0
+ j = 0
+ if (best_noise <= noise1) AND ((best_noise * 2) >= noise1) then
+    j = j + noise1   !  accumulate noise for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ if (best_noise <= noise2) AND ((best_noise * 2) >= noise2) then
+    j = j + noise2   !  accumulate noise for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ if (best_noise <= noise3) AND ((best_noise * 2) >= noise3) then
+    j = j + noise3   !  accumulate noise for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ if (best_noise <= noise4) AND ((best_noise * 2) >= noise4) then
+    j = j + noise4   !  accumulate noise for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ avg_noise = j/n
+
+
+ ! Dec 20 experiment: ALWAYS replace "best" noise with AVERAGE value
+ !                    and recompute a possibly higher HT-reject 
+
+  !  if lha_log > 0
+  !    lha$ = "440 TRy replace lowest Noise with AVG: "+val$(avg_noise)
+  !    button = Alert(lha$,2,"prev old Noise: "+val$(best_noise))
+  !  endif
+
+    best_noise = avg_noise
+    INT_InitHeight = (best_noise * i)
+    SetTabHdrVal AutoIntTabReg[1],evttab$,"InitHeight",INT_InitHeight
+
+
+ ! Dec 20: have 4 values for narrow slopes; go for the best N as long
+ !         as not more than 2X the VERY best
+ !         the "other values" are >= INT_best02
+
+ n = 0
+ j = 0
+ if (INT_best02 <= ns1) AND ((INT_best02 * 2) >= ns1) then
+    j = j + ns1      !  accumulate for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ if (INT_best02 <= ns2) AND ((INT_best02 * 2) >= ns2) then
+    j = j + ns2      !  accumulate for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ if (INT_best02 <= ns3) AND ((INT_best02 * 2) >= ns3) then
+    j = j + ns3      !  accumulate for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ if (INT_best02 <= ns4) AND ((INT_best02 * 2) >= ns4) then
+    j = j + ns4      !  accumulate for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ avg_s02 = j/n
+
+ ! Dec 20: have 4 values for wide slope; go for the best N as long
+ !         as not more than !!!! 4X the VERY best
+ !         the "other values" are >= INT_bestswide
+
+ n = 0
+ j = 0
+ if (INT_bestswide <= ws1) AND ((INT_bestswide * 4) >= ws1) then
+    j = j + ws1      !  accumulate for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ if (INT_bestswide <= ws2) AND ((INT_bestswide * 4) >= ws2) then
+    j = j + ws2      !  accumulate for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ if (INT_bestswide <= ws3) AND ((INT_bestswide * 4) >= ws3) then
+    j = j + ws3      !  accumulate for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ if (INT_bestswide <= ws4) AND ((INT_bestswide * 4) >= ws4) then
+    j = j + ws4      !  accumulate for averaging
+    n = n + 1        !  divisor for averaging
+ endif 
+ avg_sw = j/n
+
+! if lha_log > 0 then
+!    lha$ = "noise: "+val$(avg_noise)+" s02: "+val$(avg_s02)+" sw: "+val$(avg_sw)
+!    button = Alert(lha$,2,"445 Averages for noise, slope02, slopewide")
+! endif  
+
+ ! Dec 20 experiment: ALWAYS replace "best" slopes with AVERAGE value
+ !                    to recompute a possibly higher Slope Sens later 
+
+ !   if lha_log > 0
+ !     lha$ = "447 TRy replace lowest Slope02 with AVG: "+val$(avg_s02)
+ !     button = Alert(lha$,2,"prev old s02: "+val$(INT_best02))
+ !   endif
+    INT_best02 = avg_s02
+
+ !   if lha_log > 0
+ !     lha$ = "448 TRy replace lowest SlopeWide with AVG: "+val$(avg_sw)
+ !     button = Alert(lha$,2,"prev old swide: "+val$(INT_bestswide))
+ !   endif
+    INT_bestswide = avg_sw
+
+lha_nosegment:
+
+ if npeaks > 8 then
+   i = 8
+ else
+   if npeaks > 1 then            ! Dec 5: gotta have 2 peaks or print error
+      i = npeaks
+   else
+      lha_error = 1
+      print NLSCoreChrom$(DoneAIAbortPW)
+      ! Jan 14: also consider testing for npeaks = 0 and generating error?
+      ! Feb 10 1997 -- set auto_error to 3 if too few peaks to continue
+      auto_error = 3
+      RETURN
+   endif
+ endif
+
+ 
+ ! Feb 03 97: go to stricter symmetry requirement [was 1.5,0.6] and tighten
+ !            limits on iteration [was *2, change to *1.5] 
+ max_sym = 1.3
+ min_sym = 0.8
+
+!if lha_log > 0 then 
+!    lha$=" npeaks: "+val$(npeaks)
+!     lha$=lha$ + " max_sym: "+val$(max_sym) + " min_sym: "+val$(min_sym)
+!     lha2$="499  entry into lha_loop_pw"
+!     button=Alert(lha$, 2, lha2$)
+! endif
+ 
+lha_escape = 0
+
+lha_loop_pw:
+
+! Feb 27 97: speedup by only accessing the results once, when lha_escape
+!            is 1. Create objects to hold pw, sym and type data on first
+!            pass. be sure to delete object when done
+
+ lha_escape = lha_escape + 1
+
+ print NLSCoreChrom$("AutoIntPWdet")
+
+ INT_AvgWidth = INT_InitWidth
+
+ if lha_escape > 10 then
+!    if lha_log > 0 then
+!         button = Alert("lha_escape > 10; exit!")
+!    endif   
+     goto lha_done_pw
+ endif
+
+ avg_pw = 0
+ !last_rt = 0
+ j = 0   ! total peaks averaged
+ k = 0   ! peaks rejected
+ w = 0   ! peaks forever unavailable 
+
+ if lha_escape < 2 then
+      NewObj symtemp, 1, 1, i    ! holds sym   in row 0
+                                 ! holds pw    in row 1
+      NewObj typetemp, 1, 1, i   ! holds type  in row 0
+      for m = 1 to i
+        SetData symtemp, 1, m, TabVal(chromreg[obj],"IntResults",m,"width")
+        SetData symtemp, 0, m, TabVal(chromreg[obj],"IntResults",m,"symmetry")
+        SetData typetemp,0, m, TabVal(chromreg[obj],"IntResults",m,"PeakType")
+      next m
+ endif
+
+ ! Jan 1 97: after use all available, stop looping!
+ !update the peakwidth proportionally with the time of the first
+ !five found peaks, counting backwards to make the first peak most important
+ !
+ ! October 24: someday use more than 5 peaks and exclude
+ ! based on Solvent type, worse than median symmetry (.8 to 1.3 best),
+ ! aborted and other outlier indicators
+ ! balance with need to get the earliest peaks to determine
+ ! INITIAL pw
+
+ while (i > 0) do
+
+  ! Nov 11: remove unused stuff
+
+  peak_width = Data(symtemp, 1, i)  !(chromreg[obj],"IntResults",i,"width")
+  !lha_rt     = TabVal(chromreg[obj],"IntResults",i,"rettime")
+  lha_sym    = Data(symtemp, 0, i)  !(chromreg[obj],"IntResults",i,"symmetry")
+  PeakType   = Data(typetemp, 0, i) !(chromreg[obj],"IntResults",i,"PeakType")
+
+   ! Oct 14 - extensive list of cardinal points
+!   if lha_log > 0
+!     lha$=" i: "+val$(i) + " pw: "+val$(peak_width)
+!     lha$=lha$ + " rt: "+val$(lha_rt) + " type: "+val$(PeakType)
+!     lha2$="500  sym: "+val$(lha_sym)
+!     button=Alert(lha$, 2, lha2$)
+!   endif
+
+   ! Oct 28 - only average the most symmetric peaks
+   if ((lha_sym < max_sym) AND (lha_sym > min_sym) AND (peak_width > 0)) AND \
+       ((PeakType = 8) OR (PeakType = 10) OR (PeakType = 25)) then
+      avg_pw = avg_pw + peak_width
+      j = j + 1
+      ! position sensitive averaging; first peak weighted highest
+      INT_AvgWidth = sqrt(INT_AvgWidth*peak_width)
+
+ !    if lha_log > 0 then
+ !       lha$="weighted pw: "+val$(j) + " INT_AvgWidth: "+val$(INT_AvgWidth)
+ !       button=Alert(lha$,2,"502  rt: "+val$(lha_rt)+" width: "+val$(peak_width))
+ !    endif
+
+   !   if last_rt = 0
+   !       last_rt = lha_rt
+   !   endif
+
+   else
+      k = k + 1
+      if (peak_width = 0) OR (lha_sym  = 0) OR \
+        ((PeakType <> 8) AND (PeakType <> 10) AND (PeakType <> 25)) then
+          w = w + 1   ! this peak will never be available for use in average   
+      endif
+   endif
+
+   i = i - 1
+ endwhile
+
+! if lha_log > 0 then
+!      lha$="symm testing pw     good: "+val$(j)
+!      button=Alert(lha$,2,"505  rej: "+val$(k)+"   never: "+val$(w))
+! endif
+
+ ! Jan 02 97: completed based on # peaks used ?
+ !        are there at least 4 peaks present in average, if YES - done
+ !        if 3 or fewer present
+ !              are there rejected peaks? if NOT, print not enuf error and continue
+ !                                        if YES, widen sym limits and repeat UNTIL
+ !                                                no more peaks are available   
+ !        if can't do average, still have orig INT_InitWidth                                                 
+
+ if j > 3 then
+    INT_InitWidth = INT_AvgWidth
+    avg_pw = avg_pw/j
+  !  if lha_log > 0 then
+  !    lha$="avgwid: "+val$(avg_pw)+" from: "+val$(lha_rt)+" to: "+val$(last_rt)
+  !    button=Alert(lha$,2,"510  j: "+val$(j)+" InitWidth: "+val$(INT_InitWidth))
+  !  endif
+ else
+    if (j > 1 AND k = 0) OR (j > 0 AND k + j < 4) OR (j > 0 AND w > 0 AND w = k) then
+       lha_error = 2     ! few peaks available for initial pw calculation 
+       INT_InitWidth = INT_AvgWidth
+       avg_pw = avg_pw/j
+   !    if lha_log > 0 then
+   !       lha$="avgwid: "+val$(avg_pw)+" ERROR: too few pks available"
+   !       button=Alert(lha$,2,"511  j: "+val$(j)+" InitWidth: "+val$(INT_InitWidth))
+   !    endif
+    else 
+        if (k - w + j > 1) then
+           lha_error = 3 ! relaxing symmetry requirement
+           max_sym = max_sym * 1.5
+           min_sym = min_sym / 1.5
+
+        !   if lha_log > 0 then
+        !     lha$="relaxing SYMMETRY requirement; try again"
+        !     button=Alert(lha$,2,"512  j: "+val$(j)+" InitWidth: "+val$(INT_InitWidth))
+        !   endif
+
+           if npeaks > 8 then
+              i = 8
+           else
+              if npeaks > 1 then   
+                  i = npeaks
+              endif
+           endif
+
+           goto lha_loop_pw
+        endif 
+    endif 
+ endif
+
+lha_done_pw:
+
+ DelObj symtemp      ! Feb 27 97
+ DelObj typetemp
+
+ SetTabHdrVal AutoIntTabReg[1],evttab$,"initwidth",INT_InitWidth
+
+! if lha_log > 0 then
+!   lha$ = "peakwidth: "+val$(INT_InitWidth)
+!   button = Alert(lha$,2,"540  DoAuto - final width update")
+! endif
+
+ ! have "final" starting width; choose the lowest available slope_sens
+ ! value for this "final" width
+ !        consider an interpolation between values using INT_WidthWide
+ !        and INT_WidthNarrow ....
+ !         WidthNarrow = 0.03               WidthWide = 0.12
+ !                 A                B              C
+ !        <= A use linear increasing ratio (WidthNarrow/INT_InitWidth)
+ !        >= C use wide
+ !           B interpolate    
+
+
+ ! December 16: interpolate to chose a value for Threshold based on OBSERVED Width 
+ ! INT_WidthNarrow and INT_WidthWide; check for existence of values
+ ! x = INT_Widths;  y = INT_best..
+ ! y = mx + b   where m = deltaY/deltaX; b = avgY - m*avgX
+
+ ! Jan 24 97: enforce negative or 0 slope [m] so that as peaks get
+ !            wider, thresh goes LOWER
+
+ if (INT_WidthNarrow > 0) AND (INT_WidthWide > INT_WidthNarrow) then
+     m = (INT_bestswide - INT_best02)/(INT_WidthWide - INT_WidthNarrow)
+     b = (INT_bestswide + INT_best02)/2 - (m * (INT_WidthWide + Int_WidthNarrow)/2)
+     w = INT_InitWidth
+     
+     ! Jan 24 1997: enforce negative slope or replace with average    
+     if m > 0 then
+           m = 0
+           b = (INT_bestswide + INT_best02)/2
+     endif 
+
+     ! Dec 19: when width is NARROWER than WidthNarrow, must go
+     !         with higher rising than linear approx - expo
+  !   if lha_log > 0 then
+  !     lha$ = "Thr: m*w + b   m: "+val$(m)+" w: "+val$(w)+" b: "+val$(b)
+  !     lha2$= "WNarow: "+val$(INT_WidthNarrow)+" WWide: "+val$(INT_WidthWide)
+  !     button = Alert(lha$,2,lha2$)
+  !   endif
+
+     INT_InitThreshold = (m * w) + b
+
+     ! Jan 24 97: always use the lowest value as peaks get wider 
+     if INT_InitWidth > INT_WidthWide then
+           if INT_bestswide < INT_best02 then 
+               INT_InitThreshold = INT_bestswide
+           else
+               INT_InitThreshold = INT_best02
+           endif
+      endif
+
+ else 
+
+     if INT_InitWidth < INT_WidthNarrow then
+           INT_InitThreshold = INT_best02
+     else 
+           INT_InitThreshold = INT_bestswide
+     endif 
+ endif
+
+ if INT_InitWidth < INT_WidthNarrow then
+     m = (INT_best02 * INT_WidthNarrow)/INT_InitWidth
+     if m > INT_InitThreshold then
+          INT_InitThreshold = m
+     endif
+ endif 
+
+ ! 01-24-97: for LC only: 1.5 * Thresh
+ if datatype < 5 then
+          INT_InitThreshold = 1.5 * INT_InitThreshold
+ endif
+
+ ! Jan 24 1997: prepare the final threshold value 
+ !              consider NOT INCREASING first_thrsh when few peaks are found
+ !              thresh could go DOWN via more samples, UP via averaging
+ !              LIMIT allowed threshold increase to
+ !              positive values of (npeaks - 8)/8
+ !              below 8 detected peaks, NO INCREASE
+ !              at   10 detected peaks, 25%
+ !                   48                 500%
+ !
+ ! Jan 31       preceding implementation SUCKS
+ !              try the Product of first_thr * first_PW
+ !              replace npeaks value with gpeaks, # above new area_reject
+
+! if lha_log > 0
+!     lha$ = "npks: "+val$(npeaks)+" first_Thr: "+val$(first_thrsh)+" INT_IThr: "+val$(INT_InitThreshold) 
+!     button = Alert(lha$,2,"541 - test for clipping Threshold")
+! endif  
+
+ ! Feb 03: situation may be bogus since may have radical change in peakwidth
+ !         that requires a higher threshold! 
+ !         compute the product and if npeaks < 15, compute gpeaks
+ !         where gpeaks = number > MinArea from "detection"
+
+ MinArea = INT_InitHeight * 60 * INT_InitWidth * 2
+ product = first_thrsh * first_pw
+ gpeaks = npeaks
+ if npeaks < 15 then
+     i = npeaks
+     gpeaks = 0
+     while (i > 0) do
+       ! Jan 31 1997: determine gpeaks
+        area = TabVal(chromreg[obj],"IntResults",i,"area")
+        if area >= MinArea then
+            gpeaks = gpeaks + 1
+        endif 
+        i = i - 1
+     endwhile
+ endif
+ 
+ !if lha_log > 0
+ !    lha$  = "npks: "+val$(npeaks)+" gpeaks: "+val$(gpeaks)+" MinArea: "+val$(MinArea) 
+ !    lha2$ = "product: "+val$(product)
+ !    button = Alert(lha$,2,lha2$)
+ !endif  
+
+ if (npeaks < 9) or (gpeaks < 6) then
+         ! no increase allowed in Threshold 'cause too few peaks
+
+         if INT_InitThreshold * INT_InitWidth > product then
+              m = INT_InitThreshold
+              INT_InitThreshold = product/INT_InitWidth
+  !            if lha_log > 0
+  !                lha$ = "orig Thr: "+val$(m)+ " clipped to: "+val$(INT_InitThreshold)
+  !                button = Alert(lha$,2,"542 - clipping Threshold")
+  !            endif  
+         endif
+ else 
+          if (npeaks > 8) or (gpeaks > 5) then
+              ! allow Thresh to increase in proportion to gpeaks or npeaks found
+
+              if gpeaks > 5 then
+                  b = product * (1 + ((gpeaks - 5) / 5))
+              else
+                  b = product * (1 + ((npeaks - 8) / 8))
+              endif
+
+              if INT_InitThreshold * INT_InitWidth > b then
+                  m = INT_InitThreshold
+                  INT_InitThreshold = b/INT_InitWidth
+          !        if lha_log > 0
+          !            lha$ = "orig Thr: "+val$(m)+ " clipped to: "+val$(INT_InitThreshold)
+          !            button = Alert(lha$,2,"543 - clipping Threshold")
+          !        endif  
+              endif
+          endif
+ endif
+ 
+
+! if lha_log > 0 then
+!   lha$ = "interpolate InitThr: "+val$(INT_InitThreshold)+ " based on pw: "+val$(INT_InitWidth)
+!   button = Alert(lha$,2,"545  selecting Threshold")
+! endif
+
+ SetTabHdrVal AutoIntTabReg[1],evttab$,"initthresh",INT_InitThreshold
+
+ !if lha_log > 0 then
+ !  lha$ = " slope sens: "+val$(INT_InitThreshold)
+ !  button = Alert(lha$,2,"550  DoAuto - final ss/Thresh update")
+ !endif
+
+ ! Nov 15: use the maximum and minimum areas found to help set value
+ !         for INT_InitReject - AREA_REJECT
+
+ row = RowByVal(chromreg[obj],"IntResults",,"Area","max")
+ MaxArea = TabVal(chromreg[obj],"IntResults",row,"Area")
+
+ row = RowByVal(chromreg[obj],"IntResults",,"Area","min")
+ MinArea = TabVal(chromreg[obj],"IntResults",row,"Area")
+
+ ratio = MaxArea/MinArea
+
+ !if lha_log > 0 then
+ !   lha$ = "MaxArea: "+val$(MaxArea) + " MinArea: "+val$(MinArea) + " ratio: "+val$(ratio)
+ !   button = Alert(lha$,2,"555   areas found")
+ !endif
+
+ ! this will increase rejection of NARROWER spike-like things
+ INT_InitReject = INT_InitHeight * 60 * INT_InitWidth * 2
+ !if lha_log > 0 then
+ !   lha$="factor: "+val$(INT_InitReject)+" Ht: "+val$(INT_InitHeight)+" PW: "+val$(INT_InitWidth)
+ !   button = Alert(lha$,2,"556   enter AreaReject for MinArea")
+ !endif
+
+ ! factor will convert from HT*Width to Area with ~10:1 S/N
+ ! if MinArea > (HeightRej * Starting PW * factor) then set InitRej to MinArea
+ ! else
+ !   if CE/LC then     MinArea:  greater of Max/1000 or MinArea??
+ !   if GC             MinArea:  (HeightRej * startingPW * factor)  
+
+
+ k = 0
+ ! 01-06-97 for LC [DAD,MWD] try to have at least 100:1 range, even if drop thru floor 
+ !          at minimum quantifiable
+
+ if (DataType < 5) AND (DataType > 0) then
+     if MinArea > (MaxArea/1000) then
+         if MinArea < (MaxArea/100) then
+             k = MinArea
+         else
+             k = MaxArea/100
+         endif
+     else
+         k = MaxArea/1000
+     endif
+
+  !   if lha_log > 0 then
+  !       lha$ = "New k area : "+val$(k)
+  !       button = Alert(lha$,2,"556.25  from Max/min 1000")
+  !   endif
+
+     ! jan06 experiment to find lowest usable minimum area to replace k
+     ! i is lower of npeaks or 8
+     ! also check that actually used j > 0
+     if npeaks > 8
+       i = 8
+     else
+       if npeaks > 0
+          i = npeaks
+       else
+          i = 0
+       endif
+     endif
+ 
+     min_pw_area = 999999999
+     while (i > 0) do
+
+       ! Nov 11: remove unused stuff
+
+        peak_width = TabVal(chromreg[obj],"IntResults",i,"width")
+        area       = TabVal(chromreg[obj],"IntResults",i,"area")
+        lha_sym    = TabVal(chromreg[obj],"IntResults",i,"symmetry")
+        PeakType   = TabVal(chromreg[obj],"IntResults",i,"PeakType")
+
+        ! Oct 28 - only average the most symmetric peaks
+        if ((lha_sym < max_sym) AND (lha_sym > min_sym) AND (peak_width > 0)) AND \
+           ((PeakType = 8) OR (PeakType = 10) OR (PeakType = 25)) then
+            if (area < min_pw_area) AND (INT_InitWidth < (1.3 * peak_width)) then
+               min_pw_area = area
+      !         if lha_log > 0 then
+      !           lha$ = "New min_pw_area: "+val$(min_pw_area)
+      !           button = Alert(lha$,2,"556.5  searching for good min area")
+      !         endif
+            endif
+        endif
+
+     i = i - 1
+     endwhile
+
+     ! use 90% since can easily loose 10% on pw changes, etc
+     if (min_pw_area * 0.9) < k then
+         k = min_pw_area * 0.9
+       !  if lha_log > 0 then
+       !     lha$ = "New k: "+val$(k)
+       !     button = Alert(lha$,2,"556.75   replaced k with ~actual valueArea")
+       !  endif
+     endif
+
+     if k < INT_InitReject then
+         INT_InitReject = k 
+        ! if lha_log > 0 then
+        !    lha$ = "New Rej: "+val$(INT_InitReject)
+        !    button = Alert(lha$,2,"557   replaced AreaReject with SMALLER value")
+        ! endif
+     endif
+
+ endif
+
+ ! Nov 18: set value based on 2 * ideal
+ SetTabHdrVal AutoIntTabReg[1],evttab$,"initreject",INT_InitReject
+
+! if lha_log > 0 then
+!   lha$="MinArea: "+val$(INT_InitReject) + " MinHt: "+val$(INT_InitHeight)
+!   button=Alert(lha$,2,"560  final Min Area & Ht: set initrej + initht")
+! endif
+
+ !final integration
+ print NLSCoreChrom$("Integrating")
+ integrateobj ChromReg[obj],,,AutoIntTabReg[1]
+
+ !if lha_log > 0 then
+ !  button = Alert("performed final integration",2,"570  DoAuto")
+ !endif
+
+exit_with_pks:
+
+ ! 12-16-96 should check that integration hasn't been botched
+ oldpks = npeaks
+ ! should check that this exists?
+ npeaks = TabHdrVal(chromreg[obj],"intresults","numberofrows")
+
+ ! 01-08-97 various apology messages;  put them all in serially
+ if (lha_error > 1) then
+
+     if lha_error = 2 then
+        print NLSCoreChrom$("DoneAutoIFew")
+        sleep 3
+     endif
+ 
+     if lha_error = 3 then
+        print NLSCoreChrom$("DoneAutoISymm")
+        sleep 3
+     endif
+
+ endif
+
+ if oldpks > 0 then    
+   if (oldpks > 5 AND (npeaks/oldpks > 3)) OR (npeaks > 100) then
+     print using NLSCoreChrom$("DoneAutoI2Many"),npeaks
+     sleep 3
+   endif
+ endif
+ 
+ if npeaks > 0 then
+       print using NLSCoreChrom$("DoneAutoIPks"), npeaks
+       sleep 3
+       !print "Done Auto Integrate Feb1397     prev: ",oldpks," now: ",npeaks
+
+ ! Jan 14: can't display error line as Red and continue execution
+ !         so forget some error highlighting
+ else
+        print NLSCoreChrom$("DoneAutoINOPks")
+        sleep 3
+ endif
+
+endmacro
+
+!**************************************************************************
+Name INT_EnhExamenBaseLine
+! mods by LHA  February 21, 1997
+! try to take 1% chunk of baseline or max 150 points
+! for MS & others: ensure that return values are + and >0
+! changes for non-equidistant objects
+! try to return two slope values, INT_Slope02 (peaks ~ 0.02 min)
+! and INT_SlopeWide (peaks ~ 0.08 min) IF enough data points 
+! Actual "peakwidth" in INT_WidthWide for INT_SlopeWide
+! Actual "pw" in INT_WidthNarrow for INT_Slope02
+! where must clip points, try to get min 27 ....
+! 12.31.96: "not enuf points in object error"
+!           try to get enuf points for pw.08 min filter or at
+!           least 2X pw.02 but not more than 2.5%
+! 02.04.97: enhancement - try to discard last point / first point
+!                         in chromatogram
+! 02.21.97: comment-out logging
+!**************************************************************************
+ PARAMETER Obj Default 1
+ PARAMETER xl Default -99, xh Default -1
+ PARAMETER Mode Default 1
+ LOCAL npoints,step,yslope,obj_min,obj_max,xlp,xhp,j,max_points,lha$,lha2$
+ LOCAL lha_log, INT_PctUsed, lha_range
+
+ ! Globals: INT_Noise, INT_Slope02, INT_SlopeWide, INT_WidthWide, INT_WidthNarrow
+
+ lha_log = 0
+
+ !get deltatime etc.
+ npoints = DataCols(chromreg[obj])
+ step = GetStepSize(obj)
+ yslope = DataVal(chromreg[obj],1,"slope")
+ INT_WidthNarrow = 0
+
+ ! nov 14:  1% of chromatogram is npoints/100
+ !          if this is greater than 150, then use 150
+ !          always take at least 15 points!
+ ! nov 22:  15 points only good for 5 point filter; try more points up to 2.5% of runtime        
+ ! dec 31:  compute pw and test for fits with "overlap"
+
+ max_points = FLOOR(0.5 + npoints/100)
+ if max_points > 150
+    max_points = 150
+ endif
+
+ ! Nov 22: must have minimum number for filters to work even if > 1%
+ !         so go for 27 points for filter of 9, or out 2.5%, or at least 15 points
+
+ if max_points < 16 then
+    if (27/npoints <= 0.025) then 
+         max_points = 27
+    else
+         if (npoints/40 >= 15.5) then
+             max_points = FLOOR(0.5 + npoints/40)
+         else
+             max_points = 16
+         endif 
+    endif
+ endif
+
+ ! 12.31.96: now have max_points as 1% to 2.5% based on minimum points required
+ !           compute requirements for actual pw and possibly extend max_points
+
+ if ((max_points/npoints < 0.025) AND (max_points < 150)) then
+    j = ceil(0.04/step)             ! compute pw = 0.04 for 2X INT_WidthNarrow
+
+    if Mod(j,2) = 0
+          j = j + 1
+    endif                           ! ensure odd # for j
+
+    if j < (max_points * 0.40)      ! must be less than 40% of total width    
+          goto good_enuf
+    else                            ! try to extend max_points, if possible
+          k = 2.5 * j               ! approximate required max_points
+          if k > 150 then           ! need more than 150 points?
+              max_points = 150
+          else
+              max_points = floor(k)
+          endif
+
+          if (max_points/npoints) > 0.025    ! need more than 2.5%?
+              max_points = floor(0.025 * npoints)
+          endif
+
+      !    if lha_log > 0 then
+      !       lha$ = " new max_points: "+val$(max_points)
+      !       button=Alert(lha$,2,"799  EnhXamineBL")
+      !    endif
+
+    endif  
+ endif
+
+good_enuf:
+ lha_range = max_points/npoints
+ !if lha_log > 0 then
+ !  lha$ = " xl: "+val$(xl) + " xh: "+val$(xh) + " mode: "+val$(mode)
+ !  lha$ = lha$ + " max_pts: "+val$(max_points)
+ !  button=Alert(lha$,2,"800  EnhXamineBL")
+ !endif
+
+ ! Oct 18
+ ! determine time range
+ ! mode 0:  fixed points for low and high point
+ ! mode 1:  from xl up ~1% always include xl 
+ ! mode 2:  from xh down ~1% always include xh
+ ! for modes > 0, take no more than max_points or less than 15 points, even if > 1%
+ !                PREVIOUSLY had been max 50, min 16
+ ! Jan 16 97: try modify mode 1 to exclude xl and mode 2 to exclude xh 
+
+ !get time range
+ if mode = 0
+   xlp = dataindex(chromreg[obj],xl)
+   xhp = dataindex(chromreg[obj],xh)
+   
+  ! if lha_log > 0 then
+  !   lha$= " xlp: "+val$(xlp) + " xhp: "+val$(xhp)
+  !   button=Alert(lha$,2,"810  mode 0")
+  ! endif
+
+ else
+   if npoints < 16
+     xlp = 1
+     xhp = npoints
+   else
+     if mode = 1   ! first 1%  from 0 - 1%
+       ! nov 22: ensure that take no fewer than max_points
+
+       xl = Data(chromreg[obj],0,dataindex(chromreg[obj],xl))
+       xh = xl + (Data(chromreg[obj],0,npoints)-Data(chromreg[obj],0,1)) * lha_range
+       xlp = dataindex(chromreg[obj],xl)
+       xhp = dataindex(chromreg[obj],xh)
+
+   !    if lha_log > 0 then
+   !      lha$= " xlp: "+val$(xlp) + " xhp: "+val$(xhp)+" xh: "+val$(xh)
+   !      button=Alert(lha$,2,"820  mode 1 b4 clip")
+   !    endif
+
+       if xhp-xlp > max_points
+         xhp = xlp + max_points
+       else
+         if xhp-xlp < max_points
+           xhp = xlp + max_points
+         endif       
+       endif       
+     else        ! mode 2; last 1%  99-100%
+       xh = Data(chromreg[obj],0,dataindex(chromreg[obj],xh))
+       xl = xh - (Data(chromreg[obj],0,npoints)-Data(chromreg[obj],0,1)) * lha_range
+       xlp = dataindex(chromreg[obj],xl)
+       xhp = dataindex(chromreg[obj],xh)
+
+    !   if lha_log > 0 then
+    !     lha$= " xlp: "+val$(xlp) + " xhp: "+val$(xhp)+ " xl: "+val$(xl)
+    !     button=Alert(lha$,2,"830  mode 2 b4 clip")
+    !   endif
+       if xhp-xlp > max_points
+         xlp = xhp - max_points
+       else
+         if xhp-xlp < max_points
+           xlp = xhp - max_points
+         endif       
+       endif       
+     endif
+     if xlp < 0
+       xlp = 0
+     endif
+     if xhp > npoints
+       xhp = npoints
+     endif
+   endif
+ endif
+
+ ! Feb 04 97: enhance to drop [first:1] and [last:npoints] from dataset
+ if xlp = 1 then
+     xlp = 2
+     !if lha_log > 0
+     !   button=Alert("drop FIRST data point",2,"Feb 4 97  XamineBL")
+     !endif
+ endif
+
+ if xhp = npoints then
+     xhp = npoints - 1
+     !if lha_log > 0
+     !   button=Alert("drop LAST data point",2,"Feb 4 97  XamineBL")
+     !endif
+ endif
+
+ INT_PctUsed = (100 * (xhp - xlp)) / npoints
+ if INT_PctUsed > 3 then
+     INT_PctUsed = 3
+ else 
+     if INT_PctUsed < 0.5 then
+        INT_PctUsed = 0.5
+     endif
+ endif
+
+! if lha_log > 0 then
+!   lha$= " xlp: "+val$(xlp) + " xhp: "+val$(xhp) 
+!   j = xhp - xlp
+!   button=Alert(lha$,2,"840   range: "+val$(j)+" PctUsed: "+val$(INT_PctUsed))
+! endif
+
+ ! extract part of chromatogram to workreg
+ delreg AutoIntExamwork
+ newobj AutoIntExamwork,1,1,xhp - xlp + 1 ! not lc or gc class for regressobj !
+ copydatarow chromreg[obj],1,xlp:xhp,AutoIntExamwork[1],1
+ SetDataVal AutoIntExamwork[1],0,step,step
+
+ GetDataMinMax AutoIntExamwork[1],1
+ !if lha_log > 0 then
+ !  lha$ = "min: "+val$(obj_min) + " at: "+val$(obj_x_min)
+ !  lha$ = lha$ + " max: "+val$(obj_max) + " at: "+val$(obj_x_max)
+ !  button = Alert(lha$,2,"850  real data") 
+ !endif
+ ! get the noise threshold
+ RegressObj AutoIntExamwork[1]
+ ! December 6: divide by sqrt(% used in sample)
+ INT_Noise = (TabHdrVal(AutoIntExamwork[1],"Regress","StdDev") * 3) / sqrt(INT_PctUsed)
+ if INT_Noise < yslope
+     lha$ = "INT_Noise: "+val$(INT_Noise)+" yslope: "+val$(yslope)
+  !   if lha_log > 0
+  !      button = Alert(lha$,2,"852 replace INT_Noise ONLY if 0 or less")
+  !   endif
+     if INT_Noise <= 0 then
+        INT_Noise = yslope
+     endif
+ endif
+
+ ! nov 26: for MS data, will ignore front segment if Noise < 2
+ !         this condition easily? met for all 0's assuming
+ !         yslope is < 2
+
+! if lha_log > 0 then
+!   lha2$=" INT_Noise: "+val$(INT_Noise)
+!   button = Alert(lha2$,2,"860 Noise")
+! endif
+
+ ! get the slope threshold
+
+ ! polynomial smoothing function uses 3rd order Savitzky-Golay
+ ! with first derivative
+ ! filter LENGTH should be proportional to "actual" peakwidth
+ ! which takes 8 Bunched points for 1st deriv calculation
+ ! at 0.04 minutes = 2.4 sec / 8 points = 0.3 seconds / data point
+ !    0.01                                0.075
+ !    0.32                                2.4
+ ! running this number of points will produce a max value of
+ ! slope ON BASELINE .... a significantly increased value must
+ ! be used to prevent false triggering on such BASELINE SEGMENTS
+ ! it may be that >>> much smaller intervals <<< are an equivalent
+ ! way to derive this multiplication
+ ! existing filters are 9 or 5 points with HALF that # of points 
+ ! LOST off either end as startup costs for transversal filtering
+ ! 
+ ! for 5 Hz data (step = 0.00333 min), 9 point smooth ~ 0.0317 min
+ ! which is close to 0.04 min; closer is 13 pts = 0.043
+ ! with enough data available, should do several pw of baseline
+ ! for Nov 26, min length of 5; try for 0.02 & 0.08 
+
+ INT_Slope02 = 0
+  
+ ! Nov 26: compute trial width for ~0.02 peakwidth
+ j = ceil(0.02/step)
+
+ if (j/max_points) > 0.33 then
+    goto five_or_9
+ endif
+
+ if Mod(j,2) = 0
+    j = j + 1   ! must be odd number; go for maximum # points
+ endif
+
+ if j < 5 then
+   j = 5
+ endif
+  
+ !if lha_log > 0 then
+ !  lha$ = "widthnarrow   j: "+val$(j)
+ !  button=Alert(lha$,2,"865  calling derivobj")
+ !endif
+
+ derivobj AutoIntExamwork[1],j,1    ! LAST trial
+ GetDataMinMax AutoIntExamwork[1],1
+ INT_WidthNarrow = j * step
+ ! nov 26: this should be recommended Minimum Width
+ if abs(obj_min) > abs(obj_max)
+  INT_Slope02 = abs(obj_min) ! step*abs(obj_min)*60
+ else
+  INT_Slope02 = abs(obj_max) ! step*abs(obj_max)*60
+ endif
+! if lha_log > 0 then
+!   lha$ = "INT_Slope02: "+val$(INT_Slope02)
+!   button=Alert(lha$,2,"870  computed for pw: "+val$(INT_WidthNarrow))
+! endif
+
+ ! Oct 31: compute trial width for ~0.08 peakwidth
+ ! Nov 22: if INT_WidthNarrow > 0.04, then go for 4x or 9 points or ?
+ ! Dec 31: must test that well within max_points or goto five_or_9
+
+ if (INT_WidthNarrow < 0.04) then
+      j = ceil(0.08/step)
+ else
+      if (INT_WidthNarrow * 4) > .16 then
+          j = ceil(0.16/step)
+      else
+          j = ceil((INT_WidthNarrow * 4)/step)
+      endif 
+ endif
+
+ ! 12.31.96: check for j as too large compared with max_points
+ !           since now using interpolation, would like 2x INT_WidthNarrow
+
+ if (j/max_points) > 0.40
+    ! compute the permitted value for available max_points at 40%
+    ! and use it if greater than WidthNarrow
+    j = ceil(0.4 * max_points)
+    ! if this newer j is BOTH > 10 points & > 0.02 minutes, do it!
+    if (j < 11) or ((step*j) < 0.02) then
+       goto five_or_9
+    endif
+ endif
+
+ if Mod(j,2) = 0
+    j = j + 1   ! must be odd number; go for maximum # points
+ endif  
+
+ if j < 5 then
+    j = 5
+ endif
+
+ delreg AutoIntExamwork   ! replace data
+ newobj AutoIntExamwork,1,1,xhp - xlp + 1 ! not lc or gc class for regressobj !
+ copydatarow chromreg[obj],1,xlp:xhp,AutoIntExamwork[1],1
+ SetDataVal AutoIntExamwork[1],0,step,step
+
+
+ !if lha_log > 0 then
+ !  lha$ = "widthwide   j: "+val$(j)
+ !  button=Alert(lha$,2,"875  calling derivobj")
+ !endif
+
+ derivobj AutoIntExamwork[1],j,1    ! LAST trial
+ INT_WidthWide = j * step
+ GetDataMinMax AutoIntExamwork[1],1
+ if abs(obj_min) > abs(obj_max)
+  INT_SlopeWide = abs(obj_min) ! step*abs(obj_min)*60
+ else
+  INT_SlopeWide = abs(obj_max) ! step*abs(obj_max)*60
+ endif
+! if lha_log > 0 then
+!   lha$ = "INT_SlopeWide: "+val$(INT_SlopeWide)
+!   button=Alert(lha$,2,"880  computed for pw: "+val$(INT_WidthWide))
+! endif
+
+ goto bl_over_width
+
+five_or_9:
+ delreg AutoIntExamwork   ! replace data
+ newobj AutoIntExamwork,1,1,xhp - xlp + 1 ! not lc or gc class for regressobj !
+ copydatarow chromreg[obj],1,xlp:xhp,AutoIntExamwork[1],1
+ SetDataVal AutoIntExamwork[1],0,step,step
+ 
+ if xhp-xlp < 17
+  derivobj AutoIntExamwork[1],5,1    ! ?? Which filter
+  INT_WidthWide = 5 * step    !  peakwidth in minutes
+ else
+  derivobj AutoIntExamwork[1],9,1    ! ?? Which filter
+  INT_WidthWide = 9 * step
+ endif
+
+ ! did computation of narrow value occur?
+ if INT_WidthNarrow = 0 then
+    INT_WidthNarrow = INT_WidthWide
+ endif
+
+ GetDataMinMax AutoIntExamwork[1],1
+ if abs(obj_min) > abs(obj_max)
+  INT_SlopeWide = abs(obj_min) ! step*abs(obj_min)*60
+ else
+  INT_SlopeWide = abs(obj_max) ! step*abs(obj_max)*60
+ endif
+ if INT_SlopeWide < yslope
+  INT_SlopeWide = yslope
+ endif
+
+ if INT_Slope02 <= 0 then
+  INT_Slope02 = INT_SlopeWide
+ endif
+
+! if lha_log > 0 then
+!   lha$ = lha2$ + " INT_SlopeW: "+val$(INT_SlopeWide)
+!   button=Alert(lha$,2,"890  EnhXamineBL pw5or9(min): "+val$(INT_WidthWide))
+! endif
+
+ !lha$ = "min: "+val$(obj_min) + " at: "+val$(obj_x_min)
+ !lha$ = lha$ + " max: "+val$(obj_max) + " at: "+val$(obj_x_max)
+ !button = Alert(lha$,2,"900  first deriv data") 
+
+bl_over_width:
+ delreg AutoIntExamwork
+
+EndMacro
+
+!**************************************************************************
+Name Init_AutoInt
+!**************************************************************************
+
+ AutoIntegrateEnh
+
+EndMacro
+
+

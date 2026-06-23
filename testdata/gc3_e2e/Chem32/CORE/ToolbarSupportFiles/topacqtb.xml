@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="TopAcqTB" PosStyle="TOP" DockRow="0" DockCol="0" Caption="Method and Run Control" PanelName="Main">
+		<RadioButton Name="TopSeq" Help="Select Sequence Task" Command="TLB_SwitchAcqTask TopSeq" Group="1" Enable="1" ImageName="Task_Sequence20" NewGroup="1" ImageNameDisabled="Task_Sequence20_d"/>
+		<RadioButton Name="TopRun" Help="Select Run Method Task" Command="TLB_SwitchAcqTask TopRun" Group="1" Enable="1" ImageName="Task_RunMethod20" ImageNameDisabled="Task_RunMethod20_d"/>
+		<Static Name="Methods" Visible="1" Enable="1" Text="Methods" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadMethod" Help="Load a Method" Command="TLB_LoadMethod" ImageName="Load_method20" ImageNameDisabled="Load_method20_d"/>
+		<PushButton Name="SaveMethod" Help="Save current Method" Command="TLB_SaveCurrentMethod" ImageName="Save_method20" ImageNameDisabled="Save_method20_d"/>
+		<NonEditCombobox Name="ActualAndPreviousMethods" Help="Select from most previously loaded Method Files" Enable="1" Table="_Config,1,MethodFile" Selection="1" Width="200"/>
+		<Static Name="Sequences" Visible="1" Enable="1" Text="Sequences" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadSequence" Help="Load Sequence Template File" Command="LoadSequenceAuto" ImageName="Load_sequence20" ImageNameDisabled="Load_sequence20_d"/>
+		<PushButton Name="SaveSequence" Help="Save current Sequence Template" Command="SaveCurrentSequence" ImageName="Save_sequence20" ImageNameDisabled="Save_sequence20_d"/>
+		<NonEditCombobox Name="ActualAndPreviousSequences" Help="Select from most previously loaded Sequence Template Files" Enable="1" Table="_Config,1,SequenceFile" Selection="1" Width="200"/>
+		<RadioButton Name="ViewInstr" Help="Press this button to switch screen layout" Command="ACQ_SwitchDisplay Instr" Group="2" Enable="1" State="1" ImageName="MR_LayoutB20" NewGroup="1" ImageNameDisabled="MR_LayoutB20_d"/>
+		<RadioButton Name="ViewSignal" Help="Press this button to switch screen layout" Command="ACQ_SwitchDisplay Signal" Group="2" Enable="1" ImageName="MR_LayoutC20" ImageNameDisabled="MR_LayoutC20_d"/>
+		<RadioButton Name="ViewAll" Help="Press this button to switch screen layout" Command="ACQ_SwitchDisplay All" Group="2" Enable="1" ImageName="MR_LayoutA20" ImageNameDisabled="MR_LayoutA20_d"/>
+		<PushButton Name="InsLogBook" Help="Show/Hide current online Logbook" Command="LBK.LOGBOOK" NewGroup="1" ImageName="Logbook20" ImageNameDisabled="Logbook20_d"/>
+		<PushButton Name="SeqLogBook" Help="Show/Hide Sequence Logbook" Command="LBK.OPENSEQLOGBOOK" ImageName="Sequence_logbook20" ImageNameDisabled="Sequence_logbook20_d"/>
+		<PushButton Name="ReportPreview" Help="Identify Peaks, calculate and preview Results" Command="MenuQuantify SCREEN" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="ReportPrint" Help="Identify Peaks, calculate Results and print Report" Command="MenuQuantify PRINTER" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="EditEntireMethod" Help="Edit entire Method" Command="EditEntireMethod" ImageName="Edit_entire_method20" ImageNameDisabled="Edit_entire_method20_d"/>
+		<PushButton Name="LCDiagnostics" Help="Start LC Diagnostics" Command="StartLABDEV" Visible="0" ImageName="Start_LCDiagnostic20" ImageNameDisabled="Start_LCDiagnostic20_d"/>
+		<PushButton Name="Preferences" Help="Open Preferences Dialog" Command='CpRequest "Cp2", "DlgPreferences"' Visible="1" ImageName="Preferences20" ImageNameDisabled="Preferences20_d"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="ChemstoreLock" Help="Lock Chemstation Session" Command="ChemStoreLock.ChemStoreSessionLock 1,0" NewGroup="1" Visible="0" ImageName="Chemstore_Lock20" ImageNameDisabled="Chemstore_Lock20_d"/>
+		<PushButton Name="ChemstoreClient" Help="Chemstore Review Client" Command="ChemStoreShowReviewClient" Visible="0" ImageName="Chemstore_ReviewClient20" ImageNameDisabled="Chemstore_ReviewClient20_d"/>
+	</toolbar>
+</graphical_object>

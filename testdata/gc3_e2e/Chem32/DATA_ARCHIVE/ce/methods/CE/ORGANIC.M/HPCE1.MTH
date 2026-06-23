@@ -1,0 +1,30 @@
+Mode=1CE
+highpress=Off
+LoadVials=On
+LiftOfs=4
+Stoptime=10.00
+Posttime=Off
+Peakwidth=>0.03
+RawdataVoltage=On
+RawdataCurrent=On
+RawdataPower=On
+RawdataPressure=Off
+RawdataCassTemp=On
+Voltage=25.00
+Current=100.00
+Power=SysLimit
+LowCurrent=2.00
+CapTemp=20.00
+InletVial=3
+OutletVial=4
+HeightSensing=Off
+SwitchElectric=On
+Polarity=Negative
+Inject=Table,10.00,12.50
+Parallel=0
+ReplenUse=0
+PreconUse=1
+PostconUse=0
+cond pre FLUSH 4.00,1,2
+cond inj PRESSURE 50.0,2.0,InjectVial,OutHomeVial
+cond inj PRESSURE 50.0,4.0,InHomeVial,OutHomeVial

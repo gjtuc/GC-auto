@@ -1,0 +1,195 @@
+!******************************************************************************
+!*
+!* FILE:  puitop.mac
+!*
+!* DESCRIPTION:  Toplevel Macros, Autostart Macro for PUI
+!*
+!* $Header: /prodast/pui/src/macros/puitop.mac 1.11 1998-05-27 09:51:48-04 hmgr Exp $
+!******************************************************************************
+!*
+!* MACROS :    PUITop               to initialize the Addon part for PUI
+!*             PUITopClose          to close the PUI Addon part 
+!*             LoadMacroMcxOrMac    to load an mcx-file (if it exists) otherwise
+!*                                  the mac-file.
+
+
+!############################################################################
+name PUI_MenuHookServer
+! Macro serving the PreViewMenu hook for PUI related menus.
+!
+! A local variable CurrentView$ is used, which holds the name of the current
+! view. The following views are available:
+!
+!       TOP
+!       DA
+!       RptLayout
+!       Verify
+!       Diagnose
+!
+!############################################################################
+    local CurrentView$, ShortMenu , ret
+
+local NLSFileName_hppuim01$
+local ID_HPPUIM01_MCX_VIEW_29
+local ID_HPPUIM01_MCX_COMPANION__30
+local ID_HPPUIM01_MCX_RUNS_CHEMS_31  
+
+NLSFileName_hppuim01$                =  "hppuim01"
+ID_HPPUIM01_MCX_VIEW_29                  =  17029
+ID_HPPUIM01_MCX_COMPANION__30            =  17030
+ID_HPPUIM01_MCX_RUNS_CHEMS_31            =  17031
+
+    !read view name from the window table
+    CurrentView$ = UpperCase$( TabHdrText$( _CONFIG[1],Window, "CurrentView" ) )
+	
+	if ( CurrentView$ = "TOP" or CurrentView$ = "" )
+    
+!      menuadd "&View","Companion Setup &Wizard","PUI_RunWizard",,\
+!            "Runs ChemStation Companion Setup Wizard",  ,,,90008100
+
+        MenuAdd ReadResource$(NLSFileName_hppuim01$, ID_HPPUIM01_MCX_VIEW_29), ReadResource$(NLSFileName_hppuim01$, ID_HPPUIM01_MCX_COMPANION__30),"PUI_RunWizard",,\
+            ReadResource$(NLSFileName_hppuim01$, ID_HPPUIM01_MCX_RUNS_CHEMS_31),  ,,,90008100
+      return
+    endif
+
+    if ( CurrentView$ = "DA" )
+	  return
+    endif
+
+    if ( CurrentView$ = "RPTLAYOUT" )
+        ! Report Layout view
+        return
+    endif
+
+    if ( CurrentView$ = "VERIFY" )
+        ! Verification view
+        return
+    endif
+
+    if ( CurrentView$ = "DIAGNOSE" )
+        ! Diagnose view
+        return
+    endif
+
+    ! use for debugging
+    ! print "Error from PUI_MenuHookServer: Unknown View: ", CurrentView$
+    return
+endmacro ! PUI_MenuHookServer   
+
+
+name PUI_RunWizard
+!!!local savedir$
+    
+!!!    savedir$ = GetCWD$()
+!!!    ChDir _AutoPuiPath$
+    Local RunWizardApp$
+    
+    RunWizardApp$ = """" + _AutoPuiPath$ + "hppuiw01.exe"" " +  val$(_Instrument) + " " + _InstName$
+    ExecWait RunWizardApp$, 3
+
+!!!    ChDir savedir$
+
+endmacro
+
+
+!############################################################################
+name LoadMacroMcxOrMac
+  parameter File$                    ! file to be loaded without extension
+  parameter StartMacro$ default ""   ! Macro to be executed after loading
+
+! Loads an mcx file, if it exists. Otherwise it tries to load a mac file.
+!############################################################################
+
+
+! Tool Generated ID Details
+! =========================
+
+Local ID_HPPUIM01_MCX_LOADING_17
+
+ID_HPPUIM01_MCX_LOADING_17                        =		17017
+
+! End of Declarations
+! =========================
+
+  if filestat(MODE, File$ + ".mcx") = 1   ! exists - is a file
+    print ReadResource$("hppuim01",ID_HPPUIM01_MCX_LOADING_17) + File$ + ".mcx..."
+    evaluate "macro " + """" + File$ + ".mcx" + """"
+  else  ! mcx file does not exist try mac file (without test)
+    print ReadResource$("hppuim01",ID_HPPUIM01_MCX_LOADING_17) + File$ + ".mac..."
+    evaluate "macro " + """" + File$ + ".mac" + """"
+  endif
+  Evaluate StartMacro$
+endmacro
+
+
+!############################################################################
+name PUITopClose
+
+! This is the PUI close macro.
+!############################################################################
+
+    ! Shut down PUI window and VB if active
+    PUIUIRemove
+    PUIUIShutdown
+
+endmacro
+
+
+!############################################################################
+name PUITop
+
+! This is the PUI startup macro.
+!############################################################################
+
+    ! if offline, do NOT continue, Companion is only available ONLINE
+    if _Offline = 1
+        return
+    endif
+
+    ! if ChemStore is running, do NOT continue, ChemStore with Companion is not supported
+    if _IsChemStore = 1
+        return
+    endif
+
+    !initialize the path to the PUI modules (needed later on)
+    if Check (Variable, _AutoPUIPath$) = 0 then
+         l = Instr(_AUTOPATH$, "\CORE")
+         If l = 0
+             l = Instr(_AUTOPATH$, "\core")
+         EndIf
+        _AutoPUIPath$ = _AUTOPATH$[1:l]+"GC\"
+    endif
+
+    if Check(FUNCTION, PUIGetInjectorVialRange$) = 0
+        PUI_Cmds = InstallCmds(_AutoPUIPath$ + "HPPUIC01.DLC")
+    endif
+
+    ! added May 2009 EMP
+    ! The Rapidcontrol based 6890 and 6850 drivers change the behavior of getting valid vial ranges.  
+    ! To make this easier, call some of the same macro code we do for instrument diagram.  This will
+    ! set up the front and back valid vial ranges so we do not have to keep querying the driver if 
+    ! a particular vial is valid.
+    if (TestForDevice("RC6890",0,"") = 1) OR (TestForDevice("RC6850",0,"") = 1)
+         LoadMacroMcxOrMac _AutoPUIPath$  + "systgui"
+ 	 WriteVialRange "HP68QK00", _INSTPATH$ + "HP68QK00.ini"
+    endif
+
+    ! Register help aliases   
+    !RegisterHelpSubSystem _AutoPath$ + "help" + _Lang$ + "\hppui.hlp", "hppui"
+    RegisterHelpSubSystem _AutoPath$ + "help" + _Lang$ + "\ChemStat.chm", "hppui"   !Fix for PVCS#7835
+    SetHook "PreViewMenu", "PUI_MenuHookServer"
+
+    !set the hook for the close macros
+    SetHook "CloseApp", "PUITopClose"
+    
+    LoadMacroMcxOrMac _AutoPUIPath$ + "hppuim01", "PUIInitView"
+
+endmacro
+
+
+
+
+
+
+
+

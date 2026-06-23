@@ -1,0 +1,935 @@
+! CalTbl.mac
+! This is set of macros which emulate Alice/Phx2d calibration commands.
+! The macros are used to convert the calibration data from the macro format
+! to the current object format. For other purposes the error handling may
+! not be robust enough.
+!
+! The current set of commands is:
+!	calamt
+!	calistd
+!	callast
+!	callevel
+!	calmulti
+!	calref
+!	caltbpk
+!	caltitle
+!	calctype
+!	delcaltbl
+!	getpknum
+!	rpdest
+
+! Helper macros in this file:
+!	GetISTDRow
+!	GetLevelRow
+!	GetCompoundRow
+!	AddPointToLevel
+!	AddPointToCurve
+!	AddPeakToSignal
+!	AddPeakToCompound
+!	AddCompToTimeRef
+!	AddCompToISTD
+!	AddCompToISTDdep
+!	LinkTimeRefDependents
+!
+!	LoadCalTbl (macro that reads the calibration macros line by line)
+
+
+name calamt
+
+    parameter sample_amt default -1,multiplier default -1,units$ default "", \
+	      RF_uncal_peaks default -1, istdadjust default 0
+
+    if ( sample_amt > 0 ) then
+	SetTabHdrVal _damethod[1], "quantparm", "SampleAmount", sample_amt
+    else
+	SetTabHdrVal _damethod[1], "quantparm", "SampleAmount", 0
+    endif
+
+    if ( multiplier > 0 ) then
+	SetTabHdrVal _damethod[1], "quantparm", "Multiplier", multiplier
+    else
+	SetTabHdrVal _damethod[1], "quantparm", "Multiplier", 1
+    endif
+
+    SetTabHdrText _damethod[1], "quantparm", "Units", units$
+
+    if ( RF_uncal_peaks > 0 ) then
+        SetTabHdrVal _damethod[1], "quantparm", "UnkCompCalc", 1
+	SetTabHdrVal _damethod[1], "quantparm", "UnkCompRF", RF_uncal_peaks
+    else
+        SetTabHdrVal _damethod[1], "quantparm", "UnkCompCalc", 0
+	SetTabHdrVal _damethod[1], "quantparm", "UnkCompRF", 0
+    endif
+
+    return
+endmacro
+
+name calctype
+
+    parameter type default 0, AH default 0, sort default 1, output_num default 1, header default 1
+    local calctyp,style
+
+    style = -8
+    if  output_num = 2 then
+	! chromatogram only
+	style = -26
+    endif
+    SetTabHdrVal _damethod[1], "rptparm", "Style", style
+    if output_num > 1 then
+        NewTabHdrVal _DAMethod[1], "RptParm", "DrawSignal", 1, 1, 3, 0, 1
+	SetTabHdrVal _DAMethod[1], "RptParm", "DrawSignal", 1
+    endif
+
+    SetTabHdrVal _damethod[1], "quantparm", "CalcBase", AH
+
+    ! type and calctype are not coded the same.
+    calctyp = type
+    if (type = 1) then
+	calctyp = 2
+    endif
+    if (type = 2) then
+	calctyp = 1
+    endif
+    SetTabHdrVal _damethod[1], "quantparm", "CalcType", calctyp
+    SetTabHdrVal _damethod[1], "rptparm", "SortedBy", sort
+
+    return
+endmacro
+
+name calistd
+
+    parameter ISTD_num, amount
+    local ISTD_row
+    if (ISTD_num > 0) AND (amount > 0) then
+	ISTD_row = GetISTDRow(ISTD_num)
+	SetTabVal _damethod[1], "ISTD", ISTD_row, "amount", amount
+    endif
+
+    return
+endmacro
+
+name callast
+
+    parameter lastchange$ default ""
+    SetTabHdrText _damethod[1],"quantparm","calnewdatetime",lastchange$
+    SetTabHdrText _damethod[1],"quantparm","calmoddatetime",lastchange$
+
+    return
+endmacro
+
+
+name callevel
+
+    parameter peaknum,level,amount,numpeaks,curarea,curheight
+    local calptrow,done,my_rt,oth_rt
+
+    InsTabRow _damethod[1],"calpoint"
+    calptrow = TabHdrVal(_damethod[1],"calpoint","numberofrows")
+    SetTabVal _damethod[1],"calpoint", calptrow, "peak",peaknum
+    SetTabVal _damethod[1],"calpoint", calptrow, "amount",amount
+    SetTabVal _damethod[1],"calpoint", calptrow, "area",curarea
+    SetTabVal _damethod[1],"calpoint", calptrow, "height",curheight
+    if numpeaks < 1 then
+      numpeaks = 1
+    endif
+    SetTabVal _damethod[1],"calpoint", calptrow, "counter",numpeaks
+    AddPointToLevel calptrow, level
+    AddPointToCurve calptrow, peaknum
+
+    return
+endmacro
+
+name calref
+
+    parameter refwin, refunits, nonrefwin, nonrefunits
+    parameter corrwin default 0
+    if (refunits = 0) then
+	! Percent.
+	SetTabHdrVal _damethod[1],"quantparm","RTWinRefAbs",0
+	SetTabHdrVal _damethod[1],"quantparm","RTWinRefRel",refwin
+    else
+	! Minutes.
+	SetTabHdrVal _damethod[1],"quantparm","RTWinRefAbs",refwin
+	SetTabHdrVal _damethod[1],"quantparm","RTWinRefRel",0
+    endif
+    if (nonrefunits = 0) then
+	! Percent.
+	SetTabHdrVal _damethod[1],"quantparm","RTWinAbs",0
+	SetTabHdrVal _damethod[1],"quantparm","RTWinRel",nonrefwin
+    else
+	! Minutes.
+	SetTabHdrVal _damethod[1],"quantparm","RTWinAbs",nonrefwin
+	SetTabHdrVal _damethod[1],"quantparm","RTWinRel",0
+    endif
+    if (corrwin > 0 ) then
+        SettabHdrVal _damethod[1],"quantparm","SignalCorrWin",corrwin
+    endif
+
+    return
+endmacro
+
+name caltbpk
+
+    parameter rettime, compound$, timerefpeak, ISTD_peak, ISTD_num
+    parameter custwin default -1
+    local peakrow
+
+    peakrow=RowByVal(_damethod[1],"peak",,"exprettime",">",rettime)
+    if (peakrow = -1)
+	peakrow = TabHdrVal(_damethod[1],"peak","numberofrows") + 1
+    endif
+    InsTabRow _damethod[1], "peak", peakrow
+
+    SetTabVal _damethod[1],"peak",peakrow,"exprettime",rettime
+    SetTabVal _damethod[1],"peak",peakrow,"rtwincount",1
+    if custwin > 0 then
+        custwin = custwin / 2
+        SetTabVal _damethod[1],"peak",peakrow,"RTWinLow",rettime-custwin
+        SetTabVal _damethod[1],"peak",peakrow,"RTWinHigh",rettime+custwin
+        SetTabVal _damethod[1],"peak",peakrow,"SetByUser",1        
+    endif        
+
+    AddPeakToSignal peakrow
+
+    AddPeakToCompound peakrow, compound$, timerefpeak, ISTD_peak, ISTD_num
+
+    return
+endmacro
+
+name caltitle
+
+    parameter title$
+    SetTabHdrText _damethod[1],"quantparm","caltitle",title$
+    return
+endmacro
+
+name calmulti
+
+    parameter curve, origin
+
+    ! piecewise, linear and exponent don't need conversion
+    if ( curve=2 ) then
+	curve=5			! log
+    else
+	if ( curve=3 ) then
+	    curve=6		! power
+	else
+	    if ( curve=5 ) then
+		curve=2		! quadratic
+	    endif
+	endif
+    endif
+    ! forced origin is converted to 'connected'
+    if ( origin = 2 ) then
+	origin = 3
+    endif
+    SetTabHdrVal _damethod[1], "quantparm", "curvetype", curve
+    SetTabHdrVal _damethod[1], "quantparm", "curveorigin", origin
+
+    return
+endmacro
+
+name getpknum
+
+    parameter rettime
+    ! Note : a GLOBAL variable: 'calibpk' is set
+    calibpk=rowbyval(_damethod[1],"peak",,"exprettime","~",rettime)
+
+    return
+endmacro
+
+name report
+    ! This macro replaces the report command from Coyote.
+    MenuQuantify
+endmacro
+
+name rpdest
+
+    parameter screenq, printerq, fileq, fname$ default "report"
+    parameter autoq default 0, fname2$ default ""
+    parameter WMFoutput default 0, WMFname$ default "", WMFname2$ default ""
+    local ipoint,destfile,filename$
+    SetTabHdrVal _damethod[1],"rptparm","destscreen",screenq
+    SetTabHdrVal _damethod[1],"rptparm","destprinter",printerq
+    SetTabHdrVal _damethod[1],"rptparm","FileTypeTXT",fileq
+    SetTabHdrVal _damethod[1],"rptparm","FileTypeWMF",WMFoutput
+    destfile = 0
+    if ( fileq > 0 OR WMFoutput > 0 )
+        destfile=1
+    endif
+    SetTabHdrVal _damethod[1],"rptparm","destfile",destfile
+    filename$ = fname$
+    if (fileq = 0 AND WMFoutput > 0 AND WMFname$ <> "")
+        filename$ = WMFname$
+    endif
+    ipoint = INSTR(filename$,".")
+    if ipoint > 1 then
+      filename$ = filename$[1:ipoint-1]
+    endif
+    if filename$[len(filename$)] = "1" then
+	! This is left over from dealing with merlin dual sample
+        filename$ = filename$[1:len(filename$)-1]
+    endif
+    if  len(filename$) > 6 then
+	! cannot handle more than six chars
+	filename$ = filename$[1:6]
+    endif
+    SetTabHdrText _damethod[1],"rptparm","filename",filename$
+
+   return
+endmacro
+
+
+name delcaltbl
+
+    DelCalData ! from quant.mac
+endmacro
+
+
+name GetISTDRow
+    ! Finds / insers a new ISTD row
+
+    parameter ISTD_num
+    local ISTD_row
+    ISTD_row=rowbytext(_damethod[1],"ISTD",,"shortname","=",Val$(ISTD_num))
+    if (ISTD_row < 0) then
+	InsTabRow _damethod[1],"ISTD"
+	ISTD_row = TabHdrVal(_damethod[1],"ISTD","numberofrows")
+	SetTabText _damethod[1],"ISTD", ISTD_row, "shortname",Val$(ISTD_num)
+    endif
+    return ISTD_row
+endmacro
+
+name AddPointToLevel
+    ! Adds a new calibration point to a level list
+
+    parameter calptrow,  level default 1
+    local levelrow, firstptrow, temprow
+    levelrow = GetLevelRow(level)
+    ! Add point to level list
+    firstptrow = TabVal(_damethod[1],"level",levelrow,"calpoint")
+    if (firstptrow <= 0) then
+	! This is the first point of the level
+	temprow = calptrow
+	SetTabVal _damethod[1],"level", levelrow, "calpoint",calptrow
+    else
+	! Patch us in.
+	temprow = TabVal(_damethod[1],"calpoint", firstptrow, "nextonlevel")
+	SetTabVal _damethod[1],"calpoint",firstptrow,"nextonlevel",calptrow
+    endif
+    SetTabVal _damethod[1],"calpoint",calptrow,"nextonlevel",temprow
+    SetTabVal _damethod[1],"calpoint",calptrow,"level",levelrow
+
+    return
+endmacro
+
+name GetLevelRow
+    ! Finds a level from the level list
+
+    parameter level
+    local levelrow
+    levelrow=rowbytext(_damethod[1],"level",,"shortname","=",Val$(level))
+    if (levelrow < 0) then
+	InsTabRow _damethod[1],"level"
+	levelrow = TabHdrVal(_damethod[1],"level","numberofrows")
+	SetTabText _damethod[1],"level", levelrow, "name",Val$(level)
+	SetTabText _damethod[1],"level", levelrow, "shortname",Val$(level)
+    endif
+    return levelrow
+endmacro
+
+name AddPointToCurve
+    ! Adds a new calibration point to calcurve list
+
+    parameter calptrow,peakrow
+    local firstptrow, temprow
+    firstptrow = TabVal(_Damethod[1],"peak",peakrow,"firstcalpoint")
+    if (firstptrow <= 0) then
+	! This is the first calcurve point
+	temprow = calptrow
+	SetTabVal _damethod[1],"peak", peakrow, "firstcalpoint",calptrow
+    else
+	! Patch us in.
+	temprow = TabVal(_damethod[1],"calpoint", firstptrow, "nextoncurve")
+	SetTabVal _damethod[1],"calpoint",firstptrow,"nextoncurve",calptrow
+    endif
+    SetTabVal _damethod[1],"calpoint",calptrow,"nextoncurve",temprow
+    SetTabVal _damethod[1],"calpoint",calptrow,"peak",peakrow
+
+    return
+endmacro
+
+
+name AddPeakToSignal
+    ! Adds a peak to the selected signal
+
+    
+	parameter peakrow, sigrow default -1
+  local firstpkrow, temprow, CurrDet$, CurrId$, datatype, DescAdd$
+    
+  Local  ID_PHX3DSUPPORTFILES___1_GC_SIGNAL_176
+  local  NLSFileName_phx3dsupport$
+  
+  ID_PHX3DSUPPORTFILES___1_GC_SIGNAL_176             =  17176  
+ 
+	NLSFileName_phx3dsupport$="phx3dsupport"
+	
+	CurrDet$ = ""
+
+    if (ChooseDetector = 1)
+	CurrDet$ = FrontDetector$
+	CurrId$ = "1 A"
+    endif
+    if (ChooseDetector = 0)
+	CurrDet$ = RearDetector$
+	CurrId$ = "2 B"
+    endif
+    if ChooseDetector <> -1 AND CurrDet$ = "NONE"
+	CurrDet$ = "TST"
+    endif
+
+    if (ChooseDetector <> -1 AND sigrow<0)
+	sigrow=RowByText(_damethod[1],"signal",,"desc","in",CurrDet$+CurrId$)
+    endif
+	
+    if (ChooseDetector = -1 AND TabHdrVal(_damethod[1],"signal","numberofrows") <= 0) then
+	! the phx2d case
+	InsTabRow _damethod[1],"signal"
+	SetTabText _damethod[1],"signal",1,"desc",""
+    endif
+    if ChooseDetector = -1 AND sigrow<0
+        sigrow = 1
+    endif
+
+    if ChooseDetector <> -1 AND (sigrow<0 OR TabHdrVal(_damethod[1],"signal","numberofrows") <= 0) then
+	if (sigrow<0)
+	    InsTabRow _damethod[1],"signal"
+	    sigrow = TabHdrVal(_damethod[1],"signal","numberofrows")
+	else
+	    InsTabRow _damethod[1],"signal",sigrow
+	endif
+	DescAdd$ = ", "
+	if (CurrDet$ = "ADC") then
+	    DescAdd$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES___1_GC_SIGNAL_176)
+	    if (CurrId$ = "2 B") then
+		CurrId$ = "1 B"
+	    endif
+	endif
+	SetTabText _damethod[1],"signal",sigrow,"desc",CurrDet$+CurrId$+DescAdd$
+	datatype=16
+	if CurrDet$ = "TCD" then
+	    datatype=17
+	endif
+	if CurrDet$ = "FID" then
+	    datatype=18
+	endif
+	if CurrDet$ = "ECD" then
+	    datatype=19
+	endif
+	if CurrDet$ = "NPD" then
+	    datatype=20
+	endif
+	if CurrDet$ = "FPD" then
+	    datatype=21
+	endif
+	if CurrDet$ = "AED" then
+	    datatype=22
+	endif
+	if CurrDet$ = "AIB" then
+	    datatype=23
+	endif
+	if CurrDet$ = "TST" then
+	    datatype=24
+	endif
+	SetTabVal _damethod[1],"signal",sigrow,"datatype",datatype
+
+    endif
+
+    firstpkrow = TabVal(_Damethod[1],"signal",sigrow,"firstpeak")
+    if (firstpkrow <= 0) then
+	! This is the first peak of the signal
+	temprow = peakrow
+	SetTabVal _damethod[1],"signal", sigrow, "firstpeak",peakrow
+    else
+	! Patch us in.
+	temprow = TabVal(_damethod[1],"peak", firstpkrow, "nextpeaksignal")
+	SetTabVal _damethod[1],"peak",firstpkrow,"nextpeaksignal",peakrow
+    endif
+    SetTabVal _damethod[1],"peak",peakrow,"nextpeaksignal",temprow
+    SetTabVal _damethod[1],"peak",peakrow,"signal",sigrow
+
+    return
+ endmacro
+
+
+name AddPeakToCompound
+    ! links the peak to the compound table
+
+    parameter peakrow,compound$, timerefpeak,ISTD_peak,ISTD_num default -1
+    local comprow, firstpkrow, temprow
+
+    comprow = GetCompoundRow( compound$ )
+
+    ! Add peak to compound list
+    firstpkrow = TabVal(_damethod[1],"compound",comprow,"firstpeak")
+    if (firstpkrow <= 0) then
+	! This is the first peak of the compound
+	temprow = peakrow
+	SetTabVal _damethod[1],"compound", comprow, "firstpeak", peakrow
+        SetTabVal _damethod[1],"peak", peakrow, "calpeaktype", 0 ! main peak
+    else
+	! Patch us in.
+	temprow = TabVal(_damethod[1],"peak", firstpkrow, "nextpeakcomp")
+	SetTabVal _damethod[1],"peak",firstpkrow,"nextpeakcomp", peakrow
+        SetTabVal _damethod[1],"peak", peakrow, "calpeaktype", 2 ! ignore
+    endif
+    SetTabVal _damethod[1],"peak",peakrow,"nextpeakcomp",temprow
+    SetTabVal _damethod[1],"peak",peakrow,"compound",comprow
+
+    SetTabVal _damethod[1],"compound",comprow,"istimeref",timerefpeak
+    SetTabVal _damethod[1],"compound",comprow,"isISTD",ISTD_peak
+
+    if (ISTD_peak = 1) then
+	if ( ISTD_num < 1 ) then
+	    ISTD_num = 1
+	endif
+	AddCompToISTD comprow, ISTD_num
+    else
+	if ( ISTD_num > 0 )
+	    AddCompToISTDdep comprow, ISTD_num
+	endif
+    endif
+
+    if ( timerefpeak = 1 ) then
+       AddCompToTimeRef comprow
+    endif
+    ! The chain of dependents has to be built afterwards
+
+    return
+endmacro
+
+
+name GetCompoundRow
+    ! finds / adds a compound
+    parameter compound$
+    local comprow
+
+! Defect fix #SR 1653130633. 
+! Should not search for existing compound name, because it was
+! possible to have compounds with identical names. 6/27/95 RPe.
+!
+!    comprow=rowbytext(_damethod[1],"compound",,"name","i=",compound$)
+!    if (comprow = -1)
+	InsTabRow _damethod[1], "compound"
+	comprow = TabHdrVal(_damethod[1],"compound","numberofrows")
+	SetTabText _damethod[1],"compound",comprow,"name",compound$
+	SetTabVal _damethod[1],"compound",comprow,"usequalifiers",0
+!    endif
+
+    return comprow
+endmacro
+
+name AddCompToISTD
+    ! adds a compound to the chain of ISTDs
+
+    parameter comprow,ISTD_num
+    local ISTD_row
+    ISTD_row = GetISTDrow( ISTD_num )
+    SetTabVal _damethod[1],"ISTD", ISTD_row, "compound",comprow
+    SetTabVal _damethod[1],"compound",comprow,"ISTD",ISTD_row
+    SetTabVal _damethod[1],"compound",comprow,"nextISTD",comprow
+
+    return
+endmacro
+
+name AddCompToISTDdep
+    ! adds a compound to the chain of ISTDs
+
+    parameter comprow,ISTD_num
+    local ISTD_row, firstdeprow, temprow
+    ISTD_row = GetISTDrow( ISTD_num )
+    ! Add compound to the list of dependents
+    firstdeprow = TabVal(_damethod[1],"ISTD",ISTD_row,"firstdependent")
+    if (firstdeprow <= 0) then
+	! This is the first dependent compound
+	temprow = comprow
+	SetTabVal _damethod[1],"ISTD", ISTD_row, "firstdependent",comprow
+    else
+	! Patch us in.
+	temprow = TabVal(_damethod[1],"compound", firstdeprow, "nextISTD")
+	SetTabVal _damethod[1],"compound",firstdeprow,"nextISTD",comprow
+    endif
+    SetTabVal _damethod[1],"compound",comprow,"nextISTD",temprow
+    SetTabVal _damethod[1],"compound",comprow,"ISTD",ISTD_row
+
+    return
+endmacro
+
+name AddCompToTimeRef
+    ! adds a compound to the chain of time references
+
+    parameter comprow	! index of the compound
+    local firstrefrow, temprow
+    if ( TabHdrVal(_damethod[1],"TimeRefGroup","NumberOfRows") < 1 )
+	InsTabRow _damethod[1], "TimeRefGroup"
+    endif
+
+    firstrefrow = TabVal(_damethod[1],"TimeRefGroup",1,"FirstTimeRef")
+    if (firstrefrow <= 0) then
+	! This is the first reference compound
+	temprow = comprow
+	SetTabVal _damethod[1],"TimeRefGroup",1,"firsttimeref",comprow
+    else
+	! Patch us in.
+	temprow = TabVal(_damethod[1],"compound", firstrefrow, "nexttimeref")
+	SetTabVal _damethod[1],"compound",firstrefrow,"nexttimeref",comprow
+    endif
+    SetTabVal _damethod[1],"compound",comprow,"nexttimeref",temprow
+    SetTabVal _damethod[1],"compound",comprow,"timeref",1
+
+    return
+endmacro
+
+
+name LinkTimeRefDependents
+    ! rebuilds the chain of the time reference dependent compounds
+
+    local NextDep, compindex
+
+    if ( TabHdrVal(_damethod[1],"TimeRefGroup","NumberOfRows") > 0 ) then
+      compindex = TabHdrVal(_damethod[1],"compound","NumberOfRows")
+      NextDep = -1
+      while compindex > 0 do
+	if ( TabVal(_damethod[1],"compound",compindex,"IsTimeRef") <> 1) then
+	  SetTabVal _damethod[1],"compound",compindex,"NextTimeRef",NextDep
+	  SetTabVal _damethod[1],"compound",compindex,"TimeRef",1
+	  NextDep = compindex
+	endif
+	compindex = compindex - 1
+      endwhile
+     ! close the 'lasso'
+     compindex = RowByVal(_damethod[1],"compound",-1:1,"IsTimeRef","<>",1)
+     if compindex > 0 then
+       SetTabVal _damethod[1],"compound",compindex,"NextTimeRef",NextDep
+       ! Build link from time ref to its dependents
+       SetTabVal _damethod[1],"TimeRefGroup",1,"FirstDependent",NextDep
+     endif
+    endif
+
+    return
+endmacro
+
+name CorrectISTDLinks
+    local ISTDIndex, oops
+    ! In the 2D methods there may be 'ISTD dependents' without a corresponding
+    ! ISTD compound. I.e Must check that no inconsistencies remain.
+    ISTDIndex = TabHdrVal(_damethod[1],"ISTD","NumberOfRows")
+    while ISTDIndex > 0 do
+      if TabVal(_damethod[1],"ISTD",ISTDIndex,"Compound") < 1 then
+	! DelTabRow inexplicably fails for the first row
+	! It doesn't seem to hurt to leave the row, so allow it to fail
+	on error oops=1
+        DelTabRow _damethod[1],"ISTD",ISTDIndex
+	on error
+        NOfComp = TabHdrVal(_damethod[1],"Compound","NumberOfRows")
+        for CompIndex = 1 to NOfComp
+          if TabVal(_damethod[1],"compound",CompIndex,"ISTD") < 1 then
+            SetTabVal _damethod[1],"compound",CompIndex,"ISTD",-1
+          endif
+        next CompIndex
+      endif
+      ISTDIndex = ISTDIndex - 1
+    endwhile
+    return
+endmacro
+
+
+Name LoadCalTbl
+  ! loads a 2d calibration table macro line by line.
+
+  parameter FileName$
+  local Line$, ok
+  if FileStat (Mode, FileName$) = 1 then
+    DelCalData
+    ! read the file line by line:
+    Open FileName$ For Input As #6
+    on error ok = 0
+    ok = 1
+    Input Using #6, "L", Line$
+    while ok = 1 do
+      ! Check for special lines, otherwise just evaluate the line:
+      if (instr(Line$, "NAME") = 0) and \
+	 (instr(Line$, "name") = 0) and \
+	 (instr(Line$, "remove") = 0) and \
+	 (instr(Line$, "REMOVE") = 0) and \
+	 (instr(Line$, "return") = 0) and \
+	 (instr(Line$, "RETURN") = 0) \
+      then
+	if instr(Line$, "CALLAST") > 0 then
+	  ! add colons to bracket the date string :
+	  Line$ = "CALLAST "+""""+Line$[9:LEN(Line$)]+""""
+	endif
+	! evaluate the line :
+	evaluate Line$
+      endif
+      Input Using #6, "L", Line$
+    endwhile
+    Close #6
+    on error
+    ! If at least one peak added to the method some post processing required
+    if TabHdrVal(_damethod[1],"peak","numberofrows") > 0 then
+      if ChooseDetector = -1 then
+	! set the signal string which does not exist in the phx2d products,
+	! but is required now.
+	sigrow = RowByVal(_config[1],"signal",,"DataType","<",5)
+	print 
+	if sigrow > 0 then
+	SetTabText _damethod[1],"signal",1,"Desc", \
+	  TabText$(_config[1],"signal",sigrow,"Desc")
+	else
+	 SetTabText _damethod[1],"signal",1,"Desc","SIG ,"
+	endif
+      endif
+      ! Link the time reference dependents together
+      LinkTimeRefDependents
+      ! The ISTD links need special handling
+      CorrectISTDLinks
+      ! calibration data modified, recalibrate
+      CalibratePeaks ,,_damethod[1]
+    endif
+  endif
+  return
+endmacro
+
+
+
+!
+!	Macros for reading the rptparms file
+!
+!
+name FULLSIZE
+    parameter onoff
+endmacro
+
+name VERTITLE
+    parameter onoff
+endmacro
+
+name AXESUNITS
+    parameter onoff
+endmacro
+
+name PEAKNAMES
+    parameter onoff
+endmacro
+
+name RETTIMES
+    parameter onoff
+endmacro
+
+name TICKMARKS
+    parameter onoff
+endmacro
+
+name BASELN
+    parameter onoff
+endmacro
+
+name RTFONT
+    parameter fontname$, fontsize
+endmacro
+
+
+
+Name LoadRptParms
+  ! loads an Alic/Phx3d report parms macro line by line.
+
+  parameter FileName$
+  local Line$, ok
+  if FileStat (Mode, FileName$) = 1 then
+    ! read the file line by line:
+    Open FileName$ For Input As #6
+    on error ok=0
+    ok = 1
+    Input Using #6, "L", Line$
+    while ok = 1 do
+      ! Check for special lines, otherwise just evaluate the line:
+      if (instr(Line$, "NAME") = 0) and \
+	 (instr(Line$, "name") = 0) and \
+	 (instr(Line$, "remove") = 0) and \
+	 (instr(Line$, "REMOVE") = 0) and \
+	 (instr(Line$, "message") = 0) and \
+	 (instr(Line$, "MESSAGE") = 0) and \
+	 (instr(Line$, "return") = 0) and \
+	 (instr(Line$, "RETURN") = 0) \
+      then
+	evaluate Line$
+      endif
+      Input Using #6, "L", Line$
+    endwhile
+    Close #6
+    on error
+  endif
+  return
+endmacro
+
+Name CheckWhichDetector
+  ! loads a 2d calibration table macro line by line.
+
+  parameter Path$
+  local Line$, ok, setcd, injf,injb
+    on error ok = 0
+    ok = 1
+  if FileStat (Mode, Path$+"\GC5890.MTH") = 1 then
+    Open Path$+"\GC5890.MTH" For Input As #6
+  else 
+    if FileStat (Mode,Path$+"\ADC1.MTH") = 1 then
+        Open Path$+"\ADC1.MTH" For Input As #6
+    else
+        return
+    endif
+  endif
+  if ok=0 then
+     return
+  endif
+  setcd=0
+
+    ! read the file line by line:
+    Input Using #6, "L", Line$
+    while ok = 1 do
+      ! Check for special lines, otherwise just evaluate the line:
+      if (instr(Line$, "SetInjLocation") <> 0) or \
+	 (instr(Line$, "setinjlocation") <> 0) or \
+	 (instr(Line$, "SETINJLOCATION") <> 0) then
+	! Found the line, look for REAR
+        if (instr(Line$, "rear") <> 0) or \
+	   (instr(Line$, "Rear") <> 0) or \
+	   (instr(Line$, "REAR") <> 0) then
+	    setcd=1
+	    ChooseDetector = 0
+        endif
+      endif
+      Input Using #6, "L", Line$
+    endwhile
+    Close #6
+
+    if setcd=0 AND FileStat(Mode, Path$+"\I7673.MTH") = 1 then
+        on error
+        ok=1
+        on error ok=0
+	! Read the file and set injf and injr
+	Open Path$+"\I7673.MTH" For Input As #6
+
+	injf = -1
+	injr = -1
+	! read the file line by line:
+	Input Using #6, "L", Line$
+	while ok = 1 do
+          ! Check for special lines, otherwise just evaluate the line:
+          if (instr(Line$, "EnableInjector") <> 0) or \
+	     (instr(Line$, "ENABLEINJECTOR") <> 0) or \
+	     (instr(Line$, "enableinjector") <> 0) then
+	    ! Found the line, look for REAR
+            if (instr(Line$, "back") <> 0) or \
+               (instr(Line$, "Back") <> 0) or \
+               (instr(Line$, "BACK") <> 0) then
+		if (instr(Line$,"0") <> 0) then
+		    injr = 0
+		else
+		    injr = 1
+		endif
+	    else
+	        if (instr(Line$, "front") <> 0) or \
+	           (instr(Line$, "Front") <> 0) or \
+	           (instr(Line$, "FRONT") <> 0) then
+		    if (instr(Line$,"0") <> 0) then
+		        injf = 0
+		    else
+		        injf = 1
+		    endif
+		endif
+	    endif
+          endif
+          Input Using #6, "L", Line$
+	endwhile
+	if (injf = 0 AND injr = 1) then
+	    ChooseDetector = 0
+	endif
+	Close #6
+	endif
+    on error
+  return
+endmacro
+
+name PRERUNNAME
+Parameter string$
+  
+Local ID_PHX3DSUPPORTFILES_PRINT_311
+Local ID_PHX3DSUPPORTFILES_WARNING__UPDAT_313
+Local ID_PHX3DSUPPORTFILES_WARNING__UPDAT_181
+local NLSFileName_phx3dsupport$
+  
+ID_PHX3DSUPPORTFILES_PRINT_311                     =  17311  
+ID_PHX3DSUPPORTFILES_WARNING__UPDAT_313            =  17313  
+ID_PHX3DSUPPORTFILES_WARNING__UPDAT_181            =  17181
+  
+NLSFileName_phx3dsupport$="phx3dsupport"
+  
+  
+    if len(string$) < 3 then
+       print #7,"PRERUNNAME """,string$,""""
+    else
+	print #7,"PRERUNNAME ""print """+ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_WARNING__UPDAT_313),string$,""""""""
+    endif
+endmacro
+
+
+
+name POSTRUNNAME
+    parameter string$
+    if len(string$) < 3 then
+        print #7,"POSTRUNNAME """,string$,""""
+    else
+	print #7,"POSTRUNNAME ""print """+ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_WARNING__UPDAT_181),string$,""""""""
+    endif
+endmacro
+
+
+Name CopyInfoFile
+  ! loads an Alic/Phx3d report parms macro line by line.
+
+  parameter InFileName$,OutFileName$
+  local Line$, ok
+  if FileStat (Mode, InFileName$) = 1 then
+    ! read the file line by line:
+    Open InFileName$ For Input As #6
+    Open OutFileName$ For Output As #7
+    on error ok=0
+    ok = 1
+    Input Using #6, "L", Line$
+    while ok = 1 do
+      ! Check for special lines, otherwise just evaluate the line:
+      if (instr(Line$, "PRERUNNAME") = 0) and \
+	 (instr(Line$, "prerunname") = 0) and \
+	 (instr(Line$, "POSTRUNNAME") = 0) and \
+	 (instr(Line$, "postrunname") = 0) \
+      then
+	if (instr(Line$, "METHODCOMMENT") <> 0) or \
+	   (instr(Line$, "methodcomment") <> 0) then
+	    if Line$[len(Line$)-1] = "\" then
+		Line$ = Line$[1:len(Line$)-2] + Line$[len(Line$)]
+	    endif
+	endif
+	print #7,Line$
+      else
+	evaluate Line$
+      endif
+      Input Using #6, "L", Line$
+    endwhile
+    Close #6
+    Close #7
+    on error
+  endif
+  return
+endmacro
+

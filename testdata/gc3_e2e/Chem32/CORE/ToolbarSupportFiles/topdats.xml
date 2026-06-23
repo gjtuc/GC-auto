@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="TopDaTS" PosStyle="FIXED" DockRow="0" DockCol="0" Caption="Data Analysis Task Switch" PanelName="Chem">
+		<RadioButton Name="Integ" Help="Select Integration Task" Displaytext="2" Text="Integration" Border="UltraFlat" Command="TLB_SwitchDATask Integ" Font="Microsoft Sans Serif, 10, Regular" Group="10" ImageName="Task_Integration20" ImageNameDisabled="Task_Integration20_d"/>
+		<RadioButton Name="Calib" Help="Select Calibration Task" Displaytext="2" Text="Calibration" Border="UltraFlat" Command="TLB_SwitchDATask Calib" Font="Microsoft Sans Serif, 10, Regular" Group="10" ImageName="Task_Calibration20" ImageNameDisabled="Task_Calibration20_d"/>
+		<RadioButton Name="Signal" Help="Select Signal Task" Displaytext="2" Text="Signal" Border="UltraFlat" Command="TLB_SwitchDATask Signal" Font="Microsoft Sans Serif, 10, Regular" Group="10" ImageName="Task_Signal20" ImageNameDisabled="Task_Signal20_d"/>
+		<RadioButton Name="Frac" Help="Select Purify Task" Displaytext="2" Text="Purify" Border="UltraFlat" Command="TLB_SwitchDATask Frac" Font="Microsoft Sans Serif, 10, Regular" Group="10" ImageName="Task_Purify20" ImageNameDisabled="Task_Purify20_d"/>
+		<RadioButton Name="Spec" Help="Select Spectral Task" Displaytext="2" Text="Spectrum" Border="UltraFlat" Command="TLB_SwitchDATask Spec" Font="Microsoft Sans Serif, 10, Regular" Group="10" ImageName="Task_Spectrum20" ImageNameDisabled="Task_Spectrum20_d"/>
+	</toolbar>
+</graphical_object>

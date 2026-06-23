@@ -1,0 +1,32 @@
+Data File C:\HPCHEM\1\DATA\980505\CHININ3.D Sample Name: Chinin SO4
+CE-MSD 5/5/98 6:01:20 PM M. Greiner / HP Waldbronn
+
+Conc.: 1 mg/ml  in H2O
+CE Pos Mode 
+MS Pos Mode
+
+=====================================================================
+Injection Date  : 5/5/98 5:54:05 PM            
+Sample Name     : Chinin SO4                          Vial :  30
+Acq. Operator   : M. Greiner / HP Waldbronn            Inj :   1
+Method          : C:\HPCHEM\1\METHODS\CEMS\QUININ_3.M
+Last changed    : 5/5/98 5:49:12 PM by M. Greiner / HP Waldbronn
+== HP CE-MSD ==== Quinine Sulfate ===
+Sheath Flow 4 µl/min   MeOH / 10 mM Am.Acet. (1:1)
+Buffer: Am.Acet. 10 mM pH 6.9 
+Inj. 200 mbars, Temp 20 C 
+Capillary: 80 cm tot. Std FS Capill 50 µm ID
+MS Signal: MSD1 TIC, MS File
+    Subtracted background from 0.000 to 0.500 min.
+    Spectra averaged over upper half of peaks.
+    Noise Cutoff: 500 counts.
+    Reportable Ion Abundance: > 10%.
+
+
+Migration                   Mol. Weight
+Time (MS)      MS Area      or Ion
+
+   4.266      58709712       327.20 I
+                             326.20 I
+                             325.20 I
+                          *** End of Report ***

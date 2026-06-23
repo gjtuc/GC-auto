@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="CalibF" PosStyle="TOP" DockRow="1" DockCol="0" Caption="Calibration" PanelName="Chem">
+		<PushButton Name="NewTable" Help="New Calibration Table from current chromatogram" Command='ExecVeneer_MenuInstrFnParm ExecHook_GetInstrument$(),"NewCalTab",NewTable,0' NewGroup="1" ImageName="Calib_NewTable20" ImageNameDisabled="Calib_NewTable20_d"/>
+		<PushButton Name="ReCalib" Help="Recalibrate current chromatogram" Command="CAL_TLBFunction ReCalib,1" ImageName="Calib_Recalibrate20" ImageNameDisabled="Calib_Recalibrate20_d"/>
+		<PushButton Name="AddLevel" Help="Add new level from current chromatogram" Command="CAL_TLBFunction AddLevel,1" ImageName="Calib_Add_NewLevel20" ImageNameDisabled="Calib_Add_NewLevel20_d"/>
+		<PushButton Name="AddPeak" Help="Add new peaks from current chromatogram" Command="CAL_TLBFunction AddPeak,1" ImageName="Calib_Add_NewPeak20" ImageNameDisabled="Calib_Add_NewPeak20_d"/>
+		<PushButton Name="SigDetails" Help="Edit current method signals" Command="CAL_TLBFunction SigDetails,1" ImageName="Calib_SignalDetails20" ImageNameDisabled="Calib_SignalDetails20_d"/>
+		<!-- ==================================================================== -->
+		<Static Name="ReportText" Text="Report: " Help="" NewGroup="1" Width="100" Enable="1" Border="NoBorder"/>
+		<StatusList Name="ActualRpt" Text="Short" Font="Microsoft Sans Serif, 8, Regular" BkColor="White" Help="Current Report Style" Width="100" Enable="1" Border="NoBorder"/>
+		<PushButton Name="ReportOptions" Help="Specify Report Calculation and Print Style" Command="MenuRptParm" ImageName="Report_Settings20" ImageNameDisabled="Report_settings20_d"/>
+		<PushButton Name="ReportPreview" Help="Identify Peaks, calculate and preview Results" Command="MenuQuantify SCREEN" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="ReportBrowser" Help="View saved Report File(s)" Command="RPTV_ViewReportNewUI InteractiveInjRptGrp" ImageName="Browse_Run_Report20" ImageNameDisabled="Browse_Run_Report20_d"/>
+		<PushButton Name="ReportPrint" Help="Identify Peaks, calculate Results and print Report" Command="MenuQuantify PRINTER" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="XMLExport" Help="Identify Peaks, calculate Results and upload Results File to remote server" Command="XML_ManualExportUpload" ImageName="Upload_Results20" ImageNameDisabled="Upload_Results20_d"/>
+	</toolbar>
+</graphical_object>

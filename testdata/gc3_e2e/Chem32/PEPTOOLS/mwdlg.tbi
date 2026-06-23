@@ -1,0 +1,49 @@
+[Toolbar Header]
+Description=Peptide Tools Toolbar
+Style=TOP | BORDER | 3D      ; <LEFT | TOP | RIGHT | BOTTOM | FLOAT> 
+ButtonBitmapFile=mwdlg.bmp 
+ButtonSize=28,22             ; <x>, <y> Size of one button (all must be same)
+BkgndBitmapFile=             ; Background bitmap file
+NCBorder=3                   ; Non-client border width (pixels)
+3DBorder=0                   ; 3D effects border width (pixels)
+GapWidth=10                  ; Gap between buttons (pixels)
+TimeIncr=0.5                 ; Tic length (secs) for animated bitmaps
+DefaultColor=192, 192, 192, 0, 0, 0
+3DColor=255, 255, 255, 128, 128, 128
+AltColor1=255,   0,   0, 0, 0, 0
+AltColor2=  0, 255,   0, 0, 0, 0
+AltColor3=  0,   0, 255, 0, 0, 0
+AltColor4=196, 196, 196, 0, 0, 0
+
+[Font Info]
+FaceName=Arial               ; Font face name
+Height=10                    ; Height of font (pos point size, neg pixels)
+Weight=400                   ; 400 - normal, 700 - bold
+
+[Items]
+1002=4,          PUSH | NULL, , Loads application parameter files
+1003=5,          PUSH | NULL, , Saves application parameters to file
+1005=3,          PUSH | NULL, , Prints current parameters
+1012=16,         PUSH | NULL, , Loads LCMS results file
+
+1015=14, GROUP | PUSH | NULL, , Reverses previous operation
+1013=13,         PUSH | NULL, , Deletes and copies selected portion of sequence to clipboard
+1006=7,          PUSH | NULL, , Copies selected information in sequence or fragments to the clipboard
+1007=8,          PUSH | NULL, , Replaces selection in sequence with clipboard contents
+1011=11,       STICKY | NULL, , Finds locations of specified subsequences
+
+1133=12, GROUP | PUSH | NULL, , Searches sequence chains for subsequences
+1109=6,          PUSH | NULL, , Cleaves current sample and displays fragments
+
+1129=15, GROUP | PUSH | NULL, , Displays Collision Induced Dissociation dialog box
+
+9997=1, GROUP | TEXT | RIGHT | NULL, Avg:, 6,
+3=1, AUTOSIZE | TEXT | CENTER | 3DLOWER | NULL, 0.0, 10, Average molecular weight of current chain
+
+1=1, ANIMATE | GETVAR, DUMMY, 1, 4, Calculations in progress display
+1102=9, PUSH | NULL, , Calculate molecular weights
+
+9998=1, TEXT | RIGHT | NULL, MA:, 5,
+2=1, AUTOSIZE | TEXT | CENTER | 3DLOWER | NULL, 0.0, 10, Most abundant molecular weight of current chain
+4=17, STATE | GETVAR, CALCFROM, 5, Calc basis: T-Total S-Seq F-Fragment BB-Comp table MF-Mol. formula
+

@@ -1,0 +1,202 @@
+name BuildProductSpecialMenus
+
+local help,leohelp
+local ii
+
+help=HelpSubSystemTopic("HPCORECE")
+leohelp = help
+
+
+if devHPCE=1 OR devHPCS=1 then
+  if _offline = 0
+      menuadd "&Instrument","System Vialtable...","vtEditVialTable",,\
+              "Define the vials for the system","_METHODIDLE",4300,,4100010
+      menuadd "&Instrument",,"SEPARATOR",,,,,,4100011
+  endif
+  menuadd "&Instrument","Set up CE &Method...","EDHPCE ""ALL""",,\
+          "Set up complete CE Method","_METHODIDLE",404019,,4100030
+  menuadd "&Instrument",,"SEPARATOR",,,,,,4100031
+  menuadd "&Instrument","Set up CE &Homevalues...",   "EDHPCE ""HOME""",,\
+          "Set up Temperature, Vials and Height Sensing",,404025,,4100040
+  menuadd "&Instrument","Set up CE C&onditioning...", "EDHPCE ""COND""",,\
+          "Set up Replenish, Pre- and Postconditioning",,404020,,4100041
+  menuadd "&Instrument","Set up CE &Injection...",         "EDHPCE ""INJ""",,\
+          "Set Injection Method and duration",,404005,,4100042
+  menuadd "&Instrument","Set up CE &Electric...",   "EDHPCE ""ELEC""",,\
+          "Set Electrical values for CE",,404018,,4100043
+  menuadd "&Instrument","Set up CE &TimeTable...",         "EDHPCE ""TTBL""",,\
+          "Set up Rawdata and TimeTable for CE","_METHODIDLE",404023,,4100044
+  menuadd "&Instrument","Set up CE &Fraction Collection...", "FC_EditParameter",,\
+          "Set up Fraction Collection for CE","_METHODIDLE",404061,,4100045
+  menuadd "&Instrument",,"SEPARATOR",,,,,,4100046
+endif
+
+if dev1050DAD > 0
+  menuadd "&Instrument","Set up &DAD Signals...","LC1050DAD.ED1050DAD ""SIG""",,\
+          "Set up Signal Info for Diode Array Detector",,7850,,4100200
+endif
+
+if (devLeoPump = 1)
+  menuadd "&Instrument","Set up P&ump...", "LPMP.EdLPmp ""solv""",,\
+          "Set up Flow, Solvent, Stoptime, Pressure Setpoints for the Pump",\
+          "MethLoadSaveIdle",Leohelp+10100,,4101000
+endif
+
+if (devLeoPump > 1)
+  for ii=1 to devLeoPump
+    menuadd "&Instrument","Set up P&ump "+val$(ii)+"...", "LPMP.EdLPmp ""solv"","+val$(ii),,\
+            "Set up Flow, Solvent, Stoptime, Pressure Setpoints for Pump "+val$(ii),\
+            "MethLoadSaveIdle",Leohelp+10100,,4101000
+  next ii        
+endif
+
+devadc = adcdevice
+
+if adcdevice = 1
+     menuadd "&Instrument","Set up &ADC Signals...","LC35900ADC.EDADC ,1",,\
+             "Set up Signal Info for Dual Channel Interface",\
+             "MethLoadSaveIdle",7405,,4100300
+     if adctimetab > 0
+    	menuadd  "&Instrument","Set up ADC &Timed Events...","LC35900ADC.EDEVTADC ,1",,\
+        	 "Set up Timed Event Table for Dual Channel Interface","MethLoadSaveIdle",,,4100310
+     endif
+endif
+
+  if (devGCI > 0)
+     if devRCnet > 0 then
+        menuadd "&Instrument","&Set up Instrument Method...", "CPRC.RCEditMethod",,\
+                "Set parameters",\
+                "MethLoadSaveIdle",Leohelp+10100,,4101000
+        for ii=1 to devGCI
+           if InStr(GCIGetBaseType$(ii), "RAPIDCONTROL") = 0 then
+              if GCIGetMenuDeviceName$(ii) <> "" then 
+                 menuadd "&Instrument","Set up "+GCIGetMenuDeviceName$(ii)+"...", "gci.EdGci ""METH"","+val$(ii),,\
+                         "Set method parameters",\
+                         "MethLoadSaveIdle",Leohelp+10100,,4101000+ii
+              endif
+           endif
+        next ii        
+     else
+        for ii=1 to devGCI
+           if InStr(GCIGetBaseType$(ii), "RAPIDCONTROL") = 0 then
+              if GCIGetMenuDeviceName$(ii) <> "" then 
+                 menuadd "&Instrument","Set up "+GCIGetMenuDeviceName$(ii)+"...", "gci.EdGci ""METH"","+val$(ii),,\
+                         "Set method parameters",\
+                         "MethLoadSaveIdle",Leohelp+10100,,4101000+ii
+              endif
+           else
+              if GCIGetMenuDeviceName$(ii) <> "" then 
+                 menuadd "&Instrument","Set up "+GCIGetMenuDeviceName$(ii)+"...", "CPRC.RCEditMethod",,\
+                         "Set method parameters",\
+                         "MethLoadSaveIdle",Leohelp+10100,,4101000+ii
+              endif
+           endif
+        next ii        
+     endif
+  endif
+
+
+if adcdevice > 1
+   for adccount = 1 to adcdevice
+     menuadd "&Instrument","Set up &ADC Signals...","SUBMENU",,"Set up Signal Info for Dual Channel Interface",,,,4100340
+     menuadd "&Instrument|Set up &ADC Signals...","ADC&"+val$(adccount)+"","LC35900ADC.EDADC ,"+val$(adccount)+"",,\
+             "Set up Signal Info for Dual Channel Interface ADC"+val$(adccount)+"",\
+             "MethLoadSaveIdle",,7405,,4100350
+     if adctimetab > 0
+    	menuadd "&Instrument","Set up ADC &Timed Events...","SUBMENU",,"Set up Timed Event Table for Dual Channel Interface",,,,4100355
+        menuadd "&Instrument|Set up ADC &Timed Events...","ADC&"+val$(adccount)+"","LC35900ADC.EDEVTADC ,"+val$(adccount)+"",,\
+		 "Set up Timed Event Table for Dual Channel Interface ADC"+val$(adccount)+"","MethLoadSaveIdle",,,4100360
+      endif
+   next adccount
+adccount = adccount - 1
+endif
+
+if devHPCE=1 OR devHPCS=1 then
+  menuadd "&Instrument",,"SEPARATOR",,,,,,4105000
+  menuadd "&Instrument","&Simulation...",  "SIMULATION",,\
+          "Invoke the simulation dialog",,404028,,4105001
+endif
+
+if _offline = 0
+  if devHPCE=1 OR devHPCS=1 then
+    menuadd "&Instrument",,"SEPARATOR",,,,,,4180200
+    if dev1946MSD>0 then
+        menuadd "&Instrument","S&ystem Off","GotoSTANDBY",, "Turn off MSD, Pump, Lamp(s)",\
+                "_SEQUENCEIDLE/_METHODIDLE/MethLoadSaveIdle",,,4180201
+    endif
+    menuadd "&Instrument","System Reset",  "SysReset",,\
+            "Resets the system hardware","_METHODIDLE",404096,,4180202
+    menuadd "&Instrument","System INIT",  "SysInit",,\
+            "Initialize System hardware and turn on Lamp","_METHODIDLE",404097,,4180203
+  endif
+endif
+
+if _offline = 0
+  if dev1090dad+dev1050dad+devleoDAD+devleofld+devleovwd = 1
+    if dev1090dad+dev1050dad=1
+       menuadd "&View","O&nline Spectra", "ShowSpectra on,DAD",,\
+               "Switch on Spectra Monitor","MethLoadSaveIdle",help+7110,,90015000
+    endif
+    if devleodad=1
+       menuadd "&View","O&nline Spectra", "ShowSpectra on,LDAD",,\
+               "Switch on Spectra Monitor","MethLoadSaveIdle",help+7110,,90015000
+    endif
+    if devleofld=1
+       menuadd "&View","O&nline Spectra", "ShowSpectra on,LFLD",,\
+               "Switch on Spectra Monitor","MethLoadSaveIdle",help+7110,,90015000
+    endif
+    if devleovwd=1
+       menuadd "&View","VWD Sca&ns", "ShowSpectra on,LVWD",,\
+               "Switch on Spectra Monitor for VWD Scans",\
+               "MethLoadSaveIdle",help+7110,,90016000
+    endif
+  else																	
+    menuadd "&View","O&nline Spectra","SUBMENU",,\
+            "Switch on/off Spectra Monitor",,,,90015000
+    if dev1090dad+dev1050dad > 0
+      menuadd "&View|O&nline Spectra","&DAD","ShowSpectra on,DAD",,\
+              "Switch on 1050/1090 Spectra Monitor",\
+              "MethLoadSaveIdle",help+7110,,90015100
+    endif
+    if devleodad=1
+      menuadd "&View|O&nline Spectra","&DAD","ShowSpectra on,LDAD",,\
+              "Switch on DAD Spectra Monitor",\
+              "MethLoadSaveIdle",help+7110,,90015100
+    else
+      for ii=1 to devLeoDad
+        menuadd "&View|O&nline Spectra","&DAD "+val$(ii),\
+                "ShowSpectra on,LDAD"+val$(ii),,\
+                "Switch on DAD "+val$(ii)+" Spectra Monitor",\
+                "MethLoadSaveIdle",help+7110,,90015100
+      next ii
+    endif
+    if devleofld=1
+      menuadd "&View|O&nline Spectra","&FLD","ShowSpectra on,LFLD",,\
+              "Switch on FLD Spectra Monitor",\
+              "MethLoadSaveIdle",help+7110,,90015100
+    else
+      for ii=1 to devLeoFld
+        menuadd "&View|O&nline Spectra","&FLD "+val$(ii),\
+                "ShowSpectra on,LFLD"+val$(ii),,\
+                "Switch on FLD "+val$(ii)+" Spectra Monitor",\
+                "MethLoadSaveIdle",help+7110,,90015100
+      next ii
+    endif
+    if devleovwd=1
+      menuadd "&View|O&nline Spectra","&VWD","ShowSpectra on,LVWD",,\
+              "Switch on Spectra Monitor for VWD Scans",\
+              "MethLoadSaveIdle",help+7110,,90015100
+    else
+      for ii=1 to devLeoVwd
+        menuadd "&View|O&nline Spectra","&VWD "+val$(ii),\
+                "ShowSpectra on,LVWD"+val$(ii),,\
+                "Switch on Spectra Monitor for VWD "+val$(ii)+" Scans",\
+                "MethLoadSaveIdle",help+7110,,90015100
+      next ii
+    endif
+  endif
+endif
+
+endmacro
+
+

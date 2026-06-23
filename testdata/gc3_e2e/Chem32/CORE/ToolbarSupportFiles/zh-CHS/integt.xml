@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="IntegT" PosStyle="TOP" DockRow="1" DockCol="1" Caption="积分游标工具栏" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="信号显示" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals " DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="显示图形工具栏" CmdList="ANN_CloseTask|ANN_InitTask" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="放大窗口" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="缩小活动窗口" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="设置为选择模式" Command="INT_SetIntegMenuSelection NoSel,1" NewGroup="1" Group="2" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="DrawBaseline" Help="手动积分: 绘制峰基线并积分" Command="INT_SetIntegMenuSelection DrawBaseline,1" Group="2" ImageName="Int_DrawBaseline20" ImageNameDisabled="Int_DrawBaseline20_d"/>
+		<RadioButton Name="NegatievePeaks" Help="手动积分: 绘制负峰的基线并积分" Command="INT_SetIntegMenuSelection NegatievePeaks,1" Group="2" ImageName="Int_DrawBaseline_Negative20" ImageNameDisabled="Int_DrawBaseline_Negative20_d"/>
+		<RadioButton Name="TangentSkim" Help="手动积分: 切线撇去一个峰并积分" Command="INT_SetIntegMenuSelection TangentSkim,1" Group="2" ImageName="Int_TangentSkim20" ImageNameDisabled="Int_TangentSkim20_d"/>
+		<RadioButton Name="SplitPeaks" Help="手动积分: 手动分裂已积分的峰" Command="INT_SetIntegMenuSelection SplitPeaks,1" Group="2" ImageName="Int_SplitPeak20" ImageNameDisabled="Int_SplitPeak20_d"/>
+		<RadioButton Name="DeletePeaks" Help="手动积分: 从积分结果中删除已积分的峰" Command="INT_SetIntegMenuSelection DeletePeaks,1" Group="2" ImageName="Int_RemovePeak20" ImageNameDisabled="Int_RemovePeak20_d"/>
+		<PushButton Name="UndoEvent" Help="手动积分：撤消当前图谱中上一次的手动积分事件。以下功能只对特定信号有效：从信号显示列表中选择单个信号" Command="DFEvents_TLB_UndoEvents" ImageName="ManInt_Undo20" ImageNameDisabled="ManInt_Undo20_d"/>
+		<PushButton Name="RemoveEvents" Help="手动积分：删除当前显示的图谱中所有的事件。数据文件不会被更新：使用保存按钮永久性删除相应数据文件中的事件。" Command="DFEvents_TLB_RemoveEvents" ImageName="ManInt_Del20" ImageNameDisabled="ManInt_Del20_d"/>
+		<PushButton Name="SaveEvents" Help="手动积分：将当前显示的图谱的事件保存到相应数据文件中。" Command="DFEvents_TLB_SaveEvents" ImageName="ManInt_Save20" ImageNameDisabled="ManInt_Save20_d"/>
+
+	</toolbar>
+</graphical_object>

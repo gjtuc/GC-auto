@@ -1,0 +1,65 @@
+! Pass the template name as a parameter, for example
+!      ProcessExcelFile HPESTD00.XLS
+!
+name ProcessExcelFile
+  parameter template$
+
+  local datadir$
+  local xlsfilename$
+  local tempcmd$
+
+  ! The name of the ".xls" data-file to process
+  xlsfilename$ = TabHdrText$(_DAMethod[1],"RptParm","FileName")+"01.xls"
+
+  ! if the front injector was used...
+  if (_MethodInjectors = 1) OR (_MethodInjectors = 3)
+    ! get the name of the data ".d" directory
+    datadir$ = DADATAPATH$+_DATAFILE1$+"\"
+    !tempcmd$ = "execwait """+_EXEPATH$+"hpxcel00 "+_EXEPATH$+template$+","+ \
+     !        datadir$+xlsfilename$+""",1"
+	strcmd$ = chr$(34) + _EXEPATH$ + "hpxcel00" +  " " + \
+	            _EXEPATH$ + template$  + "," + \
+                datadir$ + xlsfilename$ + chr$(34)
+    tempcmd$ = "execwait " + strcmd$ + ",1"
+	  evaluate tempcmd$
+  endif
+
+  ! if the back injector was used...
+  if (_MethodInjectors = 2) OR (_MethodInjectors = 3)
+    ! get the name of the data ".d" directory
+    datadir$ = DADATAPATH$+_DATAFILE2$+"\"
+    !tempcmd$ = "execwait """+_EXEPATH$+"hpxcel00 "+_EXEPATH$+template$+","+ \
+    !         datadir$+xlsfilename$+""",1"
+	strcmd$ = chr$(34) + _EXEPATH$ + "hpxcel00" + chr$(34) + " " + \
+	            chr$(34) + _EXEPATH$ + template$ + chr$(34) + "," + \
+                chr$(34) + datadir$ + xlsfilename$ + chr$(34)
+    tempcmd$ = "execwait " + strcmd$ + ",1"
+	  evaluate tempcmd$
+  endif
+
+endmacro
+
+
+! Pass the template name as a parameter, for example
+!      ProcessExcelSequence HPSEQ00.XLS
+!
+name ProcessExcelSequence
+  parameter template$
+
+  local datadir$
+  local tempcmd$
+
+  ! get the name of the data ".d" directory
+  datadir$ =_DATAPATH$
+  if _DATASEQSUBDIR$ <> "" then
+    datadir$ =datadir$+_DATASEQSUBDIR$+"\"
+  endif
+  !tempcmd$ = "execwait """+_EXEPATH$+"hpxcel00 "+_EXEPATH$+template$+","+ \
+  !         datadir$+""",1"
+  strcmd$ = chr$(34) + _EXEPATH$ + "hpxcel00" + chr$(34) + \
+             " " + chr$(34) + _EXEPATH$ + template$ + chr$(34) + "," + \
+             chr$(34) + datadir$ + chr$(34) 
+  tempcmd$ = "execwait " + strcmd$ + ",1"
+  evaluate tempcmd$
+
+endmacro

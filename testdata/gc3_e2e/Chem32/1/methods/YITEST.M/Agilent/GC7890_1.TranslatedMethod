@@ -1,0 +1,616 @@
+<GCContextualMethod xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.agilent.com/schemas/Analytical/Instrument/GC7890/2006/">
+  <method xmlns="">
+    <GC PostRunHoldTime="0" AutoPrepRun="UNKNOWN">
+      <Inlet DeterminesReadiness="true">
+        <Setpoints COCTrackOven="false" SeptumPurgeFlow="3" SeptumPurgeState="ON" SeptumPurgeSwitching="false" SeptumPurgeSwitchTime="0" TotalFlow="6" TotalFlowState="ON" ControlMode="FLOW">
+          <Temperature State="ON" InitialHoldTime="0" InitialValue="250" PostRunValue="250"/>
+          <Pressure State="ON" InitialHoldTime="0" InitialValue="689475.7" PostRunValue="689475.7"/>
+          <Cryo UseCryo="OFF" UseTemp="25" TimeoutDetection="OFF" Timeout="30" FaultDetection="OFF" QuickCool="OFF"/>
+          <GasSaver Time="2" Flow="20" State="OFF"/>
+          <Operation Mode="SPLITLESS" SplitRatio="0" PurgeFlow="15" PurgeTime="0.75" PulsePressure="0" PulseTime="0" VIInjectTime="0" VentFlow="0" VentPressure="0" VentTime="0"/>
+        </Setpoints>
+      </Inlet>
+      <Inlet DeterminesReadiness="true">
+        <Setpoints COCTrackOven="false" SeptumPurgeFlow="3" SeptumPurgeState="OFF" SeptumPurgeSwitching="false" SeptumPurgeSwitchTime="0" TotalFlow="25" TotalFlowState="OFF" ControlMode="PRESSURE">
+          <Temperature State="OFF" InitialHoldTime="0" InitialValue="250" PostRunValue="250"/>
+          <Pressure State="OFF" InitialHoldTime="0" InitialValue="689475.7" PostRunValue="0"/>
+          <Cryo UseCryo="OFF" UseTemp="25" TimeoutDetection="OFF" Timeout="30" FaultDetection="OFF" QuickCool="OFF"/>
+          <GasSaver Time="2" Flow="20" State="OFF"/>
+          <Operation Mode="SPLIT" SplitRatio="100" PurgeFlow="15" PurgeTime="0.75" PulsePressure="689475" PulseTime="0.75" VIInjectTime="0" VentFlow="0" VentPressure="0" VentTime="0"/>
+        </Setpoints>
+      </Inlet>
+      <Column DeterminesReadiness="true">
+        <Setpoints Mode="CONSTANT_FLOW">
+          <Flow State="ON" InitialHoldTime="0" InitialValue="3" PostRunValue="1"/>
+        </Setpoints>
+      </Column>
+      <Column DeterminesReadiness="false">
+        <Setpoints Mode="CONSTANT_PRESSURE">
+          <Flow State="UNKNOWN" InitialHoldTime="0" InitialValue="1" PostRunValue="1"/>
+        </Setpoints>
+      </Column>
+      <Column DeterminesReadiness="false">
+        <Setpoints Mode="CONSTANT_PRESSURE">
+          <Flow State="UNKNOWN" InitialHoldTime="0" InitialValue="1" PostRunValue="1"/>
+        </Setpoints>
+      </Column>
+      <Column DeterminesReadiness="false">
+        <Setpoints Mode="CONSTANT_PRESSURE">
+          <Flow State="UNKNOWN" InitialHoldTime="0" InitialValue="1" PostRunValue="1"/>
+        </Setpoints>
+      </Column>
+      <Column DeterminesReadiness="false">
+        <Setpoints Mode="CONSTANT_PRESSURE">
+          <Flow State="UNKNOWN" InitialHoldTime="0" InitialValue="1" PostRunValue="1"/>
+        </Setpoints>
+      </Column>
+      <Column DeterminesReadiness="false">
+        <Setpoints Mode="CONSTANT_PRESSURE">
+          <Flow State="UNKNOWN" InitialHoldTime="0" InitialValue="1" PostRunValue="1"/>
+        </Setpoints>
+      </Column>
+      <Oven DeterminesReadiness="true">
+        <Setpoints UseCryo="OFF" UseTemp="0" TimeoutDetection="OFF" Timeout="0" FaultDetection="OFF" QuickCool="OFF" EquilibrationTime="0">
+          <Temperature State="ON" InitialHoldTime="9" InitialValue="80" PostRunValue="80"/>
+        </Setpoints>
+      </Oven>
+      <Detector DeterminesReadiness="true">
+        <Setpoints Temperature="230" Heater="ON" FuelFlow="0" Fuel="OFF" UtilityFlow="25" Utility="ON" MakeupFlow="5" Makeup="ON" ConstantTotalFlow="false" TotalFlow="0" Electronics="ON" Flame="OFF" State="TCD_NEGATIVE_POLARITY"/>
+      </Detector>
+      <Detector DeterminesReadiness="true">
+        <Setpoints Temperature="300" Heater="OFF" FuelFlow="30" Fuel="OFF" UtilityFlow="400" Utility="OFF" MakeupFlow="25" Makeup="OFF" ConstantTotalFlow="false" TotalFlow="0" Electronics="OFF" Flame="OFF" State="UNKNOWN"/>
+      </Detector>
+      <Detector DeterminesReadiness="true"/>
+      <Detector DeterminesReadiness="true"/>
+      <AuxThermalZone DeterminesReadiness="true">
+        <Temperature State="ON" InitialHoldTime="20" InitialValue="150" PostRunValue="0"/>
+      </AuxThermalZone>
+      <AuxThermalZone DeterminesReadiness="true"/>
+      <AuxThermalZone DeterminesReadiness="false"/>
+      <AuxPressure DeterminesReadiness="false"/>
+      <AuxPressure DeterminesReadiness="false"/>
+      <AuxPressure DeterminesReadiness="false"/>
+      <AuxPressure DeterminesReadiness="false"/>
+      <AuxPressure DeterminesReadiness="false"/>
+      <AuxPressure DeterminesReadiness="false"/>
+      <AuxPressure DeterminesReadiness="false"/>
+      <AuxPressure DeterminesReadiness="false"/>
+      <AuxPressure DeterminesReadiness="false"/>
+      <PCM>
+        <ChannelA DeterminesReadiness="true"/>
+        <ChannelB DeterminesReadiness="false"/>
+      </PCM>
+      <PCM>
+        <ChannelA DeterminesReadiness="true"/>
+        <ChannelB DeterminesReadiness="false"/>
+      </PCM>
+      <PCM>
+        <ChannelA DeterminesReadiness="true"/>
+        <ChannelB DeterminesReadiness="false"/>
+      </PCM>
+      <GCxGCValve SampleTime="250" ModulationTime="60000" ValveIdleState="OFF" DelayTime="60000"/>
+      <Valve InitialState="UNKNOWN">
+        <GasSamplingValve LoadTime="0.1" InjectTime="0.5"/>
+      </Valve>
+      <Valve InitialState="UNKNOWN"/>
+      <Valve InitialState="UNKNOWN"/>
+      <Valve InitialState="UNKNOWN"/>
+      <Valve InitialState="UNKNOWN"/>
+      <Valve InitialState="UNKNOWN"/>
+      <Valve InitialState="UNKNOWN"/>
+      <Valve InitialState="UNKNOWN"/>
+    </GC>
+    <Sampler>
+      <FrontInjector Fan="ON">
+        <PreWashA Reps="0" Volume="80" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0"/>
+        <PreWashB Reps="0" Volume="80" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0"/>
+        <SampleWash Reps="0" Volume="80" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0" DepthOffset="0"/>
+        <SamplePumps Reps="6" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0" DepthOffset="0"/>
+        <Sample Volume="10" DrawSpeed="200" ViscosityDelay="0" DepthOffset="0"/>
+        <Sample Volume="0" DrawSpeed="200" ViscosityDelay="0" DepthOffset="0"/>
+        <Sample Volume="0" DrawSpeed="200" ViscosityDelay="0" DepthOffset="0"/>
+        <Injection DispenseSpeed="10" PreInjectionDwellTime="0" PostInjectionDwellTime="0" LargeVolumeReps="1" LargeVolumeDelay="0"/>
+        <PostWashA Reps="0" Volume="80" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0"/>
+        <PostWashB Reps="0" Volume="80" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0"/>
+      </FrontInjector>
+      <BackInjector Fan="ON">
+        <PreWashA Reps="0" Volume="80" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0"/>
+        <PreWashB Reps="0" Volume="80" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0"/>
+        <SampleWash Reps="0" Volume="80" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0" DepthOffset="0"/>
+        <SamplePumps Reps="6" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0" DepthOffset="0"/>
+        <Sample Volume="10" DrawSpeed="200" ViscosityDelay="0" DepthOffset="0"/>
+        <Sample Volume="0" DrawSpeed="200" ViscosityDelay="0" DepthOffset="0"/>
+        <Sample Volume="0" DrawSpeed="200" ViscosityDelay="0" DepthOffset="0"/>
+        <Injection DispenseSpeed="10" PreInjectionDwellTime="0" PostInjectionDwellTime="0" LargeVolumeReps="1" LargeVolumeDelay="0"/>
+        <PostWashA Reps="0" Volume="80" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0"/>
+        <PostWashB Reps="0" Volume="80" DrawSpeed="200" DispenseSpeed="10" ViscosityDelay="0"/>
+      </BackInjector>
+      <Tray Temperature="0" UseBarcodeReader="false">
+        <Mixing Intensity="UNKNOWN" Time="0"/>
+      </Tray>
+    </Sampler>
+    <Counter ID="1229345616" Enabled="false"/>
+    <Counter ID="1229343822" Enabled="false"/>
+    <Counter ID="1229342547" Enabled="false"/>
+    <Counter ID="1229345622" Enabled="false"/>
+    <Counter ID="1229345879" Enabled="false"/>
+    <Counter ID="1229083472" Enabled="false"/>
+    <Counter ID="1229081678" Enabled="false"/>
+    <Counter ID="1229080403" Enabled="false"/>
+    <Counter ID="1229083478" Enabled="false"/>
+    <Counter ID="1229083735" Enabled="false"/>
+    <Counter ID="1145456972" Enabled="false"/>
+    <Counter ID="1145194828" Enabled="false"/>
+    <Counter ID="1127303491" Enabled="false"/>
+    <Counter ID="1127369027" Enabled="false"/>
+    <Counter ID="1127434563" Enabled="false"/>
+    <Counter ID="1127500099" Enabled="false"/>
+    <Counter ID="1127565635" Enabled="false"/>
+    <Counter ID="1127631171" Enabled="false"/>
+    <Counter ID="1246120275" Enabled="false"/>
+    <Counter ID="1245858131" Enabled="false"/>
+    <Counter ID="20" Enabled="false"/>
+    <Counter ID="21" Enabled="false"/>
+    <Counter ID="22" Enabled="false"/>
+    <Counter ID="23" Enabled="false"/>
+    <Counter ID="24" Enabled="false"/>
+    <Counter ID="25" Enabled="false"/>
+    <Counter ID="26" Enabled="false"/>
+    <Counter ID="27" Enabled="false"/>
+    <Counter ID="28" Enabled="false"/>
+    <Counter ID="29" Enabled="false"/>
+    <Counter ID="30" Enabled="false"/>
+    <Counter ID="31" Enabled="false"/>
+    <Counter ID="32" Enabled="false"/>
+    <Counter ID="33" Enabled="false"/>
+    <Counter ID="34" Enabled="false"/>
+    <Counter ID="35" Enabled="false"/>
+    <Counter ID="36" Enabled="false"/>
+    <Counter ID="37" Enabled="false"/>
+    <Counter ID="38" Enabled="false"/>
+    <Counter ID="39" Enabled="false"/>
+    <Counter ID="40" Enabled="false"/>
+    <Counter ID="41" Enabled="false"/>
+    <Counter ID="42" Enabled="false"/>
+    <Counter ID="43" Enabled="false"/>
+    <Counter ID="44" Enabled="false"/>
+    <Counter ID="45" Enabled="false"/>
+    <Counter ID="46" Enabled="false"/>
+    <Counter ID="47" Enabled="false"/>
+    <Counter ID="48" Enabled="false"/>
+    <Counter ID="49" Enabled="false"/>
+    <Counter ID="50" Enabled="false"/>
+    <Counter ID="51" Enabled="false"/>
+    <Counter ID="52" Enabled="false"/>
+    <Counter ID="53" Enabled="false"/>
+    <Counter ID="54" Enabled="false"/>
+    <Counter ID="55" Enabled="false"/>
+    <Counter ID="56" Enabled="false"/>
+    <Counter ID="57" Enabled="false"/>
+    <Counter ID="58" Enabled="false"/>
+    <Counter ID="59" Enabled="false"/>
+    <Counter ID="60" Enabled="false"/>
+    <Counter ID="61" Enabled="false"/>
+    <Counter ID="62" Enabled="false"/>
+    <Counter ID="63" Enabled="false"/>
+  </method>
+  <supplement xmlns="">
+    <signal P0="FRONT_SIGNAL" P1="DATA_CHANNEL" P2="UNKNOWN" P3="20"/>
+    <signal P0="TEST_PLOT" P1="DATA_CHANNEL" P2="UNKNOWN" P3="50"/>
+    <signal P0="TEST_PLOT" P1="DATA_CHANNEL" P2="UNKNOWN" P3="50"/>
+    <signal P0="TEST_PLOT" P1="DATA_CHANNEL" P2="UNKNOWN" P3="50"/>
+    <signalIsSaved>true</signalIsSaved>
+    <signalIsSaved>false</signalIsSaved>
+    <signalIsSaved>false</signalIsSaved>
+    <signalIsSaved>false</signalIsSaved>
+    <signalZero Zero="false"/>
+    <signalZero Zero="false"/>
+    <signalZero Zero="false"/>
+    <signalZero Zero="false"/>
+    <signalTimeEvents>
+      <SignalEventList xmlns=""/>
+      <SignalEventList xmlns=""/>
+      <SignalEventList xmlns=""/>
+      <SignalEventList xmlns=""/>
+    </signalTimeEvents>
+    <firstSamplePreferences>2</firstSamplePreferences>
+    <enableAlsTray>false</enableAlsTray>
+    <overlappedInjectionMode>noOverlap</overlappedInjectionMode>
+    <overlappedInjectionDelay>0</overlappedInjectionDelay>
+  </supplement>
+  <configuration KeyboardLocked="false" NoPrepOnManual="false" xmlns="">
+    <ConnectionSettings>
+      <TypeOfConnection>LAN</TypeOfConnection>
+      <ConnectionSpecification>192.168.0.29</ConnectionSpecification>
+      <GCName/>
+      <GCNotes/>
+      <SerialNumber>CN10742059</SerialNumber>
+      <ModelName>Agilent 7890A</ModelName>
+      <OwnershipTimeout>-1</OwnershipTimeout>
+      <WsdlVersion>2007-11-01</WsdlVersion>
+    </ConnectionSettings>
+    <GCConfiguration>
+      <Fixed CryoType="NONE">
+        <FWRevision BootLoader="BootLdr.01.00" Manufacturing="Version 4.08" GCApplication="A.01.08" FPGA="rev_2_18__.bit #rev_2_18__.ncd #2008/01/18 #12:32:28 #3s400fg456" Font="Unicode translation table v1.0"/>
+        <ALS>
+          <Controller Model="G3430A" FirmwareRev="A.01.00" ManufacturingID="[NoMfgID]" Present="true"/>
+          <FrontInjector Model="" FirmwareRev="" ManufacturingID="" Present="false" Mounted="false" Aligned="false" DoorClosed="false" CompatibleWithTray="false" TurretMaxSamples="0" NumberOfSampleStops="UNKNOWN" SyringeVolume="0"/>
+          <BackInjector Model="" FirmwareRev="" ManufacturingID="" Present="false" Mounted="false" Aligned="false" DoorClosed="false" CompatibleWithTray="false" TurretMaxSamples="0" NumberOfSampleStops="UNKNOWN" SyringeVolume="0"/>
+          <Tray Model="" FirmwareRev="" ManufacturingID="" Present="false" Positions="0" BCRPresent="false"/>
+        </ALS>
+        <Inlet ManufacturingID="T0013V" ManufacturingDate="1190910903" Address="0" ConfiguredForGC="true" FWRevCode="1290" EEPROMRevCode="513" TypeID="PP" CryoPresent="false">
+          <Heater ConfiguredForGC="true" Power="66.29477692" Position="1"/>
+        </Inlet>
+        <Inlet ManufacturingID="Q005VD" ManufacturingDate="1196675517" Address="1" ConfiguredForGC="true" FWRevCode="1290" EEPROMRevCode="514" TypeID="SS_100" CryoPresent="false">
+          <Heater ConfiguredForGC="true" Power="69.20298767" Position="2"/>
+        </Inlet>
+        <Detector>
+          <Signal ManufacturingID="3432100704276" ManufacturingDate="1178080280" Address="9" ConfiguredForGC="true" FWRevCode="1026" EEPROMRevCode="768" TypeID="TCD"/>
+          <Signal ManufacturingID="" ManufacturingDate="0" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <EPC ManufacturingID="G001WT" ManufacturingDate="1190901402" Address="2" ConfiguredForGC="true" FWRevCode="1290" EEPROMRevCode="513" TypeID="TCD_EPC"/>
+          <Heater ConfiguredForGC="true" Power="69.80957794" Position="3"/>
+          <Heater ConfiguredForGC="false" Power="1012112448" Position="0"/>
+        </Detector>
+        <Detector>
+          <Signal ManufacturingID="UTC1192741710" ManufacturingDate="1192741710" Address="8" ConfiguredForGC="true" FWRevCode="1282" EEPROMRevCode="768" TypeID="FID"/>
+          <Signal ManufacturingID="" ManufacturingDate="0" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <EPC ManufacturingID="2006HY" ManufacturingDate="1192182654" Address="3" ConfiguredForGC="true" FWRevCode="1290" EEPROMRevCode="513" TypeID="FID_EPC"/>
+          <Heater ConfiguredForGC="true" Power="67.86014557" Position="4"/>
+          <Heater ConfiguredForGC="false" Power="1012112448" Position="0"/>
+        </Detector>
+        <Detector>
+          <Signal ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <Signal ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <EPC ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <Heater ConfiguredForGC="false" Power="0" Position="0"/>
+          <Heater ConfiguredForGC="false" Power="0" Position="0"/>
+        </Detector>
+        <Detector>
+          <Signal ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <Signal ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <EPC ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <Heater ConfiguredForGC="false" Power="0" Position="0"/>
+          <Heater ConfiguredForGC="false" Power="0" Position="0"/>
+        </Detector>
+        <APC ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+        <APC ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+        <APC ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+        <PCM>
+          <EPC ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <Heater ConfiguredForGC="false" Power="0" Position="0"/>
+        </PCM>
+        <PCM>
+          <EPC ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <Heater ConfiguredForGC="false" Power="0" Position="0"/>
+        </PCM>
+        <PCM>
+          <EPC ManufacturingID="" ManufacturingDate="946771200" Address="0" ConfiguredForGC="false" FWRevCode="0" EEPROMRevCode="0" TypeID="UNKNOWN"/>
+          <Heater ConfiguredForGC="false" Power="0" Position="0"/>
+        </PCM>
+        <Valve ConfiguredForGC="true"/>
+        <Valve ConfiguredForGC="false"/>
+        <Valve ConfiguredForGC="false"/>
+        <Valve ConfiguredForGC="false"/>
+        <Valve ConfiguredForGC="false"/>
+        <Valve ConfiguredForGC="false"/>
+        <Valve ConfiguredForGC="false"/>
+        <Valve ConfiguredForGC="false"/>
+        <AuxHeater ConfiguredForGC="true" Power="66.88800812" Position="5"/>
+        <AuxHeater ConfiguredForGC="false" Power="0" Position="0"/>
+        <AuxHeater ConfiguredForGC="false" Power="0" Position="0"/>
+        <ValveBox ConfiguredForGC="false"/>
+        <CryoFocus ConfiguredForGC="false" Valve="0"/>
+      </Fixed>
+      <Variable PressureUnits="PSI" AutoPrepRunEnabled="false">
+        <Inlet Gas="ArMe" CryoType="CO2" FlowSensorAutoCal="1" SeptumPurgeRegulaterAutoCal="1"/>
+        <Inlet Gas="ArMe" CryoType="CO2" FlowSensorAutoCal="1" SeptumPurgeRegulaterAutoCal="1"/>
+        <Detector LitOffset="0" FuelGas="UNKNOWN" UtilityGas="N2" MakeupGas="N2" BeadVoltage="2500" ElectrometerOnly="false"/>
+        <Detector LitOffset="2" FuelGas="H2" UtilityGas="Air" MakeupGas="N2" BeadVoltage="0" ElectrometerOnly="false"/>
+        <Detector LitOffset="0" FuelGas="UNKNOWN" UtilityGas="UNKNOWN" MakeupGas="UNKNOWN" BeadVoltage="0" ElectrometerOnly="false"/>
+        <Detector LitOffset="0" FuelGas="UNKNOWN" UtilityGas="UNKNOWN" MakeupGas="UNKNOWN" BeadVoltage="0" ElectrometerOnly="false"/>
+        <Column Present="false" NominalLength="0" NominalDiameter="0" FilmThickness="0" InletConnection="FRONT_INLET" OutletConnection="FRONT_DETECTOR" CalculatedLength="0" CalculatedDiameter="0" CalibrationMode="UNCALIBRATED" CalibrationDateTime="2000-01-02T00:00:00Z" HeaterID="OVEN" ColumnMaxTemp="225" Name="Supelco 12845" Type="carboxen 1004" SerialNumber=""/>
+        <Column Present="true" NominalLength="25" NominalDiameter="0.00032" FilmThickness="0" InletConnection="NONE" OutletConnection="NONE" CalculatedLength="0" CalculatedDiameter="0" CalibrationMode="UNCALIBRATED" CalibrationDateTime="2000-01-02T00:00:00Z" HeaterID="OVEN" ColumnMaxTemp="450" Name="" Type="" SerialNumber=""/>
+        <Column Present="true" NominalLength="25" NominalDiameter="0.00032" FilmThickness="0" InletConnection="NONE" OutletConnection="NONE" CalculatedLength="0" CalculatedDiameter="0" CalibrationMode="UNCALIBRATED" CalibrationDateTime="2000-01-02T00:00:00Z" HeaterID="OVEN" ColumnMaxTemp="450" Name="" Type="" SerialNumber=""/>
+        <Column Present="true" NominalLength="25" NominalDiameter="0.00032" FilmThickness="0" InletConnection="NONE" OutletConnection="NONE" CalculatedLength="0" CalculatedDiameter="0" CalibrationMode="UNCALIBRATED" CalibrationDateTime="2000-01-02T00:00:00Z" HeaterID="OVEN" ColumnMaxTemp="450" Name="" Type="" SerialNumber=""/>
+        <Column Present="true" NominalLength="25" NominalDiameter="0.00032" FilmThickness="0" InletConnection="NONE" OutletConnection="NONE" CalculatedLength="0" CalculatedDiameter="0" CalibrationMode="UNCALIBRATED" CalibrationDateTime="2000-01-02T00:00:00Z" HeaterID="OVEN" ColumnMaxTemp="450" Name="" Type="" SerialNumber=""/>
+        <Column Present="true" NominalLength="25" NominalDiameter="0.00032" FilmThickness="0" InletConnection="NONE" OutletConnection="NONE" CalculatedLength="0" CalculatedDiameter="0" CalibrationMode="UNCALIBRATED" CalibrationDateTime="2000-01-02T00:00:00Z" HeaterID="OVEN" ColumnMaxTemp="450" Name="" Type="" SerialNumber=""/>
+        <Oven Voltage="UNKNOWN" Type="FAST" SlowFan="false" MaximumTemperature="225"/>
+        <APC>
+          <Channel Name="" Gas="UNKNOWN"/>
+          <Channel Name="" Gas="UNKNOWN"/>
+          <Channel Name="" Gas="UNKNOWN"/>
+        </APC>
+        <APC>
+          <Channel Name="" Gas="UNKNOWN"/>
+          <Channel Name="" Gas="UNKNOWN"/>
+          <Channel Name="" Gas="UNKNOWN"/>
+        </APC>
+        <APC>
+          <Channel Name="" Gas="UNKNOWN"/>
+          <Channel Name="" Gas="UNKNOWN"/>
+          <Channel Name="" Gas="UNKNOWN"/>
+        </APC>
+        <PCM>
+          <ChannelA Name="" Gas="N2"/>
+          <ChannelB Name="" Gas="N2" ControlMode="FORWARD_PRESSURE"/>
+        </PCM>
+        <PCM>
+          <ChannelA Name="" Gas="N2"/>
+          <ChannelB Name="" Gas="N2" ControlMode="FORWARD_PRESSURE"/>
+        </PCM>
+        <PCM>
+          <ChannelA Name="" Gas="N2"/>
+          <ChannelB Name="" Gas="N2" ControlMode="FORWARD_PRESSURE"/>
+        </PCM>
+        <Valve Name="" Type="GAS_SAMPLING" LoopVolume="0.25" BCDInverted="false" StepTime="0" Inlet="UNKNOWN"/>
+        <Valve Name="" Type="NONE" LoopVolume="0" BCDInverted="false" StepTime="0" Inlet="UNKNOWN"/>
+        <Valve Name="" Type="NONE" LoopVolume="0" BCDInverted="false" StepTime="0" Inlet="UNKNOWN"/>
+        <Valve Name="" Type="NONE" LoopVolume="0" BCDInverted="false" StepTime="0" Inlet="UNKNOWN"/>
+        <Valve Name="" Type="NONE" LoopVolume="0" BCDInverted="false" StepTime="0" Inlet="UNKNOWN"/>
+        <Valve Name="" Type="NONE" LoopVolume="0" BCDInverted="false" StepTime="0" Inlet="UNKNOWN"/>
+        <Valve Name="" Type="NONE" LoopVolume="0" BCDInverted="false" StepTime="0" Inlet="UNKNOWN"/>
+        <Valve Name="" Type="NONE" LoopVolume="0" BCDInverted="false" StepTime="0" Inlet="UNKNOWN"/>
+        <AuxHeater Name="Thermal Aux 1" Type="UNKNOWN" CryoType="CO2"/>
+        <AuxHeater Name="" Type="NONE" CryoType="CO2"/>
+        <AuxHeater Name="" Type="NONE" CryoType="CO2"/>
+        <ALS/>
+        <Counter ID="1229345616" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1229343822" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1229342547" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1229345622" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1229345879" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1229083472" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1229081678" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1229080403" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1229083478" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1229083735" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1145456972" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1145194828" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1127303491" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1127369027" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1127434563" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1127500099" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1127565635" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1127631171" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1246120275" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="1245858131" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="20" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="21" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="22" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="23" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="24" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="25" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="26" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="27" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="28" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="29" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="30" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="31" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="32" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="33" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="34" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="35" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="36" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="37" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="38" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="39" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="40" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="41" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="42" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="43" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="44" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="45" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="46" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="47" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="48" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="49" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="50" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="51" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="52" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="53" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="54" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="55" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="56" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="57" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="58" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="59" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="60" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="61" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="62" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+        <Counter ID="63" Type="RUN">
+          <Threshold Action="NOTHING" Value="0"/>
+          <Threshold Action="NOTHING" Value="0"/>
+        </Counter>
+      </Variable>
+    </GCConfiguration>
+  </configuration>
+</GCContextualMethod>

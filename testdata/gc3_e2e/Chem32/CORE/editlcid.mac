@@ -1,0 +1,254 @@
+
+! User interface for further instrument specification              LCMODULS.MAC
+
+! last altered by RZ 28-Apr-93
+
+!==============================================================================
+Name printModulesID
+!------------------------------------------------------------------------------
+
+! Print identifications (firmware revision and serial#) of modules
+
+  local i, maxModuleNum, ref
+  local l, p, k, prefix$
+  local name$, num, firmware$, serialNum$
+  local xLevel,xName$,xNameRef,xNumber,xSerialNumber$,xFWRevision$,xBuildNumber$,xPartNumber$,xDeviceType
+
+  ! TAD 2004/12/6
+  local chslen, chsi
+  ! TAD 2004/12/6
+
+  ID_PHX3DSUPPORTFILES_CONFIGURATION_141             =  17141  
+  ID_PHX3DSUPPORTFILES_MODULE_142                    =  17142  
+  ID_PHX3DSUPPORTFILES___SPECIALS_143                =  17143  
+  ID_PHX3DSUPPORTFILES__LOCATION_144                 =  17144 
+  ID_G11N_ADD_WIDTH_COLHEADER_20006                  =  20006  
+  NLSFileName_phx3dsupport$="phx3dsupport"
+!..............................................................................
+  g11nSpecialWidth6=Val(ReadResource$(NLSFileName_phx3dsupport$,ID_G11N_ADD_WIDTH_COLHEADER_20006))
+  g11nSpecialWidth6 = g11nSpecialWidth6 + 36
+
+  OpenDevice "PRINTER" as #5
+  BeginJob
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CONFIGURATION_141), _instName$
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MODULE_142)
+  print using #5, "======================================================================================/"
+
+  k=0
+  for i = 1 to 9999
+    If ModGetAtRolloutPos(,i,"xLevel","xName$","xNameRef","xNumber","xSerialNumber$","xFWRevision$","xBuildNumber$","xPartNumber$","xDeviceType")=0 Then
+      goto EndOfList
+    EndIf
+    prefix$=""
+    If xlevel=0 Then
+      k = k+1
+      Evaluate "xSerialNumber$=MOD_serialNum"+Val$(k)+"$"
+    Else
+      for n=1 to xlevel
+        prefix$=prefix$+"  "
+      next n
+    EndIf
+    name$ = prefix$+xName$
+    If Len(name$)>g11nSpecialWidth6 Then
+      name$ = name$[1:g11nSpecialWidth6]
+    EndIf
+    print using #5, val$(g11nSpecialWidth6) + "% 2#  10%   14%     25%/", name$, xNumber, xPartNumber$, xFWRevision$, xSerialNumber$
+  next i
+EndOfList:
+  
+  name$ = MOD_instrumentSpecial$; l = len(name$)
+  if l > 0 then
+    if l > 67 then
+      p = searchBlankBefore(name$, 67)
+    else; p = l; endIf
+    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES___SPECIALS_143), name$[1:p]
+    while p < l 
+      name$ = name$[p+1:l]; l = len(name$)
+      if l > 67 then
+        p = searchBlankBefore(name$, 67) 
+      else; p = l; endIf
+      print using #5, "          %/", name$[1:p]
+    endWhile
+  endIf      
+  name$ = MOD_laboratory$; l = len(name$)
+  if l > 0 then
+    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__LOCATION_144), MOD_laboratory$
+  EndIf
+  EndJob
+  close #5
+  return
+
+endMacro ! printModulesID
+
+
+!==============================================================================
+Name searchBlankBefore
+!------------------------------------------------------------------------------
+
+! Searches blank before end of string
+
+  parameter stringName$, length
+  local i
+NLSFileName_phx3dsupport$="phx3dsupport"
+!..............................................................................
+
+  i = length
+  while i > 1; i = i - 1
+    if stringName$[i:i]  = " " then; return i; endIf
+  endWhile
+  return length
+
+endMacro ! searchBlankBefore
+
+
+
+Name FormatDlgModuleLine
+  Parameter yPos, module$, num$, xPartNumber$, firmware$, serialNum$, hwserial, k
+
+  evaluate "staticText 13, "+val$(yPos+2)+", 185, 10, """+module$+""""
+  evaluate "staticText 179, "+val$(yPos+2)+", 15, 10, """+num$+""""
+  evaluate "staticText 200, "+val$(yPos+2)+", 50, 10, """+xPartNumber$+""""
+  evaluate "staticText 260, "+val$(yPos+2)+", 80, 12, """+firmware$+""""
+
+  If hwserial=0 Then
+     !means: serial number is not available, allow edit of serial no. 
+     evaluate "editBox 323, yPos, 75, 12, MOD_serialNum"+Val$(k)+"$,"""+serialNum$+""""
+  Else
+     evaluate "staticText 323, yPos+2, 75, 12, """+serialNum$+""""
+  EndIf
+
+  Return yPos
+
+EndMacro
+
+
+!==============================================================================
+Name DoEditModulesID
+!------------------------------------------------------------------------------
+
+! Edits identifications (firmware revision and serial#) of modules
+
+  local i,k,n, maxModuleNum, yPos, xlines
+  local ref, name$, hwserial, short$, prefix$
+  Local MOD_module$, MOD_num$, MOD_firmware$, MOD_serialNum$, MOD_hwserial
+  local xLevel,xName$,xNameRef,xNumber,xSerialNumber$,xFWRevision$,xBuildNumber$,xPartNumber$,xDeviceType
+  ID_PHX3DSUPPORTFILES_READ_MODULE_IN_145            =  17145  
+  ID_PHX3DSUPPORTFILES_INSTRUMENT_146                =  17146  
+  ID_PHX3DSUPPORTFILES_MODULE_147                    =  17147  
+  ID_PHX3DSUPPORTFILES_FIRMWARE_REVIS_148            =  17148  
+  ID_PHX3DSUPPORTFILES_SERIAL_NUMBER_149             =  17149  
+  ID_PHX3DSUPPORTFILES_SPECIALS_150                  =  17150  
+  ID_PHX3DSUPPORTFILES_LOCATION_151                  =  17151  
+  ID_PHX3DSUPPORTFILES_PRINT_152                     =  17152  
+  ID_PHX3DSUPPORTFILES_OK_153                        =  17153  
+  ID_PHX3DSUPPORTFILES_CANCEL_154                    =  17154  
+  ID_PHX3DSUPPORTFILES_SAVE_SERIAL_NU_155            =  17155  
+  ID_PHX3DSUPPORTFILES_SERIAL_NUMBERS_156            =  17156  
+  ID_PHX3DSUPPORTFILES_NO_158                        =  17158 
+  ID_PHX3DSUPPORTFILES_PART_NUMBER_420               =  17420
+  ID_G11N_ADD_WHITESPACE_BTW_COLUMN_20000            =  20000 
+  ID_G11N_ADD_WHITESPACE_BTW_COLUMN_20001            =  20001 
+  ID_G11N_ADD_EXTRA_LINE_20002                       =  20002 
+
+  NLSFileName_phx3dsupport$="phx3dsupport"
+
+  g11nSpecialWidth1=Val(ReadResource$(NLSFileName_phx3dsupport$,ID_G11N_ADD_WHITESPACE_BTW_COLUMN_20000))
+  g11nSpecialWidth2=Val(ReadResource$(NLSFileName_phx3dsupport$,ID_G11N_ADD_WHITESPACE_BTW_COLUMN_20001))
+  g11nExtraLine$ = ReadResource$(NLSFileName_phx3dsupport$,ID_G11N_ADD_EXTRA_LINE_20002)
+!..............................................................................
+
+  UpdateRCnetFirmwareRevision
+
+! Prepare entries for dialog box
+
+  print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_READ_MODULE_IN_145)
+  for i = 1 to TabHdrVal(_config[1], "moduleInfo", "numberOfRows")
+     ref = TabVal(_config[1], "moduleInfo", i, "nameRef") 
+     if ref<>0 then
+       hwserial = TabVal(_config[1], "modules", ref, "HWSerial")
+     Else
+       hwserial = 1
+     endif
+     evaluate "MOD_hwserial" + val$(i) + " = hwserial"
+     Evaluate "MOD_serialNum"+Val$(i)+"$ = tabText$(_config[1],""moduleInfo"",i,""serialNumber"")"    
+  next i
+  MOD_instrumentSpecial$ = tabHdrText$(_config[1], "moduleInfo", "specials")
+  MOD_laboratory$ = tabHdrText$(_config[1], "moduleInfo", "location")
+
+! Define dialog box
+  maxModuleNum = TabHdrVal(_config[1], "moduleInfo", "numberOfRows")
+  if ObjHdrType (_Config[1], "ModuleInfo2") = 4 then
+     maxModuleNum = maxModuleNum  + TabHdrVal(_config[1], "moduleInfo2", "numberOfRows")
+  endif
+
+  !beginDialog "modulesIDBox", 8, 5, 370, 105+13*maxModuleNum+5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_INSTRUMENT_146)+_instName$
+  beginDialog "modulesIDBox", 8, 5, 410, 105+13*maxModuleNum+5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_INSTRUMENT_146)+_instName$
+  staticText 13, 8+g11nSpecialWidth1, 385, 8, "________________________________________________________________________________________________"+g11nExtraLine$
+  staticText 13, 5, 25+g11nSpecialWidth2, 10,  ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MODULE_147)
+  staticText 179, 5, 40, 10, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_NO_158)
+  staticText 199, 5, 50+g11nSpecialWidth2, 10, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PART_NUMBER_420)
+  staticText 260, 5, 70+g11nSpecialWidth2, 10, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_FIRMWARE_REVIS_148)
+  staticText 322, 5, 50+g11nSpecialWidth2, 10, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SERIAL_NUMBER_149)
+
+  yPos = 19
+  k=0
+
+  for i = 1 to 9999
+    If ModGetAtRolloutPos(,i,"xLevel","xName$","xNameRef","xNumber","xSerialNumber$","xFWRevision$","xBuildNumber$","xPartNumber$","xDeviceType")=0 Then
+      goto EndOfList
+    EndIf
+    prefix$=""
+    If xLevel=0 Then
+      k = k+1
+      evaluate "hwserial=MOD_hwserial"+Val$(k)
+      Evaluate "xSerialNumber$=MOD_serialNum"+Val$(k)+"$"
+    Else
+      for n=1 to xLevel
+        prefix$=prefix$+"  "
+      next n
+      hwserial = 1  ! means: serial number is available, no edit of serial no. 
+    endif
+    yPos = FormatDlgModuleLine(yPos, prefix$+xName$, Val$(xNumber), xPartNumber$, xFWRevision$, xSerialNumber$, hwserial, k)
+    yPos = yPos + 13
+  next i
+EndOfList:
+
+  staticText 13, yPos + 5, 30+g11nSpecialWidth2, 10, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SPECIALS_150)
+   editBox 56, yPos + 6, 320, 29, MOD_instrumentSpecial$, "MLVS"
+  staticText 13, yPos+39, 30+g11nSpecialWidth2, 10, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LOCATION_151)
+  editBox 56, yPos+37, 320, 12, MOD_laboratory$
+
+
+  pushButton 13, yPos+60, 44, 16, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PRINT_152),  2
+  okButton 163, yPos+60, 44, 16, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OK_153)
+  cancelButton 309, yPos+60, 44, 16, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CANCEL_154)
+  endDialog 
+
+  print ""
+  _button = showDialog("modulesIDBox", 7005)
+  while _button > 1 
+    printModulesID
+    _button = showDialog("modulesIDBox", 7005)
+  endWhile
+  if _button = 1 then
+    print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SAVE_SERIAL_NU_155)
+    for i = 1 to TabHdrVal(_config[1], "moduleInfo", "numberOfRows")
+      evaluate "setTabText _config[1],""moduleInfo"",i,""serialNumber"",MOD_serialNum"+val$(i)+"$"
+    next i
+    setTabHdrText _config[1], "moduleInfo", "specials", MOD_instrumentSpecial$
+    setTabHdrText _config[1], "moduleInfo", "location", MOD_laboratory$
+    print ""
+  else; print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SERIAL_NUMBERS_156); endIf
+
+  removeDialog "modulesIDBox"
+  for i = 1 to TabHdrVal(_config[1], "moduleInfo", "numberOfRows")
+     evaluate "remove MOD_serialNum"+val$(i)+"$"
+     evaluate "remove MOD_hwserial"+val$(i)
+  next i
+
+  remove MOD_instrumentSpecial$, MOD_laboratory$
+  return
+
+endMacro ! DoEditModulesID
+
+

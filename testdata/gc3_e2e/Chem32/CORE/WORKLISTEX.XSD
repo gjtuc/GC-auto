@@ -1,0 +1,392 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:annotation>
+    <xs:documentation>Worklist for ChemStation Sequence Import</xs:documentation>
+  </xs:annotation>
+
+  <xs:simpleType name="SchemaEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="01.01.01"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="InjectorEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="FRONT"/>
+      <xs:enumeration value="BACK"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="SampleTypeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="CONTROLSAMPLE"/>
+      <xs:enumeration value="SAMPLE"/>
+      <xs:enumeration value="CALIBRATION"/>
+      <xs:enumeration value="UNKNOWN"/>
+      <xs:enumeration value="STANDARD"/>
+      <xs:enumeration value="QUALITYCONTROL"/>
+      <xs:enumeration value="BLANK"/>
+      <xs:enumeration value="DOUBLEBLANK"/>
+      <xs:enumeration value="SOLVENT"/>
+      <xs:enumeration value=""/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ResponseUpdateEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="NO UPDATE"/>
+      <xs:enumeration value="REPLACE"/>
+      <xs:enumeration value="BRACKET"/>
+      <xs:enumeration value="DELTA%"/>
+      <xs:enumeration value="AVERAGE"/>
+      <xs:enumeration value=""/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="RetentionTimeUpdateEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="NO UPDATE"/>
+      <xs:enumeration value="REPLACE"/>
+      <xs:enumeration value="BRACKET"/>
+      <xs:enumeration value="DELTA%"/>
+      <xs:enumeration value="AVERAGE"/>
+      <xs:enumeration value=""/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="NullOrOneEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="EmptyEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value=""/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="double_or_empty">
+    <xs:union memberTypes="EmptyEnum xs:double" />
+  </xs:simpleType>
+
+  <xs:simpleType name="SeqModeEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CalibRunStatisticsEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="SampleRunStatisticsEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="SeqSummaryEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="LimitOptionEnum">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="CustomFieldType">
+    <xs:sequence>
+      <xs:element name="Name" type="xs:string"/>
+      <xs:element name="Value" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name ="SampleType">
+    <xs:sequence>
+      <xs:element name="Number" type="xs:integer"/>
+      <xs:element name="Location" type="xs:string"/>
+      <xs:element name="Name" type="xs:string"/>
+      <xs:element name="CDSMethod" type="xs:string"/>
+      <xs:element name="numberOfInj" type="xs:nonNegativeInteger"/>
+      <xs:element name="sampleType" type="SampleTypeEnum"/>
+      <xs:element name="CalLevel" type="xs:string"/>
+      <xs:element name="calibration" type="ResponseUpdateEnum"/>
+      <xs:element name="UpdateRT" type="RetentionTimeUpdateEnum"/>
+      <xs:element name="Interval" type="xs:integer" />
+      <xs:element name="sampleAmount" type="xs:double"/>
+      <xs:element name="ISTDAmount" type="xs:double"/>
+      <xs:element name="Multipliers" type="xs:double"/>
+      <xs:element name="Dilution" type="xs:double"/>
+      <xs:element name="DataFilename" type="xs:string"/>
+      <xs:element name="InjectionVolume" type="double_or_empty"/>
+      <xs:element name="description" type="xs:string"/>
+      <xs:element name="StudyName" type="xs:string"/>
+      <xs:element name="LimsID" type="xs:string"/>
+      <xs:element name="LimsKField2" type="xs:string"/>
+      <xs:element name="LimsKField3" type="xs:string"/>
+      <xs:element name="AutoBalance" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="TargetMassCol" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="CustomField" type ="CustomFieldType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  
+  <xs:complexType name="CommonInformationType">
+    <xs:complexContent>
+      <xs:extension base="CustomFieldType">
+        <xs:attribute name="Type" use="optional" default="ROW">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:enumeration value="ROW"/>
+              <xs:enumeration value="HEADER"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="SampleListBaseType">
+    <xs:sequence>
+      <xs:element name="Sample" type="SampleType" minOccurs="0" maxOccurs="1999" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name ="SampleListType">
+    <xs:complexContent>
+      <xs:extension base="SampleListBaseType">
+        <xs:attribute name="Injector" type="InjectorEnum" use="optional" default="FRONT"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="ActivatorType">
+     <xs:attribute name="Active" type="NullOrOneEnum" />
+  </xs:complexType>
+
+  <xs:complexType name ="IndividualReportsBaseType">
+    <xs:attribute name="AsSpecifiedInMethod" type="NullOrOneEnum" />
+  </xs:complexType>
+
+  <xs:complexType name ="IndividualReportsType">
+    <xs:complexContent>
+      <xs:extension base="IndividualReportsBaseType">
+        <xs:sequence>
+          <xs:element name="ToPrinter" type="ActivatorType"/>
+          <xs:element name="ToScreen" type="ActivatorType"/>
+          <xs:element name="ToFile" type="ToFileType"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="ToPdfFileType">
+    <xs:complexContent>
+      <xs:extension base="ActivatorType">
+        <xs:attribute name="UniqueFileName" type="NullOrOneEnum" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="ToFileBaseType">
+    <xs:complexContent>
+      <xs:extension base="ActivatorType">
+        <xs:attribute name="FilePrefix" type="xs:string" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="ToFileType">
+    <xs:complexContent>
+      <xs:extension base="ToFileBaseType">
+        <xs:sequence>
+          <xs:element name="ToTxtFile" type="ActivatorType"/>
+          <xs:element name="ToXlsFile" type="ActivatorType"/>
+          <xs:element name="ToCsvFile" type="ActivatorType"/>
+          <xs:element name="ToPdfFile" type="ToPdfFileType"/>
+          <xs:element name="ToEmfFile" type="ActivatorType"/>
+          <xs:element name="ToHtmFile" type="ActivatorType"/>
+          <xs:element name="ToDifFile" type="ActivatorType"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="ExtendedStatisticsBaseType">
+      <xs:attribute name="LimitOption" type="LimitOptionEnum" />
+  </xs:complexType>
+
+  <xs:complexType name ="ExtendedStatisticsCalcType">
+    <xs:complexContent>
+      <xs:extension base="ActivatorType">
+        <xs:attribute name="Limit" type="xs:double" />
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="ExtendedStatisticsType">
+    <xs:complexContent>
+      <xs:extension base="ExtendedStatisticsBaseType">
+        <xs:sequence>
+          <xs:element name="RetTime" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PeakArea" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PeakHeight" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="Amount" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PeakWidthHalfHeight" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PeakWidthTangent" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PeakWidthSigma" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PeakWidthTailing" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PeakSymetry" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="TailingFactor" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="KPrime" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PlatesSigma" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PlatesTangent" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PlatesStatistic" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PlatesHalfWidth" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="ResolutionSigma" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="ResolutionTangent" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="ResolutionStatistic" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="ResolutionHalfWidth" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="Selectivity" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="Skew" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="Excess" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="LibraryMatchFactor" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="PeakPurity" type="ExtendedStatisticsCalcType"/>
+          <xs:element name="MeasMobility" type="ExtendedStatisticsCalcType"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="SummaryType">
+    <xs:attribute name="Style" type="SeqSummaryEnum" />
+  </xs:complexType>
+
+  <xs:complexType name ="CalibRunStatisticsType">
+    <xs:attribute name="Style" type="CalibRunStatisticsEnum" />
+  </xs:complexType>
+
+  <xs:complexType name ="SampleRunStatisticsType">
+    <xs:attribute name="Style" type="SampleRunStatisticsEnum" />
+  </xs:complexType>
+
+  <xs:complexType name ="SeqSummaryReportsType">
+    <xs:sequence>
+      <xs:element name="OnePageHeader" type="ActivatorType"/>
+      <xs:element name="Config" type="ActivatorType"/>
+      <xs:element name="Sequence" type="ActivatorType"/>
+      <xs:element name="Logbook" type="ActivatorType"/>
+      <xs:element name="Methods" type="ActivatorType"/>
+      <xs:element name="AnalysisReports" type="ActivatorType"/>
+      <xs:element name="CalibRunStatistics" type="CalibRunStatisticsType"/>
+      <xs:element name="SampleRunStatistics" type="SampleRunStatisticsType"/>
+      <xs:element name="Summary" type="SummaryType"/>
+      <xs:element name="ExtendedStatistics" type="ExtendedStatisticsType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name ="SeqSummaryToFileType">
+    <xs:complexContent>
+      <xs:extension base="ActivatorType">
+        <xs:sequence>
+          <xs:element name="SeqSummaryFile1" type="xs:string"/>
+          <xs:element name="SeqSummaryFile2" type="xs:string"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="PrintSeqSummaryType">
+    <xs:complexContent>
+      <xs:extension base="ActivatorType">
+        <xs:sequence>
+          <xs:element name="ToPrinter" type="ActivatorType"/>
+          <xs:element name="ToFile" type="SeqSummaryToFileType"/>
+          <xs:element name="ToHTM" type="ActivatorType"/>
+          <xs:element name="ToPDF" type="ActivatorType"/>
+          <xs:element name="SeqSummaryAndIndividualReport" type="ActivatorType"/>
+          <xs:element name="Reports" type="SeqSummaryReportsType"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="OLIRType">  
+    <xs:sequence>
+      <xs:element name="Template" type="xs:string"/>
+      <xs:element name="PreviewAtEndOfSequence" type="ActivatorType"/>
+      <xs:element name="PDFAtEndOfSequence" type="ActivatorType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name ="VCSTypeBase">
+    <xs:attribute name="UsePreferences" type="NullOrOneEnum" />
+  </xs:complexType>
+
+  <xs:complexType name ="VCSType">
+    <xs:complexContent>
+      <xs:extension base="VCSTypeBase">
+         <xs:sequence>
+            <xs:element name="Path" type="xs:string"/>
+         </xs:sequence>
+       </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name ="SequenceParametersType">
+    <xs:sequence>
+      <xs:element name="DataDir" type="xs:string"/>
+      <xs:element name="DataSeqSubdir" type="xs:string"/>
+      <xs:element name="DataNaming" type="NullOrOneEnum"/>
+      <xs:element name="Prefix1" type="xs:string"/>
+      <xs:element name="Counter1" type="xs:positiveInteger"/>
+      <xs:element name="Prefix2" type="xs:string"/>
+      <xs:element name="Counter2" type="xs:positiveInteger"/>
+      <xs:element name="WaitTime" type="xs:double"/>
+      <xs:element name="NotReadyTimeOut" type="xs:double"/>
+      <xs:element name="SequenceComment" type="xs:string"/>
+      <xs:element name="PostSeqCommand" type="xs:string"/>
+      <xs:element name="SequenceMode" type="SeqModeEnum"/>
+      <xs:element name="UsePostSeqCommand" type="ActivatorType"/>
+      <xs:element name="UseBarCodeReader" type="ActivatorType"/>
+      <xs:element name="IgnoreBarCodeReaderMismatch" type="ActivatorType"/>
+      <xs:element name="FractionStartLocation" type="xs:string"/>
+      <xs:element name="IndividualReport" type="IndividualReportsType"/>
+      <xs:element name="PrintSeqSummary" type="PrintSeqSummaryType"/>
+      <xs:element name="OLIR" type="OLIRType"/>
+      <xs:element name="VCS" type="VCSType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SequenceType">
+    <xs:sequence>
+      <xs:element name="SchemaVersion" type="SchemaEnum"/>
+      <xs:element name="SequenceID" type="xs:string"  minOccurs="0" maxOccurs="1" />
+      <xs:element name="Parameters" type="SequenceParametersType"/>
+      <xs:element name="Samples" type="SampleListType" minOccurs="1" maxOccurs="2" />
+      <xs:element name="CommonInformation" type="CommonInformationType" minOccurs="0" maxOccurs="unbounded" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="Sequence" type="SequenceType"/>
+
+</xs:schema>
+

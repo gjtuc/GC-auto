@@ -1,0 +1,1978 @@
+        !===============================================================================================
+        !  enutngt.mac:  Generates the Gain-EMV curve and gain curve reports **August 2005
+        !
+        ! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+        ! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+        ! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+        ! AGILENT TECHNOLOGIES.
+        !
+        !                     RESTRICTED RIGHTS LEGEND                          
+        !                                                                       
+        ! Use, duplication, or disclosure by the Government is subject to       
+        ! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+        ! Technical Data and Computer Software clause at 52.227-7013.           
+        !                                                                       
+        ! AGILENT TECHNOLOGIES                                               
+        ! Life Sciences and Chemical Analysis Solutions           
+        ! 5301 Stevens Creek Blvd
+        ! Santa Clara, CA 95051-7201
+        ! United States
+        !
+        !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        !  These MACROs are the common macros that are called when tune is invoked.
+        !  They take care of testing for the current instrument configuration and
+        !  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+        !  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+        !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        !
+        !=========================================================================================
+        !
+        !=========================================================================================
+        !  Macros:
+        !           msat_CheckGainCurve           msat_GainPrintAbort
+        !           msat_GainCurveReport          msat_AddAbortHandler
+        !           msat_InitGainCurveReg         msat_RemoveAbortHandler
+        !           msat_gainramp                 msat_GetEstimatedGain
+        !           msat_GainCurveAbort           msat_GetTestPoint
+        !           msat_gain                     msat_LoTarget
+        !           msat_FindAvgCurrent           msat_HiTarget
+        !           msat_GetNumberOfGE1s          msat_TargetAb
+        !           msat_UpdateGainCurveReg       msat_TargetAb_d
+        !           msat_AnnotGainCurve           GetYMax
+        !           msat_DispGainCurve            SetStringLen$
+        !           msat_PrintGainCurveReport
+        !
+        !===============================================================================================
+        GainVer$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/gaincurv.mac 1.17 2007-06-15 10:00:00-08 clove Exp $"
+        verIx = instr(GainVer$, ".mac ") + 5
+        GainVer$ =  GainVer$[verIx:VerIx + instr(GainVer$[VerIx:len(GainVer$)]," ") - 1] 
+        remove verIx
+        ! =======================================================================================
+        name msat_CheckGainCurve
+          parameter auto default 1       ! 1=called from autotune
+          parameter BothPols default 0   ! 0=Check current polarity only, 1=Check both polarities
+          parameter PrintIt default 0    ! 0=don't print report, 1=print the report if called from menu
+        ! Description:
+        !     This routine checks the validity of the existing gain curve for the current polarity.
+        !     If it is not within spec, it will ask the user if they want to recalibrate.
+        ! Revision History:
+        ! 08/12/04  PHC  First created.
+        ! 07/26/05  CPL  Modified to support G61x0A log amp.
+        ! 08/18/05  CPL  Updated with Agilent header information.  
+        ! 02/23/06  CPL  Added msat_TargetAb and msat_TargetAb_d subroutines.
+        !===============================================================================
+        local ChangePol,CurrPol,killit,DoIt,title$,line1$,line2$,line3$,_button,ret,cmdstr$
+        Local ID_TUNEMAC_GAINCURVE_REG_323
+        Local ID_TUNEMAC_LOADING_ATUNES_579
+        Local ID_TUNEMAC_POLARITY_SET_T_580
+        Local ID_TUNEMAC_POLARITY_SET_T_581
+        Local ID_TUNEMAC_GAIN_CURVE_CHE_695
+        Local ID_TUNEMAC_A__GAIN_CURVE_696
+        Local ID_TUNEMAC_DO_YOU_WISH_TO_697
+        Local ID_TUNEMAC_IT_IS_RECOMMEN_699
+        Local ID_TUNEMAC_DO_YOU_WISH_TO_700
+        Local ID_TUNEMAC_GAIN_CURVE_CAL_738
+        Local ID_TUNEMAC_VALUES_FROM_A_884
+        Local ID_TUNEMAC_979
+        Local ID_TUNEMAC_GAINCURVE_REG_1073
+        Local ID_TUNEMAC_PLEASE_AUTOTUNE_1074
+        Local ID_TUNEMAC_INVALID_ABUNDANCE_1075
+        
+        ID_TUNEMAC_GAINCURVE_REG_323              =  17323
+        ID_TUNEMAC_LOADING_ATUNES_579             =  17579  
+        ID_TUNEMAC_POLARITY_SET_T_580             =  17580
+        ID_TUNEMAC_POLARITY_SET_T_581             =  17581
+        ID_TUNEMAC_GAIN_CURVE_CHE_695             =  17695 
+        ID_TUNEMAC_A__GAIN_CURVE_696              =  17696
+        ID_TUNEMAC_DO_YOU_WISH_TO_697             =  17697
+        ID_TUNEMAC_IT_IS_RECOMMEN_699             =  17699
+        ID_TUNEMAC_DO_YOU_WISH_TO_700             =  17700
+        ID_TUNEMAC_GAIN_CURVE_CAL_738             =  17738
+        ID_TUNEMAC_VALUES_FROM_A_884              =  17884
+        ID_TUNEMAC_979                            =  17979
+        ID_TUNEMAC_GAINCURVE_REG_1073             =  18073
+        ID_TUNEMAC_PLEASE_AUTOTUNE_1074           =  18074
+        ID_TUNEMAC_INVALID_ABUNDANCE_1075         =  18075
+        
+          ! Check for an existing calibration curve:
+            if (RegSize(GainCurve) < 0) then
+              if filestat(mode,_tunepath$ + "GainCurve.reg") = 1 then
+                Loadobj _tunepath$ + "GainCurve.reg",, GainCurve
+              else
+              ! GainCurve.reg has been deleted from this system
+                title$= ReadResource$("tunemac",ID_TUNEMAC_GAIN_CURVE_CHE_695)
+                line1$= ReadResource$("tunemac",ID_TUNEMAC_GAINCURVE_REG_323)
+                line2$= chr$(13) + chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_GAINCURVE_REG_1073)
+                    !"Please restore file or reload ChemStation software."
+                _button=alert(line1$ + line2$,3,title$)
+              
+                ! AtunePrint "GainCurve.reg has been deleted from this system."  ! Replace with Alert
+                ! return
+                stop
+              endif
+            endif
+        
+          ! Check polarity:
+            ChangePol = 0
+            MsParm IonPolarity,CurrPol
+            if CurrPol > 1 then
+              killit=Alert(ReadResource$("tunemac",ID_TUNEMAC_979),3,"Gain Calibration Curve")
+              stop
+            endif
+            
+            if BothPols = 1 then
+            !* Check for AtuneReg, if it doesn't exist, 
+            !* or it can't be loaded from disk, then exit this macro 
+               if RegSize(AtuneReg) = -1 then
+               !* Try loading the Atune register from disk
+                  if filestat(mode,_tunepath$ + "atune.reg") = 1 then
+                     Loadobj _tunepath$ + "atune.reg",, AtuneReg
+                  else
+                     title$= ReadResource$("tunemac",ID_TUNEMAC_GAIN_CURVE_CHE_695)
+                     str1$ = ReadResource$("tunemac",ID_TUNEMAC_VALUES_FROM_A_884)
+                     str2$ =  chr$(13) + chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_PLEASE_AUTOTUNE_1074)
+                        !"Please run autotune first."
+                     _button = Alert(str1$ + str2$,3,title$)
+                     stop  !* exit macro
+                  endif   !* if filestat
+                endif     !* if regsize
+            
+                if CurrPol = 1 then
+                ! Do positive first if testing both polarities
+                print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+                MSGetTuneFile _tunepath$+"atunes.tun",0,,1   !* Load positive polarity, standard scan mode
+                print ReadResource$("tunemac",ID_TUNEMAC_POLARITY_SET_T_580)
+                mstn_ChangePolarity 0,0
+                MSon
+                CurrPol = 0
+                ChangePol = 1
+              endif
+            endif
+        
+          ! Test this polarity:
+          if (RegSize(GainCurve) < 2) then
+            DoIt = 1                             ! Register needs initializing
+          else
+            if (Data (GainCurve[CurrPol+2], 0,1)=0) then
+              DoIt = 1                           ! Register needs initializing
+            else
+              DoIt = 0                           ! Register doesn't need initializing
+            endif
+          endif
+          if (DoIt = 1) then
+            ! There is no gain curve for this polarity
+            if auto = 1 then
+              msat_GainCurveReport 0,CurrPol   ! recalibrate but don't print a report
+              return
+            else ! if auto = 0
+               !* Check for AtuneReg, if it doesn't exist, 
+               !* or it can't be loaded from disk, then exit this macro 
+               if RegSize(AtuneReg) = -1 then
+                  !* Try loading the Atune register from disk
+                     if filestat(mode,_tunepath$ + "atune.reg") = 1 then
+                        Loadobj _tunepath$ + "atune.reg",, AtuneReg
+                     else
+                        title$= ReadResource$("tunemac",ID_TUNEMAC_GAIN_CURVE_CHE_695)
+                        str1$ = ReadResource$("tunemac",ID_TUNEMAC_VALUES_FROM_A_884)
+                        str2$ =  chr$(13) + chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_PLEASE_AUTOTUNE_1074)
+                                !"Please run autotune first."
+                        _button = Alert(str1$ + str2$,3,title$)
+                        stop  !* exit macro
+                     endif   !* if filestat
+                  endif     !* if regsize
+              
+              ! ask if user wants to create a gain curve
+                title$= ReadResource$("tunemac",ID_TUNEMAC_GAIN_CURVE_CHE_695)
+                line1$= ReadResource$("tunemac",ID_TUNEMAC_A__GAIN_CURVE_696)
+                line2$= chr$(13) + chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_DO_YOU_WISH_TO_697)
+                _button=alert(line1$ + line2$,4,title$)
+                
+                if _button = 1 then
+                  ! load tune file with current polarity
+                    print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+                    MSGetTuneFile _tunepath$+"atunes.tun",CurrPol,,1   !* Load current polarity, standard scan mode
+                    MSon       
+                    msat_GainCurveReport 1,CurrPol    ! Do the current polarity
+                  
+                  if (BothPols = 1) then          
+                    print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+                    MSGetTuneFile _tunepath$+"atunes.tun",1,,1   !* Load negative polarity, standard scan mode
+                    print ReadResource$("tunemac",ID_TUNEMAC_POLARITY_SET_T_581)
+                    mstn_ChangePolarity 1,0
+                    MSon
+                    msat_GainCurveReport 1,1     ! The second polarity will always be negative
+                    if ChangePol = 0 then
+                      ! Change back to positive mode
+                      print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+                      MSGetTuneFile _tunepath$+"atunes.tun",0,,1   !* Load positive polarity, standard scan mode
+                      print ReadResource$("tunemac",ID_TUNEMAC_POLARITY_SET_T_580)
+                      mstn_ChangePolarity 0,0
+                      MSon
+                      mstn_UpdateStatusBar
+                    endif
+                  endif
+                endif
+                return
+            endif  ! if auto = 1
+          else
+            ! Compare against the existing gain curve:
+            ! ret = msat_GetTestPoint(CurrPol)
+            if auto = 1 then                    ! only testing this polarity
+                ! Compare against the existing gain curve:
+                ret = msat_GetTestPoint(CurrPol)
+              if ret = 1 then                   ! recalibration is not necessary
+                return
+              else
+                msat_GainCurveReport 0,CurrPol  ! recalibrate but don't print a report
+                return
+              endif
+            else
+              !* Check for AtuneReg, if it doesn't exist, 
+              !* or it can't be loaded from disk, then exit this macro 
+                 if RegSize(AtuneReg) = -1 then
+                    !* Try loading the Atune register from disk
+                       if filestat(mode,_tunepath$ + "atune.reg") = 1 then
+                          Loadobj _tunepath$ + "atune.reg",, AtuneReg
+                       else
+                         title$= ReadResource$("tunemac",ID_TUNEMAC_GAIN_CURVE_CHE_695)
+                         str1$ = ReadResource$("tunemac",ID_TUNEMAC_VALUES_FROM_A_884)
+                         str2$ =  chr$(13) + chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_PLEASE_AUTOTUNE_1074)
+                                !"Please run autotune first."
+                         _button = Alert(str1$ + str2$,3,title$)
+                         stop  !* exit macro
+                    endif   !* if filestat
+                  endif     !* if regsize
+          
+              ! Compare against the existing gain curve:
+              ret = msat_GetTestPoint(CurrPol)
+              ! msat_GainCheckReport CurrPol+2       ! Print the Gain Check report
+              if ret = 0 then                       ! 02/21/06 CPL  Remove report, but leave Alert
+                ! ask if user wants to recalibrate
+                  title$= ReadResource$("tunemac",ID_TUNEMAC_GAIN_CURVE_CHE_695)
+                  !line1$= "The current abundance is outside the target abundance range."
+                  line1$= ReadResource$("tunemac",ID_TUNEMAC_INVALID_ABUNDANCE_1075)
+                  line2$= chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_IT_IS_RECOMMEN_699)
+                  line3$= chr$(13) + chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_DO_YOU_WISH_TO_700)
+                  _button=alert(line1$ + line2$ + line3$,4,title$)
+                  
+                  if _button = 1 then        
+                    ! load tune file with current polarity
+                    print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+                    MSGetTuneFile _tunepath$+"atunes.tun",CurrPol,,1   !* Load current polarity, standard scan mode
+                    MSon       
+                    msat_GainCurveReport 1,CurrPol !* Recalibrate and print a report
+                  endif
+              else     
+                ! inform user that recalibration is not necessary
+                  title$= ReadResource$("tunemac",ID_TUNEMAC_GAIN_CURVE_CHE_695)
+                  line1$= ReadResource$("tunemac",ID_TUNEMAC_GAIN_CURVE_CAL_738)
+                  _button=alert(line1$,3,title$)
+              endif  !* if ret = 0
+              
+              if (BothPols = 1) then
+                ! Do the second polarity (negative)
+                print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+                MSGetTuneFile _tunepath$+"atunes.tun",1,,1   !* Load negative polarity, standard scan mode
+                print ReadResource$("tunemac",ID_TUNEMAC_POLARITY_SET_T_581)
+                mstn_ChangePolarity 1,0
+                MSon
+                if (TabVal(GainCurve[1], CurveInfo,2,"Ve6")=0) then
+                  msat_GainCurveReport 1,1
+                else 
+                  ret = msat_GetTestPoint(1)
+                ! msat_GainCheckReport 3  ! 02/21/06 CPL  Remove report, but leave Alert
+                  if ret = 0 then
+                    ! ask if user wants to recalibrate
+                      title$= ReadResource$("tunemac",ID_TUNEMAC_GAIN_CURVE_CHE_695)
+                      !line1$= "The current abundance is outside the target abundance range."
+                      line1$= ReadResource$("tunemac",ID_TUNEMAC_INVALID_ABUNDANCE_1075)
+                      line2$= chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_IT_IS_RECOMMEN_699)
+                      line3$= chr$(13) + chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_DO_YOU_WISH_TO_700)
+                      _button=alert(line1$ + line2$ + line3$,4,title$)
+                      
+                      if _button = 1 then
+                        ! load tune file with current polarity
+                        print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+                        MSGetTuneFile _tunepath$+"atunes.tun",1,,1   !* Load negative polarity, standard scan mode
+                        MSon       
+                        msat_GainCurveReport 1,1            
+                        
+                      endif
+                      if ChangePol = 0 then
+                        ! Change back to positive mode
+                        print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+                        MSGetTuneFile _tunepath$+"atunes.tun",0,,1   !* Load positive polarity, standard scan mode
+                        print ReadResource$("tunemac",ID_TUNEMAC_POLARITY_SET_T_580)
+                        mstn_ChangePolarity 0,0
+                        MSon
+                        mstn_UpdateStatusBar
+                      endif
+                  endif  ! if ret = 0
+                endif ! if (ObjHdrVal(GainCurve[3],"Emv1")=99)
+              endif  ! if (BothPols = 1)
+            endif  ! if auto = 1
+          endif !* if DoIt = 1
+        
+          if (BothPols = 1) and (ChangePol = 0) 
+            ! Change back to positive mode
+            print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+            MSGetTuneFile _tunepath$+"atunes.tun",0,,1   !* Load positive polarity, standard scan mode
+            print ReadResource$("tunemac",ID_TUNEMAC_POLARITY_SET_T_580)
+            mstn_ChangePolarity 0,0
+            MSon
+          endif
+          mstn_UpdateStatusBar
+        
+          return
+        
+        endmacro  !* msat_CheckGainCurve
+        
+        ! =======================================================================================
+        name msat_GainCurveReport
+          parameter PrintIt default 1       ! 1 = Gain curve results sent to the printer.
+          parameter IonPolarity default 0   ! 0=pos, 1=neg
+        ! Description:
+        !     This function is the main routine to recalibrate the Gain Curve.
+        ! Revision History:
+        ! 02/04/00  YD  First created.
+        ! 04/04/00  YD  Added support for Sprite1C (G1946C)
+        ! 04/07/00  YD  Removed the hard coded mass range for Sprite1C. Use MSInstrParm() instead.
+        ! 04/22/04  PHC Removed user-input of mass (not desired) and check for open calvalve (not needed).
+        ! =======================================================================================
+        local button,thisReg,Ret
+        Local  ID_TUNEMAC_INITIALIZATION_701
+        Local  ID_TUNEMAC_GAIN_CURVE_CAL_703
+          
+        ID_TUNEMAC_INITIALIZATION_701                      =  17701  
+        ID_TUNEMAC_GAIN_CURVE_CAL_703                      =  17703  
+        
+          ! Re-create the data object if there is old data in it:
+            thisreg = RegSize(GainCurve)
+            if (thisReg > 2) then
+              if (Data(GainCurve[IonPolarity+2], 0, 2) = 1600) then  ! Assumes 2nd EMV of curve is 1600 volts
+                nPoints = 5  ! Set the number of points in the Gain Curve to 5
+                NewObj GainCurve[IonPolarity+2], 2, 1, nPoints
+                if (IonPolarity = 0) then
+                  SetObjHdrText GainCurve[IonPolarity+2], "Title", "Positive Gain Curve"
+                else
+                  SetObjHdrText GainCurve[IonPolarity+2], "Title", "Negative Gain Curve"
+                endif
+                DelObj GainCurve[IonPolarity+3]               ! Get rid of the old object
+              endif
+            endif
+        
+          ! Create and initialize the Gain Curve Register, if necessary:
+            Ret = 0
+            if thisReg < 2 then
+              Ret = msat_InitGainCurveReg()
+              if Ret = 0
+                button = Alert(ReadResource$("tunemac",ID_TUNEMAC_INITIALIZATION_701), 3, "Gain Curve Report")
+                return
+              endif
+            endif
+        
+          ! Run the Gain Curve generation routine:
+           Ret = msat_gainramp(IonPolarity)
+            if Ret = 0
+              button = Alert(ReadResource$("tunemac",ID_TUNEMAC_GAIN_CURVE_CAL_703), 3, "Gain Curve Report")
+              stop
+            endif
+        
+          ! Annotate the Gain Curve register:
+            msat_AnnotGainCurve IonPolarity
+        
+          ! Save the gain curve:
+            saveobj GainCurve,_TunePath$+"GainCurve.reg",new
+        
+          ! Display the Gain-EMV curve on the screen, if not called by autotune:
+            if PrintIt = 1 then
+              msat_DispGainCurve PrintIt,,IonPolarity
+            endif
+            on error
+        
+        endmacro  !* msat_GainCurveReport
+        
+        ! ===================================================================================
+        name msat_InitGainCurveReg
+        ! Function Description:
+        !         This routine creates and initializes the Gain Curve register. The
+        !         existing old GainCurve register, if there is any, will be removed.
+        ! Function Return:          1 if sucessful; 0 otherwise.
+        ! Revision History:
+        ! 02/04/00 YD  First created.
+        ! 04/22/04 PHC Updated to accept an additional point (5 total for each parameter).
+        ! ==================================================================================
+        
+          local nPoints           ! number of points for the gain curve
+          local Pos               ! for position index
+          local SwRev$            ! The software revision info
+          local Isit_Offline      ! offline or online
+          local SCRev$            ! Smart Card revision number
+          local MSSerialNo$       ! MS serial number
+          local AmpID$            ! Log Amp ID info
+          local I_EM$
+          local IonSrc$           ! Installed source
+          local IonMode$          ! Ionization mode
+        
+           nPoints = 5  ! Set the number of points in the Gain Curve to 5
+        
+          ! Get the software revision number
+            Pos = instr(_Version$, "Copyright")
+            SWRev$ = _Version$[1:Pos-1]   
+            Isit_Offline = _Offline                ! 0=online session, 1=offline session
+        
+          ! Get serial number, SmartCard rev and amp ID
+            if Isit_Offline = 0 then
+              SCTimeOut = 10
+              MSSCQuery "*idn?", SCRev$
+              if Isit_Offline = 0 then   
+                MSSerialNo$ = SubString$(SCRev$, 3, , ",")
+                SCRev$ = SubString$(SCRev$, 4, , ",")
+                MSSCQuery "config:abund:amp?", AmpID$  ! Get log amp information
+                MSSCQuery "sys:emf:csts? emul_counts", I_EM$
+              endif
+              remove SCTimeOut
+           !   on error err = 0
+            endif 
+        
+            if Isit_Offline = 1 then
+              SCRev$ = "Offline"
+              AmpID$ = "Offline"
+              I_EM$  = "Offline"
+            endif
+        
+          ! Get the ionization information:
+            IonSrc$ = MSGetIonSrc$()
+            MSGetMode IonMode$
+        
+          ! General information:
+            SetObjHdrText GainCurve[1], "Instrument", _InstName$
+            SetObjHdrText GainCurve[1], "SerialNumber", MSSerialNo$
+            SetObjHdrText GainCurve[1], "SoftwareRev", SWRev$
+            SetObjHdrText GainCurve[1], "SmartCardRev", SCRev$
+            SetObjHdrText GainCurve[1], "LogAmpID", AmpID$
+        
+          ! Create table for general info from pos/neg gain curves:
+            NewTab GainCurve[1], "CurveInfo"
+            NewColText GainCurve[1], CurveInfo, "Polarity"
+            NewColVal GainCurve[1], CurveInfo, "Mass"
+            NewColVal GainCurve[1], CurveInfo, "Ve6"
+            NewColVal GainCurve[1], CurveInfo, "Offset"
+            NewColVal GainCurve[1], CurveInfo, "Slope"
+            NewColText GainCurve[1], CurveInfo, "IonSrc"
+            NewColText GainCurve[1], CurveInfo, "IonMode"
+            NewColText GainCurve[1], CurveInfo, "DateTime"
+            InsTabRow  GainCurve[1], CurveInfo, 1:2
+              SetTabText GainCurve[1], "CurveInfo", 1, "Polarity","Positive"
+              SetTabText GainCurve[1], "CurveInfo", 2, "Polarity","Negative"
+        
+          ! Create GainCurve[2] for the Positive Gain Curve:
+            NewObj GainCurve[2], 2, 2, nPoints
+            SetObjHdrText GainCurve[2], "Title", "Positive Gain Curve"
+        
+          ! Create GainCurve[3] for the Negative Gain Curve:
+            NewObj GainCurve[3], 2, 2, nPoints
+            SetObjHdrText GainCurve[3], "Title", "Negative Gain Curve"
+        
+          return 1 
+        
+        endmacro  !* msat_InitGainCurveReg
+        
+        ! =========================================================================================
+        name msat_gainramp
+        parameter IonPolarity default 0
+        ! Revision History:
+        ! 01/25/00 BR  First created.
+        ! 02/07/00 YD  Added error checking and handling stuff.
+        ! 02/09/00 YD  Added code to restore the original EMV
+        ! 04/22/04 PHC Changed to create true gain-based curve.
+        ! 02/23/06 CPL Added tune target abundances. 
+        ! 10/16/09 CPL Extend maximum EMV to 2800V for aging CDEMs & use msProfileAvg command
+        ! =========================================================================================
+        local c$,v0,m2mass,j,n,delta,npts,GainMass,button,thisVolt,thisgain,voltstep,i,Ret
+        local v_1,CurrIn_1,Gain_1,Mean_1,v_2,CurrIn_2,Gain_2,Mean_2,v_3,CurrIn_3,Gain_3,Mean_3
+        local v_4,CurrIn_4,Gain_4,Mean_4,v_5,CurrIn_5,Gain_5,Mean_5
+        Local iavg,sx,sx2,sy,sxy,m,b,ve6,SCslope$,SCintercept$,a1$,b1$,a2$,b2$
+          
+        Local  ID_TUNEMAC_CALIBRATING_MA_562
+        Local  ID_TUNEMAC_INSUFFICIENT_S_704
+        Local  ID_TUNEMAC_NO_SIGNAL_FOUN_705
+        Local  ID_TUNEMAC_NOT_ENOUGH_SIG_706
+        Local  ID_TUNEMAC_WARNING__THE_M_707
+        Local  ID_TUNEMAC_GAIN_CALIBRATI_708
+        Local  ID_TUNEMAC_SLOPE_OF_LN_LN_709
+        Local  ID_TUNEMAC_WRITING_VALUES_316
+        Local  ID_TUNEMAC_THIS_WILL_TAKE_317
+          
+        ID_TUNEMAC_CALIBRATING_MA_562                      =  17562
+        ID_TUNEMAC_INSUFFICIENT_S_704                      =  17704  
+        ID_TUNEMAC_NO_SIGNAL_FOUN_705                      =  17705  
+        ID_TUNEMAC_NOT_ENOUGH_SIG_706                      =  17706  
+        ID_TUNEMAC_WARNING__THE_M_707                      =  17707  
+        ID_TUNEMAC_GAIN_CALIBRATI_708                      =  17708 
+        ID_TUNEMAC_SLOPE_OF_LN_LN_709                      =  17709 
+        ID_TUNEMAC_WRITING_VALUES_316                      =  17316
+        ID_TUNEMAC_THIS_WILL_TAKE_317                      =  17317   
+        
+        ! Capture the original EMV value
+          msScquery ":msc:parm? emul", c$
+          v0 = val(c$)
+          if IonPolarity = 0 then
+            SetObjHdrVal GainCurve[1], "InitialPosEMV", v0    ! Store current EMV in GainCurve reg
+          else
+            SetObjHdrVal GainCurve[1], "InitialNegEMV", v0    ! Store current EMV in GainCurve reg
+          endif
+        
+        ! on error return 0
+          msat_AddAbortHandler "msat_GainCurveAbort " + val$(v0)
+        
+        ! Set mass to use:
+          msat_SaveMasses
+          MSMassValue 2,m2mass        ! Remember what mass #2 is
+          for j = 1 to 6
+            if j = 1 then
+              MSMassValue j,,m2mass,,1      ! Set mass #1 to m2mass and select
+            else
+              MSMassValue j,,,,0      ! Deselect all other masses
+            endif
+          next j
+        
+        ! Initialize params
+          n=8
+          delta=8
+          npts=3000
+          MSUseEmv 1                  ! Use EMV
+          MSParm emv,,v0              ! Set to current value
+          msgdisplay on
+        
+        ! Verify signal is acceptable:
+          msat_CalSwitch 1
+          print MSProfileAvg(2,1,0)
+          if peakm_z1 = -1 then
+            GainMass=BasePeak1+1         ! Use basepeak isotope instead (global variable)
+          else
+            GainMass=peakm_z1+1          ! Use ms2mass+1 isotope (global variable)
+          endif
+         print GainMass
+       ! MSCapture GainMass,1000      ! Initial setting may be too low.  
+         ! if ((CapMean/CapStdDev) < 0.30) then
+           ! button = Alert(ReadResource$("tunemac",ID_TUNEMAC_INSUFFICIENT_S_704), 3, "Gain Curve Report")
+           ! return 0
+         ! endif
+        
+       ! Get gains for each point:
+         thisVolt = 2500
+         voltstep=300
+         for i=1 to 5
+           Ret = msat_gain(GainMass,thisVolt,n,delta,npts,,0)
+            if (Ret = 0)
+              return 0
+            endif
+           evaluate "v_"+val$(i)+"="+val$(thisVolt)
+           evaluate "CurrIn_"+val$(i)+"="+val$(iin_ave*1e15)
+           evaluate "Gain_"+val$(i)+"="+val$(i_gain)
+           evaluate "Mean_"+val$(i)+"="+val$(cmean)
+           thisVolt=thisVolt-voltstep			! Go high-to-low
+         next i
+        
+       ! Do curve fitting of ln/ln data:
+       ! Find avg current
+           iavg = 0
+           iavg = msat_FindAvgCurrent(CurrIn_1, CurrIn_2, CurrIn_3, CurrIn_4, CurrIn_5)
+           if iavg=0
+             button = Alert(ReadResource$("tunemac",ID_TUNEMAC_NO_SIGNAL_FOUN_705), 3, "Gain Curve Report")
+             return 0
+           endif
+           if (Gain_1=0) AND (Gain_2=0) AND (Gain_3=0) AND (Gain_4=0) AND (Gain_5=0)
+             button = Alert(ReadResource$("tunemac",ID_TUNEMAC_NO_SIGNAL_FOUN_705), 3, "Gain Curve Report")
+             return 0
+           endif
+        
+       ! Normalize gains to average current:
+           Gain_1=CurrIn_1/iavg*Gain_1
+           Gain_2=CurrIn_2/iavg*Gain_2               ! To account for variances in ion current
+           Gain_3=CurrIn_3/iavg*Gain_3
+           Gain_4=CurrIn_4/iavg*Gain_4
+           Gain_5=CurrIn_5/iavg*Gain_5
+        
+       ! Create sums:
+           n = msat_GetNumberOfGE1s(Gain_1, Gain_2, Gain_3, Gain_4, Gain_5)
+           if (n < 2)
+             button = Alert(ReadResource$("tunemac",ID_TUNEMAC_NOT_ENOUGH_SIG_706), 3, "Gain Curve Report")
+             return 0
+           endif
+           sx = 0; sx2 = 0; sy = 0;  sxy = 0        ! Initialize the numbers
+           for j=1 to 5
+             evaluate "thisvolt=v_"+val$(j)
+             evaluate "thisgain=gain_"+val$(j)
+             if (thisvolt > 1) and (thisgain > 1) then
+               sx = sx+ln(thisvolt)
+               sx2 = sx2+sqr(ln(thisvolt))
+               sy= sy + ln(thisgain/1e6)
+               sxy = sxy+(ln(thisvolt) * ln(thisgain/1e6))
+             endif
+           next j
+        
+       ! Solve for m and b in y=mx+b:
+           delta=n*sx2-sqr(sx)
+           if delta=0
+             button = Alert(ReadResource$("tunemac",ID_TUNEMAC_NO_SIGNAL_FOUN_705), 3, "Gain Curve Report")
+             return 0
+           endif
+           m=(n*sxy-sx*sy)/delta    ! Slope
+           b=(sx2*sy-sx*sxy)/delta  ! Intercept
+        
+       ! Create the table of extrapolated values:
+         ! Set emv for gain of 1e6:
+           ! ln(g)=m*ln(v)+b
+             ve6=exp((ln(1)-b)/m)
+        
+       ! Set the flag for aging multiplier:
+           if ve6 >= 2800 then
+             ve6 = 2800
+             GainMsg$ = ReadResource$("tunemac",ID_TUNEMAC_WARNING__THE_M_707)
+           else
+             GainMsg$ = ReadResource$("tunemac",ID_TUNEMAC_GAIN_CALIBRATI_708)
+           endif
+        
+           msat_UpdateGainCurveReg IonPolarity,GainMass,ve6,m,b,v_1,Gain_1,v_2,Gain_2,v_3,Gain_3,v_4,Gain_4,v_5,Gain_5
+        
+       ! Set the new slope and intercept values in SmartCard NVRAM:
+           if IonPolarity = 0 then
+             SCslope$ = "emvgain0"
+             SCintercept$ = "emvgain1"
+           else
+             SCslope$ = "emvgain0n"
+             SCintercept$ = "emvgain1n"
+           endif
+           print ReadResource$("tunemac",ID_TUNEMAC_WRITING_VALUES_316) + \
+                 ReadResource$("tunemac",ID_TUNEMAC_THIS_WILL_TAKE_317) 
+           a1$ = """msc:parm:pset "+SCslope$+","""+" + val$(m)"
+             evaluate "MSSCWrite " + a1$                               ! Slope
+           b1$ = """msc:parm:pset "+SCintercept$+","""+" + val$(b)"
+             evaluate "MSSCWrite " + b1$                               ! Intercept
+             ! write to memory as well
+           a2$ = """msc:parm "+SCslope$+","""+" + val$(m)"
+             evaluate "MSSCWrite " + a2$
+           b2$ = """msc:parm "+SCintercept$+","""+" + val$(b)"
+             evaluate "MSSCWrite " + b2$
+                
+           If RegSize(SaveMass) > -1 then      ! see msat_WidthsCleanup macro for cleanup ideas...
+             msat_RestoreMasses             ! restore original tune masses
+             DelReg SaveMass
+           EndIf
+                                     
+           If (MSD_SL = 1) or (MSD_HT = 1) then
+           ! CPL 06/26/09 start
+             !msat_TargetAb_D msat_mode,IonPolarity,2  ! meets abundance targets for SL models
+              msat_TargetAb_D IonPolarity  ! meets abundance targets for SL models
+           Else
+             !msat_TargetAb msat_mode,IonPolarity,2    ! meets abundance targets for all others
+              msat_TargetAb IonPolarity    ! meets abundance targets for all others
+           Endif
+           ! CPL 06/26/09 end        
+             ! msparm gain,,1  ! Ensure current Gain is set to "1"  CPL 060327 Gain set in msat_TargetAb/D
+                
+           print ReadResource$("tunemac",ID_TUNEMAC_CALIBRATING_MA_562)
+           MSAxis
+           print ReadResource$("tunemac",ID_TUNEMAC_SLOPE_OF_LN_LN_709),m,", offset is ",b,", EMV set to ",ve6
+        
+           msat_RemoveAbortHandler "msat_GainCurveAbort"
+          return 1
+        
+        endmacro  !* msat_gainramp
+        
+        ! ==========================================================================
+        name msat_GainCurveAbort
+        parameter initEM default 0
+        ! This function is the abort handler for gain curve to properly handle the
+        ! abort action during the generation of gain curve.
+        ! 09/12/01 JZ  First created 
+        ! ==========================================================================
+        Local text$, title$, ret
+        Local  ID_TUNEMAC_WARNING__GENER_712
+        Local  ID_TUNEMAC_GENERATE_GAIN_713
+          
+        ID_TUNEMAC_WARNING__GENER_712                      =  17712  
+        ID_TUNEMAC_GENERATE_GAIN_713                       =  17713 
+        
+          text$ = ReadResource$("tunemac",ID_TUNEMAC_WARNING__GENER_712)
+          title$ = ReadResource$("tunemac",ID_TUNEMAC_GENERATE_GAIN_713)
+          ret = Alert(text$, 2, title$)
+          MSUseEMV 1
+          !MSParm "emv",, initEM
+          MSParm EMV,, initEM  !* Resets EMV to initial value 
+          MSUseEMV 0
+          msat_RemoveAbortHandler "msat_GainCurveAbort"
+        
+        endmacro  !* msat_GainCurveAbort
+        
+        ! =========================================================================================
+        name msat_gain
+        parameter mass default 623.03,emv default 1200,ncap default 8,spread_tol default 8,cap_npts default 3000,run_baseline default 1,reset_emv_mode default 1
+        ! Revision History:
+        ! 01/25/00 BR  First created.
+        ! 02/07/00 YD  Added error checking and handling stuff.
+        ! 02/09/00 YD  Added system noise checking
+        ! 04/22/04 PHC Updated for new gain-based curve.
+        ! 07/26/05 CPL Modified to support G61x0A log amp
+        !===============================================================================
+        ! Globals: cmean,iin_ave,i_gain
+          local NoIonSig,SysNoise,bw,ff,amp_scale,old_emv,per$,noise_avg,noise_rms
+          local csd,n,j,button,rel_spread,iout_ave,iout_rms
+          Local  ID_TUNEMAC_NO_SIGNAL_FOUN_705
+          Local  ID_TUNEMAC_NOISE_AVG_714
+          Local  ID_TUNEMAC_EMV____MASS_716
+          Local  ID_TUNEMAC_NO_ION_SIGNAL_719
+          Local  ID_TUNEMAC_SYSTEM_NOISE_W_720
+          
+          ID_TUNEMAC_NO_SIGNAL_FOUN_705                      =  17705
+          ID_TUNEMAC_NOISE_AVG_714                           =  17714     
+          ID_TUNEMAC_EMV____MASS_716                         =  17716  
+          ID_TUNEMAC_NO_ION_SIGNAL_719                       =  17719  
+          ID_TUNEMAC_SYSTEM_NOISE_W_720                      =  17720  
+          
+         ! on error return 0
+          NoIonSig = 0
+          SysNoise = 0
+        
+          ! Initialize:
+            msgclear
+            ! MSUseEmv 1
+            msgdisplay 0
+            if msmodeloptions < 14 then
+                bw=4.0e+3   !* signal bandwidth for Sprite/7up log amp
+            else
+                bw=10.0e+3  !* signal bandwidth for new Lassen/5975 log amp
+            endif
+           
+            bw=bw*1.115          !* noise to signal bw ratio for 2 pole butterworth
+            ff=2                 !* theoretical value...verified from pulse counting
+            amp_scale=3.05e-12   !* 20uA=6.5e6 counts
+            MSBufSize ,65520
+            MSParm emv,old_emv
+            MSSCQuery "cap:per?", per$
+            MSSCWrite "cap:per 0.000025" !* sets capture period to 25usec
+        
+          ! Get baseline noise:
+            if run_baseline=1 then
+              msuseemv 1
+              MSParm emv,,0
+              MSOn
+              MSCapture 50, 1000
+              MSCapture 50, 10000
+              noise_avg=CapMean
+              noise_rms=CapStdDev
+              print ReadResource$("tunemac",ID_TUNEMAC_NOISE_AVG_714),noise_avg,", noise rms=",noise_rms
+            endif
+        
+          ! Get capture values of signal:
+            MSParm emv,,emv
+            MSon
+            MSCapture mass, 1000
+            cmean=0 !cumulative capture mean
+            csd=0   !cumulative capture variance
+            n=0     !how many successful measurements
+            j=0     !how many total measurements
+            while n<ncap and j<ncap*3 do
+              MSCapture mass, cap_npts
+              if capstddev = 0
+                button = Alert(ReadResource$("tunemac",ID_TUNEMAC_NO_SIGNAL_FOUN_705), 3, "Gain Curve Report")
+                return 0
+              endif
+              rel_spread=(capmax-capmin)/capstddev    !spread of data in standard deviations
+              if rel_spread<=spread_tol then          !if spread is acceptable then use it
+                n=n+1
+                cmean=cmean+capmean
+                csd=csd+sqr(capstddev)
+              endif
+              j=j+1
+              print mass,": ",n,"/",j,", rel spread=",rel_spread,"avg=",capmean,", sd=",capstddev,", max=",capmax,", min=",capmin
+            endwhile
+            if n>0 then
+              cmean=cmean/n
+              csd=csd/n
+              csd=sqrt(csd)
+        
+              ! Calculate current and gain
+                iout_ave = amp_scale * (cmean - noise_avg)      ! Average output current
+        
+              if capstddev > noise_rms and iout_ave > 0 then    ! If output noise > baseline noise
+                iout_rms = amp_scale * sqrt(csd * csd - noise_rms * noise_rms)  ! output noise - baseline noise
+        
+                ! The input current (current =  charge of the noise * 2 *
+                ! bandwidth * (N^2/(sqrt(N))^2, remembering that iout_rms= sqrt(N)
+                if iout_rms > 0 then
+                  if (iout_rms*iout_rms)=0        !* Check for divide by zero
+                    button = Alert(ReadResource$("tunemac",ID_TUNEMAC_NO_SIGNAL_FOUN_705), 3, "Gain Curve Report")		
+                    return 0
+                  endif
+                  iin_ave = 1.6e-19*ff*bw*(iout_ave*iout_ave)/(iout_rms * iout_rms)   ! The input current
+                else
+                  iin_ave=0
+                endif
+                if iin_ave > 0 then
+                  i_gain = iout_ave/iin_ave          ! The gain
+                else
+                  i_gain=-9999
+                  NoIonSig = 1
+                endif
+              else
+                iout_rms=0
+                i_gain=-999
+                iin_ave=0
+                NoIonSig = 1
+              endif
+            else
+              iout_ave=0
+              iout_rms=0
+              i_gain=-99
+              iin_ave=0
+              SysNoise = 1
+            endif
+        
+          ! Clean up
+            msgdisplay 1
+            MSSCWrite "cap:per " + per$
+            MSParm emv,,old_emv
+            MSon
+            if reset_emv_mode=1 then
+              MSUseEmv 0
+            endif
+            print using ReadResource$("tunemac",ID_TUNEMAC_EMV____MASS_716),emv,mass,n,j,Sprintf$(iin_ave,"Iin=%6.2e"),Sprintf$(i_gain,"Gain=%6.2e")
+        
+            if (NoIonSig <> 0)
+              button = Alert(ReadResource$("tunemac",ID_TUNEMAC_NO_ION_SIGNAL_719), 3, "Gain Curve Report")
+              return 0
+            endif
+            if (SysNoise <> 0)
+              button = Alert(ReadResource$("tunemac",ID_TUNEMAC_SYSTEM_NOISE_W_720), 3, "Gain Curve Report")
+              return 0
+            endif
+        
+          return 1
+        
+        endmacro  !* msat_gain
+        
+        ! ==============================================================================
+        name msat_FindAvgCurrent
+          parameter i1, i2, i3, i4, i5
+        ! Function Description:
+        !     Given the 5 current data (from the msat_gainramp routine), this routine
+        !     returns the average of the these data. 
+        !     Note: All data that <= 0 will not count.
+        ! Function Returns:
+        !     The average current (excludes the given current data that <= 0).
+        ! Revision History:
+        ! 02/07/00 YD  First created.
+        ! 04/22/04 PHC Updated to accept an additional point (5 total).
+        ! ==============================================================================
+          local Total,CurrAvg,j,thiscurr
+        
+          ! Count the total of data that are > 0:
+            Total = 0
+            for j=1 to 5
+              evaluate "thiscurr=i"+val$(j)
+              if thiscurr > 1 then
+                Total = Total+1
+              endif
+            next j
+        
+          ! Next, get the average among the given data
+            CurrAvg = 0
+            if Total > 0
+              CurrAvg=(i1+i2+i3+i4+i5)/Total
+            endif
+        
+          return CurrAvg
+        
+        endmacro  !* msat_FindAvgCurrent
+        
+        ! ==============================================================================
+        name msat_GetNumberOfGE1s
+          parameter g1, g2, g3, g4, g5
+        ! Function Description:
+        !     Given the 5 gain data (from the msat_gainramp routine), this routine
+        !     returns total number of >= 1s among the 5 passed-in parameters (g1-g5).
+        ! Function Returns:
+        !     The total number of the given gain data that are >= 1.
+        ! Revision History:
+        ! 02/07/00 YD  First created.
+        ! 04/22/04 PHC Updated to accept an additional point (5 total).
+        ! ==============================================================================
+          local Total,j,thisgain
+        
+          ! Count the total of data that are > 0:
+            Total = 0
+            for j=1 to 5
+              evaluate "thisgain=g"+val$(j)
+              if thisgain > 1 then
+                Total = Total+1
+              endif
+            next j
+        
+          return Total
+        
+        endmacro  !* msat_GetNumberOfGE1s
+            
+        ! ===================================================================================
+        name msat_UpdateGainCurveReg
+          parameter ThisPol                     ! the polarity to update
+          parameter dMZ default 623.03          ! the mass
+          parameter ve6                         ! EMV at gain = 1e6
+          parameter Slope                       ! the slope value in the gain-emv formula
+          parameter Offset                      ! the offset value in the gain-emv formula
+          parameter Emv1,Gain1                  ! the emv and gain for the 1st point
+          parameter Emv2,Gain2                  ! the emv and gain for the 2nd point
+          parameter Emv3,Gain3                  ! the emv and gain for the 3rd point
+          parameter Emv4,Gain4                  ! the emv and gain for the 4th point
+          parameter Emv5,Gain5                  ! the emv and gain for the 5th point
+        ! Function Description:
+        !         This routine updates the Gain Curve register with the information provided
+        !         by the msat_gainramp routine, such as emv, gain, slope, offset info.
+        ! Revision History:
+        ! 02/04/00 YD  First created.
+        ! 02/08/00 YD  Added HED info
+        ! 02/09/00 YD  Changed the gain formular string
+        ! 04/22/04 PHC Updated for new gain-based curve.
+        ! ==================================================================================
+        local GainRegNum,PolRow,IonSrc$,IonMode$
+        
+          if ThisPol = 0 then
+            GainRegNum = 2        ! Positive gain curve
+            PolRow = 1
+          else
+            GainRegNum = 3        ! Negative gain curve
+            PolRow = 2
+          endif
+        
+          ! Update general curve info:
+            IonSrc$ = MSGetIonSrc$()
+            MSGetMode IonMode$
+            SetTabVal GainCurve[1], "CurveInfo", PolRow, "Mass",dMZ
+            SetTabVal GainCurve[1], "CurveInfo", PolRow, "Ve6",ve6
+            SetTabVal GainCurve[1], "CurveInfo", PolRow, "Offset",Offset
+            SetTabVal GainCurve[1], "CurveInfo", PolRow, "Slope",Slope
+            SetTabText GainCurve[1], "CurveInfo", PolRow, "IonSrc",IonSrc$
+            SetTabText GainCurve[1], "CurveInfo", PolRow, "IonMode",IonMode$
+            SetTabText GainCurve[1], "CurveInfo", PolRow, "DateTime",Date$(1) + " " + Time$(1)
+        
+          ! Update curve data points:   (Input them low-to-high, so curve is displayed correctly)
+            SetData GainCurve[GainRegNum], 0, 1, Emv5
+            SetData GainCurve[GainRegNum], 1, 1, Gain5/100000
+            SetData GainCurve[GainRegNum], 0, 2, Emv4
+            SetData GainCurve[GainRegNum], 1, 2, Gain4/100000
+            SetData GainCurve[GainRegNum], 0, 3, Emv3
+            SetData GainCurve[GainRegNum], 1, 3, Gain3/100000
+            SetData GainCurve[GainRegNum], 0, 4, Emv2
+            SetData GainCurve[GainRegNum], 1, 4, Gain2/100000
+            SetData GainCurve[GainRegNum], 0, 5, Emv1
+            SetData GainCurve[GainRegNum], 1, 5, Gain1/100000
+        
+          ! Set the Maximum Gain header item:
+            if ThisPol = 0 then
+              SetObjHdrVal GainCurve[1], PosGainMax, GetYMax(Gain1/100000)
+            else
+              SetObjHdrVal GainCurve[1], NegGainMax, GetYMax(Gain1/100000)
+            endif
+        
+        endmacro  !* msat_UpdateGainCurveReg
+        
+        ! ============================================================================
+        name msat_AnnotGainCurve
+          parameter IonPolarity              ! the polarity to annotate
+        ! Function Description:
+        !         This routine sets all annotations, lines and markers for the gain
+        !         data blocks.
+        ! Revision History:
+        ! 02/07/00 YD  First created.
+        ! 02/09/00 YD  Added an average Ion Current cross hair line.
+        !              Also, added Gain=1000000 crosshair.
+        ! 04/22/04 PHC Updated for new gain-based curve, removed current-emv curve.
+        ! ============================================================================
+        local GainRegNum,i,AnnotIndex,Annot$,EMVmin,EMVmax
+        local numcols,thisEMV,thisGain,EMV_e6,ThisPolYMax
+        Local  ID_TUNEMAC_ANNOTGAINCURVE_721
+          
+        ID_TUNEMAC_ANNOTGAINCURVE_721                      =  17721
+        
+        
+          if IonPolarity = 0 then
+            GainRegNum = 2                   ! Positive polarity
+          else
+            GainRegNum = 3                   ! Negative polarity
+          endif
+        
+          on error goto AnnotGainCurveErr
+          ClearWin
+          WinUpdate off
+        
+          ! Set the X axis units:
+            for i = 1 to 3
+              SetDataText GainCurve[i],   0, "AxisTitle", "EM Volts"
+            next i
+          ! Set the Y axis units:
+            SetDataText GainCurve[1], 1, "AxisTitle", "Counts"
+            SetDataText GainCurve[GainRegNum], 1, "AxisTitle", "Gain(x100K)"
+        
+          ! Annotate the Gain-EMV curve:
+            ! Add type of curve to title
+              AnnotIndex = NewTextAnn(GainCurve[GainRegNum], "Gain Curve",,,,1)
+        
+          ! Set the Marker, LineStyle, and Y-axis precision:
+            SetDataVal GainCurve[GainRegNum], 1, "LineStyle", 5
+            SetDataVal GainCurve[GainRegNum], 1, "Marker", 1
+            SetDataVal GainCurve[GainRegNum], 1, "FieldWidth", 8
+            SetDataVal GainCurve[GainRegNum], 1, "Precision", 2
+        
+          ! Add curve fit as a polyline annotation:
+            AnnotIndex = NewPolyAnn(GainCurve[GainRegNum], 0)
+            EMVmin = ObjHdrVal(GainCurve[1], "EMVmin")
+            EMVmax = ObjHdrVal(GainCurve[1], "EMVmax")
+        
+            numcols = DataCols(GainCurve[GainRegNum])
+            for i=1 to numcols
+              thisEMV = Data(GainCurve[GainRegNum],0,i)
+              thisGain = Data(GainCurve[GainRegNum],1,i)
+              SetPolyAnnVal GainCurve[GainRegNum], AnnotIndex, i, thisEMV, thisGain
+            next i
+        
+          ! Add Gain=1 annotations:
+            AnnotIndex = NewTextAnn(GainCurve[GainRegNum], "Gain = 1e6", 1050, 1000000/100000, 4, 8, 8, , 0, , 3, "Arial")   
+        
+          ! Add EMV value for Gain=1 annotation:
+            EMV_e6 = Trunc(TabVal(GainCurve[1], CurveInfo,GainRegNum-1,"Ve6"))
+        
+            if (EMV_e6 > 0)
+              ! AnnotIndex = NewTextAnn(GainCurve[GainRegNum], "EMV at Gain=1e6: " + val$(EMV_e6)+" V", EMV_e6-5, 25, 4, 8, 8, , 90, , 3, "Arial")
+              AnnotIndex = NewTextAnn(GainCurve[GainRegNum], "EMV at Gain=1: " + val$(EMV_e6)+" V", EMV_e6-5, 5, 4, 8, 8, , 90, , 3, "Arial")
+            endif
+        
+          ! Annotate a horizontal crosshairs at the Gain=1 (g=1000000):
+            AnnotIndex = NewPolyAnn(GainCurve[GainRegNum], 2)
+            SetPolyAnnVal GainCurve[GainRegNum], AnnotIndex, 1, EMVmin, 1000000/100000
+            SetPolyAnnVal GainCurve[GainRegNum], AnnotIndex, 2, EMVmax, 1000000/100000
+        
+          ! Annotate a vertical crosshairs at the Gain=1 (g=1000000):
+            if (EMV_e6 > 0)
+              AnnotIndex = NewPolyAnn(GainCurve[GainRegNum], 2)
+              if IonPolarity = 0 then
+                ThisPolYMax = ObjHdrVal(GainCurve[1], "PosGainMax")
+                SetPolyAnnVal GainCurve[GainRegNum], AnnotIndex, 1, EMV_e6, 0   ! OBJ_Min
+                SetPolyAnnVal GainCurve[GainRegNum], AnnotIndex, 2, EMV_e6, ThisPolYMax  ! OBJ_Max
+              else
+                ThisPolYMax = ObjHdrVal(GainCurve[1], "NegGainMax")
+                SetPolyAnnVal GainCurve[GainRegNum], AnnotIndex, 1, EMV_e6, 0   ! OBJ_Min
+                SetPolyAnnVal GainCurve[GainRegNum], AnnotIndex, 2, EMV_e6, ThisPolYMax  ! OBJ_Max
+              endif
+            endif
+        
+           WinUpdate ON
+           return
+        
+        AnnotGainCurveErr:
+           on error print
+           print ReadResource$("tunemac",ID_TUNEMAC_ANNOTGAINCURVE_721), _ErrMsg$ + " occurred at line ", _ErrLine, " in ", _ErrCmd$
+           WinUpdate ON
+           return
+           
+        endmacro  !* msat_AnnotGainCurve
+        
+        ! ============================================================================
+        name msat_DispGainCurve
+          parameter PrintIt default 0      ! if = 1, will also print the Gain Curve.
+          parameter BothPols default 0
+          parameter IonPolarity default 0
+        ! Function Description:
+        !         This routine displays the Gain Curve.
+        ! Revision History:
+        ! 02/07/00 YD  First created.
+        ! 04/22/04 PHC Updated.
+        ! ============================================================================
+        local title$,line1$,_button
+        local GainRegNum1,GainRegNum2,GainWin1,GainWin2
+        local title1$,title2$,PolYMax_1,PolYMax_2
+        Local  ID_TUNEMAC_A_GAIN_CURVE_H_723
+        Local  ID_TUNEMAC_PRINT_GAIN_CUR_724
+        Local  ID_TUNEMAC_A_GAIN_CURVE_H_725
+        Local  ID_TUNEMAC_GAINCURVE_REG_323
+        Local  ID_TUNEMAC_SCREEN_726
+          
+        ID_TUNEMAC_A_GAIN_CURVE_H_723                      =  17723  
+        ID_TUNEMAC_PRINT_GAIN_CUR_724                      =  17724  
+        ID_TUNEMAC_A_GAIN_CURVE_H_725                      =  17725  
+        ID_TUNEMAC_GAINCURVE_REG_323                       =  17323  
+        ID_TUNEMAC_A_GAIN_CURVE_H_723                      =  17723  
+        ID_TUNEMAC_PRINT_GAIN_CUR_724                      =  17724  
+        ID_TUNEMAC_SCREEN_726                              =  17726
+        
+          ! If called from Diagnosis menu item, check for an existing calibration curve:
+            if (RegSize(GainCurve) < 0) then
+              if filestat(mode,_tunepath$ + "GainCurve.reg") = 1 then
+                Loadobj _tunepath$ + "GainCurve.reg",, GainCurve
+                if (RegSize(GainCurve) < 3) then
+                  ! AtunePrint ReadResource$("tunemac",ID_TUNEMAC_A_GAIN_CURVE_H_723)
+                   title$= ReadResource$("tunemac",ID_TUNEMAC_PRINT_GAIN_CUR_724)
+                   line1$= ReadResource$("tunemac",ID_TUNEMAC_A_GAIN_CURVE_H_725)
+                   _button=alert(line1$,2,title$)
+                   stop
+                endif
+              else
+                AtunePrint ReadResource$("tunemac",ID_TUNEMAC_GAINCURVE_REG_323)
+                stop
+              endif
+            else
+              if (RegSize(GainCurve) < 3) then
+                ! AtunePrint ReadResource$("tunemac",ID_TUNEMAC_A_GAIN_CURVE_H_723)
+                title$= ReadResource$("tunemac",ID_TUNEMAC_PRINT_GAIN_CUR_724)
+                line1$= ReadResource$("tunemac",ID_TUNEMAC_A_GAIN_CURVE_H_725)
+                _button=alert(line1$,2,title$)
+                stop
+              endif
+            endif
+        
+          if BothPols = 0 then
+            if IonPolarity = 0 then
+              GainRegNum1 = 2                   ! Positive polarity
+            else
+              GainRegNum1 = 3                   ! Negative polarity
+            endif
+            GainRegNum2 = 0
+          else
+            GainRegNum1 = 2
+            GainRegNum2 = 3
+          endif
+        
+          ! Define windows:
+           ! if (Check(Variable, GainWin1) = 0) or (GainWin1 < 10) then
+              GainWin1 = FreeWin(71)
+           ! endif
+            if BothPols = 1 then
+              GainWin2 = FreeWin(GainWin1 + 1)
+            else
+              GainWin2 = 0
+            endif
+        
+        WinUpdate Off
+          ! Build window title:
+            title1$ = ObjHdrText$(GainCurve[GainRegNum1], "Title")
+            SetWinTitle GainWin1, title1$ + "   Created On: " + TabText$(GainCurve[1], CurveInfo, GainRegNum1-1, "DateTime")
+            
+          ! Initialize all the windows:
+            SetTabVal _config[1], window, GainWin1, "Topic", +4294967295
+            SetTabVal _config[1], window, GainWin1, "XAxisStyle",   1
+            SetTabVal _config[1], window, GainWin1, "YAxisStyle",   2
+            SetTabVal _config[1], window, GainWin1, "DefWinStyle", 31
+            if BothPols = 1 then
+              title2$ = ObjHdrText$(GainCurve[GainRegNum2], "Title")
+              SetWinTitle GainWin2, title2$ + "   Created On: " + TabText$(GainCurve[1], CurveInfo, GainRegNum1, "DateTime")
+              SetTabVal _config[1], window, GainWin2, "Topic", +4294967295
+              SetTabVal _config[1], window, GainWin2, "XAxisStyle",   1
+              SetTabVal _config[1], window, GainWin2, "YAxisStyle",   2
+              SetTabVal _config[1], window, GainWin2, "DefWinStyle", 31
+            endif
+        
+          ! Print the result to the printer:
+            if (PrintIt = 1)
+              msat_PrintGainCurveReport GainWin1,GainWin2,GainRegNum1,GainRegNum2
+            endif
+           
+          ! Draw the curves on the screen:
+            ClearWin  ! Clears profiles from screen
+            SetWinPrintParams GainWin1, "Screen",,.5
+            ! SetWinPrintParams GainWin1, Screen,0.6, 1
+            if BothPols = 0 then
+              ! SetWindowSize GainWin1, 0, 1, 0.3, 1
+              SetWindowSize GainWin1, 0, 1, 0, 1 !* Display full screen
+              if IonPolarity = 0 then
+                PolYMax_1 = ObjHdrVal(GainCurve[1], "PosGainMax")
+              else
+                PolYMax_1 = ObjHdrVal(GainCurve[1], "NegGainMax")
+              endif
+              Draw GainWin1, GainCurve[GainRegNum1], ObjHdrVal(GainCurve[1], "EMVmin"):ObjHdrVal(GainCurve[1], "EMVmax"), 0:PolYMax_1
+            else                                                 ! called from ResetEMGain or Diagnosis
+              PolYMax_1 = ObjHdrVal(GainCurve[1], "PosGainMax")
+              PolYMax_2 = ObjHdrVal(GainCurve[1], "NegGainMax")
+              SetWinPrintParams GainWin2, "Screen",,.5
+              SetWindowSize GainWin1, 0, 1, 0.5, 1 !* Display in uppper half of screen
+              SetWindowSize GainWin2, 0, 1, 0, 0.5 !* Display in lower half of screen
+              Draw GainWin1, GainCurve[GainRegNum1], ObjHdrVal(GainCurve[1], "EMVmin"):ObjHdrVal(GainCurve[1], "EMVmax"), 0:PolYMax_1
+              Draw GainWin2, GainCurve[GainRegNum2], ObjHdrVal(GainCurve[1], "EMVmin"):ObjHdrVal(GainCurve[1], "EMVmax"), 0:PolYMax_2
+            endif
+        WinUpdate
+           return
+        
+        endmacro  !* msat_DispGainCurve
+        
+        ! ============================================================================
+        name msat_PrintGainCurveReport
+          parameter GainWin1 default -99999, GainWin2 default -99999
+          parameter GainRegNum1 default 2, GainRegNum2 default 0
+        ! Function Description:
+        !         This routine prints the Gain Curve report
+        ! Revision History:
+        ! 02/07/00 YD  First created.
+        ! 04/22/04 PHC Updated for new gain-based curve; removed ion current curve.
+        ! ============================================================================
+        local title$,PgWidth,MidWidth,text1$,text2$,gain1300$,gain1600$,gain1900$,gain2200$,gain2500$
+        local Row1,Col1,Win1_Ymax,Win2_Ymax
+        Local  ID_TUNEMAC____EMV____GAIN_727
+          
+        ID_TUNEMAC____EMV____GAIN_727                      =  17727  
+        
+          ! Check if GainWin1 is valid:
+            if (GainWin1 = -99999) then
+              return
+            endif
+        
+          GetCurrentPrinterSetup
+          SetMargin 4, 0, 0
+          PgWidth  = XMax()
+          On Error CloseDeviceBeforeOpenDevice
+          opendevice "Printer" as #5
+            on error goto PrintGainCurveError
+            msat_AddAbortHandler "msat_GainPrintAbort"
+            BeginJob ,, XLogMax() - 10, YLogMax() - 1 
+              title$ = ObjHdrText$(GainCurve[1], "Title")
+                MidWidth = (PgWidth-len(title$))/2  !*Center of the page
+                SetPageLoc MidWidth
+                Print #5, title$
+              text2$ = " "                        ! Print a blank line
+              Print #5, text2$
+              text2$ = "Instrument:          " + \
+                       ObjHdrText$(GainCurve[1], "Instrument") + " " +\
+                       ObjHdrText$(GainCurve[1], "SerialNumber")
+              SetPageLoc _Pg_LeftMargin
+              Print #5, text2$
+              text1$ = "Polarity:            " +  TabText$(GainCurve[1],CurveInfo,GainRegNum1-1,Polarity)
+               Print #5, text1$
+              text1$ = SprintF$(Trunc(TabVal(GainCurve[1], CurveInfo,GainRegNum1-1,"Mass")), "m/z:                 %5.2f")
+               Print #5, text1$
+              text1$ = "Ion Source:          " + TabText$(GainCurve[1],CurveInfo,GainRegNum1-1,IonSrc)
+               Print #5, text1$
+              text1$ = "Ion Mode:            " + TabText$(GainCurve[1],CurveInfo,GainRegNum1-1,IonMode)
+               Print #5, text1$
+              text2$ = "Created on:          " + TabText$(GainCurve[1],CurveInfo,GainRegNum1-1,DateTime)
+               Print #5, text2$
+        
+            ! Show table of results:
+              text2$ = " "                        ! Print a blank line
+               Print #5, text2$
+              Print #5, "-----------------------"
+              Print #5, ReadResource$("tunemac",ID_TUNEMAC____EMV____GAIN_727)
+              Print #5, "|-------|-------------|"
+              gain1300$ = SetStringLen$(Data(GainCurve[GainRegNum1],1,1)) ! Default return length is 7 characters
+              Print #5, "| 1300  |   "+gain1300$+"   |"
+              Print #5, "|-------|-------------|"
+              gain1600$ = SetStringLen$(Data(GainCurve[GainRegNum1],1,2))
+              Print #5, "| 1600  |   "+gain1600$+"   |"
+              Print #5, "|-------|-------------|"
+              gain1900$ = SetStringLen$(Data(GainCurve[GainRegNum1],1,3))
+              Print #5, "| 1900  |   "+gain1900$+"   |"
+              Print #5, "|-------|-------------|"
+              gain2200$ = SetStringLen$(Data(GainCurve[GainRegNum1],1,4))
+              Print #5, "| 2200  |   "+gain2200$+"   |"
+              Print #5, "|-------|-------------|"
+              gain2500$ = SetStringLen$(Data(GainCurve[GainRegNum1],1,5))
+              Print #5, "| 2500  |   "+gain2500$+"   |"
+              Print #5, "-----------------------"
+              
+        
+               SetPageLoc _Pg_LeftMargin, YLoc() + 1
+               Col1 = XLoc()
+               Row1 = YLoc()
+        
+            ! Send the first output to the printer:
+              SetWinPrintParams GainWin1, "PRINTER", 0.95, 0.53
+              if (GainRegNum1 = 2) then
+                Win1_Ymax = ObjHdrVal(GainCurve[1], "PosGainMax")
+                Win2_Ymax = ObjHdrVal(GainCurve[1], "NegGainMax")
+              else
+                Win1_Ymax = ObjHdrVal(GainCurve[1], "NegGainMax")
+              endif
+              Draw GainWin1, GainCurve[GainRegNum1], ObjHdrVal(GainCurve[1], "EMVmin"):ObjHdrVal(GainCurve[1], "EMVmax"), 0:Win1_Ymax
+        
+            ! Set up second curve, if necessary:
+              if (GainRegNum2 > 0) then             ! Printing gain curves for both polarities
+                formfeed
+                
+                text2$ = " "                        ! Print a blank line
+                Print #5, text2$
+                text2$ = "Instrument:          " + \
+                       ObjHdrText$(GainCurve[1], "Instrument") + " " +\
+                       ObjHdrText$(GainCurve[1], "SerialNumber")
+                SetPageLoc _Pg_LeftMargin
+                Print #5, text2$
+                text1$ = "Polarity:            " +  TabText$(GainCurve[1],CurveInfo,GainRegNum2-1,Polarity)
+                 Print #5, text1$
+                text1$ = SprintF$(Trunc(TabVal(GainCurve[1], CurveInfo,GainRegNum2-1,"Mass")), "m/z:                 %5.2f")
+                 Print #5, text1$
+                text1$ = "Ion Source:          " + TabText$(GainCurve[1],CurveInfo,GainRegNum2-1,IonSrc)
+                 Print #5, text1$
+                text1$ = "Ion Mode:            " + TabText$(GainCurve[1],CurveInfo,GainRegNum2-1,IonMode)
+                 Print #5, text1$
+                text2$ = "Created on:          " + TabText$(GainCurve[1],CurveInfo,GainRegNum2-1,DateTime)
+                 Print #5, text2$
+        
+                ! Show table of results:
+                  text2$ = " "                        ! Print a blank line
+                   Print #5, text2$
+                  Print #5, "-----------------------"
+                  Print #5, ReadResource$("tunemac",ID_TUNEMAC____EMV____GAIN_727)
+                  Print #5, "|-------|-------------|"
+                  gain1300$ = SetStringLen$(Data(GainCurve[GainRegNum2],1,1)) ! Default return length is 7 characters
+                  Print #5, "| 1300  |   "+gain1300$+"   |"
+                  Print #5, "|-------|-------------|"
+                  gain1600$ = SetStringLen$(Data(GainCurve[GainRegNum2],1,2))
+                  Print #5, "| 1600  |   "+gain1600$+"   |"
+                  Print #5, "|-------|-------------|"
+                  gain1900$ = SetStringLen$(Data(GainCurve[GainRegNum2],1,3))
+                  Print #5, "| 1900  |   "+gain1900$+"   |"
+                  Print #5, "|-------|-------------|"
+                  gain2200$ = SetStringLen$(Data(GainCurve[GainRegNum2],1,4))
+                  Print #5, "| 2200  |   "+gain2200$+"   |"
+                  Print #5, "|-------|-------------|"
+                  gain2500$ = SetStringLen$(Data(GainCurve[GainRegNum2],1,5))
+                  Print #5, "| 2500  |   "+gain2500$+"   |"
+                  Print #5, "-----------------------"
+              
+        
+                SetPageLoc _Pg_LeftMargin, YLoc() + 1
+                Col1 = XLoc()
+                Row1 = YLoc()
+        
+               ! Row1 = YLoc() + 0.5   ! for horizontal
+               ! SetPageLoc Col1, Row1     ! for horizontal
+                SetWinPrintParams GainWin2, "PRINTER", 0.95, 0.53
+                Draw GainWin2, GainCurve[GainRegNum2], ObjHdrVal(GainCurve[1], "EMVmin"):ObjHdrVal(GainCurve[1], "EMVmax"), 0:Win2_Ymax
+              endif
+        
+            PrintGainCurveError:
+              on error print
+        
+            EndJob
+          close #5
+        
+          msat_RemoveAbortHandler "msat_GainPrintAbort"
+          return
+        
+        endmacro  !* msat_PrintGainCurveReport
+        
+        ! ========================================================================
+        name msat_GainPrintAbort
+        ! ========================================================================
+        
+          close #5
+          msat_RemoveAbortHandler "GainPrintAbort"
+        
+        endmacro  !* msat_GainPrintAbort
+        
+        !===========================================================================
+        name msat_AddAbortHandler
+          parameter handler$
+        ! Routine to add a command or macro to the _abort$ string global.
+        ! This sets an abort handler.
+        !===========================================================================
+          if check (Variable,_Abort$) = 1 then
+            if _Abort$ = "" then
+              _Abort$ = handler$
+            else
+              _Abort$ = handler$ + ";" + _Abort$
+            endif
+          else
+            _Abort$ = handler$
+          endif
+        
+        endmacro  !* msat_AddAbortHandler
+        
+        !====================================================================
+        name msat_RemoveAbortHandler
+        parameter hdlrName$
+        !  Routine to remove a substring from the _Abort$ string based on
+        !  whether hdlrName$ is in a substring of _Abort$
+        !====================================================================
+        local i,NewAbort$,current_handler$
+        
+          i = 1
+          NewAbort$ = ""
+          hdlrName$ = ConvertText$("upper",hdlrName$)
+          if check (Variable,_Abort$) = 1 then
+            current_handler$ = substring$(_Abort$,i,,";")
+            while current_handler$ <> ""
+              current_handler$ = ConvertText$("upper",current_handler$)
+              if instr (current_handler$,hdlrName$) = 0
+                if len(NewAbort$) = 0 then
+                  NewAbort$ = substring$(_Abort$,i,,";")  !current_handler$
+                else
+                  NewAbort$ =  NewAbort$ + ";" + current_handler$
+                endif
+              endif
+              i = i+1
+              current_handler$ = substring$(_Abort$,i,,";")
+            endwhile
+            _Abort$ = NewAbort$
+          endif
+        
+        endmacro  !* msat_RemoveAbortHandler
+        
+        ! ============================================================================
+        name msat_GetEstimatedGain
+          parameter TestVolt
+          parameter ThisPol
+        ! Function Description:
+        !         Given the EMV value, this routine returns the estimated gain value
+        !         based on the formula: Gain = exp (Slope * ln(EMV) + Offset).
+        !         The value of the Slope and Offset are stored in the GainCurve[1]
+        !         register.
+        ! Function Returns:         If the pass-in EMV value > 0, this function
+        !                           returns estimated gain value. Otherwise, it
+        !                           returns -9999999
+        ! Revision History:
+        ! 02/04/00 YD  First created.
+        ! 04/22/04 PHC Updated.
+        ! ============================================================================
+        local button,ThisRow,Slope,Offset
+        
+          if TestVolt <= 0
+            button = Alert("msat_GetEstimatedGain cannot handle EMV value <= 0.", 3, "Gain Curve Report")
+            return -9999999
+          endif
+        
+          if ThisPol = 0 then
+            ThisRow = 1
+          else
+            ThisRow = 2
+          endif
+        
+          evaluate "slope = TabVal(GainCurve[1], CurveInfo, "+val$(ThisRow)+", ""Slope"")"
+          evaluate "offset = TabVal(GainCurve[1], CurveInfo, "+val$(ThisRow)+", ""Offset"")"
+        
+          return exp(Slope * ln(TestVolt) + Offset)
+        
+        endmacro  !* msat_GetEstimatedGain
+        
+        ! =======================================================================================
+        name msat_GetTestPoint
+          parameter pCurrPol default 0   ! 0=Check current polarity only, 1=Check both polarities
+        ! Description:
+        !     This routine checks whether the abundance is within the target limits at Gain = 1. 
+        !     It returns 0 if difference is outside the target limits and 1 if it is within the limits.
+        ! Revision History:
+        ! 08/12/04  PHC  First created.
+        ! 02/21/06  CPL  Modified to check abundance target instead of gain.
+        ! 10/20/09  CPL  Use MSProfileAvg() function for more consistent peakmax2 values
+        ! =======================================================================================
+        Local ChkLoAb, ChkHiAb, Check_Diff, Test_Gain, APPIstat$, APPItemp$, j
+        Local lDebug;     lDebug = 0
+        Local ID_TUNEMAC_TURNING_ON_APP_586
+        Local ID_TUNEMAC_CALIBRANT_IS_T_589
+        
+        ID_TUNEMAC_TURNING_ON_APP_586 = 17586
+        ID_TUNEMAC_CALIBRANT_IS_T_589 = 17589
+        
+             ! Check for source type and ion polarity
+             msat_SetMode
+               
+             ! Set mass to use:
+             msat_SaveMasses
+             MSMassValue 2,m2mass        ! Remember what mass #2 is
+                for j = 1 to 6
+                  if j = 2 then
+                    MSMassValue j,m2mass,,,1   ! Set mass #2 to m2mass and select
+                  else
+                    MSMassValue j,,,,0         ! Deselect all other masses
+                  endif
+                next j
+             
+             ! Set the abundance targets according to installed source:
+             ! CPL 06/26/09 start
+             ChkLoAb=msat_LoTarget()
+             ChkHiAb=msat_HiTarget()
+             ! CPL 06/26/09 end             
+        
+            ! CPL 070615: covers target abundances for new models
+            ! Get the values for low and high abundance from the appropriate register
+            lRegIndex = MSAT_SelectTuneMix( "auto" ) ! CPL 061115: Returns TuneMixReg Index
+            If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainLowAbund" ) = 1 ) then
+                ChkLoAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainLowAbund" )
+            Endif
+            If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainHighAbund" ) = 1 ) then
+                ChkHiAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainHighAbund" )
+            Endif
+            If ( lDebug > 0 ) then
+                Print "msat_GetTestPoint: ChkLoAb, ChkHiAb, lRegIndex =", ChkLoAb, ChkHiAb, lRegIndex
+                Print "msat_GetTestPoint: SRCMode, MSat_SRCType =", SRCMode, MSat_SRCType
+            Endif
+            ! CPL 070615: End
+        
+             if msat_srctype = 2 then                        !* Make sure lamp on if APPI
+               MSSCQuery "config:src:appi:stat?", APPIstat$
+               APPItemp$ = Substring$(APPIstat$,1,,",")
+               if (val(APPItemp$) <> 1) then                 !* Lamp is off, so turn it on
+                 msscwrite "config:src:appi:lamp 1"
+                 print ReadResource$("tunemac",ID_TUNEMAC_TURNING_ON_APP_586)
+                 sleep 15
+               endif
+             endIf
+          MSUseEMV 0                            ! Use Gain
+          MSParm Gain,,1                        ! Set to a Gain of 1
+          Print ReadResource$("tunemac",ID_TUNEMAC_CALIBRANT_IS_T_589)
+          msat_CalSwitch 1                      ! Turn on calibrant, based on installed source
+          sleep 5
+          print MSProfileAvg(2,1,0)             ! Use three profiles for peakmax2 value
+               CurrAb = peakmax2                ! Global parameter, SelectMass routine not needed
+               Print "CurrAb = ",CurrAb
+               If (CurrAb<ChkLoAb) Or (CurrAb>ChkHiAb) Then
+                   Check_Diff = 1
+               Else
+                   Check_Diff = 0
+               EndIf
+               
+          msat_RestoreMasses                    ! Restore profile masses
+              
+          if Check_Diff > 0 then
+            GainCheckResult_1$ = "The current abundance is outside the target abundance range."
+            GainCheckResult_2$ = "Recalibration is recommended."
+            return 0
+          else
+            GainCheckResult_1$ = "Gain curve calibration is within specifications."
+            GainCheckResult_2$ = ""
+            return 1
+          endif
+        
+        endmacro  !* msat_GetTestPoint
+        
+        !===============================================================================
+        !
+        !===============================================================================
+        !
+        name msat_LoTarget  ! Function returns low target abundance for 46A/B, 56C/D, and 6100 series instruments
+        ! Revision History:                                           
+        ! 06/26/09  CPL  First created.
+        !===============================================================================
+        local lCurrPol      ! 0 = positive, 1 = negative
+        
+        ! Set low abundance targets according to installed source:
+        if MSD_SL = 1 then         ! 46x or 56x SL models
+          if (msat_srctype = 0) then
+            if lCurrPol = 0 then   ! positive mode
+              Return 100000
+            else                   ! negative mode
+              Return 50000
+            endif
+          endif  !* if msat_srctype = 0
+          if (msat_srctype = 1) or (msat_srctype = 2) or (msat_srctype = 3) then
+            if lCurrPol = 0 then   ! positive mode
+              Return 200000
+            else                   ! negative mode
+              Return 50000
+            endif
+          endif  !* if msat_srctype = 1 or 2 or 3
+        endif  !* if MSD_SL
+    
+        if MSD_VL = 1 then         ! 46x or 56x VL models        
+          if (msat_srctype = 0) then  
+              Return 40000         ! positive or negative modes
+          endif
+          if (msat_srctype = 1) or (msat_srctype = 2) or (msat_srctype = 3) then
+              Return 50000         ! positive or negative modes
+          endif  !* if msat_srctype = 1 or 2 or 3
+        endif  !* if MSD_VL
+        
+        endmacro  !* msat_LoTarget
+        
+        
+        !===============================================================================
+        !
+        !===============================================================================
+        !
+        name msat_HiTarget  ! Function returns high target abundance for 46A/B, 56C/D, and 6100 series instruments
+        ! Revision History:                                           
+        ! 06/26/09  CPL  First created.
+        !===============================================================================
+        local lCurrPol      ! 0 = positive, 1 = negative
+        
+        msParm IonPolarity,lCurrPol
+        
+        ! Set high abundance targets according to installed source:
+        if MSD_SL = 1 then         ! 46x or 56x SL models
+          if (msat_srctype = 0) then
+              Return 300000        ! positive or negative modes
+          endif  !* if msat_srctype = 0
+          if (msat_srctype = 1) or (msat_srctype = 2) or (msat_srctype = 3) then
+            if lCurrPol = 0 then   ! positive mode
+              Return 400000
+            else                   ! negative mode
+              Return 300000
+            endif
+          endif  !* if msat_srctype = 1 or 2 or 3
+        endif  !* if MSD_SL
+    
+        if MSD_VL = 1 then         ! 46x or 56x VL models        
+          if (msat_srctype = 0) then  
+              Return 60000         ! positive or negative modes
+          endif
+          if (msat_srctype = 1) or (msat_srctype = 2) or (msat_srctype = 3) then
+              Return 120000        ! positive or negative modes
+          endif  !* if msat_srctype = 1 or 2 or 3
+        endif  !* if MSD_VL
+        
+        endmacro  !* msat_HiTarget        
+  
+                
+        !===============================================================================
+        !
+        !===============================================================================
+        !
+        name msat_TargetAb  !Target abundance optimization for 46A/B and VL instruments
+        !PARAMETER srcmode default 0       !* 0    API_ES
+                                           !* 1    APCI
+                                           !* 2    APPI
+                                           !* 3    MM-ES+APCI
+        PARAMETER pCurrPol default 0       !* 0    Positive
+                                           !* 1    Negative
+        !PARAMETER pRegIndex default 2
+        !PARAMETER whichMode default 0     ! 0 for positive and negative autotune
+                                           ! 1 for positive only autotune
+                                           ! 2 for negative only autotune
+        !
+        ! 10/16/09  CPL Extend minimum EMV to 1000V for new CDEMs & AJS.
+        ! 10/16/09  CPL Extend maximum EMV to 2800V for aging CDEMs
+        !===============================================================================
+        local i,j,oldAverage, LoAb,HiAb,OldGain,CurrAb,count,c$,c,d,killit
+        local  ID_TUNEMAC_CALIBRATING_MA_562
+        local lRegIndex
+        local  lDebug;		lDebug = 0
+        ID_TUNEMAC_CALIBRATING_MA_562                      =  17562  
+        
+        ! Set mass to use:
+        msat_SaveMasses
+        MSMassValue 2,m2mass        ! Remember what mass #2 is
+          for j = 1 to 6
+            if j = 2 then
+              MSMassValue j,m2mass,,,1   ! Set mass #2 to m2mass and select
+            else
+              MSMassValue j,,,,0         ! Deselect all other masses
+            endif
+          next j
+        
+        !change averages to 9 for gain calibration
+        MSAverages oldAverage,9
+      
+        ! Set abundance to working range:
+          if (msat_srctype = 0) then
+          !CPL 06/25/09 start
+            !LoAb=20000
+            !HiAb=60000
+            LoAb=msat_LoTarget()
+            HiAb=msat_HiTarget()
+          endif
+          if (msat_srctype = 1) or (msat_srctype = 2) or (msat_srctype = 3) then
+            !LoAb=40000
+            !HiAb=130000
+            LoAb=msat_LoTarget()
+            HiAb=msat_HiTarget()
+          !CPL 06/25/09 end
+          endif
+          ! ueff 060327: covers new target abundance for new sources and models
+          ! Get the values for low and high abundance from the appropriate register
+          ! pRegIndex = SRCMode * 2 + Polarity + 2 ! CPL 061115: PVCS #13310
+          lRegIndex = MSAT_SelectTuneMix( "auto" ) ! CPL 061115: Returns TuneMixReg Index
+          If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainLowAbund" ) = 1 ) then
+              LoAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainLowAbund" )
+          Endif
+          If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainHighAbund" ) = 1 ) then
+              HiAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainHighAbund" )
+          Endif
+          If ( lDebug > 0 ) then
+              Print "msat_TargetAb: LoAb, HiAb, lRegIndex =", LoAb, HiAb, lRegIndex
+              Print "msat_TargetAb: MSat_SRCType =", MSat_SRCType
+          Endif
+          ! ueff 060327: End
+          
+          ! Adjust emv to get close to target abundance
+            MSUseEMV 0
+            MSParm Gain,OldGain,1                  ! Make sure gain is set to 1
+            print MSProfileAvg(2,0,0)
+            CurrAb = peakmax2
+            if (CurrAb<LoAb) or (CurrAb>HiAb)
+              count = 0
+              MSSCQuery "msc:parm? emul",c$         ! Save the current EMV
+              d=val(c$)                             ! Start with current EMV
+              if d < 1000 then                      
+                d = 1000                            ! Limit lower EMV to 1000 V
+              else
+                if d > 2800 then
+                  d = 2800                          ! Limit upper EMV to 2800 V
+                endif
+              endif
+              ! d = 1485                            ! Default EMV value to start with
+              ! Reduce EMV minimum for new CDEMs & AJS
+              !while ((CurrAb<LoAb) or (CurrAb>HiAb)) and (count < 15 and d >= 1000)
+              while ((CurrAb<LoAb) or (CurrAb>HiAb) and (count < 30))    
+                MSUseEmv 1
+                if CurrAb<LoAb
+                  if count = 0 then
+                    c=val(c$)
+                  else
+                    MSParm Emv,c      ! Save the old EMV setting
+                  endif
+                  !d = c+100          ! Decrease EMV shift for better control
+                  d = c+50
+                  if d >=3000 then
+                    d=c
+                    count = 30        ! Set it to last value and force it to end
+                  endif
+                  MSParm Emv,,d
+                endif
+                if CurrAb>HiAb
+                  if count = 0 then
+                    c=val(c$)
+                  else
+                    MSParm Emv,c      ! Save the old EMV setting
+                  endif
+                  !d = c-100          ! Decrease EMV shift for better control
+                  d = c-50
+                  if d < 1000 then
+                    d=c
+                    count = 30        ! Set it to last value and force it to end
+                  endif
+                  MSParm Emv,,d                  
+                endif
+                print MSProfileAvg(2,0,0)
+                CurrAb=peakmax2
+                count = count + 1
+              endwhile
+              MSUseEmv 0              ! Use Gain
+              SetGain d,1             ! Shift Gain Curve to meet target abundance
+                ! if ((CurrAb<LoAb) or (CurrAb>HiAb)) and (count < 15 and d > 1000)
+              if ((CurrAb<LoAb) or (CurrAb>HiAb) and (count >= 30))    
+                killit = Alert("Abundance could not be attained.",3,"Target abundance")
+                msat_RestoreMasses          ! Restore profile masses        
+                MSAverages ,oldAverage      ! Change averages to original value
+                stop
+              endif
+            endif  !* if (CurrAb<LoAb) or (CurrAb>HiAb)
+                      
+            msat_RestoreMasses          ! Restore profile masses        
+            MSAverages ,oldAverage      ! Change averages to original value
+            ! AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CALIBRATING_MA_562)
+            ! MSAxis ,,1
+        
+        endmacro  ! msat_TargetAb
+        
+        !===============================================================================
+        !
+        !===============================================================================
+        
+        name msat_TargetAb_D   !Target abundance optimization for SL & HT instruments
+        !PARAMETER srcmode default 0       !* 0    API_ES
+                                           !* 1    APCI
+                                           !* 2    APPI
+                                           !* 3    MM-ES+APCI
+        PARAMETER pCurrPol default 0       !* 0    Positive
+                                           !* 1    Negative
+        !PARAMETER pRegIndex default 2
+        !PARAMETER whichMode default 0     ! 0 for positive and negative autotune
+                                           ! 1 for positive only autotune
+                                           ! 2 for negative only autotune
+        !
+        ! 10/16/09  CPL Extend minimum EMV to 1000V for new CDEMs & AJS.
+        ! 10/16/09  CPL Extend maximum EMV to 2800V for aging CDEMs
+        !===============================================================================
+        local i,j,oldAverage, LoAb,HiAb,OldGain,CurrAb,count,c$,c,d,killit
+        local ID_TUNEMAC_CALIBRATING_MA_562     
+        ID_TUNEMAC_CALIBRATING_MA_562                      =  17562 
+        local lRegIndex 
+        local lDebug;		lDebug = 0
+           
+        ! Set mass to use:
+        msat_SaveMasses
+        MSMassValue 2,m2mass        ! Remember what mass #2 is
+          for j = 1 to 6
+            if j = 2 then
+              MSMassValue j,m2mass,,,1   ! Set mass #2 to m2mass and select
+            else
+              MSMassValue j,,,,0         ! Deselect all other masses
+            endif
+          next j           
+              
+        !change averages to 9 for gain calibration
+        MSAverages oldAverage,9
+      
+        ! Set abundance to working range:
+          if (msat_srctype = 0) then    ! 0=API-ES, 1=APCI, 2=APPI, 3=Multimode (ES+APCI)
+            if pCurrPol = 0 then    ! positive mode
+          !CPL 06/26/09 start              
+              !LoAb=100000
+              !HiAb=300000
+              LoAb=msat_LoTarget()
+              HiAb=msat_HiTarget()
+            else                    ! negative mode
+              !LoAb=50000
+              !HiAb=300000
+              LoAb=msat_LoTarget()
+              HiAb=msat_HiTarget()
+            endif
+          endif  !* if msat_srctype = 0 
+          if (msat_srctype = 1) or (msat_srctype = 2) or (msat_srctype = 3) then
+            if pCurrPol = 0 then    ! positive mode
+              !LoAb=200000
+              !HiAb=400000
+              LoAb=msat_LoTarget()
+              HiAb=msat_HiTarget()
+            else                    ! negative mode
+              !LoAb=50000
+              !HiAb=300000
+              LoAb=msat_LoTarget()
+              HiAb=msat_HiTarget()
+            endif
+          endif  !* if msat_srctype = 1 or 2 or 3
+          ! ueff 060327: covers new target abundance for new sources and models
+          ! Get the values for low and high abundance from the appropriate register
+          !pRegIndex = SRCMode * 2 + pCurrPol + 2 ! CPL 061115: PVCS #13310
+          lRegIndex = MSAT_SelectTuneMix( "auto" ) ! CPL 061115: Returns TuneMixReg Index    
+          If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainLowAbund" ) = 1 ) then
+              LoAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainLowAbund" )
+          Endif
+          If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainHighAbund" ) = 1 ) then
+              HiAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainHighAbund" )
+          Endif
+                   
+          If ( lDebug > 0 ) then
+              Print "msat_TargetAb_D: LoAb, HiAb, lRegIndex =", LoAb, HiAb, lRegIndex
+              Print "msat_TargetAb_D: pCurrPol, MSat_SRCType =", pCurrPol, MSat_SRCType
+          Endif
+          ! ueff 060327: End
+          
+          ! Adjust emv to get close to target abundance
+            MSUseEMV 0                             ! Use Gain
+            MSParm Gain,OldGain,1                  ! Make sure gain is set to 1
+            print MSProfileAvg(2,0,0)
+            CurrAb = peakmax2
+            print "CurrAb = ", CurrAb
+            if (CurrAb<LoAb) or (CurrAb>HiAb)
+              count = 0
+              MSSCQuery "msc:parm? emul",c$         ! Save the current EMV
+              d=val(c$)                             ! Start with current EMV
+              if d < 1000 then
+                d = 1000                            ! Limit lower EMV to 1000 V                        
+              else
+                if d > 2800 then
+                  d = 2800                          ! Limit uppper EMV to 2800 V
+                endif
+              endif
+                
+              ! d = 1485                            ! Default EMV value to start with
+              ! Reduce EMV minimum for new CDEMs & AJS 
+              while ((CurrAb<LoAb) or (CurrAb>HiAb) and (count < 30))            
+                MSUseEmv 1                          ! Use EMV
+                if CurrAb<LoAb
+                  if count = 0 then
+                    c=val(c$)
+                  else
+                    MSParm Emv,c      ! Save the old EMV setting
+                  endif
+                  !d = c+100          ! Decrease EMV shift for better control
+                  d = c+50
+                  if d >=3000 then
+                    d=c
+                    count = 30        ! Set it to last value and force it to end
+                  endif
+                  MSParm Emv,,d
+                endif
+                if CurrAb>HiAb
+                  if count = 0 then
+                    c=val(c$)
+                  else
+                    MSParm Emv,c      ! Save the old EMV setting
+                  endif
+                  !d = c-100          ! Decrease EMV shift for better control
+                  d = c-50
+                  MSParm Emv,,d
+                  if d < 1000 then
+                    d=c
+                    count = 30        ! Set it to last value and force it to end
+                  endif
+                endif
+                print MSProfileAvg(2,0,0)
+                CurrAb=peakmax2
+                print "CurrAb = ",CurrAb
+                count = count + 1
+              endwhile
+              MSUseEmv 0              ! Use Gain
+              SetGain d,1             ! Shift Gain Curve to meet target abundance          
+                  
+              if ((CurrAb<LoAb) or (CurrAb>HiAb) and (count >= 30))             
+                killit = Alert("Abundance could not be attained.",3,"Target abundance")
+                msat_RestoreMasses          ! Restore profile masses        
+                MSAverages ,oldAverage      ! Change averages to original value                
+                stop
+              endif               
+            endif  !* if (CurrAb<LoAb) or (CurrAb>HiAb)
+            msat_RestoreMasses      ! Restore profile masses               
+            MSAverages ,oldAverage  ! Change averages to original value        
+            ! AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CALIBRATING_MA_562)
+            ! MSAxis ,,1
+      
+      endmacro  ! msat_TargetAb_D
+        
+        ! ============================================================================
+        name GetYMax
+          parameter TestNum
+        ! Function Description:
+        !         This routine finds out how large the input number is and then
+        !         calculates a reasonable round-up number.
+        ! Revision History:
+        ! 01/04/05 PHC First created.
+        ! ============================================================================
+        local b,CeilNum
+        
+          b=1
+          while TestNum/b > 1
+            b=b*10
+          endwhile
+          b=b/10   ! back up one
+          CeilNum = (trunc((TestNum/b)+.5))*b
+          if TestNum > CeilNum then
+            CeilNum = CeilNum + 50
+          endif
+        
+          return CeilNum
+        
+        endmacro
+        
+        ! ============================================================================
+        name SetStringLen$
+          parameter ThisNum
+          parameter StringLen default 7
+          parameter TrailingDigits default 2 ! Number of digits behind decimal place
+        ! Function Description:
+        !         This routine truncates the input number as specified and then
+        !         adds leading spaces to make it as long as desired.
+        ! Revision History:
+        ! 01/20/05 PHC First created.
+        ! ============================================================================
+        local b,ThisNum$,HowLong,WhereDot,numspaces,n
+        
+          evaluate "b = 1e+00"+val$(TrailingDigits)
+          ThisNum$=val$((Trunc((ThisNum*b))/b))
+          HowLong = Len(ThisNum$)
+          WhereDot = INSTR(ThisNum$, ".")
+        
+          if ((Howlong-WhereDot) < TrailingDigits) then
+            ThisNum$ = ThisNum$+"0"
+          endif
+        
+          if len(ThisNum$) < StringLen then
+            numspaces = StringLen-len(ThisNum$)
+            for n=1 to numspaces
+              ThisNum$ = " "+ThisNum$
+            next n
+          endif
+        
+          return ThisNum$
+        
+        endmacro
+
+        !********* end of file ******************************************************

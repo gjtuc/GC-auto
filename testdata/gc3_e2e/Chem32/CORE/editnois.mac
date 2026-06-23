@@ -1,0 +1,170 @@
+! $Header: /PHX3D/parts/macros/report/editnois.mac 4.0 1996-03-22 17:48:02-05 hmgr Exp $
+!
+! Macros for handling noise determination
+!
+
+!==============================================================================
+Name printNoiseParms
+!------------------------------------------------------------------------------
+
+! Print parameters for noise determination
+
+  local i
+  local  noiseFrom, noiseTo ! time range of noise
+  local firstTime
+!..............................................................................
+
+  firstTime = 1
+  for i = 1 to 7
+    noiseFrom = tabHdrVal(_DAMethod,"sysSuit","noise"+val$(i)+"from")
+    noiseTo = tabHdrVal(_DAMethod,"sysSuit","noise"+val$(i)+"to")
+    if (noiseFrom >= 0) and (noiseTo > noiseFrom) then
+      if firstTime = 1 then
+        print using #5, NLSCoreNoise$("PrintTitle")
+        firstTime = 0; endIf
+      print using #5, NLSCoreNoise$("PrintFormat"), noiseFrom, noiseTo
+    endIf
+  next i
+  return
+
+endMacro ! printNoiseParms
+
+
+!==============================================================================
+Name DoEditNoiseParms
+!------------------------------------------------------------------------------
+
+! Edit parameters for noise determination
+
+  local i 
+  local fromTime, from1, from2, from3, from4, from5, from6, from7
+  local toTime, to1, to2, to3, to4, to5, to6, to7
+  local keepFrom, kf1, kf2, kf3, kf4, kf5, kf6, kf7
+  local keepTo, kTo1, kTo2, kTo3, kTo4, kTo5, kTo6, kTo7
+  local iControl, bReadOnly
+
+  local strMsgFormat$, FromValue$, ToValue$, EnuFile$, nTransactionID, bResult
+  
+  local ID_PHX3DSUPPORTFILES_AUDIT_CHANGED_FROM
+  local ID_PHX3DSUPPORTFILES_AUDIT_CHANGED_TO
+  local ID_PHX3DSUPPORTFILES_AUDIT_OFF
+!..............................................................................
+
+  If AS_IsPermitted_SystemSuitabilityEdit=0 then
+    bReadOnly = 1
+  Else
+    bReadOnly = 0
+  Endif
+
+  EnuFile$ = "Phx3dSupport"
+  ID_PHX3DSUPPORTFILES_AUDIT_CHANGED_FROM	= 17359		  ! "Noise Determination: Changed ""Time Range from"" of ""#%s"" from '{0}' to '{1}'"
+  ID_PHX3DSUPPORTFILES_AUDIT_CHANGED_TO		= 17360		  ! "Noise Determination: Changed ""Time Range to"" of ""#%s"" from '{0}' to '{1}'"
+  ID_PHX3DSUPPORTFILES_AUDIT_OFF			= 17370	      ! "OFF"
+
+  nTransactionID = AuditOpenTransaction()
+
+  ! load noise parameters from noise table of _DAMethod register 
+
+  for i = 1 to 7
+    fromTime = tabHdrVal(_DAMethod, "sysSuit", "noise"+val$(i)+"from")
+    toTime = tabHdrVal(_DAMethod, "sysSuit", "noise"+val$(i)+"to")
+    if (fromTime >= 0) and (toTime > fromTime) then
+      ! ok to use
+    else
+      fromTime = -1
+      toTime = -1
+    endIf
+    evaluate "from"+val$(i)+" = fromTime"
+    evaluate "kf"+val$(i)+" = fromTime"
+    evaluate "to"+val$(i)+" = toTime"
+    evaluate "kTo"+val$(i)+" = toTime"
+  next i
+
+  ! define dialog box for noise parameters
+
+  if dialogExists("noiseBox") = 0 then
+    LoadDialog  NLSCoreMacDLL$, "noiseBox", "noiseBox", "%s" + _InstName$
+    iControl = 10001
+    for i = 1 to 7
+      evaluate "NumberBoxParm iControl, from"+val$(i)+",0,,-1"
+      evaluate "NumberBoxParm iControl+1, to"+val$(i)+",0,,-1"
+      iControl = iControl + 2
+    next i 
+    endDialog 
+  endIf
+
+  ! displaying dialog box for noise time ranges
+  
+  _button = showDialog("noiseBox", 8087,, bReadOnly)
+  If bReadOnly<>0 Then
+    _button = 0  ! always like cancel
+  EndIf
+  
+  if _button > 0 then
+    for i = 1 to 7
+      evaluate "fromTime = from"+val$(i)
+      evaluate "keepFrom = kf"+val$(i)
+      evaluate "toTime = to"+val$(i)
+      evaluate "keepTo = kTo"+val$(i)
+      if (fromTime >= 0) and (toTime > fromTime) then
+        ! ok to use
+      else
+        fromTime = -1
+        toTime = -1
+      endIf
+
+! === AuditTrail Begin ==========================
+      if fromTime <> keepFrom then
+        setTabHdrVal _DAMethod, "sysSuit", "noise"+val$(i)+"from", fromTime
+        
+		if(keepFrom = -1)
+		  FromValue$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		else
+          FromValue$ = ConvertText$(TRIM, val$(keepFrom))
+		endIf
+
+		if(fromTime = -1)
+		  ToValue$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		else
+		  ToValue$ = ConvertText$(TRIM, val$(fromTime))
+		endIf
+
+		strMsgFormat$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_CHANGED_FROM)
+		strMsgFormat$ = PrintF$(strMsgFormat$, ConvertText$(TRIM, val$(i)))
+
+		bResult = AuditLog(nTransactionID, 1, strMsgFormat$, FromValue$, ToValue$)		 
+      endIf
+      if toTime <> keepTo then
+        setTabHdrVal _DAMethod, "sysSuit", "noise"+val$(i)+"to", toTime
+		
+		if(keepTo = -1)
+		  FromValue$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		else
+		 FromValue$ = ConvertText$(TRIM, val$(keepTo))
+		endIf
+
+        if(toTime = -1)
+		  ToValue$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		else
+		  ToValue$ = ConvertText$(TRIM, val$(toTime))
+		endIf
+		
+		strMsgFormat$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_CHANGED_TO)
+		strMsgFormat$ = PrintF$(strMsgFormat$, ConvertText$(TRIM, val$(i)))
+		
+		bResult = AuditLog(nTransactionID, 1, strMsgFormat$, FromValue$, ToValue$)
+      endIf
+! === AuditTrail End ==============================
+
+    next i
+	AuditCommitTransaction nTransactionID
+  else
+    AuditCancelTransaction nTransactionID
+  endif
+
+  AuditCloseTransaction nTransactionID
+
+  return
+
+endMacro ! DoEditNoiseParms
+

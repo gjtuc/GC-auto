@@ -1,0 +1,1214 @@
+NAME GetGCMacroVersion$
+LOCAL szString$
+
+  szReturn$ =  "HP685000"
+  RETURN szReturn$
+ENDMACRO
+
+
+NAME SetGCAuxZoneState 
+PARAMETER dChannel, szState$
+LOCAL szString$
+
+  ! Check if the values are within range
+
+  IF ((dChannel < 1) OR (dChannel > 2))
+    MESSAGE "Aux. channel must be 1 to 2"
+    RETURN
+  ENDIF
+
+  IF ((szState$ <> "OFF") AND (szState$ <> "ON"))
+    MESSAGE "Aux. zone state must be ON or OFF"
+    RETURN
+  ENDIF
+
+  !  Start the string by putting the aux channel number into the command.
+
+  szString$ = "A" + VAL$(dChannel) + "TZ "
+
+  ! Find out if the channel is to be turned on or off. 
+
+  IF szState$ = "OFF"
+    szString$ = szString$ + "0"
+  ELSE
+    szString$ = szString$ + "1"
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCAuxTemp
+PARAMETER dChannel,dTemp
+LOCAL szString$
+
+  ! Check if the values are within range
+
+  IF ((dChannel < 1) OR (dChannel > 2))
+    MESSAGE "Aux. channel must be 1 to 2"
+    RETURN
+  ENDIF
+
+  !  Build the command
+
+  szString$ = "A" + VAL$(dChannel) + "TI " + VAL$(dTemp)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCAuxTempRamp
+PARAMETER dChannel,dRamp,dRate,dTemp,dTime
+LOCAL szString$,iInteger
+
+  ! Check if the values are within range
+
+  IF ((dChannel < 1) OR (dChannel > 2))
+    MESSAGE "Aux. channel must be 1 to 2"
+    RETURN
+  ENDIF
+
+  IF ((dRamp < 0) OR (dRamp > 3))
+    MESSAGE "Aux. ramp must be 0 to 3"
+    RETURN
+  ENDIF
+
+  IF ((dTime < 0) OR (dTime > 999.99))
+    MESSAGE "Aux. time must be 0 to 999.99"
+    RETURN
+  ENDIF
+
+  IF ((dRate < 0) OR (dRate > 650))
+    MESSAGE "Aux. rate must be 0 to 650"
+    RETURN
+  ENDIF
+
+  ! See if we are doing ramp 0
+
+  IF (dRamp = 0)
+    szString$ = "A" + VAL$(dChannel) + "TR " + VAL$(dTemp) + "," + VAL$(dTime)
+  ELSE
+    szString$ = "A" + VAL$(dChannel) + "TR ,,"
+    iInteger = 1
+    WHILE (iInteger < dRamp)
+      szString$ = szString$ + ",,,"
+      iInteger = iInteger + 1
+    ENDWHILE
+    szString$ = szString$ + VAL$(dRate)+ "," + VAL$(dTemp) + "," + VAL$(dTime)
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCAuxPnuematicState 
+PARAMETER dChannel, szState$
+LOCAL szString$
+
+  ! Check if the values are within range
+
+  IF ((dChannel < 3) OR (dChannel > 5))
+    MESSAGE "Aux. channel must be 3 to 5"
+    RETURN
+  ENDIF
+
+  IF ((szState$ <> "OFF") AND (szState$ <> "ON"))
+    MESSAGE "Aux. zone state must be ON or OFF"
+    RETURN
+  ENDIF
+
+  !  Start the string by putting the aux channel number into the command.
+
+  szString$ = "A" + VAL$(dChannel) + "NZ "
+
+  ! Find out if the channel is to be turned on or off. 
+
+  IF szState$ = "OFF"
+    szString$ = szString$ + "0"
+  ELSE
+    szString$ = szString$ + "1"
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCAuxPressure
+PARAMETER dChannel,dPressure
+LOCAL szString$,szPUnits$,szPressure$
+
+  ! Check if the values are within range
+
+  IF ((dChannel < 3) OR (dChannel > 5))
+    MESSAGE "Aux. channel must be 3 to 5"
+    RETURN
+  ENDIF
+
+
+  ! Turn the pressure into the data comm value. (dynes/cm)
+
+  szPUnits$ = GetGCPressureUnits$()
+  IF (szPUnits$ = "0")
+    dPressure = dPressure * 68947.57
+  ELSE
+    IF (szPUnits$ = "1")
+      dPressure = dPressure * 1.0E6
+    ELSE
+      IF (szPUnits$ = "2")
+       dPressure = dPressure * 1.0E4
+      ELSE
+        MESSAGE "Unknown pressure units"
+        RETURN
+      ENDIF
+    ENDIF
+  ENDIF
+  szPressure$ = SPRINTF$(dPressure,"%ld")
+
+  !  Build the command
+
+  szString$ = "A" + VAL$(dChannel) + "PI " + szPressure$
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCAuxPressureRamp
+PARAMETER dChannel,dRamp,dRate,dPressure,dTime
+LOCAL szString$,szPUnits$,szPressure$,szRate$,iInteger
+
+  ! Check if the values are within range
+
+  IF ((dChannel < 3) OR (dChannel > 5))
+    MESSAGE "Aux. channel must be 3 to 5"
+    RETURN
+  ENDIF
+
+  IF ((dRamp < 0) OR (dRamp > 3))
+    MESSAGE "Aux. ramp must be 0 to 3"
+    RETURN
+  ENDIF
+
+  IF ((dTime < 0) OR (dTime > 999.99))
+    MESSAGE "Aux. time must be 0 to 999.99"
+    RETURN
+  ENDIF
+
+
+  ! Turn the pressure into the data comm value. (dynes/cm)
+
+  szPUnits$ = GetGCPressureUnits$()
+  IF (szPUnits$ = "0")
+    dPressure = dPressure * 68947.57
+    dRate = dRate * 68947.57
+  ELSE
+    IF (szPUnits$ = "1")
+      dPressure = dPressure * 1.0E6
+      dRate = dRate * 1.0E6
+    ELSE
+      IF (szPUnits$ = "2")
+        dPressure = dPressure * 1.0E4
+        dRate = dRate * 1.0E4
+      ELSE
+        MESSAGE "Unknown pressure units"
+        RETURN
+      ENDIF
+    ENDIF
+  ENDIF
+  szRate$ = SPRINTF$(dRate,"%ld")
+  szPressure$ = SPRINTF$(dPressure,"%ld")
+
+  ! See if we are doing ramp 0
+
+  IF (dRamp = 0)
+    szString$ = "A" + VAL$(dChannel) + "PR " + szPressure$ + "," + VAL$(dTime)
+  ELSE
+    szString$ = "A" + VAL$(dChannel) + "PR ,,"
+    iInteger = 1
+    WHILE (iInteger < dRamp)
+      szString$ = szString$ + ",,,"
+      iInteger = iInteger + 1
+    ENDWHILE
+    szString$ = szString$ + szRate$ + "," + szPressure$ + "," + VAL$(dTime)
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCOvenState 
+PARAMETER szState$
+LOCAL szString$
+
+  ! Check if the keyword is "ON" or "OFF"
+
+  IF ((szState$ <> "OFF") AND (szState$ <> "ON"))
+    MESSAGE "Oven state must be ON or OFF"
+    RETURN
+  ENDIF
+
+  ! Find out if the oven is to be turned on or off. 
+
+  IF szState$ = "OFF"
+    szString$ = "OVTZ " + "0"
+  ELSE
+    szString$ = "OVTZ " + "1"
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCOvenTemp
+PARAMETER dTemp
+LOCAL szString$
+
+  szString$ = "OVTI " + VAL$(dTemp)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCOvenInitTime
+PARAMETER dTime
+LOCAL szString$
+
+  IF ((dTime < 0) OR (dTime > 999.99))
+    MESSAGE "Oven time must be 0 to 999.99"
+    RETURN
+  ENDIF
+
+  szString$ = "OVTR ," + VAL$(dTime)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCOvenRamp
+PARAMETER dRamp,dRate,dTemp,dTime
+LOCAL szString$,iInteger
+
+  IF ((dRamp < 0) OR (dRamp > 6))
+    MESSAGE "Oven ramp must be 0 to 6"
+    RETURN
+  ENDIF
+
+  IF ((dTime < 0) OR (dTime > 999.99))
+    MESSAGE "Oven time must be 0 to 999.99"
+    RETURN
+  ENDIF
+
+  IF ((dRate < 0) OR (dRate > 120))
+    MESSAGE "Oven rate must be 0 to 120"
+    RETURN
+  ENDIF
+
+  ! See if we are doing ramp 0
+
+  IF (dRamp = 0)
+    szString$ = "OVTR " + VAL$(dTemp) + "," + VAL$(dTime)
+  ELSE
+    szString$ = "OVTR ,,"
+    iInteger = 1
+    WHILE (iInteger < dRamp)
+      szString$ = szString$ + ",,,"
+      iInteger = iInteger + 1
+    ENDWHILE
+    szString$ = szString$ + VAL$(dRate)+ "," + VAL$(dTemp) + "," + VAL$(dTime)
+
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCOvenEquibTime 
+PARAMETER dTime
+LOCAL szString$
+
+  ! Check if the values are within range
+
+  IF ((dTime < 0) OR (dTime > 999.99))
+    MESSAGE "Equib time must be 0 to 999.99"
+    RETURN
+  ENDIF
+
+  szString$ = "OVSP " + VAL$(dTime)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCDetZoneState 
+PARAMETER szDetector$, szState$
+LOCAL szString$
+
+  ! Check if the values are within range
+
+  IF ((szDetector$ <> "FRONT") AND (szDetector$ <> "BACK"))
+    MESSAGE "Detector must be front or back"
+    RETURN
+  ENDIF
+
+  IF ((szState$ <> "OFF") AND (szState$ <> "ON"))
+    MESSAGE "Detector zone state must be ON or OFF"
+    RETURN
+  ENDIF
+
+  ! Find out if the detector is front or back 
+
+  IF szDetector$ = "FRONT"
+    szString$ = "DFTZ "
+  ELSE
+    szString$ = "DBTZ "
+  ENDIF
+
+  ! Find out if the channel is to be turned on or off. 
+
+  IF szState$ = "OFF"
+    szString$ = szString$ + "0"
+  ELSE
+    szString$ = szString$ + "1"
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCDetTemp
+PARAMETER szDetector$,dTemp
+LOCAL szString$
+
+  ! Check if the Detector is "FRONT" or "BACK"
+
+  IF ((szDetector$ <> "FRONT") AND (szDetector$ <> "BACK"))
+    MESSAGE "Detector must be front or back"
+    RETURN
+  ENDIF
+
+  !  Build the command
+
+  IF (szDetector$ = "FRONT")
+    szString$ = "DFTI " + VAL$(dTemp)
+  ELSE
+    szString$ = "DBTI " + VAL$(dTemp)
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCDetTempRamp
+PARAMETER szDetector$,dRamp,dRate,dTemp,dTime
+LOCAL szString$,iInteger
+
+  ! Check if the values are within range
+
+  IF ((szDetector$ <> "FRONT") AND (szDetector$ <> "BACK"))
+    MESSAGE "Detector must be front or back"
+    RETURN
+  ENDIF
+
+  IF ((dRamp < 0) OR (dRamp > 10))
+    MESSAGE "Detector ramp must be 0 to 10"
+    RETURN
+  ENDIF
+
+  IF ((dTime < 0) OR (dTime > 999.99))
+    MESSAGE "Detector time must be 0 to 999.99"
+    RETURN
+  ENDIF
+
+  ! See if we are doing ramp 0
+
+  IF (dRamp = 0)
+    IF (szDetector$ = "FRONT")
+      szString$ = "DFTR " + VAL$(dTemp) + "," + VAL$(dTime)
+    ELSE
+      szString$ = "DBTR " + VAL$(dTemp) + "," + VAL$(dTime)
+    ENDIF
+  ELSE
+    IF (szDetector$ = "FRONT")
+      szString$ = "DFTR ,,"
+    ELSE
+      szString$ = "DBTR ,,"
+    ENDIF
+    iInteger = 1
+    WHILE (iInteger < dRamp)
+      szString$ = szString$ + ",,,"
+      iInteger = iInteger + 1
+    ENDWHILE
+    szString$ = szString$ + VAL$(dRate)+ "," + VAL$(dTemp) + "," + VAL$(dTime)
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+
+NAME SetGCDetPnuematicState 
+PARAMETER szDetector$, szFuelState$, szUtilState$, szMakeupState$
+LOCAL szString$
+
+  ! Check if the values are within range
+
+  IF ((szDetector$ <> "FRONT") AND (szDetector$ <> "BACK"))
+    MESSAGE "Detector must be front or back"
+    RETURN
+  ENDIF
+
+  IF ((szFuelState$ <> "OFF") AND (szFuelState$ <> "ON"))
+    MESSAGE "Fuel gas state must be ON or OFF"
+    RETURN
+  ENDIF
+
+  IF ((szUtilState$ <> "OFF") AND (szUtilState$ <> "ON"))
+    MESSAGE "Utility gas state must be ON or OFF"
+    RETURN
+  ENDIF
+
+  IF ((szMakeupState$ <> "OFF") AND (szMakeupState$ <> "ON"))
+    MESSAGE "Makeup gas state must be ON or OFF"
+    RETURN
+  ENDIF
+
+  ! Find out if the detector is front or back 
+
+  IF szDetector$ = "FRONT"
+    szString$ = "DFNZ "
+  ELSE
+    szString$ = "DBNZ "
+  ENDIF
+
+  ! Find out the channels is to be turned on or off. 
+
+  dFuel = 0
+  dUtil = 0
+  dMakeup = 0
+
+  IF szFuelState$ = "ON"
+    dFuel = 1
+  ENDIF
+
+  IF szUtilState$ = "ON"
+    dUtil = 1
+  ENDIF
+
+  IF szMakeupState$ = "ON"
+    dMakeup = 1
+  ENDIF
+
+  szString$ = szString$ + VAL$(dFuel) + "," + VAL$(dUtil) + "," + VAL$(dMakeup)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCInlZoneState 
+PARAMETER szInlet$, szState$
+LOCAL szString$
+
+! Check if the values are within range
+
+IF ((szInlet$ <> "FRONT") AND (szInlet$ <> "BACK"))
+  MESSAGE "Inlet must be front or back"
+  RETURN
+ENDIF
+
+IF ((szState$ <> "OFF") AND (szState$ <> "ON"))
+  MESSAGE "Inlet zone state must be ON or OFF"
+  RETURN
+ENDIF
+
+! Find out if the inlet is front or back 
+
+  IF szInlet$ = "FRONT"
+    szString$ = "IFTZ "
+  ELSE
+    szString$ = "IBTZ "
+  ENDIF
+
+! Find out if the channel is to be turned on or off. 
+
+  IF szState$ = "OFF"
+    szString$ = szString$ + "0"
+  ELSE
+    szString$ = szString$ + "1"
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCInlTemp
+PARAMETER szInlet$,dTemp
+LOCAL szString$
+
+  ! Check if the Inlet is "FRONT" or "BACK"
+
+  IF ((szInlet$ <> "FRONT") AND (szInlet$ <> "BACK"))
+    MESSAGE "Inlet must be front or back"
+    RETURN
+  ENDIF
+
+  !  Build the command
+
+  IF (szInlet$ = "FRONT")
+    szString$ = "IFTI " + VAL$(dTemp)
+  ELSE
+    szString$ = "IBTI " + VAL$(dTemp)
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCInlTempRamp
+PARAMETER szInlet$,dOvenTrack,dRamp,dRate,dTemp,dTime
+LOCAL szString$,iInteger
+
+  ! Check if the values are within range
+
+  IF ((szInlet$ <> "FRONT") AND (szInlet$ <> "BACK"))
+    MESSAGE "Inlet must be front or back"
+    RETURN
+  ENDIF
+
+  IF ((dOvenTrack < 0) OR (dOvenTrack > 1))
+    MESSAGE "Oven tracking must be 0 or 1"
+    RETURN
+  ENDIF
+
+  IF ((dRamp < 0) OR (dRamp > 3))
+    MESSAGE "Inlet ramp must be 0 to 3"
+    RETURN
+  ENDIF
+
+  IF ((dTime < 0) OR (dTime > 999.99))
+    MESSAGE "Inlet time must be 0 to 999.99"
+    RETURN
+  ENDIF
+
+  ! See if we are doing ramp 0
+
+  IF (dRamp = 0)
+    IF (szInlet$ = "FRONT")
+      szString$ = "IFTR " + VAL$(dOvenTrack) + "," + VAL$(dTemp) + "," + VAL$(dTime)
+    ELSE
+      szString$ = "IBTR " + VAL$(dOvenTrack) + "," + VAL$(dTemp) + "," + VAL$(dTime)
+    ENDIF
+  ELSE
+    IF (szInlet$ = "FRONT")
+      szString$ = "IFTR ,,"
+    ELSE
+      szString$ = "IBTR ,,"
+    ENDIF
+    iInteger = 1
+    WHILE (iInteger < dRamp)
+      szString$ = szString$ + ",,,"
+      iInteger = iInteger + 1
+    ENDWHILE
+    szString$ = szString$ + VAL$(dRate)+ "," + VAL$(dTemp) + "," + VAL$(dTime)
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCInlPnuematicState 
+PARAMETER szInlet$, szState$
+LOCAL szString$
+
+! Check if the values are within range
+
+IF ((szInlet$ <> "FRONT") AND (szInlet$ <> "BACK"))
+  MESSAGE "Inlet must be front or back"
+  RETURN
+ENDIF
+
+IF ((szState$ <> "OFF") AND (szState$ <> "ON"))
+  MESSAGE "Inlet zone state must be ON or OFF"
+  RETURN
+ENDIF
+
+! Find out if the inlet is front or back 
+
+  IF szInlet$ = "FRONT"
+    szString$ = "IFNZ "
+  ELSE
+    szString$ = "IBNZ "
+  ENDIF
+
+! Find out if the channel is to be turned on or off. 
+
+  IF szState$ = "OFF"
+    szString$ = szString$ + "0"
+  ELSE
+    szString$ = szString$ + "1"
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCInlPressure
+PARAMETER szInlet$,dPressure
+LOCAL szString$,szPUnits$,szPressure$
+
+  ! Check if the Inlet is "FRONT" or "BACK"
+
+  IF ((szInlet$ <> "FRONT") AND (szInlet$ <> "BACK"))
+    MESSAGE "Inlet must be front or back"
+    RETURN
+  ENDIF
+
+  ! Turn the pressure into the data comm value. (dynes/cm)
+
+  szPUnits$ = GetGCPressureUnits$()
+  IF (szPUnits$ = "0")
+    dPressure = dPressure * 68947.57
+  ELSE
+    IF (szPUnits$ = "1")
+      dPressure = dPressure * 1.0E6
+    ELSE
+      IF (szPUnits$ = "2")
+       dPressure = dPressure * 1.0E4
+      ELSE
+        MESSAGE "Unknown pressure units"
+        RETURN
+      ENDIF
+    ENDIF
+  ENDIF
+  szPressure$ = SPRINTF$(dPressure,"%ld")
+
+  !  Build the command
+
+  IF (szInlet$ = "FRONT")
+    szString$ = "IFPI " + szPressure$
+  ELSE
+    szString$ = "IBPI " + szPressure$
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCInlFlow
+PARAMETER szInlet$,dFlow
+LOCAL szString$,dInstFlow
+
+  ! Check if the Inlet is "FRONT" or "BACK"
+
+  IF ((szInlet$ <> "FRONT") AND (szInlet$ <> "BACK"))
+    MESSAGE "Inlet must be front or back"
+    RETURN
+  ENDIF
+
+  ! The flow number that we must send to the instrument is actually
+  ! 1000 times the flow value
+
+  dInstFlow = dFlow * 1000
+
+  !  Build the command
+
+  IF (szInlet$ = "FRONT")
+    szString$ = "IFFI " + VAL$(dInstFlow)
+  ELSE
+    szString$ = "IBFI " + VAL$(dInstFlow)
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCDisplay 
+PARAMETER dLine, szLine$
+LOCAL szString$,iLength
+
+! Check if the values are within range
+
+IF ((dLine < 1) OR (dLine > 4))
+  MESSAGE "Display line must be 1 to 4"
+  RETURN
+ENDIF
+
+iLength = LEN(szLine$)
+IF (iLength > 20)
+  MESSAGE "Only 20 characters are allowed in a display line."
+  RETURN
+ENDIF
+
+!  Start the string by putting the line number into the command.
+
+  szString$ = "GCD" + VAL$(dLine) + " "
+
+! Add the string to the command
+
+  szString$ = szString$ + """" + szLine$ + """" 
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME DisplayGCHostBuffer 
+LOCAL szString$
+
+!  Build the host buffer command
+
+  szString$ = "GCDH"
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME DisplayGCLocalBuffer 
+LOCAL szString$
+
+!  Build the local buffer command
+
+  szString$ = "GCDL"
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCMPVPosition 
+PARAMETER dValve, dPosition
+LOCAL szString$
+
+  ! Check if the values are within range
+
+  IF ((dValve < 1) OR (dValve > 8))
+    MESSAGE "Valve must be 1 to 8"
+    RETURN
+  ENDIF
+
+  ! We are not going to check the valve position because the user may
+  ! someday go and get a bigger one
+
+  !  Build the MPV command
+
+  szString$ = "V" + VAL$(dValve) + "MP " + VAL$(dPosition)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCValveState 
+PARAMETER dValve, szState$
+LOCAL szString$
+
+  ! Check if the values are within range
+
+  IF ((dValve < 1) OR (dValve > 8))
+    MESSAGE "Valve must be 1 to 8"
+    RETURN
+  ENDIF
+
+  IF ((szState$ <> "OFF") AND (szState$ <> "ON"))
+    MESSAGE "Valve state must be ON or OFF"
+    RETURN
+  ENDIF
+
+  !  Build the valve command
+
+  IF szState$ = "ON"
+    szString$ = "V" + VAL$(dValve) + "SW " + "1"
+  ELSE
+    szString$ = "V" + VAL$(dValve) + "SW " + "0"
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCGSVSetpoints
+PARAMETER dValve, szState$,dLoadTime,dInjectTime
+LOCAL szString$
+
+  ! Check if the values are within range
+
+  IF ((dValve < 1) OR (dValve > 8))
+    MESSAGE "Valve must be 1 to 8"
+    RETURN
+  ENDIF
+
+  IF ((szState$ <> "OFF") AND (szState$ <> "ON"))
+    MESSAGE "Valve state must be ON or OFF"
+    RETURN
+  ENDIF
+
+  IF ((dLoadTime < 0.01) OR (dLoadTime > 999.99))
+    MESSAGE "Valve load time must be 0.01 to 999.99"
+    RETURN
+  ENDIF
+
+  IF ((dInjectTime < 0.01) OR (dInjectTime > 999.99))
+    MESSAGE "Valve inject time must be 0.01 to 999.99"
+    RETURN
+  ENDIF
+
+  !  Build the GSV command
+
+  IF szState$ = "ON"
+    szString$ = "V" + VAL$(dValve) + "GS " + "1," + VAL$(dLoadTime) + "," + VAL$(dInjectTime)
+  ELSE
+    szString$ = "V" + VAL$(dValve) + "GS " + "0," + VAL$(dLoadTime) + "," + VAL$(dInjectTime)
+  ENDIF
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME StopGCRun$
+LOCAL szString$, szReturn$
+
+  !  Build the command
+
+  szString$ = "GCSP"
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME SetGCColumnFlow 
+PARAMETER dColumn, dFlow
+LOCAL szString$,dInstFlow
+
+  ! Check if the values are within range
+
+  IF ((dColumn < 1) OR (dColumn > 2))
+    MESSAGE "Column must be 1 to 2"
+    RETURN
+  ENDIF
+
+  ! The flow number that we must send to the instrument is actually
+  ! 1000 times the flow value
+
+  dInstFlow = dFlow * 1000
+
+  !  Start the string by putting the aux channel number into the command.
+
+  szString$ = "C" + VAL$(dColumn) + "FI " + VAL$(dInstFlow)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCColumnPressure
+PARAMETER dColumn, dPressure
+LOCAL szString$,szPUnits$,szPressure$
+
+  ! Check if the values are within range
+
+  IF ((dColumn < 1) OR (dColumn > 2))
+    MESSAGE "Column must be 1 to 2"
+    RETURN
+  ENDIF
+
+
+  ! Turn the pressure into the data comm value. (dynes/cm)
+
+  szPUnits$ = GetGCPressureUnits$()
+  IF (szPUnits$ = "0")
+    dPressure = dPressure * 68947.57
+  ELSE
+    IF (szPUnits$ = "1")
+      dPressure = dPressure * 1.0E6
+    ELSE
+      IF (szPUnits$ = "2")
+       dPressure = dPressure * 1.0E4
+      ELSE
+        MESSAGE "Unknown pressure units"
+        RETURN
+      ENDIF
+    ENDIF
+  ENDIF
+  szPressure$ = SPRINTF$(dPressure,"%ld")
+
+  !  Build the command string
+
+  szString$ = "C" + VAL$(dColumn) + "PI " + szPressure$
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME GCIdentify$
+LOCAL szString$, szReturn$
+
+  !  Build the command
+
+  szString$ = "CCID"
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME SendGCKeycodes$
+PARAMETER szKeycodes$
+LOCAL iLength, iIndex, szString$, szReturn$
+
+  !  Build the command
+
+  szString$ = "GCKP "
+  iLength = LEN(szKeycodes$)
+  FOR iIndex = 1 to iLength
+    szString$ = szString$ + szKeycodes$[iIndex] + ","
+  NEXT iIndex
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCPressureUnits$
+LOCAL szString$,iReturn
+
+  szString$ = "GCPU ?"
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  ! iReturn = alert (szReturn$)
+  RETURN szReturn$[6]
+ENDMACRO
+
+NAME SetGCPressureUnits
+PARAMETER szUnits$
+LOCAL iReturn,szString$
+
+  ! Check the input value
+
+  IF ((szUnits$ <> "BAR") AND (szUnits$ <> "PSI") AND (szUnits$ <> "KPA"))
+    MESSAGE "Pressure units must be PSI, BAR, or KPA"
+    RETURN
+  ENDIF
+
+  !  Build the command
+
+  IF szUnits$ = "PSI"
+    szString$ = "GCPU 0"
+  ELSE
+    IF szUnits$ = "BAR"
+      szString$ = "GCPU 1"
+    ELSE
+      szString$ = "GCPU 2"
+    ENDIF
+  ENDIF
+  ! iReturn = alert (szString$)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCHostReady
+PARAMETER szReady$
+LOCAL iReturn,szString$
+
+  ! Check the input value
+
+  IF ((szReady$ <> "TRUE") AND (szReady$ <> "FALSE"))
+    MESSAGE "Host ready must be TRUE or FALSE"
+    RETURN
+  ENDIF
+
+  !  Build the command
+
+  IF szReady$ = "TRUE"
+    szString$ = "GCHR 1"
+  ELSE
+    szString$ = "GCHR 0"
+  ENDIF
+  ! iReturn = alert (szString$)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCTimeandDate
+PARAMETER szTime$,szDate$
+LOCAL iReturn,szString$
+
+  !  Build the command
+
+  szString$ = "GCTM " + szTime$ + "," + szDate$
+  ! iReturn = alert (szString$)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME SetGCKeyboardLocks
+PARAMETER dKeyboardLock,dStartkeyLock,dRemoteStartLock
+LOCAL iReturn,szString$
+
+  !  Build the command
+
+  szString$ = "GCKC ," + VAL$(dKeyboardLock) + "," + VAL$(dStartkeyLock) + "," + VAL$(dRemoteStartLock)
+  ! iReturn = alert (szString$)
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME GetGCReadiness$
+LOCAL iReturn, szString$, szReturn$
+
+  !  Build the command
+
+  szString$ = "GCRY"
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCRunState$
+LOCAL iReturn, szString$, szReturn$
+
+  !  Build the command
+
+  szString$ = "GCRI"
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCConfiguration$
+LOCAL iReturn, szString$, szReturn$
+
+  !  Build the command
+
+  szString$ = "GCCF ?"
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCAuxZoneStatus$
+PARAMETER dChannel
+LOCAL iReturn, szString$, szReturn$
+
+  ! Check if the values are within range
+
+  IF ((dChannel < 1) OR (dChannel > 2))
+    MESSAGE "Aux. channel must be 1 to 2"
+    RETURN ""
+  ENDIF
+
+  !  Build the command
+
+  szString$ = "A" + VAL$(dChannel) + "ST"
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCAuxPnuematicStatus$
+PARAMETER dChannel
+LOCAL iReturn, szString$, szReturn$
+
+  ! Check if the values are within range
+
+  IF ((dChannel < 3) OR (dChannel > 5))
+    MESSAGE "Aux. channel must be 3 to 5"
+    RETURN ""
+  ENDIF
+
+  !  Build the command
+
+  szString$ = "A" + VAL$(dChannel) + "ST"
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCDetStatus$
+PARAMETER szDetector$
+LOCAL iReturn, szString$, szReturn$
+
+  ! Check if the Detector is "FRONT" or "BACK"
+
+  IF ((szDetector$ <> "FRONT") AND (szDetector$ <> "BACK"))
+    MESSAGE "Detector must be front or back"
+    RETURN ""
+  ENDIF
+
+  !  Build the command
+
+  IF (szDetector$ = "FRONT")
+    szString$ = "DFST"
+  ELSE
+    szString$ = "DBST"
+  ENDIF
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCIndicatorStatus$
+LOCAL iReturn, szString$, szReturn$
+
+  !  Build the command
+
+  szString$ = "GCDI"
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCStatusInfo$
+LOCAL iReturn, szString$, szReturn$
+
+  !  Build the command
+
+  szString$ = "GCST"
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCInlStatus$
+PARAMETER szInlet$
+LOCAL iReturn, szString$, szReturn$
+
+  ! Check if the Inlet is "FRONT" or "BACK"
+
+  IF ((szInlet$ <> "FRONT") AND (szInlet$ <> "BACK"))
+    MESSAGE "Inlet must be front or back"
+    RETURN ""
+  ENDIF
+
+  !  Build the command
+
+  IF (szInlet$ = "FRONT")
+    szString$ = "IFST"
+  ELSE
+    szString$ = "IBST"
+  ENDIF
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCOvenStatus$
+LOCAL iReturn, szString$, szReturn$
+
+  !  Build the command
+
+  szString$ = "OVST"
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCValveStatus$
+LOCAL szString$, iReturn, szReturn$
+
+
+  !  Build the command
+
+  szString$ = "VXST"
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME GetGCSignalStatus$
+PARAMETER dSignal
+LOCAL szString$, iReturn, szReturn$
+
+  ! Check if the values are within range
+
+  IF ((dSignal < 1) OR (dSignal > 2))
+    MESSAGE "Signal must be 1 to 2"
+    RETURN ""
+  ENDIF
+
+  !  Build the command
+
+  szString$ = "S" + VAL$(dSignal) + "ST"
+  ! iReturn = alert (szString$)
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+  RETURN szReturn$
+ENDMACRO
+
+NAME SetGCColCompConfig
+PARAMETER dColumn, szColCompDet$
+LOCAL szString$, szDet$
+
+  ! Check if the values are within range
+
+  IF ((szColCompDet$ <> "FRONT") AND (szColCompDet$ <> "BACK"))
+    MESSAGE "Column Comp Detector must be FRONT or BACK"
+    RETURN
+  ENDIF
+
+  IF ((dColumn < 1) OR (dColumn > 2))
+    MESSAGE "Column number must be 1 or 2"
+    RETURN
+  ENDIF
+
+  ! Find out if the detector is front or back 
+
+  IF szColCompDet$ = "FRONT"
+    szDet$ = " 0"
+  ELSE
+    szDet$ = " 1"
+  ENDIF
+
+  szString$ = "CCC" + VAL$(dColumn) + szDet$
+
+  WRITEMODULE "6850GC", szString$
+ENDMACRO
+
+NAME StartGCColCompRun
+PARAMETER dColumn
+LOCAL szString$, szReturn$
+
+  ! Check if the values are within range
+
+  IF ((dColumn < 1) OR (dColumn > 3))
+    MESSAGE "Column number must be 1, 2, or 3 (both)"
+    RETURN
+  ENDIF
+
+  szString$ = "CCCR" + VAL$(dColumn)
+
+  szReturn$ =  SENDMODULE$ ("6850GC", szString$)
+
+  IF szReturn$ = "CCCR 0"
+    MESSAGE "Column comp run started"
+    RETURN
+  ELSE
+    MESSAGE "Column comp run error: " + szReturn$
+    RETURN
+  ENDIF
+ENDMACRO
+

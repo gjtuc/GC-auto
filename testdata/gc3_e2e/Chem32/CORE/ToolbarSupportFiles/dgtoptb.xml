@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 sp2 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="dgTopTB" PosStyle="TOP" Caption='"dgTopTB"' PanelName="Main">
+		<Static Name="ResultsLabel" Text="Test Results/Logbooks" Border="NoBorder"/>
+		<PushButton Name="Open" Help="Open a previously saved test result or logbook" Command="dgOpenTestResult" Group="0" ImageName="Diag_OpenResults20" ImageNameDisabled="Diag_OpenResults20_d"/>
+		<PushButton Name="Save" Help="Saves the most recent test result" Command="dgExecSaveMacro" Group="0" ImageName="Diag_SaveResults20" ImageNameDisabled="Diag_SaveResults20_d"/>
+		<PushButton Name="Print" Help="Prints the most recent test result" Command="dgExecPrintMacro" Group="0" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<RadioButton Name="OQPVBtn" Help="Load possible OQ/PV failures into the symptoms list." Command="dgSelectSymptomGroup OQPVsymptoms, OQPVBtn" DisplayText="1" Text="OQ/PV" NewGroup="1" Group="1"/>
+		<RadioButton Name="AnalytBtn" Help="Load possible analytical problems into the symptoms list. " Command="dgSelectSymptomGroup AnalSymptoms, AnalytBtn" DisplayText="1" Text="Analytic" Group="1"/>
+		<Static Name="SymptomsLabel" Text="Observed Symptoms" Border="NoBorder"/>
+		<NonEditCombobox Name="SymptomSelect" Help="Select a symptom, to load possible defects into cause list." Enable="1" Table="DiagGUIReg,4,FMSymptoms" Selection="1" Width="200" IsPath="0"/>
+		<Static Name="CausesLabel" Text="Possible Causes" Border="NoBorder"/>
+		<NonEditCombobox Name="CauseSelect" Help="Select defect cause to be evaluated on cause confirmation pad" Enable="1" Table="DiagGUIReg,4,FMCauses" Selection="1" Width="200" IsPath="0"/>
+	</toolbar>
+</graphical_object>

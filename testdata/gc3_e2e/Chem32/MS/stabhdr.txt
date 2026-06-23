@@ -1,0 +1,17 @@
+Location
+SampleName
+Method
+InjVial
+SampleType
+CalLevel
+UpdateRF
+UpdateRT
+Interval
+Amount
+ISTDAmt
+Multiplier
+Dilution
+DataFileName
+InjVolume
+SampleInfo
+CalLine

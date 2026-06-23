@@ -1,0 +1,14 @@
+!**************************************************
+! FILE:   FIRMWARE.MAC
+!
+! DESCRIPTION:   This is a macro for Firmware revision "?"
+!
+!* $Header: /cag/DRIVERS/leodef/ce/misc/firmware.mac 3.0 1994-10-25 13:54:15-07 hmgr Exp $
+!**************************************************
+
+print "Loading FIRMWARE.MAC..."
+
+name firmware
+endmacro
+
+print ""

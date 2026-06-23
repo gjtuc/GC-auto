@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 sp2 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="dgTopTB" PosStyle="TOP" Caption="&quot;dgTopTB&quot;" PanelName="Main">
+		<Static Name="ResultsLabel" Text="テスト結果/ログブック" Border="NoBorder"/>
+		<PushButton Name="Open" Help="前に保存したテスト結果かログブックを開きます" Command="dgOpenTestResult" Group="0" ImageName="Diag_OpenResults20" ImageNameDisabled="Diag_OpenResults20_d"/>
+		<PushButton Name="Save" Help="最も最近のテスト結果を保存します" Command="dgExecSaveMacro" Group="0" ImageName="Diag_SaveResults20" ImageNameDisabled="Diag_SaveResults20_d"/>
+		<PushButton Name="Print" Help="最も最近のテスト結果を印刷します" Command="dgExecPrintMacro" Group="0" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<RadioButton Name="OQPVBtn" Help="OQ/PV のトラブル現象をリストします。" Command="dgSelectSymptomGroup OQPVsymptoms, OQPVBtn" DisplayText="1" Text="OQ/PV" NewGroup="1" Group="1"/>
+		<RadioButton Name="AnalytBtn" Help="分析中のトラブル現象をリストします。" Command="dgSelectSymptomGroup AnalSymptoms, AnalytBtn" DisplayText="1" Text="分析" Group="1"/>
+		<Static Name="SymptomsLabel" Text="発生した現象" Border="NoBorder"/>
+		<NonEditCombobox Name="SymptomSelect" Help="トラブルの現象を選択すると考えられる原因がリストされます。" Enable="1" Table="DiagGUIReg,4,FMSymptoms" Selection="1" Width="200" IsPath="0"/>
+		<Static Name="CausesLabel" Text="トラブル原因" Border="NoBorder"/>
+		<NonEditCombobox Name="CauseSelect" Help="トラブル原因を選択すると考えられるテスト項目がリストされます" Enable="1" Table="DiagGUIReg,4,FMCauses" Selection="1" Width="200" IsPath="0"/>
+	</toolbar>
+</graphical_object>

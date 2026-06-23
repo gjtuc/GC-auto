@@ -1,0 +1,154 @@
+[Header]
+FileVersion=1
+SampleName=Lysozyme
+BBSetName=Amino Acids
+DefMatchSet=Protein Digest,2.0,1,2,9,3,7
+BBInsertMode=0
+LastMod= 30 Jun, 1994 8:24:23 AM
+
+[Globals]
+BBBondAdj=-H2O
+AutoCalcMode=0
+
+[Sequence Window]
+Format=0
+IndexLabels=5
+WordSize=5
+AutoCleavage=64
+ManualCleavage=32
+ModifiedBB=1
+NonDefaultBB=16
+InterSeqLinks=8
+IntraSeqLinks=4
+DisabledSeqLinks=2
+
+[Font Info]
+FaceName=Arial
+Height=8
+Width=0
+Weight=400
+TypeFlags=0
+Family=32
+
+[Reports]
+Margin=1905, 1270, 1270, 1270, 0
+Orientation=0
+
+[Digest]
+Protease=Trypsin
+
+[Security]
+Signature=39opClAsPbIHnEeL5rwmC0Hq
+
+[Report Layout]
+0=0,0,0
+1=2,7,15
+2=3,7,15
+3=4,7,15
+4=5,7,15
+5=6,7,15
+6=7,12,15
+7=8,7,15
+8=9,7,15
+9=10,7,15
+10=11,7,15
+11=0,7,15
+
+[Elements]
+C=Carbon,     12.00000000:98.890, 13.003355:1.110
+H=Hydrogen,    1.00782506:99.985,  2.014102:0.015
+N=Nitrogen,   14.00307407:99.640, 15.000109:0.360
+O=Oxygen,     15.99491475:99.760, 16.999131:0.040, 17.999159:0.20
+F=Fluorine,   18.99840460:100.00,
+Na=Sodium,    22.98877000:100.00
+Si=Silicon,   27.97692860:92.230, 28.976496:4.670, 29.973772:3.10
+P=Phosphorus, 30.97376300:100.00
+S=Sulfur,     31.97207280:95.020, 32.971459:0.760, 33.967868:4.20, 35.96708:0.02
+Cl=Chlorine,  34.96885300:75.770, 36.965903:24.23
+K=Potassium,  38.96370800:93.260, 39.963999:0.01, 40.961825:6.73
+Cr=Chromium,  49.94604600:4.35,  51.940510:83.79, 52.940651:9.50, 53.938882:2.36
+Fe=Iron,      55.93493900:91.720, 53.939612:5.9, 56.935396:2.1, 57.933277:0.28
+Br=Bromine,   78.91833200:50.690, 80.916290:49.31
+I=Iodine,    126.90447300:100.00
+
+[BB: Amino Acids]
+A65=Ala,Alanine,90,C3H7NO2,H0,Unmodified
+R82=Arg,Arginine,47,C6H14N4O2,P+,Unmodified
+N78=Asn,Asparagine,44,C4H8N2O3,P0,Unmodified
+D68=Asp,Aspartic Acid,55,C4H7NO4,P-,Unmodified
+C67=Cys,Cysteine,28,C3H7NO2S,H0,Unmodified
+Q81=Gln,Glutamine,39,C5H10N2O3,P0,Unmodified
+E69=Glu,Glutamic Acid,62,C5H9NO4,P-,Unmodified
+G71=Gly,Glycine,75,C2H5NO2,0,Unmodified
+H72=His,Histidine,21,C6H9N3O2,P+,Unmodified
+I73=Ile,Isoleucine,46,C6H13NO2,H0,Unmodified
+L76=Leu,Leucine,75,C6H13NO2,H0,Unmodified
+K75=Lys,Lysine,70,C6H14N2O2,P+,Unmodified
+M77=Met,Methionine,17,C5H11NO2S,H0,Unmodified
+F70=Phe,Phenylalanine,35,C9H11NO2,AH0,Unmodified
+P80=Pro,Proline,46,C5H9NO2,H0,Unmodified
+S83=Ser,Serine,71,C3H7NO3,P0,Unmodified
+T84=Thr,Threonine,60,C4H9NO3,P0,Unmodified
+W87=Trp,Tryptophan,11,C11H12N2O2,PAH0,Unmodified
+Y89=Tyr,Tyrosine,35,C9H11NO3,PA0,Unmodified
+V86=Val,Valine,69,C5H11NO2,H0,Unmodified
+^94=NH2,N-Terminal,0,,+,Unmodified
+$36=COOH,C-Terminal,0,,-,Unmodified
+
+[CID: Amino Acids]
+Series 1=a,-COOH,1,,
+Series 2=x,-H+CO,0,,
+Series 3=b,-OH,1,,
+Series 4=y,+H,0,,
+Series 5=c,-O+NH2,0,,
+Series 6=z,-NH2,1,,
+
+[BB Modification Types]
+*Unmodified=*,,, ,
+Alkylation (iodoacetic acid)=C,-H+C2H3O2,-, ,
+
+[Terminal Modification Types]
+*Unmodified=*,,, ,
+
+[Sequence Chains]
+65=Lysozyme,131
+
+[Sequence Terminals]
+65N=NH2,,+
+65C=COOH,,-
+
+[Sequence Symbols]
+65(1,60)=^KVFGRCELAAAMKRHGLDNYRGYSLGNWVCAAKFESNFNTQATNRNTDGSTDYGILQIN
+65(61,120)=SRWWCNDGRTPGSRNLCNIPCSALLSSDITASVNCAKKIVSDGDGMNAWVAWRNRCKGTD
+65(121,131)=VQAWIRGCRL$
+
+[BB Modifications]
+65(6)=Alkylation (iodoacetic acid),Unmodified
+65(30)=Alkylation (iodoacetic acid),Unmodified
+65(64)=Alkylation (iodoacetic acid),Unmodified
+65(76)=Alkylation (iodoacetic acid),Unmodified
+65(80)=Alkylation (iodoacetic acid),Unmodified
+65(94)=Alkylation (iodoacetic acid),Unmodified
+65(115)=Alkylation (iodoacetic acid),Unmodified
+65(127)=Alkylation (iodoacetic acid),Unmodified
+
+[Fragments]
+65(1)=0,0,146.19,146.11
+65(2,5)=0,0,477.57,477.27
+65(6,13)=0,0,894.06,893.39
+65(14)=0,0,174.20,174.11
+65(15,21)=0,0,873.93,873.41
+65(22,33)=0,0,1326.49,1325.61
+65(34,45)=0,0,1428.49,1427.64
+65(46,61)=0,0,1753.85,1752.83
+65(62,68)=0,0,994.05,993.38
+65(69,73)=0,0,516.56,516.27
+65(74,96)=0,0,2511.80,2511.13
+65(97)=0,0,146.19,146.11
+65(98,112)=0,0,1676.87,1675.78
+65(113,114)=0,0,288.31,288.15
+65(115,116)=0,0,307.36,307.12
+65(117,125)=0,0,1045.17,1044.54
+65(126,128)=0,0,392.42,392.15
+65(129)=0,0,131.18,131.09
+

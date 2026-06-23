@@ -1,0 +1,1073 @@
+!------------------------------------------------------------
+! tlbsmsda.mac          spectra math toolbar        10-98
+!------------------------------------------------------------
+! Copyright 1998 Hewlett-Packard Company
+!------------------------------------------------------------
+!   summation, subtraction, and multiplication of spectra(um)
+!------------------------------------------------------------
+    ! this is used in SetHook "DASwitchTask","LDMS_RemoveCalculationToolbar", 85
+    ! to remove SM Toolbar when switching to non SPECT mode within DA
+name LDMS_RemoveCalculationToolbar$
+  PARAMETER NewButtonName$,NewApplic$,DoSwitch Default 1   !these 3 params needed!!
+  if (NewButtonName$ <> "SPEC")     !don't remove if switching to SPECT tools
+    LDMS_RemoveSpecMathToolbar  
+  else 
+    LDMS_RestoreSpecMathToolbar     !instead restore (if not already restored)
+  endif
+  return ""
+endmacro
+    ! this is used in SetHook "VCloseDA","LDMS_RemoveSpecMathToolbar", 85
+    ! to remove SM Toolbar when switching to mode out of DA, or turning off toolbar
+    ! this is used in SetHook "VCloseDA","LDMS_RemoveSpecMathToolbar", 85
+    ! to remove SM Toolbar when switching to mode out of DA, or turning off toolbar
+name LDMS_RemoveSpecMathToolbar
+!print alert("LDMS_RemoveSpecMathToolbar",2)    !pdr2do  
+    ! if GOMExist( , "TLBSMSDA") = 1              !if exist then hide it & save state
+    if TlbrExists("","TLBSMSDA") = 1              !if exist then hide it & save state
+      ! GOMShow  , "TLBSMSDA",OFF                 !hide toolbar
+      ! CpRequest "CP", "GomSetVal ""SubTB|ChromTB"", ""SPECT"", ""AddOnButton3"", ""State"", 0"
+      On error print
+     ! TlbrDelete "Chem", "tlbsmsda"    getting rid of tlbrdelete commands
+      TlbrShow "Chem", "tlbsmsda", ,"0"
+      On error
+      ! CpRequest "CP", "GomSetVal ""SubTB|ChromTB"", ""SPECT"", ""AddOnButton3"", ""State"", 1"
+      CpRequest "CP", "TlbrSetPropertyVal ""Chem"", ""SpecT"", ""TurnOnMathCalc"", ""State"", 0"
+      if DEC_DeconvUIMenuState > 1 then         !if in deconvolution - then reset multiply
+          resetMultiplyMode                     !else in deconv so reset all multi stuff
+          disableInactiveSpectraMathToolbar     !all buttons inactive & disabled
+      else
+        resetMultiplyMouseHandlersToDefault     !only reset handlers
+        disableSpectraMathToolbar               !resets sum and subtr, multiply is just disabled
+      endif
+      setCalcSavedState                         !save calculation toolbar state
+    endif                                     
+endmacro
+    ! this is used in SetHook "vOPENDA","LDMS_RestoreSpecMathToolbar", 84
+    ! to restore Calc Toolbar when switching back to DA mode
+    ! this is used in SetHook "vOPENDA","LDMS_RestoreSpecMathToolbar", 84
+    ! to restore Calc Toolbar when switching back to DA mode
+name LDMS_RestoreSpecMathToolbar            !restore calc toolbar & work regs
+  Local  bChanged
+    if (regSize(MSREG_SAVEDSTATE) > 0)      !if saved state exists then
+Local  ID_SUPPORTMACFILES_NOTE__THE_SPEC_137
+ID_SUPPORTMACFILES_NOTE__THE_SPEC_137              =  17137  
+       bChanged = checkForChangedMSREG()
+       if (bChanged = 0)                    !if no change then restore
+          restoreCalcSavedState
+          ! GOMShow  , "TLBSMSDA",ON          !show toolbar (could be hiding)
+          if TlbrExists ("","TLBSMSDA") = 0
+            TlbrLoad "Chem", "toolbarsupportfiles\tlbmsda.xml"
+	  else
+	    TlbrShow "Chem","Tlbsmsda", ,"1"
+          endif
+          ! CpRequest "CP", "GomSetVal ""SubTB|ChromTB"", ""SPECT"", ""AddOnButton3"", ""State"", 1"
+          CpRequest "CP", "TlbrSetPropertyVal ""Chem"", ""SpecT"", ""TurnOnMathCalc"", ""State"", 1"
+        else
+          print alert(ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_NOTE__THE_SPEC_137),2)
+!         DrawMSReg                         !Display MSReg    could be hiding
+!restore active mode here
+       endif 
+       clearCalcSavedState                  !clear calculation toolbar saved state, use new regs
+       enableSpectraMathToolbar             !enables but retains (in)active state
+    endif                                     
+endmacro
+
+!check if MSREG has changed - check header and data
+name checkForChangedMSREG
+  local iMaxIons, nIon, RetentTime, EICMassChrg, bChanged
+  local iMaxIonsSAVED, nIonSAVED, RetentTimeSAVED, EICMassChrgSAVED
+  bChanged = 0                              !default = no change
+    if (regSize(MSREG) <> 1)                !multisignal view in MS Spect window => changed
+!     bChanged = 1                          !changed
+      return 1                              !changed = 1
+    endif                                     
+    iMaxIons = tabhdrval(MSReg[1],"intresults",numberofrows)
+    on error return 1                       !if intresults table not found then data has changed
+    iMaxIonsSAVED = tabhdrval(MSREG_SAVEDSTATE[1],"intresults",numberofrows)
+    if (iMaxIons <> iMaxIonsSAVED)              
+      return 1                              !changed = 1
+!     bChanged = 1                          !changed
+    endif                                     
+    for nIon=1 to iMaxIons                      !loop for number of ions
+        EICMassChrg = TabVal(MSreg[1],"intresults",nIon,"RetTime")
+        EICMassChrgSAVED = TabVal(MSREG_SAVEDSTATE[1],"intresults",nIon,"RetTime")
+        if (EICMassChrg <> EICMassChrgSAVED)              
+          return 1                          !changed = 1
+        endif                                     
+    next nIon
+  return bChanged                           !no change = 0
+endmacro
+name setCalcSavedState                      !save calculation toolbar state
+    clearCalcSavedState
+    if (regSize(MSREG) = 1)                 !no multisignal view in MS Spect window
+      copyObj MSREG[1], MSREG_SAVEDSTATE        
+      if regSize(MSREGSamples) > 0
+        copyObj MSREGSamples, MSREGSamples_SAVEDSTATE
+      endif                                     
+      if regSize(MSREGResult) > 0
+        copyObj MSREGResult, MSREGResult_SAVEDSTATE
+      endif                                     
+    endif                                     
+endmacro
+name clearCalcSavedState                    !clear calculation toolbar saved state regs
+!print alert("clearCalcSavedState",2)    !pdr2do  
+    if regSize(MSREG_SAVEDSTATE) > 0  
+        delReg MSREG_SAVEDSTATE             !get rid of prev 
+      if regSize(MSREGResult_SAVEDSTATE) > 0
+        delReg MSREGResult_SAVEDSTATE       !get rid of prev 
+      endif                                     
+      if regSize(MSREGSamples_SAVEDSTATE) > 0
+        delReg MSREGSamples_SAVEDSTATE      !get rid of prev 
+      endif                                     
+    endif                                     
+endmacro
+name restoreCalcSavedState                  !restore calculation toolbar saved state
+!print alert("restoreCalcSavedState",2)    !pdr2do  
+    if regSize(MSREG_SAVEDSTATE) > 0  
+        delReg MSREG                        !copy over current
+        copyObj MSREG_SAVEDSTATE, MSREG
+    endif                                     
+    if regSize(MSREGResult) > 0
+        delReg MSREGResult           
+    endif                                     
+    if regSize(MSREGResult_SAVEDSTATE) > 0  !copy over current
+        copyObj MSREGResult_SAVEDSTATE, MSREGResult
+    endif                                     
+    if regSize(MSREGSamples) > 0
+        delReg MSREGSamples                 !copy over current
+    endif                                     
+    if regSize(MSREGSamples_SAVEDSTATE) > 0
+        copyObj MSREGSamples_SAVEDSTATE, MSREGSamples
+    endif 
+endmacro
+name LDMS_DoCalculationToolbar              !user has selected the calc toolbar enable button
+  Local t                             
+  ! if GOMExist( , "TLBSMSDA") = 1            !if exist then 
+    ! GOMShow  , "TLBSMSDA",ON                !show toolbar (could be hiding)
+  if TlbrExists ("","TLBSMSDA") = 0
+    TlbrLoad "Chem", "toolbarsupportfiles\tlbsmsda.xml"
+  else
+    TlbrShow "Chem","TLBSMSDA",,"1"
+  endif
+    ! CpRequest "CP", "GomSetVal ""SubTB|ChromTB"", ""SPECT"", ""AddOnButton3"", ""State"", 1"
+    CpRequest "CP", "TlbrSetPropertyVal ""Chem"", ""SpecT"", ""TurnOnMathCalc"", ""State"", 1"
+    !re-entry after zooming (sum or subtr was active)
+    !check buttons to see if sum or subtr were enabled and ACTIVE = 1
+    ! if GomVal("", "TLBSMSDA", "SumSpect", "State") = 1      !active(pressed) & enabled
+    if TlbrGetPropertyVal ("Chem", "TLBSMSDA", "SumSpect", "State") = 1
+        ! GomSetVal "", "TLBSMSDA", "MultiplySpect", "State", 0
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "State", 0
+        return                              !if so then don't redraw - 
+    endif
+    ! if GomVal("", "TLBSMSDA", "SubtrSpect", "State") = 1    !active(pressed)
+    if TlbrGetPropertyVal ("Chem", "TLBSMSDA", "SubtrSpect", "State") = 1
+        ! GomSetVal "", "TLBSMSDA", "MultiplySpect", "State", 0
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "State", 0
+        return
+    endif
+    !re-entry after zooming so check if multiply was active - but disabled
+    !check multiply to see if it was disabled but ACTIVE =3
+    ! t = GomVal("", "TLBSMSDA", "MultiplySpect", "State")
+    t = TlbrGetPropertyVal ("Chem", "TLBSMSDA", "MultiplySpect", "State")
+    if ((t = 3) OR (t = 2)) then            !if disabled ...inactive(2) or active(3)
+      if (regSize(MSREG) > 0)               !if MSREG does not exist ...then can not be in multiply mode
+        enableSpectraMathToolbar            !this is return from zoom (back in to multiply mode)
+      endif
+      return
+    endif
+    if (regSize(MSREG) = 1)                 !if exists then draw it, could be hidden
+        DrawMSReg                           !Display MSReg     if MSREG has data
+    endif
+    !if calculation registers exist then assume that we have current data - so enable toolbar
+    if ((regSize(MSREGResult) > 0) AND (regSize(MSREGSamples) > 0) AND (regSize(MSREG) = 1))
+       enableSpectraMathToolbar             !enables but retains (in)active state
+    endif                                     
+  ! else                                      !if toolbar doesn't exist then load it
+    createCalcToolbar
+    MultiplyIndx = -1                       !flag multiply mode was not initialized yet
+	MS_CursorState = 0                      !initialize cursor state to zoom
+return
+endmacro
+name resetMultiplyMouseHandlersToDefault
+    SetTabText _Config[1], "WINDOW", MSDA_MSWIN, "LClick", "lcl"       !"lcl"
+    SetTabText _Config[1], "WINDOW", MSDA_MSWIN, "LEndDrag", "lenddr"   !allow zoom
+	if (MS_CursorState = 0)
+		Win_SetWindowCursors MSDA_MSWIN, -3, 101, 101
+	else
+		Win_SetWindowCursors MSDA_MSWIN, -2, 3, 3
+	endif
+endmacro
+name setMultiplyMouseHandlers               !use calc toolbar mouse handler for redline position
+       SetTabText _Config[1], "WINDOW", MSDA_MSWIN, "LClick", "MultiplySpectraGetCursorLocation"
+       SetTabText _Config[1], "WINDOW", MSDA_MSWIN, "LEndDrag", ""  !disable crippled zoom
+       Win_SetWindowCursors MSDA_MSWIN, , , 1  !use arrow cursor to indicate multiplication mode
+endmacro
+name createCalcToolbar                      !put up calc tool bar
+  if TlbrExists ("","TLBSMSDA") = 0
+    TlbrLoad "Chem", "toolbarsupportfiles\tlbsmsda.xml"
+  else
+    TlbrShow "Chem","TLBSMSDA", ,"1"
+  endif
+    ! GOMLoad _AutoMSPath$ + "800\TLBSMSDA.ini"
+    ! GOMSetVal "","TLBSMSDA","MultiplySpect","y",4
+    ! GOMSetVal "","TLBSMSDA","SumSpect","y",42
+    ! GOMSetVal "","TLBSMSDA","SubtrSpect","y",76     !68
+    ! GOMSetVal "","TLBSMSDA","ClearSpect","y",114
+    ! GOMSetVal "","TLBSMSDA","HelpSpect","y",152
+    ! GOMSetVal "","TLBSMSDA","ExitSpect","y",190
+    ! GOMShow , "TLBSMSDA", ON                  !show toolbar
+    if (regSize(MSREG) = 1)                   !if exists then use it
+      DrawMSReg                               !Display MSReg     if data...could be hiding
+      enableInactiveSpectraMathToolbar
+    else
+      disableInactiveSpectraMathToolbar       !all buttons reset to inactive & disabled
+    endif
+endmacro
+name DoMSSpectraMathExit        !called from zoom button press in tlbmsda.mac
+    LDMS_RemoveSpecMathToolbar
+endmacro
+name DoMSSpectraMathHelp
+!    use IDH_specarithtbar  (5025)  
+    Help HelpSubSystemTopic("HPMSCORE", 5025)
+endmacro
+name disableInactiveSpectraMathToolbar      !all buttons inactive & disabled
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "Enable", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "Enable", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "Enable", 0
+endmacro
+name enableInactiveSpectraMathToolbar   !all buttons inactive & enabled
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "State", 0
+endmacro
+name enableSpectraMathToolbar           !enables but retains (in)active state
+    ! Local t
+    ! t = GomVal("", "TLBSMSDA", "MultiplySpect", "State")
+    ! if (t - 2 >= 0)
+       ! GomSetVal "", "TLBSMSDA", "MultiplySpect", "State", t - 2
+      ! if (t = 3)                            !was disabled - active, now enabled active
+       ! setMultiplyMouseHandlers             !use calc toolbar mouse handler for redline position
+       ! GomSetVal "", "TLBSMSDA", "SumSpect", "State", 2     !disable since multiply enabled
+       ! GomSetVal "", "TLBSMSDA", "SubtrSpect", "State",2
+      ! else                                  !multiply was not active, so enable
+       ! GomSetVal "", "TLBSMSDA", "SumSpect", "State", 0     !other buttons
+       ! GomSetVal "", "TLBSMSDA", "SubtrSpect", "State",0
+      ! endif
+    ! endif
+    ! GomSetVal "", "TLBSMSDA", "ClearSpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "ClearSpect", "State", 0
+    if TlbrGetPropertyVal ("Chem", "TLBSMSDA", "MultiplySpect", "Enable") = 0
+      TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "Enable", 1
+      if TlbrGetPropertyVal ("Chem", "TLBSMSDA", "MultiplySpect", "State") = 1
+        setMultiplyMouseHandlers             !use calc toolbar mouse handler for redline position
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "Enable", 0
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "Enable", 0
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "State", 0
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "State", 0
+      else
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "Enable", 1
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "Enable", 1
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "State", 0
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "State", 0
+      endif
+    endif
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "ClearSpect", "State", 0
+endmacro
+name disableSpectraMathToolbar          !disables but retains (in)active state
+    Local t                             !note disabled inactive =2, dis & act=3
+    ! if GOMExist( , "TLBSMSDA") = 1            !if exist calc toolbar
+    if TlbrExists ("","TLBSMSDA") = 0
+      ! t = GomVal("", "TLBSMSDA", "MultiplySpect", "State")
+      ! if (t + 2 <= 3)
+      if TlbrGetPropertyVal ("Chem", "TLBSMSDA", "MultiplySpect", "Enable") = 1
+        ! GomSetVal "", "TLBSMSDA", "MultiplySpect", "State", t + 2
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "Enable", 0
+      endif
+      ! GomSetVal "", "TLBSMSDA", "SumSpect", "State", 2        !disable&inactive...even if active
+      ! GomSetVal "", "TLBSMSDA", "SubtrSpect", "State", 2
+      TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "Enable", 0
+      TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "Enable", 0
+      TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "State", 0
+      TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "State", 0
+    endif
+endmacro
+!called from tlbmsda.mac   MSD_SetIonSelection
+!called from tlbmsda.mac   MSD_SetIonSelection
+name disableSpectraMathToolbarMultiply  !disables but retains (in)active state
+    Local t                             !note disabled inactive =2, dis & act=3
+    ! if GOMExist( , "TLBSMSDA") = 1            !if exist calc toolbar
+    if TlbrExists ("","TLBSMSDA") = 0
+      ! t = GomVal("", "TLBSMSDA", "MultiplySpect", "State")
+      ! if (t + 2 <= 3)
+      if TlbrGetPropertyVal ("Chem", "TLBSMSDA", "MultiplySpect", "Enable") = 1
+        ! GomSetVal "", "TLBSMSDA", "MultiplySpect", "State", t + 2
+        TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "Enable", 0
+      endif
+    endif
+endmacro
+name ActivateMSSumSpectraButton   !enable Summation - so reset other 2 buttons
+    ! GomSetVal "", "TLBSMSDA", "SubtrSpect", "State",0
+    ! GomSetVal "", "TLBSMSDA", "MultiplySpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "State", 0
+    !added 6-2-99 since now we could still have multiply data in MSREGResult[1&2] if 
+    !'Exit' or deactivate 'Multiply' button was just used
+    if (regSize(MSREGResult) = 3)       !if 3 MSREGResults then undo multiply first
+      resetMultiplyMode                 !reset multiply mode
+    endif
+endmacro
+name ActivateMSSubtractSpectraButton
+    ! GomSetVal "", "TLBSMSDA", "SumSpect", "State", 0
+    ! GomSetVal "", "TLBSMSDA", "MultiplySpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "State", 0
+    !added 6-2-99 since now we could still have multiply data in MSREGResult[1&2] if 
+    !'Exit' or deactivate 'Multiply' button was just used
+    if (regSize(MSREGResult) = 3)       !if 3 MSREGResults then undo multiply first
+      resetMultiplyMode                 !reset multiply mode
+    endif
+endmacro
+name ActivateMSMultiplySpectraButton        !setup for multiply mode
+    ! GomSetVal "", "TLBSMSDA", "SumSpect", "State", 2        !disable inactive
+    ! GomSetVal "", "TLBSMSDA", "SubtrSpect", "State",2
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "Enable", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "MultiplySpect", "Enable", 0
+    !get current funct/macro for LCLICK and use to replace our macro when exit from multiply
+!ok defaultLCLICK$ = TabText$(_Config[1], "WINDOW", MSDA_MSWIN, "LClick")
+    setMultiplyMouseHandlers                !use calc toolbar mouse handler for redline position
+!   Win_SetWindowCursors MSDA_MSWIN, , , 1  !use arrow cursor to indicate multiplication mode
+!we may have a multiply result already... if so - then don't reset everything here...use it
+    if MultiplyIndx = -1                    !if multiply was not active
+      !if MSREGResult[3] doesn't exist then need to copy MSREG[1] twice so
+      !that MSREGResult[1] & [2] can be used for multiply, [1] is scratch obj, [2] is MSREG copy
+!!need to keep current MSREGResult[1] since it has sum or subtr data(prenormalized & preinteg)
+!!so when done with setup here - then ot will become MSREGResult[3]
+!!      if (regSize(MSREGResult) >= 0)        !if exists then delete it(get MSREG[1] copy)
+!!        delReg MSREGResult
+!!      endif
+      !assumes that MSREG[1] exists else multiply would not have been enabled
+      copyObj MSREG[1], MSREGResult[1]      !save as original MSREG (display) data
+      copyObj MSREG[1], MSREGResult[1]      !save working copy
+      MultiplyIndx = 0                      !global Multiply table Index
+    endif
+endmacro
+name DeactivateMSMultiplySpectraButton
+    ! GomSetVal "", "TLBSMSDA", "SumSpect", "State", 0
+    ! GomSetVal "", "TLBSMSDA", "SubtrSpect", "State",0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "State", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SumSpect", "Enable", 0
+    TlbrSetPropertyVal "Chem", "TLBSMSDA", "SubtrSpect", "Enable", 0
+!6-2-99 decided that we want to keep red lines as already setup
+!    resetMultiplyMode
+    resetMultiplyMouseHandlersToDefault     !at least reset the mouse handlers
+endmacro
+name resetMultiplyMode                      !reset multiply mode
+  if MultiplyIndx >= 0                      !if multiply was active
+    MultiplyIndx = -1                       ! reset stored redline counter
+      if (regSize(MSREGResult) = 3)         !if 3 MSREGResults exist then undo multiply
+        delObj MSREG[1]                     !blow away redlines displayed
+        delObj MSREGResult[1]               !remove table & multiplication work reg
+        copyObj MSREGResult[1],MSREG[1]     !put back 'original' for current display
+!!need to keep current MSREGResult[1] since it has sum or subtr data(prenormalized & preinteg)
+!!so when done with setup here - then it will become MSREGResult[3]
+        delObj MSREGResult[1]               !remove original MSREG data (was MSREGResult[2])
+!now what was MSREGResult[3] will become MSREGResult[1] ready for any operation (+-*)
+      endif
+      !if  MultiplySpect was active then - reset cursor & mouse capture
+      !    Win_SetWindowCursors MSDA_MSWIN, , , 1            !reset back to arrow cursor
+    resetMultiplyMouseHandlersToDefault
+  endif
+endmacro
+    !unfortunate overhead -since this is always called- because the chemist 
+    !want to add or subtract at any time... and so we must have already saved 
+    !the previous MSREG data (before normalization)
+    !unfortunate overhead -since this is always called- because the chemist 
+    !want to add or subtract at any time... and so we must have already saved 
+    !the previous MSREG data (before normalization)
+name SaveSubAndSumMSREGdata                     !save MSREG for next sub or sum
+  if (regSize(MSREGResult) > 1)             !if 3 MSREGResults then undo multiply first
+    resetMultiplyMode                       !reset multiply mode
+  endif
+  if (regSize(MSREG) = 1)
+    !initialize sum or subtration...clear out old data, grab new data
+    if regSize(MSREGResult) >= 0  
+        delReg MSREGResult                      !get rid of prev initial result
+    endif
+    if regSize(MSREGSamples) >= 0
+        delReg MSREGSamples                     !get rid of prev initial result
+    endif
+    smSignalDes$ = ObjHdrText$(MSREG[1],"SignalDesc")
+    SetObjHdrText MSREG[1],"Title", smSignalDes$ + " of " + DADataFile$ + ", " + getPolarityStr$()
+    !if no data saved in reg then copy new data in
+    copyObj MSREG[1], MSREGResult[1]  !save as first selection
+  endif
+endmacro
+!--------------------------------
+!--------------------------------
+name DoSpectraMathToolbarIfActive               !this is only called if a peak has been selected
+  Local smTitleNew$, smSignalDes$, t            !it is deemed a 'new' peak if no mode is active
+  ! if GomExist(,"TLBSMSDA") = 1                  !check if toolbar has been created...
+  if TlbrExists ("","TLBSMSDA") = 1
+    if (regSize(MSREG) <> 1)                    !verify NOT multiple views in MS Spectrum window
+        !either CTRL was used, or the data is linked multisignals so..
+        disableSpectraMathToolbar               !disable TLBMSDA buttons...
+    else            !if (regSize(MSREG) = 1)    !only 1 MS Spectrum view allowed
+        !check if any of the spectra math modes are active
+        !check that the math data regs have valid data
+!       if (regSize(MSREGResult) <= 0 AND regSize(MSREGSamples) <= 0 AND (GomVal("", "TLBSMSDA", "SumSpect", "State") >= 2))
+!           enableSpectraMathToolbar            !enable buttons on toolbar
+!       endif
+        ! if GomVal("", "TLBSMSDA", "SumSpect", "State") = 1      !active(pressed) & enabled
+        if TlbrGetPropertyVal ("Chem", "TLBSMSDA", "SumSpect", "State") = 1
+            DoMSSumSpectra                      !add peaks
+            return
+        endif
+        ! if GomVal("", "TLBSMSDA", "SubtrSpect", "State") = 1    !active(pressed)
+        if TlbrGetPropertyVal ("Chem", "TLBSMSDA", "SubtrSpect", "State") = 1
+            DoMSSubtractSpectra                 !subtract peaks
+            return
+        endif
+        !if sum & sub are disabled & MultiplySpect is active then a new spectrum
+        !was selected while in multiply mode - so reset multiply & enable all
+        ! t = GomVal("", "TLBSMSDA", "MultiplySpect", "State")
+        ! if ((t = 1) OR (t = 3))
+        if TlbrGetPropertyVal ("Chem", "TLBSMSDA", "MultiplySpect", "State") = 1
+            copyObj MSREG[1],MSREG_SAVEDSTATE[1]    !temp save of MSREG while reset of Multiply mode
+            resetMultiplyMode
+            delObj MSREG                            !clear out MSREG as restored from pre Multiply mode
+            copyObj MSREG_SAVEDSTATE[1],MSREG[1]    !restore MSREG after reset of Multiply mode
+            SaveSubAndSumMSREGdata              !save MSREG for next sub or sum
+            clearCalcSavedState                 !clear calculation toolbar saved state, use new regs
+            enableInactiveSpectraMathToolbar    !all buttons inactive but enabled
+!            if (regSize(MSREG) = 1)             !if exists then use it
+!              DrawMSReg                         !Display MSReg     if data...could be hiding
+!            endif
+            return
+        endif
+      !if (NOT in multi. mode, AND NOT in Sum AND NOT in Subtr mode) then
+      !must save the MSREG data...since this could be the starting point for next SUM or SUB
+      SaveSubAndSumMSREGdata                !save MSREG for next sub or sum
+      clearCalcSavedState                   !clear calculation toolbar saved state, use new regs
+      enableSpectraMathToolbar              !enables toolbar math operation buttons - if MSREG=1
+      
+    endif                                   !if (regSize(MSREG) <> 1)
+  else                                      !tb is not active - but it could be activated anytime
+    !if the math toolbar is not active
+    SaveSubAndSumMSREGdata                  !save MSREG for next sub or sum
+  endif
+endmacro
+name DoMSClearSpectra 
+  PARAMETER KeepMSREG  Default 0
+    !if  MultiplySpect was active then - reset cursor & mouse capture
+    ! if GomVal("", "TLBSMSDA", "MultiplySpect", "State") = 1
+    if TlbrGetPropertyVal ("Chem", "TLBSMSDA", "MultiplySpect", "State") = 1
+       resetMultiplyMode 
+    endif
+    if (regSize(MSREGResult) > 0)       !if exists then delete it
+        delReg MSREGResult
+    endif
+    if (regSize(MSREGSamples) > 0)      !if exists then delete it
+        delReg MSREGSamples
+    endif
+    if (KeepMSREG = 0) AND (regSize(MSREG) > 0)
+        delReg MSREG
+    endif
+    disableInactiveSpectraMathToolbar   !all buttons reset to inactive & disabled
+    return
+endmacro
+name DoMSSumSpectra                     !processes and brings up MS SpecWindow
+  Local smTitleNew$, smSignalDes$       !, smRawDataFile$
+  if (regSize(MSREGSamples) <= 0)       !if no data samples saved yet
+    copyObj MSREGResult[1], MSREGSamples[1] !save this sample
+  endif
+  if verifySignalsCanBeAdded() = 1 then
+    smSignalDes$ = ObjHdrText$(MSREG[1],"SignalDesc")
+!   smTitleNew$ =  "+" +smSignalDes$ + " of " + DADataFile$
+    smTitleNew$ =  "+" +smSignalDes$ + " of " + DADataFile$ + ", " + getPolarityStr$()
+    SetObjHdrText MSREG[1],"Title", smTitleNew$
+    copyObj MSREG[1], MSREGSamples      !save this 2nd sample - append
+    moveObj MSREG[1], MSREGResult[1]    !removes MSREG[1] and inserts before previous result
+    addObj  MSREGResult                 !add the 2 registers - put result in MSREGResult[1]
+    setPolarityOfMSREGResult            !put into MSRegResult the polarity of MSREGSamples
+    copyObj MSREGResult[1], MSREG[1]    !return to display it now
+  else
+    SaveSubAndSumMSREGdata              !save this 'new' MSREG for next subtr or sum
+  endif
+  return
+endmacro
+name getPolarityStr$                    !get current MSREG[1] polarity str (3 chars)
+  Local sPolarity$
+  sPolarity$ = ObjHdrText$(MSREG[1],"Polarity")
+  if (sPolarity$ = "Positive") OR (sPolarity$ = "Positve")
+    return "Pos"
+  endif
+  if (sPolarity$ = "Negative")
+    return "Neg"
+  endif
+  return "Unk"                          !else unknown
+endmacro
+name DoMSSubtractSpectra  
+  Local smTitleNew$, smSignalDes$
+  if (regSize(MSREGSamples) <= 0)     !if no data yet
+        copyObj MSREGResult[1], MSREGSamples[1]     !save this sample
+        !no data yet - so subtraction result is negative
+        !print alert(">>FIX>>DoMSSubtractSpectra regSize(MSREGSamples) <= 0",2)
+  endif
+  if verifySignalsCanBeAdded() = 1 then
+    smSignalDes$ = ObjHdrText$(MSREG[1],"SignalDesc")
+    smTitleNew$ =  "-" +smSignalDes$ + " of " + DADataFile$ + ", " + getPolarityStr$()
+    SetObjHdrText MSREG[1],"Title", smTitleNew$
+    copyObj MSREG[1], MSREGSamples    !save this 2nd sample - append
+    moveObj MSREG[1], MSREGResult[2]  !put what you want subtracted in [2]
+    subzero MSREGResult[1], MSREGResult[2]  !put result in [1]     
+    setPolarityOfMSREGResult          !put into MSRegResult the polarity of MSREGSamples
+    copyObj MSREGResult[1], MSREG[1]  !put back for display
+    delObj  MSREGResult[2]            !note subtraction doesn't del reg[2]
+  endif
+  return
+endmacro
+name MultiplySpectraGetCursorLocation
+  PARAMETER Win Default MSDA_MSWIN      !79
+  PARAMETER X1  Default 0
+  PARAMETER X2  Default 0
+  PARAMETER Y1  Default 0
+  PARAMETER Y2  Default 0
+  PARAMETER reg$      Default "MSREG"
+  PARAMETER regObjNum Default 1
+  Local MultiplyByX
+    MultiplyByX = GetMSMultiplyValue()
+    if MultiplyByX <> 0
+      Set_Multiplication_Range X1, MultiplyByX
+    endif
+endmacro
+!-------------------------------------------------------------------------
+!-------------------------------------------------------------------------
+name Set_Multiplication_Range   !command line Do multiply
+  PARAMETER XPosition       Default 100 !value from 0. to large
+  PARAMETER MultiplyFactor  Default 0   !default to invalid value
+  Local     YHigh, YLow, XH, XL, DataXIndx, massChrg, i, d
+  Local     YHght, MultiplyLabel$, LabelLen, XArrow, YArrow
+  Local     XYString$, DrawCommandStr$
+! validate inputs here (could be from command line
+Local  ID_SUPPORTMACFILES_UNABLE_TO_MULT_138
+Local  ID_SUPPORTMACFILES_MULTIPLIER_MUS_139
+ID_SUPPORTMACFILES_UNABLE_TO_MULT_138              =  17138  
+ID_SUPPORTMACFILES_MULTIPLIER_MUS_139              =  17139  
+    if (regSize(MSREG) <= 0) 
+        print alert(ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_UNABLE_TO_MULT_138), 2)
+        return
+    endif
+!   !pdr2do validate position
+!   GetDataMinMax MSReg[1], 0  !OBJ_MIN = 271.2, OBJ_MAX = 311.3
+!   if XPosition < OBJ_MIN OR XPosition >= OBJ_MAX
+!       print alert("Unable to Multiply since position(parameter 1) is out of range of MS Spectrum data", 2)
+!       return
+!   endif
+    !validate MultiplyFactor
+    if (MultiplyFactor <= 0) OR (MultiplyFactor > 10000)
+        ON ERROR print ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MULTIPLIER_MUS_139)
+        GENERATE ERROR                      !force this error msg
+        return                              !simply ret...can't do msg box/warn
+    endif
+!-----------------------------------
+    !this needed if Set_Multiplication_Range was done on command line
+    !this sets up 'multiplication mode' so that it can be detected & destroyed
+    ! if (GOMExist( , "TLBSMSDA") = 0)        !if doesn't exist then set it up
+    if TlbrExists ("","TLBSMSDA") = 0
+        LDMS_DoCalculationToolbar           !set up calc tool bar
+    endif
+    if (MultiplyIndx < 0)                   !multiply button & mouse click not set up yet
+        ActivateMSMultiplySpectraButton     !setup for multiply mode
+    endif
+!-----------------------------------
+  !do special case if 1x and left most position
+  if (MultiplyFactor = 1) 
+    if (MultiplyIndx > 0)                   !must have one table entry
+      i = getTabIndexFromSort(1)            !returns Table Index for left most pnt
+      massChrg = TabVal (MSREGResult[1], "MultiplyRanges", i, "PosXStart")
+    else
+      massChrg = 0
+    endif
+      !reset back to orig MSREG before multiply         if left most point
+      if (XPosition < massChrg) OR (MultiplyIndx = 0)   !or first entry
+        MultiplyIndx = 0                    ! reset stored redline counter
+        delObj MSREG[1]
+        delObj MSREGResult[1]               !remove table
+        copyObj MSREGResult[1],MSREG[1]     !put back for display
+        copyObj MSREG[1],MSREGResult[1]     !put back for work register
+        !will still have three objs in MSREGResult[]
+        return
+    endif
+  endif
+!-----------------------------------
+!use globals MultiplyIndx, and NewObjHdrVal MSREG[1], "MultiplyRangeIndx", 0, , INT
+!create MultiplyIndx, and NewObjHdrVal MSREG[1], "MultiplyRangeIndx", 0, , INT
+!else increment index and save PosX and XFactor
+    if (MultiplyIndx = 0)
+      if(objhdrtype(MSREGResult[1], "MultiplyRanges") = 99)
+        NewTab MSREGResult[1], "MultiplyRanges"
+!NewColVal RegObj, TabName, ColName, [InitVal], [Protect], [TypeCode], [Low], [High]
+!       NewColVal MSREGResult[1], "MultiplyRanges", "MultiplyXStart", 0, , DOUBLE  !DOUBLE=1
+        NewColVal MSREGResult[1], "MultiplyRanges", "PosXStart"     , 0, , 1
+        NewColVal MSREGResult[1], "MultiplyRanges", "MultiplyBy"    , 0, , 1
+        NewColVal MSREGResult[1], "MultiplyRanges", "startRangeIndx", 0, , 1  !pdr2do INT
+        NewColVal MSREGResult[1], "MultiplyRanges", "sortRangeIndx" , 0, , 1  
+      endif
+    endif
+    MultiplyIndx = MultiplyIndx + 1
+    DataXIndx = getXDataFromMass (XPosition)  !XPos parameter  returns DataIndx
+    nPeaks = DataCols(MSreg[1])         !npeaks in data obj
+!-----------------------------------
+    updateTabDataIndex      !be sure that all dataIndex's saved in the table are current
+                            !may change if a new signals data is added
+!   check here that this is a new/unique position point
+!   if not unique - then over-write original else insert new into table
+    i = returnNonUniqueMultiplyStartPosition (DataXIndx)    !i = 0 if was unique
+    if i = 0                                                !then insert table
+        InsTabRow MSREGResult[1], "MultiplyRanges"        !appends new row for both cols
+        !SetTabVal RegObj, TabName, [RowRange], ColName, Value
+        SetTabVal MSREGResult[1], "MultiplyRanges", MultiplyIndx, "PosXStart", XPosition
+        SetTabVal MSREGResult[1], "MultiplyRanges", MultiplyIndx, "MultiplyBy", MultiplyFactor
+        SetTabVal MSREGResult[1], "MultiplyRanges", MultiplyIndx, "startRangeIndx", DataXIndx
+        SetTabVal MSREGResult[1], "MultiplyRanges", MultiplyIndx, "sortRangeIndx", MultiplyIndx
+        updateSortIndex DataXIndx               !sort the ranges in the table
+    else    !over-write table index returned
+        SetTabVal MSREGResult[1], "MultiplyRanges", i, "PosXStart", XPosition
+        SetTabVal MSREGResult[1], "MultiplyRanges", i, "MultiplyBy", MultiplyFactor
+        !print alert("overwrite of non-unique redline position" + "xIndx =" + VAL$(DataXIndx), 2)
+        MultiplyIndx = MultiplyIndx - 1         !not a new table entry
+    endif
+!-----------------------------------
+! - perform multiply for all MSREGResults for given position
+! for objnum=objlow to objhi
+    displayMultiplyRanges             !now multiply desired ranges in MSREG[1]
+    !must draw red lines after spectra modifications ... else they are removed
+    !during each SetData() call
+!6-8-99 to reduce the variability of red line placement....we will now make
+!use of the fact that the MS Spect window is redrawn full scale after a red line
+!placment - even if you had been zoom'd in
+!so now always use the MAX stored values to determine sizes
+    GetDataMinMax MSREG[1], 0           !get x range
+    XL = OBJ_MIN                      
+    XH = OBJ_MAX	
+    GetDataMinMax MSREG[1], 1           !get y range
+    YLow = OBJ_MIN                      
+    YHigh = OBJ_MAX	
+    if YLow > 0 then
+        !note some times MS Spect window has a Y range that is not ref'd to 0!
+        !this can happen for SIM results (usually a single ion) where OBJ_MIN = OBJ_MAX = data height
+        if OBJ_MIN = OBJ_MAX then
+            YLow = OBJ_MIN * .98        !this range is likely to be +/- 5% but use 2%
+            YHigh = OBJ_MAX * 1.02
+        endif
+        if XH = XL then
+            XL = XL * .98 
+            XH = XH * 1.02
+        endif
+        YHght = ((YHigh - YLow) * .86) + YLow
+        ! note some data (like MSDEMO\CAFCAL04.D) have OBJ_MIN = OBJ_MAX = mid range...so YHght becomes = YLow
+        YLow = 0                        !now for drawing...be sure to start from lowest Y point
+    else
+        YHght = (YHigh - YLow) * .86    !normal case where YLow is 0 (or slightly negative)
+    endif
+    !ok to always draw a new fig here...  since this MSREG[1] is destroyed next time thru
+    for i=1 to MultiplyIndx
+        XPosition = TabVal (MSREGResult[1], "MultiplyRanges", i, "PosXStart")
+        MultiplyFactor = TabVal (MSREGResult[1], "MultiplyRanges", i, "MultiplyBy")
+        MultiplyLabel$ = val$(MultiplyFactor) + "X"
+        LabelLen = (len(MultiplyLabel$)) * .01 * (XH-XL)
+        !draw a red line
+        Indx = NewPolyAnn (MSREG[1], 0, XPosition, YLow, 4, 9, 1, 240, 0, , 1)
+        SetPolyAnnVal MSREG[1], Indx, 1, 0, 0
+        SetPolyAnnVal MSREG[1], Indx, 2, 0, YHght
+        !draw arrow head here
+        XArrow = .014 * (XH-XL)
+        YArrow = .014
+        !underline 'Xxxx' label - fix to size of char string
+!ok     Indx = NewFig (MSDA_MSWIN, 1, 1, XPosition, YHght, XPosition+LabelLen+XArrow, YHght, 0, , 240)
+        SetPolyAnnVal MSREG[1], Indx, 3, LabelLen+XArrow, YHght
+        SetPolyAnnVal MSREG[1], Indx, 4, LabelLen, YHght*(1+YArrow)
+        SetPolyAnnVal MSREG[1], Indx, 5, LabelLen, YHght*(1-YArrow)
+        SetPolyAnnVal MSREG[1], Indx, 6, LabelLen+XArrow, YHght
+        !place red label with MultiplyFactor
+        dummy = NewTextAnn(MSREG[1], MultiplyLabel$,XPosition+.1,YHght,4,,8,240,,3,3,"courier new",0)
+    next i
+endmacro
+
+!-------------------------------------------------------------------------
+name GetMSMultiplyValue
+  local MultiplyFactor$
+Local  ID_SUPPORTMACFILES_ENTER_THE_MULT_140
+Local  ID_SUPPORTMACFILES_MULTIPLIER_MUS_139
+ID_SUPPORTMACFILES_ENTER_THE_MULT_140              =  17140  
+ID_SUPPORTMACFILES_MULTIPLIER_MUS_139              =  17139  
+    MultiplyFactor$ = "1"
+    BeginDialog "SPCMULPEDlg", 80,80,120,80,
+        StaticText  10, 8,100,16, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_ENTER_THE_MULT_140)
+        EditBox 40, 33, 40,14, MultiplyFactor$
+        OKButton 15,60, 40,14
+        CANCELButton 65,60, 40,14
+    EndDialog
+          
+    repeat 
+        retval = ShowDialog("SPCMULPEDlg")
+        if retval = 0               !0 => canceled
+          RemoveDialog "SPCMULPEDlg"
+          return (0)                !user canceled 
+        endif
+        if (val(MultiplyFactor$) <= 0) OR (val(MultiplyFactor$) > 10000)
+!         print alert("Invalid entry: " +MultiplyFactor$ + " multiplier must be between 0 and 1,000,000", 2)
+          print alert(ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MULTIPLIER_MUS_139), 2)
+        endif
+    until ((retval < 2) AND (val(MultiplyFactor$) > 0) AND (val(MultiplyFactor$) <= 10000) )
+    RemoveDialog "SPCMULPEDlg"
+    return val(MultiplyFactor$)
+endmacro
+
+name displayMultiplyRanges            !now multiply desired ranges in MSREG[1]
+!loop for iSI = 1 to MultiplyIndx
+!   getTabIndexFromSort iSI   returns TableIndex(TIC)
+!   if iSI = MultiplyIndx
+!       then use maxXData(maxPeaks)
+!   else
+!     getTabIndexFromSort iSI+1 returns TableIndex(TIC+1)
+!     getpeaks From table startRangeIndx
+! multiply from XData to < XDataNext
+!assume that MSREGResult is valid (verify size > 0)
+! note when multiply is started....then current data is im MSREGResult
+!   if this doesn't exist then...copy it to MSREGResult
+                                                                
+  Local i, iSI, XDataCur, XDataNext, iTabIndexCur, MultiplyFactor, Yvalue
+  Local NormRatio
+  Local ErrorString$
+    on error goto dmr_err
+    winupdate off
+    copyObj MSREGResult[1], MSREG[1]  !put back for display
+    delObj  MSREG[2]                  !note del reg[2] old [1] before copy
+!!  !since we do not want to have 'multiplied peaks' go way off the scale...
+!!  !since this will force a redraw of MS Spec window....and so make the redlines
+!!  !be drawn at the wrong height...since the scale changes during the redraw...
+!!  !we will clamp the multiplied data peak to 15% more than than current max Y scale
+!!  !this is large enough to show that the ion is maxed out...but won't force rescale
+!!  GetDataMinMax MSREG[1], 1           !get y range
+!!  YHigh = OBJ_MAX * 1.15 
+     
+    ErrorString$ = ""
+    for iSI=1 to MultiplyIndx
+        iTabIndexCur = getTabIndexFromSort(iSI) !returns Table Index for sort id
+        XDataCur = TabVal(MSREGResult[1], "MultiplyRanges", iTabIndexCur, "startRangeIndx") 
+        if iSI = MultiplyIndx                   !then at last range start
+          XDataNext = DataCols(MSREGResult[1])
+        else
+          XDataNext = (TabVal(MSREGResult[1], "MultiplyRanges", (getTabIndexFromSort (iSI+1)), "startRangeIndx") )-1
+        endif                          
+        
+        ! Check that the range of the multiplied data is valid
+        MultiplyFactor = TabVal(MSREGResult[1], "MultiplyRanges", iTabIndexCur, "MultiplyBy") 
+        if (objhdrtype(msreg[1], "NormalizeRatio") = 1) then
+          NormRatio = objhdrval(msreg[1],"NormalizeRatio")
+          if (NormRatio <= 0) then
+            NormRatio = 1
+          endif
+        else
+          NormRatio = 1
+        endif
+        GetDataMinMax msreg[1],1,data(msreg[1],0,XDataCur):data(msreg[1],0,XDataNext)
+        if ((OBJ_MAX * MultiplyFactor) > (34006075/NormRatio)) then ! 340006075 is the max for an MS data point abundence
+          ErrorString$ = "Multiplier should be less than " + val$(trunc((34006075/NormRatio)/OBJ_MAX)) + " for the current spectrum." 
+          deltabrow MSREGResult[1], "MultiplyRanges", iTabIndexCur
+          MultiplyIndx = MultiplyIndx - 1
+        else
+          !now draw the peaks in MSREG[1]
+          for i = XDataCur to XDataNext
+  !           SetData MSreg[1], 1, i, (Data(MSreg[1], 1, i)) * MultiplyFactor
+              Yvalue = Data(MSreg[1], 1, i) * MultiplyFactor
+  !!            if Yvalue > YHigh then
+  !!                Yvalue = YHigh
+  !!            endif
+              SetData MSreg[1], 1, i, Yvalue
+          next i
+        endif
+    next iSI
+dmr_err:    
+    on error
+    winupdate on
+    if (len(ErrorString$) > 0) then
+       print alert (ErrorString$)
+    endif
+endmacro
+    !   check here that this is a new/unique position point
+    !       need to determine next peak data index and see if this is currently used
+    !if not unique - then over-write original else insert new into table
+    !   else can assume that each has a unique start index
+    !   check here that this is a new/unique position point
+    !       need to determine next peak data index and see if this is currently used
+    !if not unique - then over-write original else insert new into table
+    !   else can assume that each has a unique start index
+name returnNonUniqueMultiplyStartPosition 
+  PARAMETER DataXIndx                           !returns 0 if was unique
+  Local mc, i, d
+    if MultiplyIndx = 1 
+        return 0                                !first 1 so must be unique
+    endif
+    for i=1 to (MultiplyIndx-1)                 !-1 since we havn't inserted data yet
+        mc = TabVal (MSREGResult[1], "MultiplyRanges", i, "PosXStart")
+        d = getXDataFromMass( mc )              !XPos parameter  returns DataIndx
+        !print alert("massChrg =" + VAL$(massChrg)+ "xIndx(NEAREST) =" + VAL$(DataXIndx), 2)
+        if d = DataXIndx                        !then overwrite this position
+            return i                            !was not unique
+        endif
+    next i
+    return 0                                    !was unique
+endmacro
+name updateSortIndex                        !sort the ranges in the table
+  PARAMETER DataXIndx                       !this is new DataIndex inserted
+!!!!(loop for MultiplyIndx(Il) times)
+!!!!loop for SortIndx(SIC)=1 to MultiplyIndx max
+!!!!   getTabIndexFromSort !SortIndxCurrent(SIC),   returns TableIndex(TIC)
+!!!!   compare current(entered) dMassChg(MCe) to  sortIndx dMassChgLoop(MCl)
+!!!!   if < then need to 
+!!!!       insert here  - so set sort index to SIC
+!!!!       and bump up remaining sortIndxes by 1
+!!!!   loop for MultiplyIndx(Il) times
+!!!!       if SortIndex >= SIC then SI++
+!!!!     finally set TIC's SortIndex to SIC
+!!!!   return
+!!!! else SIC++
+!assume that DataXIndx are current - so sort based on them
+!assume only 1 value (last entry in table) needs to have sortIndex(MultiplyIndx)
+  Local iTmp, iSI, curTabIndex,  chgTabIndx, icDataXIndx, i
+    for iSI = 1 to MultiplyIndx-1             !last table entry has SortIndex set OK
+      curTabIndex = getTabIndexFromSort(iSI)  !returns Table Index for sort id
+      icDataXIndx = TabVal(MSREGResult[1], "MultiplyRanges", curTabIndex, "startRangeIndx")
+      if DataXIndx < icDataXIndx              !then insert here
+         chgTabIndx = curTabIndex             !save this index to set sortRangeIndx later
+         if iSI+1 <= MultiplyIndx-1
+           for i = iSI+1 to MultiplyIndx-1      !increment all greater SortIds
+             curTabIndex = getTabIndexFromSort(i)  !returns Table Index for sort id
+             SetTabVal MSREGResult[1], "MultiplyRanges", curTabIndex, "sortRangeIndx", i+1
+           next i
+         endif
+         !set SortID for table entry that was preceeded initially
+         SetTabVal MSREGResult[1], "MultiplyRanges", chgTabIndx, "sortRangeIndx",iSI+1
+         !set last table entry to desired sortIndex (since it was incr'd above)
+         SetTabVal MSREGResult[1], "MultiplyRanges", MultiplyIndx, "sortRangeIndx",iSI
+         return
+      endif
+    next iSI
+endmacro
+    !be sure that all dataIndex's saved in the table are current...since
+    !input signal could have changed and/or additional spectra added/subtracted
+    !be sure that all dataIndex's saved in the table are current...since
+    !input signal could have changed and/or additional spectra added/subtracted
+name updateTabDataIndex                 !no parameter     no return
+  Local     iDataXIndx, massChrg, i
+!   get MassChrg from table 
+!   getXDataFromMass just determined
+!   write this DataIndex back to table
+    if MultiplyIndx = 1
+        return                               !no need to update table if size=1
+    endif
+    for i=1 to MultiplyIndx-1                !new data not appended yet
+        massChrg = TabVal (MSREGResult[1], "MultiplyRanges", i, "PosXStart")
+        iDataXIndx = getXDataFromMass( massChrg )  !XPos parameter  returns DataIndx
+        SetTabVal MSREGResult[1], "MultiplyRanges", i, "startRangeIndx", iDataXIndx
+    next i
+endmacro
+name getXDataFromMass           !XPos parameter     returns DataIndex 
+  PARAMETER XPos                        !must provide 
+  Local     xIndx, massChrg
+    xIndx = DataIndex(MSREGResult[1],XPos)    !get nearest XDataIndex to desired position
+    massChrg = Data(MSREGResult[1], 0, xIndx)
+    if (massChrg < XPos)
+        xIndx = (xIndx + 1)             !modify points > than selected
+    endif
+    return xIndx                        !return data Index
+endmacro
+name getTabIndexFromSort    !returns Table Index for provided sort id
+  PARAMETER SIC     !SortIndxCurrent(SIC)   must provide & be <= MultiplyIndx
+  Local     i, sortID
+!getTabIndexFromSort !SortIndxCurrent(SIC),   returns TableIndexNext(TIC)
+!loop for MultiplyIndx(Il) times
+!    return Il that has SortIndex=SIC(passed in)
+    for i=1 to MultiplyIndx
+        sortID = TabVal (MSREGResult[1], "MultiplyRanges", i, "sortRangeIndx")
+        if (sortID = SIC)
+            return i
+        endif
+    next i
+endmacro
+!display the titles - of what was added or subtracted (or modified)
+!display the titles - of what was added or subtracted (or modified)
+name displaySpecMathTitlesOnMSSpecWND
+  Local     YHigh, YLow, XH, XL, YHght
+  Local     XYString$, DrawCommandStr$
+  if (regSize(MSREGSamples) > 0) AND (regSize(MSREG) = 1)  !if SM data & single view
+!    if GomVal("", "TLBSMSDA", "SumSpect", "State") = 1 OR \
+!      GomVal("", "TLBSMSDA", "SubtrSpect", "State") = 1
+      on error goto dsm_err
+      winupdate off
+      msSamples = regSize(MSREGSamples)
+      print msSamples
+      ic = 1
+      DrawCommandStr$  = TabText$(_Config[1],"Window", MSDA_MSWIN, "Command")
+      XYString$ =  SubString$( DrawCommandStr$, 3,,",")
+      XH = val(SubString$(XYString$, 2,,":"))
+      XL = val(SubString$(XYString$, 1,,":"))
+      XYString$ =  SubString$( DrawCommandStr$, 4,,",")   !get Y values
+      YHigh = val(SubString$(XYString$, 2,,":"))
+      YLow = val(SubString$(XYString$, 1,,":"))
+      YHght = (YHigh - YLow) * .95
+      while ic <= msSamples
+        smTitleNew$ = ObjHdrText$(MSREGSamples[ic],"Title")
+!        dummy = NewTextAnn(MSREG[1], smTitleNew$,.1,.95 - (.035*ic),1,26,8,,,3,3,"courier new",0)
+        dummy = NewTextAnn(MSREG[1], smTitleNew$,.12,.915 - (.035*ic),1,26,8,,,3,3,"courier new",0)
+        ic = ic + 1
+        print ic
+      endwhile
+!   endif
+dsm_err:
+    winupdate on
+  endif
+endmacro
+name setPolarityOfMSREGResult         !put into MSRegResult the polarity of MSREGSamples
+  local sPolarity$, sPolarityFirst$, i, msSamples
+  msSamples = regSize(MSREGSamples)
+  if msSamples > 1
+    sPolarityFirst$ = ObjHdrText$(MSREGSamples[1],"Polarity")
+    if (sPolarityFirst$ = "Positve")
+      sPolarityFirst$ = "Positive"           !fix old bug where spelling was wrong
+    endif
+    for i=2 to msSamples
+      sPolarity$ = ObjHdrText$(MSREGSamples[i],"Polarity")
+      if (sPolarity$ <> sPolarityFirst$) then
+        if (sPolarityFirst$ = "Positive") AND (sPolarity$ = "Positve")
+          goto OK4nexti                       !fix old bug where spelling was wrong
+        endif
+        SetObjHdrText MSREGResult[1], "Polarity", "Unknown"
+        return
+      endif
+OK4nexti:
+    next i
+    SetObjHdrText MSREGResult[1], "Polarity", sPolarityFirst$
+  endif
+endmacro
+name DoSpectraMathDeleteForDeconvolution  !make 'deconv delete' adjustments for Spectra Math
+  local nSamples
+    nSamples = regSize(MSREGSamples)
+    if nSamples <= 0
+      SaveSubAndSumMSREGdata            !save MSREG for next subtr or sum(calculation toolbar)
+    else
+!     clearCalcSavedState               !clear calculation toolbar saved state, use new regs
+      !want to save new data, but retain annotations of operated on signals
+      copyObj MSREG[1], MSREGSamples    !save this modified sample - append to list
+      SetObjHdrText MSREGSamples[nSamples+1],"Title", "Spectra data modified in Deconvolution"
+      delObj MSREGResult[1]             !remove old backup
+      copyObj MSREG[1], MSREGResult[1]  !replace with new 'modified' result
+    endif
+endmacro
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!   modelled after 'name IsFullScan' in simprep.mac
+!   check if any of MSREGSamples is a 'full scan'
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!   modelled after 'name IsFullScan' in simprep.mac
+!   check if any of MSREGSamples is a 'full scan'
+name AreAnyMSREGSamples_FullScan
+  local retval, mode, specnum, i
+  i = regSize(MSREGSamples)
+  retval = 0                                !default return No => no full scan
+  if i > 0 then
+    for specnum=1 to i                      !new data not appended yet
+      if ObjHdrType(MSREGSamples[specnum], "Mode") = 1 then
+        mode = ObjHdrVal(MSREGSamples[specnum], Mode)
+        ! Condensed scan(3) or SIM(1) or Full Scan(2 or 0)
+        if mode = 1 OR mode = 3 then
+             retval = 0
+        else
+             retval = 1
+        endif
+      else
+        if ObjHdrType(MSREGSamples[specnum], DataDimension) <> 99 then
+            if ObjHdrVal(MSREGSamples[specnum], DataDimension) = 2 then
+                retval = 0
+            else
+                retval = 1
+            endif
+        else
+            retval = 1
+        endif
+      endif
+      if retval = 1 then
+        return retval                       !all done - we found a Full Scan
+      endif
+    next specnum
+  endif
+  return retval
+endmacro
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!   determine 'mode[SIM(1) or SCAN-Full(2 or 0) or SCAN-Condensed(3)]' 
+!   of current MSREG[1] to be operated on
+!   returns 0 => can not operate together, 1=> signals CAN be added/subtracted
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!   determine 'mode[SIM(1) or SCAN-Full(2 or 0) or SCAN-Condensed(3)]' 
+!   of current MSREG[1] to be operated on
+!   returns 0 => can not operate together, 1=> signals CAN be added/subtracted
+name verifySignalsCanBeAdded                    !...or subtracted
+  local retval
+  retval = 1                                    !default return signals OK to add
+Local  ID_SUPPORTMACFILES_FULL_SCAN_DATA_141
+Local  ID_SUPPORTMACFILES_SIM_OR_CONDENS_142
+ID_SUPPORTMACFILES_FULL_SCAN_DATA_141              =  17141  
+ID_SUPPORTMACFILES_SIM_OR_CONDENS_142              =  17142  
+       
+    if LDMS_IsFullScan(1) = 1 then                   !current MSREG[1] = 1 => Full Scan
+      if AreAnyMSREGSamples_FullScan() = 0 then   !all other samples are not Full Scan
+!       generate error 1, "'Full Scan' data can not be added to or subtracted from 'Sim or Condensed Scan' data"
+        print alert(ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_FULL_SCAN_DATA_141),2) 
+        return 0
+      endif
+    else
+      if AreAnyMSREGSamples_FullScan() = 1 then   !other samples are Full Scan
+!       generate error 1, "'Sim or Condensed Scan' data can not be added to or subtracted from 'Full Scan' data"
+        print alert(ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SIM_OR_CONDENS_142),2) 
+        return 0
+      endif
+    endif
+  return retval
+endmacro
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!I didn't want to mess with all the extra parameters in Yong's LDMS_iIsFullScan
+!so instead here is the macro provided by simprep.mac 'IsFullScan' which may not be loaded when needed
+name LDMS_IsFullScan
+    PARAMETER specnum default 1
+    local retval, mode
+    retval = 1
+    if ObjHdrType(MSreg[specnum], "Mode") = 1 then
+        mode = ObjHdrVal(MSreg[specnum], Mode)
+        ! Condensed scan or SIM
+        if mode = 1 OR mode = 3 then
+             retval = 0
+        endif
+    else
+        if ObjHdrType(MSreg[specnum], DataDimension) <> 99 then
+            ! Condensed scan or SIM
+            if ObjHdrVal(MSreg[specnum], DataDimension) = 2 then
+                retval = 0
+            endif
+        endif
+    endif
+    return retval
+endmacro
+name SetCursorStateZoom
+    MS_CursorState = 0
+endmacro
+name SetCursorStateEIC
+	MS_CursorState = 1
+endmacro

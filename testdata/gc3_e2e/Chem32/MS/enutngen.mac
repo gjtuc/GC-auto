@@ -1,0 +1,1042 @@
+! EnuTnGen.mac  Macro to manage debugging and error handling during Autotune  **-Oct-96
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+!===============================================================================================
+! MACROS:  
+!         MSTN_AddAbortHandler         MSTN_Error   
+!         MSTN_RemoveAbortHandler      MSTN_Error2
+!         MSTN_RemoveAbortHdlrParam
+!                                      MSTN_ExitRoutine
+!         MSTN_CPSafeStart             MSTN_LastSlash
+!         MSTN_CPSafeTerminate
+!                                      MSTN_SelectFile$
+!         MSTN_ChangeTitle             MSTN_ErrSelectFile
+!         MSTN_DiffStr$                 
+!                                      MSTN_UserStart 
+!         MSTN_DoDispPrint             
+!         MSTN_DoError                 MSTN_ViewFile      
+!         MSTN_DoTrace                 MSTN_ViewTrace          
+!     
+!===============================================================================================
+! GLOBAL VARIABLES:
+!
+!         _TunePath$       MSTN_ACQINPROG       SNAPSHOT    
+!         FILEPROMPT       MSTN_AtuneError      TuneFileName$       
+!         LASTPRINT$       MSTN_DoPrint         TUNESIZE          
+!         MCTOCLOSEF       MSTrace              TuneTraceName$        
+!         MSDATAFILE$      MSTuneTraceState     TuneTracePath$
+!         MSFILEINSTRNUM   QUAD_MAX             TUNETYPE$
+!         MSFILENUM        SCANNUMON            UNATTENDED  
+!         MSManCalOpenF              
+!                                           
+!===============================================================================================
+!
+!===============================================================================================
+NAME MSTN_AddAbortHandler
+
+parameter handler$
+! Routine to add a command or macro to the _abort$ string global
+! This sets an abort handler
+!====================================================================
+  if check (Variable,_Abort$) = 1 then
+       if _Abort$ = "" then
+            _Abort$ = handler$
+       else
+            _Abort$ = handler$ + ";" + _Abort$
+       endif
+  else
+       _Abort$ = handler$
+  endif
+
+ENDMACRO     !MSTN_AddAbortHandler
+
+
+
+!====================================================================
+NAME MSTN_RemoveAbortHandler
+parameter hdlrName$
+!  Routine to remove a substring from the _Abort$ string based on
+!  whether hdlrName$ is in a substring of _Abort$
+!====================================================================
+local i, NewAbort$, current_handler$
+
+  i = 1
+  NewAbort$ = ""
+  hdlrName$ = ConvertText$("upper",hdlrName$)
+  if check (Variable,_Abort$) = 1 then
+       current_handler$ = substring$(_Abort$,i,,";")
+       while current_handler$ <> ""
+            current_handler$ = ConvertText$("upper",current_handler$)
+            if instr (current_handler$,hdlrName$) = 0
+                 if len(NewAbort$) = 0 then
+                      NewAbort$ = substring$(_Abort$,i,,";")  !current_handler$
+                 else
+                      NewAbort$ =  NewAbort$ + ";" + current_handler$
+                 endif
+            endif
+            i = i + 1
+            current_handler$ = substring$(_Abort$,i,,";")
+       endwhile
+       _Abort$ = NewAbort$
+  endif
+
+ENDMACRO     !MSTN_RemoveAbortHandler
+
+
+!=========================================================================
+name MSTN_RemoveAbortHdlrParam
+parameter hdlrName$
+!
+!  Routine to remove a substring from the _Abort$ string based on
+!  whether hdlrName$ is in a substring of _Abort$; differs from
+!  MSTN_RemoveAbortHandler because this this does it based on a substring
+!  for abort handlers that take parameters
+!=========================================================================
+local str$, i, NewAbort$
+  
+  i = 1
+  hdlrName$ = ConvertText$("upper",hdlrName$)
+  if check (Variable,_Abort$) = 1 then
+    repeat
+      str$ = ConvertText$("upper",substring$(_Abort$,i,,";"))
+        i = i + 1
+        if Instr(str$,hdlrName$)=0 AND str$ <> ""
+          if len(NewAbort$) = 0 then
+            NewAbort$ = str$
+          else
+          NewAbort$ =  NewAbort$ + ";" + str$
+          endif
+        endif
+    until str$ = ""
+    _Abort$ = NewAbort$
+  endif
+endmacro           !MSTN_RemoveAbortHdlrParam
+
+
+
+!====================================================================
+NAME MSTN_CPSafeStart
+parameter name$
+!====================================================================
+local i, tmpname$
+
+   i = 1
+   tmpname$ = CPName$(i)
+   while len(tmpname$) > 0
+        if ConvertText$(upper,tmpname$) = ConvertText$(upper,name$) then
+             return
+        else
+             i = i + 1
+             tmpname$ = CPName$(i)
+        endif
+   endwhile 
+   CPStart name$
+
+ENDMACRO     !MSTN_CPSafeStart
+
+!====================================================================
+NAME MSTN_CPSafeTerminate
+parameter name$
+!====================================================================
+local i, tmpname$
+
+   i = 1
+   tmpname$ = CPName$(i)
+   while len(tmpname$) > 0
+        if ConvertText$(upper,tmpname$) = ConvertText$(upper,name$) then
+             CPTerminate name$
+             return
+        else
+             i = i + 1
+             tmpname$ = CPName$(i)
+        endif
+   endwhile 
+
+ENDMACRO     !MSTN_CPSafeTerminate
+
+
+
+!====================================================================
+NAME MSTN_ChangeTitle
+! Update the application title in the main window;
+! Used for compatibility with translated code
+!
+! Pre-conditions:
+!
+! Post-conditions:
+!====================================================================
+      ShowTitle
+
+ENDMACRO     !MSTN_ChangeTitle
+
+
+
+!====================================================================
+NAME MSTN_DiffStr$
+parameter str1$, str2$, delim$ default "|"
+
+! Check if the substrings in str1 are in str2; if they are not,
+! then add the substrings in str1 but not str2 to a delimited
+! list that will be returned.
+! Delim$ gives the delimiter for str1 and for the returned list of strings
+! str1$: string delimited by delim$ character with substrings to check
+!        against str2$
+! str2$: string that contains substrings to be filtered out of str1$
+!
+! Pre-conditions:
+!  Both str1$ and str2$ must exist.  The delimiters in str1$ are assumed to
+!   be delim$
+!
+! Post-conditions:
+!   Returns a delimited list of substrings from str1$ that are not in str2$
+! 
+!====================================================================
+local diff$, temp$, i
+
+  diff$ = ""
+  
+  !* Loop through str1$ to see if any of its substrings are in str2$
+  
+  i = 1
+  temp$ = SubString$(str1$,i)              !* Initialize loop
+  while len(temp$) > 0                     !* Terminate when no more substrings
+       if InStr(str2$,temp$) = 0 then
+            !* The ith substring in str1$ is not a substring in str2$
+            if len(diff$) = 0 then
+                 !* This is the first substring in str1$ not in str2$
+                 diff$ = temp$
+            else
+                 !* Append this substring to the list of substrings in str1$ but not in str2$
+                 diff$ = diff$ + delim$ + temp$       !* Use delim$ as the delimiting char
+            endif
+       endif                                          !* Increment to next substring
+       i = i + 1                                 
+       temp$ = SubString$(str1$,i)
+  endwhile
+
+  return diff$
+
+ENDMACRO     !MSTN_DiffStr$
+
+
+
+!====================================================================
+NAME MSTN_DoDispPrint
+
+parameter ptitle default 1,ptitle$ default " "
+! This macro is a wrapper macro around the MSDispPrint command
+! It takes two paramters
+! ptitle: 1 -- display a user input box prompting for a report title
+!         0 -- no title expected
+!        -1 -- set the title to ptitle$
+! ptitle$ the string used as a title when ptitle = -1
+! Called in fmmcmenu.mac
+!
+! Globals: 
+!   MSFILEINSTRNUM             
+!
+! Pre-conditions:
+!   The global variable MSFILEINSTRNUM must be predefined.
+!
+! Post-conditions:
+!
+! Known problems:
+!  This routine hard-codes user interface strings. 
+!  This routine uses cryptic variable names.
+!  This routine hard-codes numbers used to format the output.
+!  This routine includes a comment with a source file name.
+!====================================================================
+    local dx,dy,m,fr,t$,tx,ty
+
+Local  ID_TUNEMAC_ENTER_A_TITLE_674
+Local  ID_TUNEMAC_PRINTING_OF_TH_675
+ID_TUNEMAC_ENTER_A_TITLE_674                       =  17674  
+ID_TUNEMAC_PRINTING_OF_TH_675                      =  17675  
+    if ptitle=1 then
+         !* Prompt the user for a title.
+         _button = input (ReadResource$("tunemac",ID_TUNEMAC_ENTER_A_TITLE_674),t$)
+         if (_button = 0)
+              !* The user cancelled the operation.
+              message ReadResource$("tunemac",ID_TUNEMAC_PRINTING_OF_TH_675)
+              return
+         endif
+    else
+         if ptitle=-1 then
+              !* Use the title supplied as a parameter
+              t$=ptitle$
+         endif
+    endif
+
+    !* Set an error trap.  
+    !* The trap should ignore any errors and keep going
+    on error  MSTN_ReportError          !in TUNCOM46.mac  
+
+    dx = XLogMax ()  !* Get the width of the page
+    dy = YLogMax ()  !* Get the height of the page
+    fr = 0.9
+
+    if dx * fr < 69  
+         !* Check for profile width
+         fr = 0.93
+    endif
+
+    !* Open a printer device for printing
+    GetCurrentPrinterSetup                !3-02PR utilize current printer setup
+    on error  MSTN_ReportError          !in TUNCOM46.mac  
+    OpenDevice "Printer" As #MSFILEINSTRNUM             
+    
+    !* Begin the print job.   Set the horizontal and vertical
+    !* coordinates.
+    BeginJob ,,XMax()-13, 0                
+    
+         if ptitle<>0 then
+              !* ptitle flag indicates there should be a title
+              !* Calculate where to put the title
+              t$=" "+t$+" "
+              m=(dx-len(t$))/2
+              if m<0 then
+                   m=2
+              endif
+      
+             SetPageLoc m,1 
+             !* Print the title
+             sprint t$
+      
+             !* Set where the time should be printed
+             tx=(dx*0.05)
+             ty=4
+         else
+             !* Set where the time should be printed
+             tx=30
+             ty=3
+         endif
+    
+         SetPageLoc tx,ty
+         !*  Print the time
+         sprint time$()
+    
+         !* Call the command to print the contents of the
+         !* Tune display window
+         MSDispPrint 0.05,(6/dy),fr,((dy-10)/dy)
+    
+         !* End the print job and clean up
+    EndJob
+
+    close #MSFILEINSTRNUM         
+    return
+
+ENDMACRO     !MSTN_DoDispPrint
+
+
+
+!====================================================================
+NAME MSTN_DoError
+
+parameter IsIcon default 0
+!    Error exit routine
+! Error trapping function to put up a dialog box
+! that displays the message on the error line
+!
+! Global variables: _errmsg$ 
+!
+! Pre-conditions:
+!   Assumes that the Tune commands DLL is loaded, and
+!   that it can talk to the instrument.
+!   Assume that it can turn off the MSD.
+!   Assume that no clean up is needed on stop due to error.
+
+! Post-conditions:
+!   Displays a message for user and returns control to system
+!   by calling Stop.
+!====================================================================
+ local _button
+
+Local  ID_TUNEMAC_CALIBRATION_ER_676
+ID_TUNEMAC_CALIBRATION_ER_676                      =  17676  
+    on error MSTN_ReportError
+    print _errmsg$
+    _button = alert (ReadResource$("tunemac",ID_TUNEMAC_CALIBRATION_ER_676) +_errmsg$ ,3)
+    MSOff
+
+    ! Fall off end to abort calling macro
+    stop
+
+ENDMACRO    !MSTN_DoError
+
+
+
+!====================================================================
+NAME MSTN_DoTrace
+!
+! Global variables:
+!  MSTuneTraceState - acts as a flag to indicate if tracing is on or off
+!                     1 = off
+!                     3 = on
+!  MSTrace will set and use TuneTraceName$ and TuneTracePath$
+!
+! Pre-conditions:
+!  If MSTuneTraceState is undefined, then the MSTrace command will be assumed to
+!  be not tracing; the assumed correct behavior of this routine would be to toggle
+!  it into tracing on.
+!
+! Post-conditions:
+!  If MSTuneTraceState is not defined, it will be defined and initialized to 1.
+!  If it is defined, the state will be toggled.
+!
+! Known problems:
+!  Because the toggle variable is external to the
+!  MSTrace command, the variable could get out of synch
+!  with the menu check mark.
+!====================================================================
+
+  if check(variable,MSTuneTraceState)= 0 then
+       !* Global variable not defined.  Initialize to 1
+       MSTuneTraceState = 0x1
+  endif  
+  
+  !* Toggle the trace state and call the trace command
+  if  MSTuneTraceState = 0x1  then
+       MSTuneTraceState = 0x3
+  else
+       MSTuneTraceState = 0x1
+  endif
+  
+  MSTrace               !* Toggle the trace state
+
+ENDMACRO     !MSTN_DoTrace
+
+
+
+!====================================================================
+NAME MSTN_Error
+
+! Global variables:
+!  MSTN_AtuneError
+!
+! Pre-conditions
+!
+! Post-conditions:
+!  The global variable mstn_AtuneError will be set
+!
+! Known problems:
+!   The name of the source file is given in the comment
+!====================================================================
+  !* Call an error routine which will reset the error trap,
+  !* and print the error message in a dialog box.
+  MSTN_ReportError                        
+  MSTN_atuneError = 1
+  stop
+
+ENDMACRO    !MSTN_Error
+
+
+
+!=====================================================================
+NAME MSTN_Error2
+! Pre-conditions:
+!  The tune commands DLL must be loaded.
+!
+! Post-conditions:
+!
+! Known problems:
+!   The name of the source file is given in the comment
+!====================================================================
+  on error print             !* Reset the error trap
+  MSpwidth 0.5,0.3,0.3
+  MSaverages,1
+  MSsamples,4
+
+  !* Call an error routine which will reset the error trap,
+  !* and print the error message in a dialog box.
+  MSTN_Error                
+
+ENDMACRO    !MSTN_Error2
+
+
+
+
+!====================================================================
+NAME MSTN_ExitRoutine
+!  This routine should be called whenever the user leaves
+!  the Manual MS Calibrate view for whatever reason.
+!  It is supposed to simulate Mustang, which implemented
+!  Tune as a separate .exe
+!  This code is here instead of with the manual calibrate view
+!  to isolate the implementation aspects from the UI.
+!====================================================================
+local _button
+
+    !* Prompt to save MSD calibration file 
+    !* Must be done before tune DLC is removed
+Local  ID_TUNEMAC_DO_YOU_WISH_TO_647
+ID_TUNEMAC_DO_YOU_WISH_TO_647                      =  17647  
+    if MSIsTnParmDirty() = 1 then
+         !* Prompt user to save tune file
+         _button = alert (ReadResource$("tunemac",ID_TUNEMAC_DO_YOU_WISH_TO_647) + _tunepath$+tunefilename$ +"?",4)
+         if _button = 1 then
+              MSTN_DoSaveTuneFile
+         endif
+    endif
+    MSTN_ShowSpriteMenu = 0
+       
+    !* Save the name of the tune file in the mstune.ini
+    MSTN_SaveTuneFileName    
+
+    !* Link the Fragmentor and Skim1 if it's a not an SL
+	if MSD_SL = 0 then
+      MSUnlinkParms 0
+	endif
+
+ENDMACRO     !MSTN_ExitRoutine
+
+!====================================================================
+NAME MSTN_LastSlash
+! Return the index of the last \ in the string
+! This routine is meant to parse out the name of
+! a tune file from its full path name.
+!
+! Pre-conditions: 
+!  The input parameter should be a non-empty string that 
+!  contains a full file path name, where the file name
+!  has a extension on which the search is based.
+!
+! Post-conditions:
+!  The index of the first slash to the left of the
+!  extension is returned.
+!
+! Known problems:
+!  This routine will not find the last slash if it is
+!  part of or to the right of the extension. 
+!  Routine contains two exit points.
+! 
+!====================================================================
+parameter file$, extension$ default ".tun"
+local idx, str$
+
+  idx = instr(ConvertText$(Upper,file$),ConvertText$(Upper,extension$))
+  while idx > 0 do
+       if  file$[idx] = "\"
+            return idx
+       endif
+       idx = idx - 1
+  endwhile
+
+  return idx
+
+ENDMACRO     !MSTN_LastSlash
+
+
+
+!====================================================================
+NAME MSTN_SelectFile$
+
+parameter ReadOnly default 0
+parameter Path$ default _TunePath$
+parameter Extension$ default "*.TUN"
+parameter title$ default "Select Tune File"
+parameter DefFileName$ default TuneFileName$
+parameter mode default 0
+parameter ExtraText$ default ""
+parameter HelpIndex default 9082
+!
+!  Build a dialog box that shows the names of the files ending
+!  with Extension$ under Path$.
+!  title$ is the title of the dialog box
+!  DefFileName$ is the name of the file initially selected
+!  mode tells what type of files to show;  0 = files and subdir
+!                                          1 = files only
+!                                          2 = subdir only
+!                                          3 = tune files
+!  This dialog was written to display a combo box that displays the
+!  tune files under _TunePath$, hence the defaults.
+!
+!  Global variables
+!    _TunePath$
+!    TuneFileName$
+!
+!  Pre-conditions:
+!    The global variables _TunePath$ and TuneFileName$ should exist if no
+!    parameters are given.
+!
+!  Post-conditions:
+!    Returns the name of the file selected; an empty string is returned if
+!      the user cancels out of the box.
+!
+!  Known problems:      
+!    User interface strings are hard-coded.
+!
+!====================================================================
+local FileAndDirList$          !* Holds delimited list of files and subdirs on path
+local DirList$                 !* Holds delimited list of subdirs on path
+local FileList$                !* Holds delimited list of files on path
+local file$                    !* File variable to hold user selection
+local _button
+local ShowList$                !* Variable used to fill combo box
+local width                    !* Variable to hold width of dialog box
+local Polarity                 !* Variable for polarity selection
+local FilenameOK               !* used when validating the filename
+
+! JAM Added for Testing
+local DirectoryOnlyReadWrite$
+local DirectoryOnlyReadOnly$
+local FileOnlyReadWrite$
+local FileOnlyReadOnly$
+Local  ID_TUNEMAC__SET_DEFFILENA_677
+Local  ID_TUNEMAC__DIRLIST_678
+Local  ID_TUNEMAC__SHOWLIST_679
+Local  ID_TUNEMAC__DEFFILENAME_680
+Local  ID_TUNEMAC_DEFFILENAME_FI_681
+Local  ID_TUNEMAC_DEFFILENAME_682
+Local  ID_TUNEMAC_PATH_683
+Local  ID_TUNEMAC_L_272
+Local  ID_TUNEMAC_FILES__JAM_684
+
+
+Local  ID_TUNEMAC_FILES_685
+Local  ID_TUNEMAC_POSITIVE_POLAR_686
+Local  ID_TUNEMAC_NEGATIVE_POLAR_687
+Local  ID_TUNEMAC_POSITIVE_POLAR_688
+Local  ID_TUNEMAC_NEGATIVE_POLAR_689
+Local  ID_TUNEMAC__HELP_283
+Local  ID_TUNEMAC_ONLY_SHORT__8_690
+Local  ID_TUNEMAC_ONLY_SHORT__8_691
+ID_TUNEMAC__SET_DEFFILENA_677                      =  17677  
+ID_TUNEMAC__DIRLIST_678                            =  17678  
+ID_TUNEMAC__SHOWLIST_679                           =  17679  
+ID_TUNEMAC__DEFFILENAME_680                        =  17680  
+ID_TUNEMAC_DEFFILENAME_FI_681                      =  17681  
+ID_TUNEMAC_DEFFILENAME_682                         =  17682  
+ID_TUNEMAC_PATH_683                                =  17683  
+ID_TUNEMAC_L_272                                   =  17272  
+ID_TUNEMAC_FILES__JAM_684                          =  17684  
+ID_TUNEMAC_PATH_683                                =  17683  
+ID_TUNEMAC_L_272                                   =  17272  
+ID_TUNEMAC_FILES_685                               =  17685  
+ID_TUNEMAC_POSITIVE_POLAR_686                      =  17686  
+ID_TUNEMAC_NEGATIVE_POLAR_687                      =  17687  
+ID_TUNEMAC_POSITIVE_POLAR_688                      =  17688  
+ID_TUNEMAC_NEGATIVE_POLAR_689                      =  17689  
+ID_TUNEMAC__HELP_283                               =  17283  
+ID_TUNEMAC_ONLY_SHORT__8_690                       =  17690  
+ID_TUNEMAC_ONLY_SHORT__8_691                       =  17691  
+  if DialogExists("DlgListFile") <> 0 then
+       RemoveDialog "DlgListFile"
+  endif
+  
+  if mode <> 1 then
+       !* Get the files and subdirectories under the given path
+       !* Need to do for mode 0 and 2
+       FileAndDirList$ = FindFile$( Path$+Extension$,"D")
+  else
+       !* Get just the files under the given path
+       FileList$ = FindFile$(Path$+Extension$,"N")
+  endif
+  
+  if mode = 2 or mode = 3 then
+       !* for directory only mode, use the file list to get 
+       !* rid of the files and leave only the subdirectories
+       FileList$ = FindFile$(Path$+Extension$,"NR")
+       DirList$ = MSTN_DiffStr$(FileAndDirList$,FileList$)
+       ShowList$ = DirList$                   !* Set ShowList$ for mode 2
+
+! JAM Added for testing
+
+       if mode = 3 then
+            MSParm ionpolarity, Polarity
+            Polarity = Polarity + 1
+       endif
+  else
+       if mode = 1 then
+            ShowList$ = FileList$             !* Set ShowList$ for mode 1
+       else
+            !* Default mode is 0
+            ShowList$ = FileAndDirList$       !* Set ShowList$ for mode 0 
+       endif
+  endif
+
+  ! JAM added for correct behavior with "Save As" tune files. Not used by 
+  ! any other macro routines.
+
+  if mode = 2
+            ! JAM Manual Create ShowList, DefFileName
+            DirectoryOnlyReadWrite$ = FindFile$(Path$+Extension$,"D")
+            DirectoryOnlyReadWrite$ = ConvertText$("upper",DirectoryOnlyReadWrite$)
+	    DirList$ = DirectoryOnlyReadWrite$
+
+! JAM Start if you want to remove DEFAULT.TUN
+!       	    DirList$ = MSTN_DiffStr$(DirectoryOnlyReadWrite$,"DEFAULT.TUN")
+! JAM End if you want to remove DEFAULT.TUN from Combo Box display
+
+            FileAndDirList$ = DirList$          
+            ShowList$ = DirList$          
+	    if ( len(DefFileName$) < 1) then
+		DefFileName$ = "ATUNES.TUN"
+!                print ReadResource$("tunemac",ID_TUNEMAC__SET_DEFFILENA_677)
+	    endif
+!            print ReadResource$("tunemac",ID_TUNEMAC__DIRLIST_678), DirList$
+!            print ReadResource$("tunemac",ID_TUNEMAC__SHOWLIST_679), ShowList$
+!            print ReadResource$("tunemac",ID_TUNEMAC__DEFFILENAME_680), DefFileName$                  
+  endif
+  
+  !==== Build the dialog box
+  HelpIndex = HelpSubSystemTopic("msd") + HelpIndex
+  DefFileName$ = ConvertText$(upper,DefFileName$)
+  ShowList$ = ConvertText$(upper,ShowList$)
+  if InStr(ShowList$,DefFileName$)<> 0 then
+       !* verify that the default file name is in the ShowList$
+       file$ = DefFileName$
+
+! JAM added for debugging 
+  	print ReadResource$("tunemac",ID_TUNEMAC_DEFFILENAME_FI_681),file$
+  	print ReadResource$("tunemac",ID_TUNEMAC_DEFFILENAME_682),DefFileName$
+
+  else
+       file$ = SubString$(ShowList$,1)  
+
+
+  endif
+  width = (len(Path$)*4) + 70
+  if width < 260 then
+       width = 260
+  endif 
+  MSTN_CPSafeStart "CP2"
+   
+  BeginDialog "DlgListFile", 100, 100, width, 150, title$
+       if len(ExtraText$) > 0 then
+            StaticText 5, 9, width-30,12, ExtraText$
+            StaticText 5, 19, 30, 12, ReadResource$("tunemac",ID_TUNEMAC_PATH_683),"R"                !*Modified to match MthEdit box
+            StaticText 40, 20, 160, 12, Path$,ReadResource$("tunemac",ID_TUNEMAC_L_272)                  !*Modified to match MthEdit box
+            StaticText 5, 39, 30, 12, ReadResource$("tunemac",ID_TUNEMAC_FILES__JAM_684),"R"               !*Add to match MthEdit box
+! Original Size
+!                 ListBox 40,40,138,50, ShowList$, file$               !* View only, no edit
+!                 ComboBox 40,40,138,50, ShowList$, file$,0x2F         !* Allow edit
+            If ReadOnly = 1 then
+                 ListBox 40,40,190,100, ShowList$, file$               !* View only, no edit
+            else
+                 ComboBox 40,40,190,100, ShowList$, file$,0x2F         !* Allow edit
+            endif
+       else
+            StaticText 5, 9, 30, 12, ReadResource$("tunemac",ID_TUNEMAC_PATH_683),"R"                 !*Modified to match MthEdit box
+            StaticText 40, 10, 160, 12, Path$,ReadResource$("tunemac",ID_TUNEMAC_L_272)                  !*Modified to match MthEdit box
+            StaticText 5, 19, 30, 12, ReadResource$("tunemac",ID_TUNEMAC_FILES_685),"R"               !*Add to match MthEdit box
+            If ReadOnly = 1 then
+                 ListBox 40,30,190,50, ShowList$, file$               !* View only, no edit
+            else
+                 ComboBox 40,30,190,50, ShowList$, file$,0x2F         !* Allow edit
+            endif
+       endif
+
+       If mode = 3 then
+            OptionGroup Polarity
+            ! OptionButton 40,90,80,12, "Positive Polarity"
+            ! OptionButton 40,105,80,12, "Negative Polarity"
+            OptionButton 40,60,125,12, ReadResource$("tunemac",ID_TUNEMAC_POSITIVE_POLAR_686)
+            OptionButton 40,75,125,12, ReadResource$("tunemac",ID_TUNEMAC_NEGATIVE_POLAR_687)
+            OptionButton 40,90,125,12, ReadResource$("tunemac",ID_TUNEMAC_POSITIVE_POLAR_688)
+            OptionButton 40,105,125,12, ReadResource$("tunemac",ID_TUNEMAC_NEGATIVE_POLAR_689)
+       endif
+
+       !* Standard values for buttons  
+       OKButton 33, 128, 40, 14
+       CancelButton 89, 128, 40, 14
+       ExecPushButton 145,128,40,14, ReadResource$("tunemac",ID_TUNEMAC__HELP_283),CP2,"Help " + sprintf$(HelpIndex,"%f")
+!       PushButton  145, 128, 40, 14, "&Help",2 
+  EndDialog
+
+
+
+  on error MSTN_ErrSelectFile
+!  _button = ShowDialog ("DlgListFile", HelpIndex)
+!  repeat
+!       _button = ShowDialog ("DlgListFile", HelpIndex)
+!       if _button = 2 then
+!            Help HelpIndex
+!       endif
+!  until _button <> 2  
+
+  repeat
+     _button = ShowDialog ("DlgListFile", HelpIndex)
+     FilenameOK = 0
+     
+     if (ReadOnly <> 1) then   ! if getting a filename for save as
+        !if (instr(file$, ".") > 9) then
+        !  FilenameOK = 1
+        !endif
+        !if (instr(file$, ".") = 0) AND (len(file$) > 8) then
+        !  FilenameOK = 2
+        !endif
+        if (instr(file$, ".") > 0) \
+           AND (instr(file$, Extension$[2:len(Extension$)]) = 0) then
+          FilenameOK = 3
+        endif
+        if (instr(file$, Extension$[2:len(Extension$)]) > 0) \
+           AND ((instr(file$, Extension$[2:len(Extension$)]) + 3) < len(file$)) then
+          FilenameOK = 4
+        endif
+        if (instr(file$, Extension$[2:len(Extension$)]) = 1) then
+          FilenameOK = 5
+        endif
+
+        if (FilenameOK > 0) AND (_button <> 0) then
+          print Alert(ReadResource$("tunemac",ID_TUNEMAC_ONLY_SHORT__8_690)+Extension$+\
+                      " extension are allowed.  Please rename your file.",3,title$)
+        endif
+     !else
+     !  if (len(file$) > 12) AND _button <> 0 then
+     !     FilenameOK = 1
+     !     print Alert(ReadResource$("tunemac",ID_TUNEMAC_ONLY_SHORT__8_691),3,title$)
+     !  endif
+     endif
+!  until _button = 0 OR (len(file$)<= 12)
+  until _button = 0 OR (FilenameOK = 0)
+
+
+  
+  RemoveDialog "DlgListFile"
+  if _button <> 1 then
+       file$ = ""
+  endif
+
+  if mode = 3 and _button = 1 then
+      return ConvertText$("Upper",file$) + "|" + val$(Polarity-1)
+  else
+      return ConvertText$("Upper",file$)
+  endif
+
+ENDMACRO     !MSTN_SelectFile$
+
+!====================================================================
+NAME MSTN_ErrSelectFile
+!====================================================================
+  if DialogExists("DlgListFile") <> 0 then
+       RemoveDialog "DlgListFile"
+  endif
+
+ENDMACRO     !MSTN_ErrSelectFile   
+
+
+
+
+!====================================================================
+NAME MSTN_UserStart
+!
+! Global variables: FILEPROMPT      MSFILENUM       SCANNUMON 
+!                   LASTPRINT$      MSManCalOpenF   SNAPSHOT  
+!                   MCTOCLOSEF      MSTN_ACQINPROG  TUNESIZE 
+!                   MSDATAFILE$     MSTN_DoPrint    TUNETYPE$
+!                   MSFILEINSTRNUM  QUAD_MAX        UNATTENDED                  
+!
+! Pre-conditions:
+!  Assumes Tune commands DLL is loaded.
+!
+! Post-conditions:
+!  Initializes several global variables used by the tune macros.
+!
+! Known problems:
+!  Some unknown subset of the globals initialized here are unused.
+!====================================================================
+    MSTN_DoPrint=1                         ! report printing flag
+    FILEPROMPT=0                           ! Whether to prompt to save tune file
+                                           ! on exit of tune DLL
+                                           ! 0 = no prompt
+                                           ! 1 = prompt to save file
+Local  ID_TUNEMAC_ERROR__CANNOT_692
+ID_TUNEMAC_ERROR__CANNOT_692                       =  17692  
+                                            
+    VALVEPROMPT=0                          ! Whether to prompt to close cal valve
+                                           ! on exit of tune DLL
+                                           ! 0 = no prompt
+                                           ! 1 = prompt to close valve
+    SOURCE_MAX=260                         ! Maximum recommended source temperature (HP 5989 only?)
+                                           ! used in EnuTnRpt.mac by MSTN_PrintRep
+    QUAD_MAX=150                           ! Maximum recommended quadrupole temperature (used by tune cmds?)
+                                           ! Not used in manual tune macros
+    TUNETYPE$ = " "                        ! used by MSTN_DoGenReport
+
+    MSDATAPATH$=  _datapath$+_datasubdir$  ! path name for system data file
+    MSDATAFILE$=""                         ! file name for tune data file
+    MSFILEINSTRNUM = 9                     ! file number for instr. parms
+    MSManCalOpenF= 1                       ! make open data file menu item active
+    MSManCalCloseF= 0                      ! make close data file menu item inactive
+    MSManShow = 0                          ! makes only full autotune available
+    NoPeakOK  = 1                          ! Used for continuous scan by MSEditParms
+    ScanNumOn = 1                          ! 1 = Use scan number instead of time for files
+                                           !
+    MSTN_ACQINPROG = 0                     ! =1 if in continuous acquisition
+    DYNUSERSTRT=1                          ! user array start index for EnuTnDyn.mac
+    
+!Load macro files
+    if filestat(MODE,_AUTOMSPATH$ + _language$ + "TnAcq.mac")= 1 then
+       macro _AUTOMSPATH$ + _language$ + "TnAcq.mac"
+       macro _AUTOMSPATH$ + _language$ + "TnDyn.mac"
+       macro _AUTOMSPATH$ + _language$ + "TnFil.mac"
+       macro _AUTOMSPATH$ + _language$ + "TnGen.mac"
+       macro _AUTOMSPATH$ + _language$ + "TnMs.mac"
+       macro _AUTOMSPATH$ + _language$ + "TnRpt.mac"
+       macro _AUTOMSPATH$ + _language$ + "TnUI.mac"
+       
+       macro _AUTOMSPATH$ + _language$ + "Tnatn.mac"
+       macro _AUTOMSPATH$ + _language$ + "TnChk.mac"
+       macro _AUTOMSPATH$ + _language$ + "Tngt.mac"
+       macro _AUTOMSPATH$ + _language$ + "Tnmix.mac"
+       macro _AUTOMSPATH$ + _language$ + "Tnpw.mac"
+       macro _AUTOMSPATH$ + _language$ + "Tnrf.mac"
+       macro _AUTOMSPATH$ + _language$ + "tnfs.mac"
+       
+    else
+       if filestat(MODE,_AUTOMSPATH$ + "enutnAcq.mac")= 1 then
+         macro _AUTOMSPATH$ + "enutnacq.mac"
+         macro _AUTOMSPATH$ + "enuTnDyn.mac"
+         macro _AUTOMSPATH$ + "enuTnFil.mac"
+         macro _AUTOMSPATH$ + "enuTnGen.mac"
+         macro _AUTOMSPATH$ + "enuTnMs.mac"
+         macro _AUTOMSPATH$ + "enuTnRpt.mac"
+         macro _AUTOMSPATH$ + "enutnui.mac"
+         
+         macro _AUTOMSPATH$ + "enutnatn.mac"
+         macro _AUTOMSPATH$ + "enutnchk.mac"
+         macro _AUTOMSPATH$ + "enutngt.mac"
+         macro _AUTOMSPATH$ + "enutnmix.mac"
+         macro _AUTOMSPATH$ + "enutnpw.mac"
+         macro _AUTOMSPATH$ + "enutnrf.mac"
+         macro _AUTOMSPATH$ + "enutnfs.mac"
+       else
+         print Alert(ReadResource$("tunemac",ID_TUNEMAC_ERROR__CANNOT_692),3,"Error")  
+       endif
+    endif   
+       
+    macro _AUTOMSPATH$ + "def_46.mac"
+
+    macro _AUTOMSPATH$ + "mstnutil.mac"
+    
+    macro _AUTOMSPATH$ + "msautosn.mac"
+    
+    ! See if atune.reg exists
+    !Check for AtuneReg, if it does not exist,
+    !or it can not be loaded from disk, MANMANSHOW is set to make
+    !only the full polarity autotune sensitive, negative and
+    !positive are insensitive because the AtuneReg does not 
+    !currently does not exist
+
+    msat_CheckAtuneReg 
+    
+    !*
+    !* Add a hook for post-run
+    !* MSACQPST.MAC must be an user defined ASCII macro
+    !*
+    if Check (Macro, mstn_BuildMSParmFile) = 1 then
+	    SetHook "PostAcq", "mstn_BuildMSParmFile 1"
+    endif
+    
+    
+    return
+
+ENDMACRO    !MSTN_UserStart
+
+
+
+!====================================================================
+NAME MSTN_ViewFile
+parameter file$
+! parameter:
+! file$        the path and name of the file to open
+!
+! global variables: NONE
+! Call either notepad or write to view a file
+! An error message is generated if the file does not exist.
+!
+! Pre-conditions:
+!   The programs notepad.exe and write.exe 
+!   executed to read the file are assumed to exist.
+!
+! Post-conditions:
+!   Either notepad or write will be running.
+!
+! Known problems:
+!   The names of write.exe and notepad.exe are hard-coded.
+!   This routine calls write.exe instead of wordpad.exe
+!   The maximum size of the notepad file is hard-coded.
+!====================================================================
+  local a$,size, _button
+
+  size = filestat (SIZE,file$)
+  if size < 1 then
+       _button = alert (file$+ " : " + " File does not exist!",3)
+       return
+  else
+       !* Execute Hp ChemStation Viewer, which only allows reading, not writing
+!       a$ = "notepad.exe " + file$
+        a$ = "notepad.exe " + chr$(34) + file$ + chr$(34)
+       execnowait a$, 1
+  endif
+
+ENDMACRO    !MSTN_ViewFile
+
+
+
+!====================================================================
+NAME MSTN_ViewTrace
+!
+! Prompt the user for a trace file and the let
+! the user view it.
+! Global variables:
+!    TuneTracePath$
+!    TuneTraceName$
+!
+! Pre-conditions:
+!  Variables TuneTracePath$ and TuneTraceName$ must exist.
+!
+! Post-conditions:
+!   If not cancelled, will call mstn_ViewFile to 
+!   invoke a Windows text editor.
+!
+! Known problems:
+!   User interface strings are hard-coded.
+!   Name of source file is included in a comment.
+!====================================================================
+local p$,f$,a, _button
+
+Local  ID_TUNEMAC_SELECT_TRACE_F_693
+ID_TUNEMAC_SELECT_TRACE_F_693                      =  17693  
+     p$ = TuneTracePath$
+     f$ = TuneTraceName$
+     _button = SelectFile (1,ReadResource$("tunemac",ID_TUNEMAC_SELECT_TRACE_F_693),"*.trc",p$,f$,a)
+
+     if (_button <> 0)
+          !* User did not press cancel
+          MSTN_ViewFile p$+f$                 
+     endif
+
+ENDMACRO    !MSTN_ViewTrace
+
+
+!======================= END MACRO FILE ============================= 
+
+
+
+
+
+

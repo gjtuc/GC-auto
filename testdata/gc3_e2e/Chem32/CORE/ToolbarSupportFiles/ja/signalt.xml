@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="SignalT" PosStyle="TOP" DockRow="1" DockCol="1" Caption="シグナル カーソル ツールバー" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="シグナル表示" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals " DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="グラフィック ツールバー表示" CmdList="ANN_CloseTask|ANN_InitTask" Group="0" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="ウィンドウを拡大" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="ウィンドウを縮小" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="選択モード" Command="SIG_SetSignalMenuSelection NoSel,1" Group="2" NewGroup="1" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="AddTime" Help="クロマトグラムにタイム リファレンス ポイント設定" Command="SIG_SetSignalMenuSelection AddTime,1" Group="2" ImageName="Signal_SetRef20" ImageNameDisabled="Signal_SetRef20_d"/>
+		<RadioButton Name="MoveTime" Help="クロマトグラムの新しいポジションにタイム リファレンス ポイントを移動" Command="SIG_SetSignalMenuSelection MoveTime,1" Group="2" ImageName="Signal_MoveRef20" ImageNameDisabled="Signal_MoveRef20_d"/>
+		<RadioButton Name="DelTime" Help="クロマトグラムからタイム リファレンス ポイント削除" Command="SIG_SetSignalMenuSelection DelTime,1" Group="2" ImageName="Signal_DelRef20" ImageNameDisabled="Signal_DelRef20_d"/>
+		<RadioButton Name="DelObject" Help="クロマトグラム表示からオブジェクトを削除" Command="SIG_SetSignalMenuSelection DelObject,1" Group="2" ImageName="Signal_DelSignal20" ImageNameDisabled="Signal_DelSignal20_d"/>
+		<RadioButton Name="Overlay" Help="シグナル重ね書き表示" Command="SIG_SetSignalOption Overlay,1" Group="3" NewGroup="1" ImageName="Graph_SignalsOverlay20" ImageNameDisabled="Graph_SignalsOverlay20_d"/>
+		<RadioButton Name="Separate" Help="シグナル分割表示" Command="SIG_SetSignalOption Overlay,0" Group="3" ImageName="Graph_SignalsSeparate20" ImageNameDisabled="Graph_SignalsSeparate20_d"/>
+		<RadioButton Name="FullScale" Help="全てフル スケール表示" Command="SIG_SetSignalOption FullScale,1" Group="4" ImageName="Graph_FullScale20" ImageNameDisabled="Graph_FullScale20_d"/>
+		<RadioButton Name="SameScale" Help="全て同一スケール表示" Command="SIG_SetSignalOption FullScale,0" Group="4" ImageName="Graph_SameScale20" ImageNameDisabled="Graph_SameScale20_d"/>
+	</toolbar>
+</graphical_object>

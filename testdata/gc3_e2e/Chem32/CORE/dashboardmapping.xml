@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DeviceTypeInfos xsi:noNamespaceSchemaLocation="KnownDeviceTypes.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<DeviceInfo ID="DAD">
+		<ModuleId>G1315</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Dad.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Dad.DadControl</ClassNameControl>
+		<DefaultColumn>1000</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="DAD">
+		<ModuleId>G4211</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Dad.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Dad.DadControl</ClassNameControl>
+		<DefaultColumn>1000</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="MWD">
+		<ModuleId>G1365</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Dad.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Dad.DadControl</ClassNameControl>
+		<DefaultColumn>1000</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="MWD">
+		<ModuleId>G4212</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Dad.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Dad.DadControl</ClassNameControl>
+		<DefaultColumn>1000</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="VWD">
+		<ModuleId>G1314</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Vwd.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Vwd.VWDControl</ClassNameControl>
+		<DefaultColumn>1010</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="VWD">
+		<ModuleId>G4284</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Vwd.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Vwd.VWDControl</ClassNameControl>
+		<DefaultColumn>1010</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="ALS">
+		<ModuleId>G1313</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Sampler.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Sampler.SamplerControl</ClassNameControl>
+		<DefaultColumn>100</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Therm ALS">
+		<ModuleId>G1329</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Sampler.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Sampler.SamplerControl</ClassNameControl>
+		<DefaultColumn>100</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="SFC ALS">
+		<ModuleId>G4303</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Sampler.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Sampler.SamplerControl</ClassNameControl>
+		<DefaultColumn>100</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Micro ALS">
+		<ModuleId>G1389</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Sampler.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Sampler.SamplerControl</ClassNameControl>
+		<DefaultColumn>100</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="ZEN ALS">
+		<ModuleId>G4282</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Sampler.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Sampler.SamplerControl</ClassNameControl>
+		<DefaultColumn>100</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="WPS">
+		<ModuleId>G1367</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Sampler.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Sampler.SamplerControl</ClassNameControl>
+		<DefaultColumn>100</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Bio WPS">
+		<ModuleId>G5667</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Sampler.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Sampler.SamplerControl</ClassNameControl>
+		<DefaultColumn>100</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Micro WPS">
+		<ModuleId>G1377</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Sampler.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Sampler.SamplerControl</ClassNameControl>
+		<DefaultColumn>100</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Monex ALS">
+		<ModuleId>G4226</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Sampler.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Sampler.SamplerControl</ClassNameControl>
+		<DefaultColumn>100</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="ZEN Iso Pump">
+		<ModuleId>G4280</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Pump.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Pump.PumpControl</ClassNameControl>
+		<DefaultColumn>200</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="ZEN Quad Pump">
+		<ModuleId>G4281</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Pump.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Pump.PumpControl</ClassNameControl>
+		<DefaultColumn>200</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Cougar Pump">
+		<ModuleId>G4220</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Pump.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Pump.PumpControl</ClassNameControl>
+		<DefaultColumn>200</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Iso Pump">
+		<ModuleId>G1310</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Pump.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Pump.PumpControl</ClassNameControl>
+		<DefaultColumn>200</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Quad Pump">
+		<ModuleId>G1311</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Pump.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Pump.PumpControl</ClassNameControl>
+		<DefaultColumn>200</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Bio Quad Pump">
+		<ModuleId>G5611</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Pump.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Pump.PumpControl</ClassNameControl>
+		<DefaultColumn>200</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Bin Pump">
+		<ModuleId>G1312</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Pump.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Pump.PumpControl</ClassNameControl>
+		<DefaultColumn>200</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Cap Pump">
+		<ModuleId>G1376</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Pump.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Pump.PumpControl</ClassNameControl>
+		<DefaultColumn>200</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Cap Pump">
+		<ModuleId>G2226</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Pump.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Pump.PumpControl</ClassNameControl>
+		<DefaultColumn>200</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="SFC Bin Pump">
+		<ModuleId>G4302</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Pump.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Pump.PumpControl</ClassNameControl>
+		<DefaultColumn>200</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="CE">
+		<ModuleId>G7150</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.CE.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.CE.CEControl</ClassNameControl>
+		<DefaultColumn>1000</DefaultColumn>
+		<InitialSize>FullSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="CE DAD">
+		<ModuleId>G7151</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Dad.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Dad.DadControl</ClassNameControl>
+		<DefaultColumn>950</DefaultColumn>
+		<InitialSize>FullSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="TCC ZEN">
+		<ModuleId>G4283</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.ColumnComp.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.ColumnComp.ColumnCompControl</ClassNameControl>
+		<DefaultColumn>500</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="TCC">
+		<ModuleId>G1316</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.ColumnComp.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.ColumnComp.ColumnCompControl</ClassNameControl>
+		<DefaultColumn>500</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="ELSD">
+		<ModuleId>G4218</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Elsd.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Elsd.ElsdControl</ClassNameControl>
+		<DefaultColumn>1100</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="FLD">
+		<ModuleId>G1321</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Fld.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Fld.FldControl</ClassNameControl>
+		<DefaultColumn>1020</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="RID">
+		<ModuleId>G1362</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Rid.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Rid.RidControl</ClassNameControl>
+		<DefaultColumn>1030</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Valve">
+		<ModuleId>G1157</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Valve.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Valve.ValveControl</ClassNameControl>
+		<DefaultColumn>600</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Valve">
+		<ModuleId>G1158</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Valve.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Valve.ValveControl</ClassNameControl>
+		<DefaultColumn>600</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Valve">
+		<ModuleId>G1159</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Valve.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Valve.ValveControl</ClassNameControl>
+		<DefaultColumn>600</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Valve">
+		<ModuleId>G1160</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Valve.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Valve.ValveControl</ClassNameControl>
+		<DefaultColumn>600</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+		<DeviceInfo ID="Low Flow Valve">
+		<ModuleId>G1162</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Valve.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Valve.ValveControl</ClassNameControl>
+		<DefaultColumn>600</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Low Flow Valve">
+		<ModuleId>G1163</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Valve.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Valve.ValveControl</ClassNameControl>
+		<DefaultColumn>600</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="Valve">
+		<ModuleId>G1170</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.Valve.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.Valve.ValveControl</ClassNameControl>
+		<DefaultColumn>600</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="ColumnCompCluster">
+		<ModuleId>ColumnCompartmentCluster</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.ColumnCompCluster.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.ColumnCompCluster.ColumnCompClusterControl</ClassNameControl>
+		<DefaultColumn>501</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+	<DeviceInfo ID="PumpValveCluster">
+		<ModuleId>PumpValveCluster</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.PumpValveCluster.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.PumpValveCluster.PumpValveClusterControl</ClassNameControl>
+		<DefaultColumn>201</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+  	<DeviceInfo ID="FractionCollector">
+    		<ModuleId>G1364</ModuleId>
+    		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.FractionCollector.dll</AssemblyNameControl>
+    		<ClassNameControl>Agilent.LCDrivers.Dashboard.FractionCollector.FractionCollectorControl</ClassNameControl>
+    		<DefaultColumn>1200</DefaultColumn>
+    		<InitialSize>HalfSize</InitialSize>
+  	</DeviceInfo>
+  	<DeviceInfo ID="FractionCollector">
+    		<ModuleId>G5664</ModuleId>
+    		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.FractionCollector.dll</AssemblyNameControl>
+    		<ClassNameControl>Agilent.LCDrivers.Dashboard.FractionCollector.FractionCollectorControl</ClassNameControl>
+    		<DefaultColumn>1200</DefaultColumn>
+    		<InitialSize>HalfSize</InitialSize>
+  	</DeviceInfo>
+	<DeviceInfo ID="ChipCube">
+		<ModuleId>G4240</ModuleId>
+		<AssemblyNameControl>Agilent.LCDrivers.Dashboard.ChipCube.dll</AssemblyNameControl>
+		<ClassNameControl>Agilent.LCDrivers.Dashboard.ChipCube.ChipCubeControl</ClassNameControl>
+		<DefaultColumn>1190</DefaultColumn>
+		<InitialSize>HalfSize</InitialSize>
+	</DeviceInfo>
+</DeviceTypeInfos>

@@ -1,0 +1,464 @@
+name BuildProductSpecialMenus
+
+local help
+local ii
+local leohelp
+local ContactsInstalled
+
+help=HelpSubSystemTopic("HPCORECE")
+leohelp = help
+
+if devrcnet>0 then
+      menuadd "&Instrument","System Vialtable...","vtEditVialTable",,\
+              "Define the vials for the system","_METHODIDLE",4300,,4100010
+      menuadd "&Instrument",,"SEPARATOR",,,,,,4100011
+endif
+if devHPCE=1 OR devHPCS=1 then
+  if _offline = 0
+      menuadd "&Instrument","System Vialtable...","vtEditVialTable",,\
+              "Define the vials for the system","_METHODIDLE",4300,,4100010
+      menuadd "&Instrument",,"SEPARATOR",,,,,,4100011
+  endif
+  menuadd "&Instrument","Select CE Mode...","r$=hpcemode$()",,\
+          "Select CE operation mode","_METHODIDLE",404056,,4100020
+  menuadd "&Instrument","Set up CE &Method...","EDHPCE ""ALL""",,\
+          "Set up complete CE Method","_METHODIDLE",404019,,4100030
+  menuadd "&Instrument",,"SEPARATOR",,,,,,4100031
+  menuadd "&Instrument","Set up CE &Homevalues...",   "EDHPCE ""HOME""",,\
+          "Set up Temperature, Vials and Height Sensing",,404025,,4100040
+  menuadd "&Instrument","Set up CE C&onditioning...", "EDHPCE ""COND""",,\
+          "Set up Replenish, Pre- and Postconditioning",,404020,,4100041
+  menuadd "&Instrument","Set up CE &Injection...",         "EDHPCE ""INJ""",,\
+          "Set Injection Method and duration",,404005,,4100042
+  menuadd "&Instrument","Set up CE &Electric...",      "EDHPCE ""ELEC""",,\
+          "Set Electrical values for CE",,404018,,4100043
+  menuadd "&Instrument","Set up CE &TimeTable...",         "EDHPCE ""TTBL""",,\
+          "Set up Rawdata and TimeTable for CE","_METHODIDLE",404023,,4100044
+  if dev1946msd = 0
+    menuadd "&Instrument","Set up CE &Fraction Collection...", "FC_EditParameter",,\
+            "Set up Fraction Collection for CE","_METHODIDLE",404061,,4100045
+  endif
+  menuadd "&Instrument",,"SEPARATOR",,,,,,4100100
+endif
+
+if dev1050DAD > 0
+  menuadd "&Instrument","Set up &DAD Signals...","LC1050DAD.ED1050DAD ""SIG""",,\
+          "Set up Signal Info for Diode Array Detector",,7850,,4100200
+endif
+
+if (devLeoPump = 1)
+  menuadd "&Instrument","Set up P&ump...", "LPMP.EdLPmp ""solv""",,\
+          "Set up Flow, Solvent, Stoptime, Pressure Setpoints for the Pump",\
+          "MethLoadSaveIdle",Leohelp+10100,,4101000
+endif
+
+if (devLeoPump > 1)
+  for ii=1 to devLeoPump
+    menuadd "&Instrument","Set up P&ump "+val$(ii)+"...", "LPMP.EdLPmp ""solv"","+val$(ii),,\
+            "Set up Flow, Solvent, Stoptime, Pressure Setpoints for Pump "+val$(ii),\
+            "MethLoadSaveIdle",Leohelp+10100,,4101000
+  next ii        
+endif
+
+devadc = adcdevice
+
+if adcdevice = 1
+     menuadd "&Instrument","Set up &ADC Signals...","LC35900ADC.EDADC ,1",,\
+             "Set up Signal Info for Dual Channel Interface",\
+             "MethLoadSaveIdle",7405,,4100300
+     if adctimetab > 0
+        menuadd  "&Instrument","Set up ADC &Timed Events...","LC35900ADC.EDEVTADC ,1",,\
+             "Set up Timed Event Table for Dual Channel Interface","MethLoadSaveIdle",,,4100310
+     endif
+     for i = 1 to 18
+        evaluate "present = check(variable,adcnhpmenucmd"+val$(i)+"$)"
+           if present = 1
+             evaluate "adccmd$=adcnhpmenucmd"+val$(i)+"$"
+             evaluate "menuadd ""&Instrument"", adcnhpmenuitem"+val$(i)+"$,\
+                          ""LC35900ADC."+adccmd$+""",,\
+                          adcnhpmenuhelp"+val$(i)+"$,""MethLoadSaveIdle"",,,4100320"
+            endif
+      next i
+endif
+
+if adcdevice > 1
+   for adccount = 1 to adcdevice
+     menuadd "&Instrument","Set up &ADC Signals...","SUBMENU",,"Set up Signal Info for Dual Channel Interface",,,,4100340
+     menuadd "&Instrument|Set up &ADC Signals...","ADC&"+val$(adccount)+"","LC35900ADC.EDADC ,"+val$(adccount)+"",,\
+             "Set up Signal Info for Dual Channel Interface ADC"+val$(adccount)+"",\
+             "MethLoadSaveIdle",7405,,4100350
+     if adctimetab > 0
+        menuadd "&Instrument","Set up ADC &Timed Events...","SUBMENU",,"Set up Timed Event Table for Dual Channel Interface",,,,4100355
+        menuadd "&Instrument|Set up ADC &Timed Events...","ADC&"+val$(adccount)+"","LC35900ADC.EDEVTADC ,"+val$(adccount)+"",,\
+         "Set up Timed Event Table for Dual Channel Interface ADC"+val$(adccount)+"","MethLoadSaveIdle",,,4100360
+      endif
+      for i = 1 to 18
+        evaluate "present = check(variable,adcnhpmenucmd"+val$(i)+"$)"
+           if present = 1
+             evaluate "adccmd$=adcnhpmenucmd"+val$(i)+"$"
+             evaluate "menuadd ""&Instrument"", adcnhpmenuitem"+val$(i)+"$,\
+                          ""LC35900ADC."+adccmd$+""",,\
+                          adcnhpmenuhelp"+val$(i)+"$,""MethLoadSaveIdle"",,,4100370"
+            endif
+       next i
+   next adccount
+adccount = adccount - 1
+endif
+
+  if (devGCI > 0)
+     if devRCnet > 0 then
+        menuadd "&Instrument","&Set up Instrument Method...", "CPRC.RCEditMethod",,\
+                "Set parameters",\
+                "MethLoadSaveIdle",Leohelp+10100,,4101000
+        for ii=1 to devGCI
+           if InStr(GCIGetBaseType$(ii), "RAPIDCONTROL") = 0 then
+              if GCIGetMenuDeviceName$(ii) <> "" then 
+                 menuadd "&Instrument","Set up "+GCIGetMenuDeviceName$(ii)+"...", "gci.EdGci ""METH"","+val$(ii),,\
+                         "Set method parameters",\
+                         "MethLoadSaveIdle",Leohelp+10100,,4101000+ii
+              endif
+           endif
+        next ii        
+     else
+        for ii=1 to devGCI
+           if InStr(GCIGetBaseType$(ii), "RAPIDCONTROL") = 0 then
+              if GCIGetMenuDeviceName$(ii) <> "" then 
+                 menuadd "&Instrument","Set up "+GCIGetMenuDeviceName$(ii)+"...", "gci.EdGci ""METH"","+val$(ii),,\
+                         "Set method parameters",\
+                         "MethLoadSaveIdle",Leohelp+10100,,4101000+ii
+              endif
+           else
+              if GCIGetMenuDeviceName$(ii) <> "" then 
+                 menuadd "&Instrument","Set up "+GCIGetMenuDeviceName$(ii)+"...", "CPRC.RCEditMethod",,\
+                         "Set method parameters",\
+                         "MethLoadSaveIdle",Leohelp+10100,,4101000+ii
+              endif
+           endif
+        next ii        
+     endif
+  endif
+
+
+if dev1050pump+dev1050sampler+dev1050dad+dev1090pump+dev1090inject+\
+   dev1090fpd+dev1090dad+dev1046fld+dev1049ecd+dev1050mwd+dev1050vwd > 0 \
+then
+  menuadd "&Instrument",,"SEPARATOR",,,,,,4105000
+endif
+
+if devHPCE=1 OR devHPCS=1 then
+  menuadd "&Instrument","&Simulation...", "SIMULATION",,\
+          "Invoke the simulation dialog",,404028,,4105001
+  menuadd "&Instrument",,"SEPARATOR",,,,,,4105002
+  if _offline = 0
+    menuadd "&Instrument","More CE Co&ntrol","SUBMENU",,\
+            "More Dialogs for CE Control",,,,4105010
+    menuadd "&Instrument|More CE Co&ntrol","&Tray Control...",\
+            "EDHPCE ""TRAY""",,\
+            "Direct control of the tray","_METHODIDLE",404002,,4105011
+    menuadd "&Instrument|More CE Co&ntrol","Change &Cassette...",\
+            "POPCHNGCASS ",,\
+            "Moves down the vials in order to change the cassette",\
+            "_METHODIDLE",404029,,4105012
+    menuadd "&Instrument|More CE Co&ntrol","Change &Bottles...",\
+            "POPCHNGBOTTLE ",,\
+            "Choose this function if you want to change the bottles",\
+            "_METHODIDLE",404026,,4105013
+    menuadd "&Instrument|More CE Co&ntrol",,"SEPARATOR",,,,,,4105014
+!PVCS #8246
+    menuadd "&Instrument|More CE Co&ntrol","&Load Vials on Load Method","CE_LoadVials",,\
+            "Load vials when new method is loaded","_METHODIDLE",404027,,4105015
+    CE_UpdateLoadVials
+
+
+    menuadd "&Instrument","More CE E&lectric","SUBMENU",,"More Dialogs for CE energy apply",,,,4105020
+    menuadd "&Instrument|More CE E&lectric","&Abort Action!",\
+            "dum$=SendModule$(""HPCE"",""ABRT:ENGY"")",,\
+            "Aborts any energy action","_METHODIDLE",404075,,4105021
+    menuadd "&Instrument|More CE E&lectric","Apply &Voltage...",\
+            "POPAPPLY ""VOLT""",,\
+            "Apply voltage to the capillary","_METHODIDLE",404076,,4105022
+    menuadd "&Instrument|More CE E&lectric","Apply &Current...",\
+            "POPAPPLY ""CURR""",,\
+            "Apply current to the capillary","_METHODIDLE",404077,,4105023
+    menuadd "&Instrument|More CE E&lectric","Apply &Power...",\
+            "POPAPPLY ""POWER""",,\
+            "Apply power to the capillary","_METHODIDLE",404078,,4105024
+
+
+    menuadd "&Instrument","More CE &Pressure","SUBMENU",,"More Dialogs for CE pressure apply",,,,4105030
+    menuadd "&Instrument|More CE &Pressure","&Abort Action!",\
+            "dum$=SendModule$(""HPCE"",""ABRT:PRES"")",,\
+            "Aborts any pressure action","_METHODIDLE",404081,,4105031
+    menuadd "&Instrument|More CE &Pressure","&Flush Capillary...",\
+            "POPFLUSH ",,\
+            "Flushs the capillary","_METHODIDLE",404012,,4105032
+    menuadd "&Instrument|More CE &Pressure","Apply &Pressure...",\
+            "POPAPPLY ""PRESS""",,\
+            "Apply pressure to the capillary","_METHODIDLE",404082,,4105033
+!PVCS #8246
+    menuadd "&Instrument|More CE &Pressure","Apply &External pressure...",\
+            "POPAPPLY ""EXTPRESS""",,\
+            "Apply external pressure to the capillary","_METHODIDLE",404057,,4105034
+
+
+    menuadd "&Instrument","More CE Vi&als","SUBMENU",,"More Dialogs for CE vial control",,,,4105040
+    menuadd "&Instrument|More CE Vi&als","Set new &inlet vial...",\
+            "POPVIALSET ""INLET""",,\
+            "Sets a new inlet vial","_METHODIDLE",404086,,4105041
+    menuadd "&Instrument|More CE Vi&als","Set new &outlet vial...",\
+            "POPVIALSET ""OUTLET""",,\
+            "Sets a new outlet vial","_METHODIDLE",404087,,4105042
+    menuadd "&Instrument|More CE Vi&als","Remove i&nlet vial",\
+            "POPVIALRMV ""INLET""",,\
+            "Removes the inlet vial","_METHODIDLE",404088,,4105043
+    menuadd "&Instrument|More CE Vi&als","Remove o&utlet vial",\
+            "POPVIALRMV ""OUTLET""",,\
+            "Removes the outlet vial","_METHODIDLE",404089,,4105044
+
+    menuadd "&Instrument|More CE Vi&als",,"SEPARATOR",,,,,,4105045
+    menuadd "&Instrument|More CE Vi&als","&Abort Action!",\
+            "dum$=SendModule$(""HPCE"",""ABRT:REPL"")",,\
+            "Aborts any replenishment action","_METHODIDLE",404090,,4105050
+    menuadd "&Instrument|More CE Vi&als","&Replenish vial...",\
+            "POPREPL ""REPLENISH""",,\
+            "Replenishs a vial in the replensihment system",\
+            "_METHODIDLE",404091,,4105051
+    menuadd "&Instrument|More CE Vi&als","&Fill vial...",\
+            "POPREPL ""FILL""",,\
+            "Fills a vial in the replensihment system",\
+            "_METHODIDLE",404092,,4105052
+    menuadd "&Instrument|More CE Vi&als","&Empty vial...",\
+            "POPVIALSET ""EMPTY""",,\
+            "Empties a vial in the replensihment system",\
+            "_METHODIDLE",404093,,4105053
+    menuadd "&Instrument|More CE Vi&als","&Clean Tubes...",\
+            "POPAPPLY ""CLEAN""",,\
+            "Clean the tubes of the replensihment system",\
+            "_METHODIDLE",404094,,4105054
+  endif
+endif
+
+if dev1050dad > 0
+  menuadd "&Instrument","Mo&re DAD","SUBMENU",,"More Dialogs for 1050 DAD",,,,4105099
+  menuadd "&Instrument|Mo&re DAD","C&ontacts...","ED1050DAD ""CONT""",,\
+          "Set up external Contacts",,404070,,4105100
+  if (devHPCE=1 OR devHPCS=1) and (_offline = 0) then
+     On Error Goto DadNotOnline001
+
+     tmp$ = SendModule$("DAD", "CONF?")
+  
+     if InStr(tmp$, "DAC") > 0 then
+        ! option is installed
+        menuadd "&Instrument|Mo&re DAD","&Analog Output...","DadAnalogOutputControl",,\
+                "Set up of analog output",,,,4105200
+     endif
+
+  endif
+DadNotOnline001:
+On Error
+  if _offline = 0
+    menuadd "&Instrument|Mo&re DAD",,"SEPARATOR",,,,,,4105210
+    menuadd "&Instrument|Mo&re DAD","&Indirect UV-Mode...","SelectIndirectUVmode",,\
+            "selection of indirect UV operation mode","_METHODIDLE",404062,,4105300
+    menuadd "&Instrument|Mo&re DAD","&Control...", "ED1050DAD ""CTRL""",,\
+            "Set up special DAD Control Parameters",,404071,,4105301
+    menuadd "&Instrument|Mo&re DAD","&Test...","Menu1050DADTest",,\
+            "Set up and execute DAD Test",,404072,,4105302
+    menuadd "&Instrument|Mo&re DAD","&Wavelength Calibration...","ED1050DAD ""WCAL""",,\
+            "Execute DAD Wavelength Calibration",,404073,,4105303
+    if devHPCE=1 OR devHPCS=1 then
+        menuadd "&Instrument|Mo&re DAD",,"SEPARATOR",,,,,,4105304
+!PVCS #8246
+        menuadd "&Instrument|Mo&re DAD","&Reset Lamp Life Count...","ResetLampLifeCount",,\
+                "Resets the lamp life counter",,404063,,4105305
+    endif
+  endif
+endif
+
+if (devLeoPump = 1)
+  menuadd "&Instrument","&More Pump","SUBMENU",,"More Dialogs for Pump",,,,4107000
+         
+  menuadd "&Instrument|&More Pump","&Auxiliary...", "LPMP.EdLPmp ""aux""",,\
+          "Set up auxiliary parameters","MethLoadSaveIdle",\
+          Leohelp+10200,,4107100
+  menuadd "&Instrument|&More Pump","&Data Curves...", "LPMP.EdLPmp ""store""",,\
+          "Select pump data curves to store","MethLoadSaveIdle",\
+          Leohelp+10300,,4107200
+
+  if ObjHdrVal (LeoPumpStatus1[1],"Cont_Installed") > 0
+    menuadd "&Instrument|&More Pump","&Contacts...", "LPMP.EdLPmp ""Contacts""",,\
+            "Set up external contacts","MethLoadSaveIdle",Leohelp+10500,,4107300
+  endif
+  if _offline <> 0
+    if (ObjHdrVal (LeoPumpStatus1[1],"PumpType") > 2)
+	   menuadd "&Instrument|&More Pump",,"SEPARATOR",,,,,,4107350
+       menuadd "&Instrument|&More Pump","&Configuration...", "LPMP.EdLPmp ""Config""",,\
+               "Configure Pump","MethLoadSaveIdle",Leohelp+0,,4107400
+    endif
+  else
+	menuadd "&Instrument|&More Pump",,"SEPARATOR",,,,,,4107350
+    menuadd "&Instrument|&More Pump","C&ontrol...", "LPMP.EdLPmp ""ctrl""",,\
+            "Control Parameters for the Pump","MethLoadSaveIdle",\
+            Leohelp+10600,,4107400
+    menuadd "&Instrument|&More Pump","&Bottle filling...",\
+    	    "LPMP.EdLPmp ""bottle""",,\
+	        "Bottle filling",\
+	        "MethLoadSaveIdle",Leohelp+10600,,4107500
+  endif
+endif
+
+if (devLeoPump > 1)
+  for ii=1 to devLeoPump
+    menuadd "&Instrument","&More Pump "+val$(ii),"SUBMENU",,\
+            "More Dialogs for Pump "+val$(ii),,,,4107000
+
+    menuadd "&Instrument|&More Pump "+val$(ii),"&Auxiliary...",\
+            "LPMP.EdLPmp ""aux"","+val$(ii),,"Set up auxiliary parameters",\
+            "MethLoadSaveIdle",Leohelp+10200,,4107100
+    menuadd "&Instrument|&More Pump "+val$(ii),"&Data Curves...",\
+            "LPMP.EdLPmp ""store"","+val$(ii),,\
+            "Select pump data curves to store",\
+            "MethLoadSaveIdle",Leohelp+10300,,4107200
+
+    Evaluate("ContactsInstalled = ObjHdrVal (LeoPumpStatus"+val$(ii)+"[1], ""Cont_Installed"")")
+    if ContactsInstalled > 0
+      menuadd "&Instrument|&More Pump "+val$(ii),"&Contacts...",\
+              "LPMP.EdLPmp ""Contacts"","+val$(ii),,\
+              "Set up external contacts","MethLoadSaveIdle",Leohelp+10500,,4107300
+    endif
+    if _offline <> 0
+      Evaluate("PumpType = ObjHdrVal (LeoPumpStatus"+val$(ii)+"[1], ""PumpType"")")
+      if (PumpType > 2)
+        menuadd "&Instrument|&More Pump "+val$(ii),"&Configuration...",\
+                "LPMP.EdLPmp ""Config"","+val$(ii),,\
+                "Configure Pump "+val$(ii),"MethLoadSaveIdle",Leohelp+0,,4107400
+      endif
+	else
+      menuadd "&Instrument|&More Pump "+val$(ii),,"SEPARATOR",,,,,,4107400
+      menuadd "&Instrument|&More Pump "+val$(ii),"C&ontrol...",\
+              "LPMP.EdLPmp ""ctrl"","+val$(ii),,\
+              "Control Parameters for Pump "+val$(ii),\
+              "MethLoadSaveIdle",Leohelp+10600,,4107500
+      menuadd "&Instrument|&More Pump "+val$(ii),"&Bottle filling...",\
+	          "LPMP.EdLPmp ""bottle"","+val$(ii),,\
+	          "Bottle filling "+val$(ii),\
+	          "MethLoadSaveIdle",Leohelp+10600,,4107700
+    endif
+  next ii        
+endif
+
+if CHECK(variable, InstConfigEditorActive) = 1 Then
+   if InstConfigEditorActive = 1 Then
+      menuadd "&Instrument",,"SEPARATOR",,,,,,4128000
+      menuadd "&Instrument","Instrument &Configuration...","ConfigEditor",,\
+   		"Configure Instrument",,,,4130000
+   endif
+endif
+
+
+if _offline = 0
+  if dev1050dad+dev1090dad+dev1046fld+dev1049ecd+dev1050mwd+dev1050vwd+devadc > 0 \
+  then
+    menuadd "&Instrument",,"SEPARATOR",,,,,,4180000
+    menuadd "&Instrument","Snapshot",  "RunSnapshotMrcView",,\
+            "Copy currently created data file to SNAPSHOT.D in data directory","_SYSTEMRUNNING",404095,,4180100
+  endif
+
+  if devHPCE=1 OR devHPCS=1 then
+    menuadd "&Instrument",,"SEPARATOR",,,,,,4180200
+    menuadd "&Instrument","NotReady In&fo...",  "PopNrdyInfo",,\
+            "Retrieves more information if device is NotReady",,404052,,4180201
+    if dev1946MSD>0 then
+        menuadd "&Instrument","S&ystem Off","GotoSTANDBY",, "Turn off MSD, Pump, Lamp(s)",\
+                "_SEQUENCEIDLE/_METHODIDLE/MethLoadSaveIdle",,,4180202
+    endif
+    menuadd "&Instrument","System Reset",  "SysReset",,\
+            "Resets the system hardware","_METHODIDLE",404096,,4180203
+    menuadd "&Instrument","System INIT",  "SysInit",,\
+            "Initialize System hardware and turn on Lamp","_METHODIDLE",404097,,4180204
+    menuadd "&Instrument","Maintenance",  "Maintenance",,\
+            "park all lift stations for maintenance","_METHODIDLE",404098,,4180205
+  endif
+  if dev1050pump+dev1050sampler+dev1050dad+dev1090pump+dev1090inject+\
+     dev1090fpd+dev1090dad+dev1046fld+dev1049ecd+dev1050mwd+dev1050vwd+devadc+devrcnet > 0 \
+  then
+    menuadd "&Instrument",,"SEPARATOR",,,,,,4180250
+    menuadd "&Instrument","Re&visions && Serial#'s...","EditModulesID",,\
+            "Revisions and serial Numbers of Modules",,7005,,4180300
+    menuadd "&Instrument",,"SEPARATOR",,,,,,4180350
+  endif
+  menuadd "&Instrument","&Capillaries...","EditSysColumnParms",,\
+          "Edit available and installed capillaries",,404085,,4180400
+endif
+
+if _offline = 0
+  if dev1090dad+dev1050dad+devleoDAD+devleofld+devleovwd = 1
+    if dev1090dad+dev1050dad=1
+      menuadd "&View","O&nline Spectra", "ShowSpectra on,DAD",,\
+              "Switch on Spectra Monitor","MethLoadSaveIdle",help+7110,,90015000
+    endif
+    if devleodad=1
+      menuadd "&View","O&nline Spectra", "ShowSpectra on,LDAD",,\
+              "Switch on Spectra Monitor","MethLoadSaveIdle",help+7110,,90015000
+    endif
+    if devleofld=1
+      menuadd "&View","O&nline Spectra", "ShowSpectra on,LFLD",,\
+              "Switch on Spectra Monitor","MethLoadSaveIdle",help+7110,,90015000
+    endif
+    if devleovwd=1
+      menuadd "&View","VWD Sca&ns", "ShowSpectra on,LVWD",,\
+              "Switch on Spectra Monitor for VWD Scans","MethLoadSaveIdle",\
+              help+7110,,90016000
+    endif
+  else
+    if dev1090dad+dev1050dad+devleoDAD+devleofld+devleovwd > 1
+      menuadd "&View","O&nline Spectra","SUBMENU",,\
+              "Switch on/off Spectra Monitor",,,,90015000
+      if dev1090dad+dev1050dad > 0
+        menuadd "&View|O&nline Spectra","&DAD","ShowSpectra on,DAD",,\
+                "Switch on 1050/1090 Spectra Monitor","MethLoadSaveIdle",\
+                help+7110,,90015100
+      endif
+      if devleodad=1
+        menuadd "&View|O&nline Spectra","&DAD","ShowSpectra on,LDAD",,\
+                "Switch on DAD Spectra Monitor","MethLoadSaveIdle",\
+                help+7110,,90015100
+      else
+        for ii=1 to devLeoDad
+          menuadd "&View|O&nline Spectra","&DAD "+val$(ii),\
+                  "ShowSpectra on,LDAD"+val$(ii),,\
+                  "Switch on DAD "+val$(ii)+" Spectra Monitor",\
+                  "MethLoadSaveIdle",help+7110,,90015100
+        next ii
+      endif
+      if devleofld=1
+        menuadd "&View|O&nline Spectra","&FLD","ShowSpectra on,LFLD",,\
+                "Switch on FLD Spectra Monitor","MethLoadSaveIdle",\
+                help+7110,,90015200
+      else
+        for ii=1 to devLeoFld
+          menuadd "&View|O&nline Spectra","&FLD "+val$(ii),\
+                  "ShowSpectra on,LFLD"+val$(ii),,\
+                  "Switch on FLD "+val$(ii)+" Spectra Monitor",\
+                  "MethLoadSaveIdle",help+7110,,90015200
+        next ii
+      endif
+      if devleovwd=1
+        menuadd "&View|O&nline Spectra","&VWD","ShowSpectra on,LVWD",,\
+                "Switch on Spectra Monitor for VWD Scans",\
+                "MethLoadSaveIdle",help+7110,,90015300
+      else
+        for ii=1 to devLeoVwd
+          menuadd "&View|O&nline Spectra","&VWD "+val$(ii),\
+                  "ShowSpectra on,LVWD"+val$(ii),,\
+                  "Switch on Spectra Monitor for VWD "+val$(ii)+" Scans",\
+                  "MethLoadSaveIdle",help+7110,,90015300
+        next ii
+      endif
+    endif
+  endif
+endif
+
+endmacro
+
+

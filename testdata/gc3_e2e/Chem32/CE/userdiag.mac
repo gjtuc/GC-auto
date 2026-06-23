@@ -1,0 +1,725 @@
+!*******************************************
+! FILE: USERDIAG.MAC
+!
+! DESCRIPTION: for HPCE user diagnostics
+!
+!* $Header: /cag/DRIVERS/leodef/ce/misc/userdiag.mac 1.1 1995-10-05 08:34:53-07 hmgr Exp $
+!*******************************************
+! revision 1.2    11.11.94
+! check_belt added
+! clean sensorline added
+
+! revision 1.1    21.3.94
+! check_pump now works even if tempnrdy
+
+! revision 1.0  
+! showsensor zeigt die druckwerte aller sensoren
+
+! showtemp zeigt die temperaturen aller sensoren
+
+! makeready setzt instrument auf ready
+
+! traydoor dient zum enable oder disable vom traydoor switch
+
+! showposition zeigt die Position aller lifts
+
+! showpower zeigt die Messwerte des Hochspannungs Powersupplies
+
+! showvalves zeigt alle aktuell eingeschalteten valves
+
+! valveon dient zum einschalten von einzelnen ventilen
+! die ventile werden mit Kurznamen angegeben
+! fall = fall valve
+! rise = rise valve
+! ambient  = ambient valve
+! pressreg  = pressure reg valve
+! flbypass = flush bypass valve
+! fill = fill valve
+! vacreg  = vacuum reg valve
+! empty = empty valve
+! levelsensor  = level sensor valve
+! maximal 2 valves koennen gemeinsam geschaltet werden
+! Beispiele : valveon rise         schaltet das rise valve an
+!             valveon flbypass,ambient    schaltet ambient und flush
+!                                   valve an
+!             valveon               erzeugt dialog fenster
+
+! showarea zeigt den Istwert und den Sollwert der injection
+! area 
+
+! showoffsets zeigt die beim Initialisieren ermittelten 
+! Positionsoffsets der lifts
+
+! moveservos erzeugt ein window um die servos zu bewegen
+
+! restart erzeugt ein window um einen restart eines servos auszuloesen
+
+! adj_needle unterstuetzt die justage der replenish Nadel
+
+name readpress
+Parameter whichpress$
+if (whichpress$ = "vacuum") then
+  a$ = sendmodule$("HPCE","scrt 212,5,0")
+endif
+if (whichpress$ = "pressure") then
+  a$ = sendmodule$("HPCE","scrt 212,6,0")
+endif
+if (whichpress$ = "injection") then
+  a$ = sendmodule$("HPCE","scrt 212,4,0")
+endif
+if (whichpress$ = "replenish") then
+  a$ = sendmodule$("HPCE","scrt 212,7,0")
+endif
+return val(a$[20:len(a$)])/100
+endmacro
+
+name readtemp
+Parameter whichtemp$
+if (whichtemp$ = "cold") then
+  a$ = sendmodule$("HPCE","scrt 211,1,0")
+endif
+if (whichtemp$ = "hot") then
+  a$ = sendmodule$("HPCE","scrt 211,2,0")
+endif
+if (whichtemp$ = "capillary") then
+  a$ = sendmodule$("HPCE","scrt 211,3,0")
+endif
+if (whichtemp$ = "tray") then
+  a$ = sendmodule$("HPCE","scrt 211,4,0")
+endif
+return val(a$[20:len(a$)])/100
+endmacro
+
+name showsensor
+    print "vacuum " + val$(readpress(vacuum)) + " mbar" + "  highpress " + val$(readpress(pressure)) + " mbar" + "  levelsensor " + val$(readpress(replenish)) + " mbar"
+endmacro
+
+name showtemp
+    print "peltier cold side " + val$(readtemp(cold)) + " C" + " peltier hot side " + val$(readtemp(hot)) + " C" + "  cassette " + val$(readtemp(capillary)) + " C" + "  tray " + val$(readtemp(tray)) + " C"
+endmacro
+
+
+name switchvalve
+  Parameter valve$,valve1$,valve2$
+  valve_cmd = 0
+  repl_cmd = 0
+  
+  if ((valve$ = "fall") or (valve1$ = "fall") or (valve2$ = "fall"))
+	valve_cmd = valve_cmd + 2
+  endif
+  if ((valve$ = "rise") or (valve1$ = "rise") or (valve2$ = "rise"))
+  	valve_cmd = valve_cmd + 4
+  endif
+  if ((valve$ = "ambient") or (valve1$ = "ambient") or (valve2$ = "ambient"))
+  	valve_cmd = valve_cmd + 8
+  endif
+  if ((valve$ = "pressreg") or (valve1$ = "pressreg") or (valve2$ = "pressreg"))
+  	valve_cmd = valve_cmd + 16
+  endif
+  if ((valve$ = "flbypass") or (valve1$ = "flbypass") or (valve2$ = "flbypass"))
+  	valve_cmd = valve_cmd + 32
+  endif
+  if ((valve$ = "fill") or (valve1$ = "fill") or (valve2$ = "fill"))
+  	valve_cmd = valve_cmd + 64
+  endif
+  if ((valve$ = "vacreg") or (valve1$ = "vacreg") or (valve2$ = "vacreg"))
+  	valve_cmd = valve_cmd + 128
+  endif
+  if ((valve$ = "empty") or (valve1$ = "empty") or (valve2$ = "empty"))
+  	repl_cmd = repl_cmd + 8
+  endif
+  if ((valve$ = "levelsensor") or (valve1$ = "levelsensor") or (valve2$ = "levelsensor"))
+  	repl_cmd = repl_cmd + 4
+  endif
+  if ((valve$ = "off") or (valve1$ = "off"))
+  	repl_cmd = 0
+        valve_cmd = 0
+  endif
+  valve_cmd$ = "scrt -444," + val$(valve_cmd) + ",0"
+  repl_cmd$ = "scrt -445," + val$(repl_cmd) + ",0"
+  a$ = SendModule$("HPCE", valve_cmd$)
+  a$ = SendModule$("HPCE", repl_cmd$)
+  if ((valve_cmd = 0) and (repl_cmd = 0))
+        print "all valves switched off"
+  else
+        print valve$ + " " + valve1$ + " " + valve2$ + " switched on"
+  endif
+endmacro
+
+name showvalves$
+  a$ = SendModule$("HPCE", "scrt 444,0,0")
+  commapos = instr(a$,",")
+  a$ = a$[(commapos+1):len(a$)]
+  commapos = instr(a$,",")
+  a$ = a$[(commapos+1):len(a$)]
+  a = val(a$)
+  if (a < 0)
+    a = 256 + a
+  endif
+  b$ = SendModule$("HPCE", "scrt 445,0,0")
+  commapos = instr(b$,",")
+  b$ = b$[(commapos+1):len(b$)]
+  commapos = instr(b$,",")
+  b$ = b$[(commapos+1):len(b$)]
+  b = val(b$)
+  valvesum$ = ""
+  if a >= 128
+    a = a - 128
+    valvesum$ = valvesum$ + "vacreg "
+  endif
+  if a >= 64
+    a = a - 64
+    valvesum$ = valvesum$ + "fill "
+  endif
+  if a >= 32
+    a = a - 32
+    valvesum$ = valvesum$ + "flbypass "
+  endif
+  if a >= 16
+    a = a - 16
+    valvesum$ = valvesum$ + "pressreg "
+  endif
+  if a >= 8
+    a = a - 8
+    valvesum$ = valvesum$ + "ambient "
+  endif
+  if a >= 4
+    a = a - 4
+    valvesum$ = valvesum$ + "rise "
+  endif
+  if a >= 2
+    a = a - 2
+    valvesum$ = valvesum$ + "fall "
+  endif
+  if b >= 128
+    b = b - 128
+  endif
+  if b >= 64
+    b = b - 64
+  endif
+  if b >= 32
+    b = b - 32
+  endif
+  if b >= 16
+    b = b - 16
+  endif
+  if b >= 8
+    b = b - 8
+    valvesum$ = valvesum$ + "empty "
+  endif
+  if b >= 4
+    b = b - 4
+    valvesum$ = valvesum$ + "levelsensor "
+  endif
+  if valvesum$ = ""
+    valvesum$ = "all valves off"
+  endif
+  return valvesum$
+  endmacro
+
+name showarea
+  a$ = SendModule$("HPCE", "scrt 524,1,0")
+  b$ = SendModule$("HPCE", "scrt 524,2,0")
+  print "measured area " + a$[20:len(a$)] + " targetarea " + b$[20:len(b$)]
+  endmacro
+
+name showoffsets
+  a$ = SendModule$("HPCE", "scrt 203,0,0")
+  b$ = SendModule$("HPCE", "scrt 204,0,0")
+  c$ = SendModule$("HPCE", "scrt 205,0,0")
+  print "inlet " + a$[20:len(a$)] + " outlet " + b$[20:len(b$)] + " replen " + c$[20:len(c$)]
+endmacro
+
+name getlift$
+  parameter whichlift$
+  if (whichlift$ = "tray") 
+    liftnumber = 0
+  endif
+  if (whichlift$ = "inlet") 
+    liftnumber = 1
+  endif
+  if (whichlift$ = "outlet") 
+    liftnumber = 2
+  endif
+  if (whichlift$ = "replenish") 
+    liftnumber = 3
+  endif
+  return val$(liftnumber)
+endmacro
+
+name getposition
+  parameter whichlift$
+  actpos$ = sendmodule$("HPCE","step " + getlift$(whichlift$) + ",20,0")
+  return val(actpos$[19:len(actpos$)])
+endmacro
+
+name showposition
+  print "tray " + val$(getposition(tray)) + "  inlet " + val$(getposition(inlet)) + "  outlet " + val$(getposition(outlet)) + "  replenish " + val$(getposition(replenish))
+endmacro
+
+name showpower
+  a$ = SendModule$("HPCE", "act:engy?")
+  commapos = instr(a$,"Y ")
+  a$ = a$[(commapos+2):len(a$)]
+  commapos = instr(a$,",")
+  electric_on = val(a$[1:(commapos -1)])
+  a$ = a$[(commapos+1):len(a$)]
+  commapos = instr(a$,",")
+  voltage = val(a$[1:(commapos -1)])*1000
+  a$ = a$[(commapos+1):len(a$)]
+  commapos = instr(a$,",")
+  retcurr = val(a$[1:(commapos -1)])
+  a$ = a$[(commapos+1):len(a$)]
+  commapos = instr(a$,",")
+  outcurr = val(a$[1:(commapos -1)])
+  a$ = a$[(commapos+1):len(a$)]
+  commapos = instr(a$,",")
+  power = val(a$[1:(commapos -1)])*1000
+  a$ = a$[(commapos+1):len(a$)]
+  polarity = val(a$)
+  print "volt " + vaL$(VOLTAGE) + " outcurr " + VAL$(OUTCURR) + " uA " + " retcurr " + VAL$(RETCURR) + " uA " + " power " + VAL$(POWER) + " mW"
+endmacro
+
+
+name movelift
+parameter whichlift$, deltapos
+  servopos = getposition(whichlift$)
+  newpos = servopos + deltapos
+  dummy$ = sendmodule$("HPCE", "step " + getlift$(whichlift$) + ",3," + val$(newpos))
+  print "new position of " + whichlift$ + " is " + val$(newpos)
+endmacro
+
+
+name servodialog
+parameter whichlift$
+local stop_macro
+dselect = 2
+stop_macro = 0
+print "actual position of " + whichlift$ + " is " + val$(getposition(whichlift$)) 
+while (stop_macro = 0)
+  removedialog "test2"
+  begindialog "test2",50,50,100,125
+  title$ = "Move " + whichlift$
+  GroupBox 5,5,80,95,title$
+  optiongroup dselect
+  if (whichlift$ = "tray")
+    but2$ = "Highest Pos"
+  else
+    but1$ = "Sealing Pos"
+    but2$ = "Normal Pos"
+    optionbutton 10,20,50,15,but1$
+  endif
+  but3$ = "Lowest Pos"
+  but4$ = "Move"
+  optionbutton 10,40,50,15,but2$
+  optionbutton 10,60,50,15,but3$
+  numberbox 45,82,20,12,length,-50,50
+  statictext 70,83,20,12,"mm"
+  optionbutton 10,80,35,15,but4$
+  okbutton 50,105,30,15,"OK"
+  cancelbutton 10,105,30,15,"Cancel"
+  enddialog
+  if (showdialog("test2") < 1)
+    stop_macro = 1
+  else
+    if (whichlift$ = "tray") 
+      if (dselect = 1)
+        dummy$ = sendmodule$("HPCE","step " + getlift$(whichlift$) + ",3,14000")
+        dummy$ = sendmodule$("HPCE","step " + getlift$(whichlift$) + ",8,20")
+      endif
+      if (dselect = 2)
+        dummy$ = sendmodule$("HPCE","step " + getlift$(whichlift$) + ",3,0")
+      endif
+      if (dselect = 3)
+        movelift tray, length*19
+      endif
+    else
+      if (dselect = 1)
+        dummy$ = sendmodule$("HPCE","step " + getlift$(whichlift$) + ",3,35000")
+        dummy$ = sendmodule$("HPCE","step " + getlift$(whichlift$) + ",8,20")
+      endif
+      if (dselect = 2)
+        dummy$ = sendmodule$("HPCE","step " + getlift$(whichlift$) + ",3,36500")
+      endif
+      if (dselect = 3)
+        dummy$ = sendmodule$("HPCE","step " + getlift$(whichlift$) + ",3,0")
+        print "liftposition of " + whichlift$ + " is 0" 
+      endif
+      if (dselect = 4)
+        movelift whichlift$, length*480
+      endif
+    endif
+  endif
+endwhile
+endmacro
+
+name moveservo
+local stop_macro
+servoselect = 1
+stop_macro = 0
+while (stop_macro = 0)
+  removedialog "test1"
+  begindialog "test1",50,50,100,100
+  title$ = "Move servo"
+  GroupBox 5,5,80,75,title$
+  optiongroup servoselect
+  but1$ = "tray"
+  but2$ = "inlet"
+  but3$ = "outlet"
+  but4$ = "replenish"
+  optionbutton 10,17,50,15,but1$
+  optionbutton 10,32,50,15,but2$
+  optionbutton 10,47,50,15,but3$
+  optionbutton 10,62,50,15,but4$
+  okbutton 50,85,30,15,"OK"
+  cancelbutton 10,85,30,15,"Cancel"
+  enddialog
+  if (showdialog("test1") < 1)
+    stop_macro = 1
+  else 
+    if (servoselect = 1)
+      servodialog(tray)
+    endif
+    if (servoselect = 2)
+      servodialog(inlet)
+    endif
+    if (servoselect = 3)
+      servodialog(outlet)
+    endif
+    if (servoselect = 4)
+      servodialog(replenish)
+    endif
+  endif
+endwhile
+endmacro
+
+name restartservo
+Parameter servo$
+    if (servo$ = "tray")
+      a$ = SendModule$("HPCE", "rstm 0")
+    endif
+    if (servo$ = "inlet")
+      a$ = SendModule$("HPCE", "rstm 1")
+    endif
+    if (servo$ = "outlet")
+      a$ = SendModule$("HPCE", "rstm 2")
+    endif
+    if (servo$ = "replenish")
+      a$ = SendModule$("HPCE", "rstm 3")
+    endif
+endmacro
+
+name makeready
+Parameter readyselect$
+  if (readyselect$ = "airpump")
+    a$ = SendModule$("HPCE", "scrt -18,9071,0")
+  endif
+  if (readyselect$ = "temperature")
+    a$ = SendModule$("HPCE", "scrt -18,9045,0")
+  endif
+  if (readyselect$ = "cassette")
+    a$ = SendModule$("HPCE", "CFAN 1")
+  endif
+endmacro
+
+name valveon
+Parameter valve1$, valve2$, valve3$
+if (valve1$ = "")
+  valveselect = 10
+  removedialog "test1"
+  begindialog "test1",50,50,100,200
+  title$ = "Valve On"
+  GroupBox 5,5,80,170,title$
+  optiongroup valveselect
+  but1$ = "fall"
+  but2$ = "rise"
+  but3$ = "ambient"
+  but4$ = "pressreg"
+  but5$ = "flbypass"
+  but6$ = "fill"
+  but7$ = "vacreg"
+  but8$ = "empty"
+  but9$ = "levelsensor"
+  but10$ = "all off"
+  optionbutton 10,17,50,15,but1$
+  optionbutton 10,32,50,15,but2$
+  optionbutton 10,47,50,15,but3$
+  optionbutton 10,62,50,15,but4$
+  optionbutton 10,77,50,15,but5$
+  optionbutton 10,92,50,15,but6$
+  optionbutton 10,107,50,15,but7$
+  optionbutton 10,122,50,15,but8$
+  optionbutton 10,137,50,15,but9$
+  optionbutton 10,152,50,15,but10$
+  okbutton 50,180,30,15,"OK"
+  cancelbutton 10,180,30,15,"Cancel"
+  enddialog
+  if (showdialog("test1") > 0)
+    if (valveselect = 1)
+        switchvalve fall
+    endif
+    if (valveselect = 2)
+  	switchvalve rise
+    endif
+    if (valveselect = 3)
+  	switchvalve ambient
+    endif
+    if (valveselect = 4)
+  	switchvalve pressreg
+    endif
+    if (valveselect = 5)
+  	switchvalve flbypass
+    endif
+    if (valveselect = 6)
+  	switchvalve fill
+    endif
+    if (valveselect = 7)
+  	switchvalve vacreg
+    endif
+    if (valveselect = 8)
+  	switchvalve empty
+    endif
+    if (valveselect = 9)
+  	switchvalve levelsensor
+    endif
+    if (valveselect = 10)
+  	switchvalve off
+    endif
+  else
+  endif
+else
+  switchvalve valve1$,valve2$,valve3$
+endif
+endmacro
+
+name traydoor
+Parameter what$
+  if (what$ = "enable")
+    a$ = SendModule$("HPCE", "scrt -443,9,0")
+  endif
+  if (what$ = "disable")
+    a$ = SendModule$("HPCE", "scrt -443,0,0")
+  endif
+endmacro
+
+name adj_needle
+  dummy$ = sendmodule$("HPCE","gime 48")
+  if (alert("remove vial number 48, press OK if done",2) = 1) then
+  endif
+  dummy$ = sendmodule$("HPCE","step 3,5,48")
+  dummy$ = sendmodule$("HPCE","step 3,3,20500")
+  servodialog(replenish)
+endmacro
+
+name check_electrodes
+  dummy$ = sendmodule$("HPCE","gime 48")
+  if (alert("remove vial number 48, press OK if done",2) = 1) then
+  endif
+  dummy$ = sendmodule$("HPCE","step 1,5,48")
+  dummy$ = sendmodule$("HPCE","step 1,3,20500")
+  servodialog(inlet)
+  dummy$ = sendmodule$("HPCE","step 2,5,48")
+  dummy$ = sendmodule$("HPCE","step 2,3,20500")
+  servodialog(outlet)
+  dummy$ = sendmodule$("HPCE","step 2,4,0")
+endmacro
+
+name show_pumpvalues
+  if (readpress(vacuum) < 30)
+    pressuptime = time() - presstart
+    print "pressure " + val$(readpress(pressure)) + " mbar after " + val$(pressuptime) + " seconds"
+    vacstart = time()
+  else
+    vacuptime = time() - vacstart
+    print "vacuum " + val$(readpress(vacuum)) + " mbar after " + val$(vacuptime) + " seconds" + "   total time " + val$(time() - presstart) + " seconds"
+  endif
+endmacro
+
+name check_bit
+  Parameter testword, whichbit
+  while (whichbit >= 0)
+    bit_present = mod(testword,2)
+    testword = floor(testword/2)
+    whichbit = whichbit - 1
+  endwhile
+  return bit_present
+endmacro
+
+name check_pump
+  switchvalve off
+  dummy$ = sendmodule$("HPCE", "prsc 0")
+  if (alert("open pressure and vacuum bottle, press OK when ready",2) = 1) then
+  else
+    print time()
+  endif
+  pofs$ = sendmodule$("HPCE","POFS 0")
+  print "wait until all sensors are stable"
+  oldreplpress = 0
+  replsens_ready = 0
+  while (replsens_ready = 0)
+    sleep 10
+    if (readpress(vacuum) < 30)
+      if (readpress(pressure) < 30)
+        replpress = readpress(replenish)
+        if (abs(replpress - oldreplpress) < 1)
+          replsens_ready = 1
+          pofs$ = sendmodule$("HPCE","POFS 1")
+        endif
+        oldreplpress = replpress
+      endif
+    endif
+    showsensor
+  endwhile
+  if (alert("close pressure and vacuum bottle, press OK when ready",2) = 1) then
+  endif
+  dummy$ = sendmodule$("HPCE", "prsc 1")
+  presstart = time()
+  ce_notready = 0
+  while (ce_notready = 0)
+    a$ = sendmodule$("HPCE","act:nrdy?")
+    a = val(a$[18:len(a$)])
+    if (check_bit(a,5) = 0)
+      ce_notready = 1
+    endif
+    show_pumpvalues
+    sleep 2
+  endwhile
+endmacro
+
+name clean_needle
+  switchvalve off
+  print ""
+  dummy$ = sendmodule$("HPCE", "step 3,24,30000")
+  dummy$ = sendmodule$("HPCE", "step 3,4,0")
+  dummy$ = sendmodule$("HPCE","gime 48")
+  ce_notready = 0
+  while (ce_notready = 0)
+    a$ = sendmodule$("HPCE","act:nrdy?")
+    a = val(a$[18:len(a$)])
+    if (check_bit(a,6) = 0)
+      ce_notready = 1
+    endif
+    sleep 2
+  endwhile
+  if (alert("Put a vial in position 48, filled to a height of ca. 1.5 cm. Make sure to fill the vial with an appropriate cleaning liquid. The cleaning process will take about 3.5 minutes. Press OK when ready",2) = 1) then
+  endif
+  switchvalve empty    ! remove potential overfill
+  print "checking cleaning vial level"
+  dummy$ = sendmodule$("HPCE", "step 3,5,48")	  ! move vial 48 in repl lift
+  dummy$ = sendmodule$("HPCE", "step 3,3,29500")  ! bring vial up to a height where an overfill is definitely removed
+  sleep 8              ! duration of overfill removal
+  i =0      ! initialize cycle counter
+  while (i < 8)    ! i = number of valve cycles; each cycle schluerfs in a small amout of liquid
+    switchvalve off
+    i = i+1   ! increment cycle counter
+    print "levelsensor cleaning in progress : cycle " + val$(i) + " of 8"
+    dummy$ = sendmodule$("HPCE", "step 3,3,36300") ! move vial to pos 36300 for definitely immersing the sensing orifice of the double needle
+    sleep 3
+    dummy$ = sendmodule$("HPCE", "scrt -445,4,0;scrt -445,0,0") ! levelsensor >on< levelsensor >off<
+    sleep 1
+    dummy$ = sendmodule$("HPCE", "step 3,3,29500")  !  definitely remove the liquid from the sense line orifice
+    sleep 1  ! give it time to travel
+    dummy$ = sendmodule$("HPCE", "scrt -445,4,0") ! switch on the levelsensing valve, thus swallowing the schluerfed-in amount, hence rinsing the sensing restrictions
+    sleep 10  ! Cheers   ...   give it time to drink
+    dummy$ = sendmodule$("HPCE", "scrt -445,0,0") ! levelsensor *off*
+    sleep 1
+    dummy$ = sendmodule$("HPCE", "scrt -445,4,0") ! levelsensor *on*
+    sleep 3
+  endwhile
+ dummy$ = sendmodule$("HPCE", "step 3,4,48")	! move repl lift down
+ dummy$ = sendmodule$("HPCE","gime 48")
+ sleep 2
+ switchvalve off   ! the process from endwhile up to here gave it time to finalize drinking
+ print ""
+ if (alert("Cleaning is done;  please remove vial 48.        Press OK when ready",2) = 1) then
+ endif  ! the last alert-box is present for cosmetic reasons
+endmacro
+
+name shownormal
+  dummy$ = sendmodule$("HPCE","scrt -201,12,0")
+  dummy$ = sendmodule$("HPCE","scrt -601,0,0")
+endmacro
+
+name showpress
+  dummy$ = sendmodule$("HPCE","scrt -201,1,0")
+  dummy$ = sendmodule$("HPCE","scrt -601,4,0")
+endmacro
+
+name testbelt
+  print "initializing tray servo"
+  a$ = sendmodule$("HPCE","rstm 0")
+  a$ = sendmodule$("HPCE","step 0,3,7000")
+  pos = 0
+  while (pos < 6000)
+    a$ = sendmodule$("HPCE","step 0,20,0")
+    pos = val(a$[19:len(a$)])
+  endwhile
+  print "checking belt"
+  a$ = sendmodule$("HPCE","step 0,8,-60")
+  a$ = sendmodule$("HPCE","step 0,3,12000;step 0,8,60")
+  a$ = sendmodule$("HPCE","step 0,8,-60")
+  sleep 20
+  a$ = sendmodule$("HPCE","step 0,20,0")
+  newzero_pos = val(a$[19:len(a$)])
+  a$ = sendmodule$("HPCE","step 0,3,0")
+  if abs(newzero_pos + 70) > 20
+    if (alert("tray belt loose, tighten belt and restart testmacro",2) = 1)
+    endif
+  else
+    repeat_test = 1
+    while (repeat_test > 0) 
+    print "rotate tray clockwise to traystop and hold for about 3 seconds until motor reduces torque"
+    a$ = sendmodule$("HPCE","step 0,3,60;step 0,9,1") ! move tray to pos 60 and block it
+    meas_start = 0
+    while (meas_start = 0)
+      a$ = sendmodule$("HPCE","step 0,23,0") ! read torque to check if user started to move the tray
+      torque = val(a$[19:len(a$)])
+      if (torque > 20)
+        meas_start = 1
+      endif
+    endwhile
+    torquecount = 0
+    maxtorque = 0
+    while (torquecount < 10)
+      a$ = sendmodule$("HPCE","step 0,23,0")  ! read torque
+      torque = val(a$[19:len(a$)])
+      if (torque > maxtorque)
+        maxtorque = torque
+      endif
+      torquecount = torquecount + 1
+    endwhile
+    a$ = sendmodule$("HPCE","step 0,3,-150;step 0,23,0")
+    mintorque = val(a$[19:len(a$)])
+    clearance = mintorque+150 - maxtorque+60
+    print "clearance of belt is "+val$(clearance)+" steps, tighten belt if > 30 or release belt if < 20 steps"
+    if (alert("repeat test",4) <> 1) then
+      repeat_test = 0
+    endif
+    a$ = sendmodule$("HPCE","step 0,3,0")
+    endwhile
+  endif
+endmacro
+
+! Initializes Service tools
+Name Init_ServiceTools
+ MenuAdd "&Diagnose", "Press sensors", "showsensor",, \
+         "Show values of high press, vacuum and levelsensor"
+ MenuAdd "&Diagnose", "Temp sensors", "showtemp",, \
+         "Show values of all temperature sensors"
+ MenuAdd "&Diagnose", "Servoposition", "showposition",, \
+         "Show position of all servos"
+ MenuAdd "&Diagnose", "Active Valves", "print showvalves$()",, \
+         "Show which valves are activated"
+ MenuAdd "&Diagnose|Levelsensor", "On", "valveon levelsensor",, \
+         "Switch levelsensor on"
+ MenuAdd "&Diagnose|Levelsensor", "Off", "valveon off",, \
+         "Switch levelsensor off"
+ MenuAdd "&Diagnose|Reconfigure Windows", "Normal", "shownormal",, \
+         "Reconfigure windows to their standard configuration"
+ MenuAdd "&Diagnose|Reconfigure Windows", "Special", "showpress",, \
+         "Reconfigure windows to show rawpressure,rawvacuum and level sensor"
+ MenuAdd "&Diagnose", "Clean Levelsensor", "clean_needle",, \
+         "The cleaning of the sensor line will take about 3 minutes"
+endmacro
+
+Init_ServiceTools

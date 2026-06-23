@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ezl="http://www.agilent.com/schemas/Analytical/AutomationEngine/EzspLocator/2009/09/08" targetNamespace="http://www.agilent.com/schemas/Analytical/AutomationEngine/EzspLocator/2009/09/08" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:element name="EzspLocator" type="ezl:EzspLocatorBaseType"/>
+	<xs:complexType name="EzspLocatorBaseType" abstract="true" id="EzspLocatorType">
+		<xs:attribute ref="ezl:Name"/>
+		<xs:attribute ref="ezl:Link"/>
+		<xs:attribute ref="ezl:Type"/>
+                <xs:attribute ref="ezl:DisplayName"/>
+	</xs:complexType>
+	<xs:simpleType name="EzspResourceTypeEnum" id="EzspResourceTypeEnum">
+		<xs:restriction base="xs:token">
+			<xs:enumeration value="Unknown"/>
+			<xs:enumeration value="ChemicalResource"/>
+			<xs:enumeration value="EmptyContainer"/>
+			<xs:enumeration value="ProcessContainer"/>
+			<xs:enumeration value="SampleContainer"/>
+			<xs:enumeration value="InjectorPosition"/>
+			<xs:enumeration value="TurretLocation"/>
+			<xs:enumeration value="TrayLocation"/>
+                        <xs:enumeration value="HomeLocation"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:attribute name="Name" type="xs:string"/>
+	<xs:attribute name="Type" type="ezl:EzspResourceTypeEnum"/>
+	<xs:attribute name="Link" type="xs:string"/>
+	<xs:attribute name="DisplayName" type="xs:string"/>
+</xs:schema>

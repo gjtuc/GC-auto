@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="TLBSMSDA" PosStyle="Right" DockRow="0" DockCol="0" Caption="数学计算" PanelName="Chem">
+		<StickyButton Name="MultiplySpect" Help="在 MS 光谱窗口中设置选定范围内离子的比例" CmdList="DeactivateMSMultiplySpectraButton | ActivateMSMultiplySpectraButton" ImageName="MathMS_SetScale20" ImageNameDisabled="MathMS_SetScale20_d"/>
+		<StickyButton Name="SumSpect" Help="将选定的 MS 光谱添加到 MS 光谱窗口" CmdList=" | ActivateMSSumSpectraButton" ImageName="MathMS_AddSpectrum20" ImageNameDisabled="MathMS_AddSpectrum20_d"/>
+		<StickyButton Name="SubtrSpect" Help="从 MS 光谱窗口中扣除选定的 MS 光谱" CmdList=" | ActivateMSSubtractSpectraButton " ImageName="MathMS_SubSpectrum20" ImageNameDisabled="MathMS_SubSpectrum20_d"/>
+		<PushButton Name="ClearSpect" Help="重置 MS 光谱窗口" Command="DoMSClearSpectra" ImageName="MathMS_Rest20" ImageNameDisabled="MathMS_Rest20_d"/>
+		<PushButton Name="HelpSpect" Help="有关计算工具栏的帮助" Command="DoMSSpectraMathHelp" ImageName="Help20" ImageNameDisabled="Help20_d"/>
+		<PushButton Name="ExitSpect" Help="退出计算工具栏模式" Command="DoMSSpectraMathExit" ImageName="Exit20" ImageNameDisabled="Exit20_d"/>
+	</toolbar>
+</graphical_object>

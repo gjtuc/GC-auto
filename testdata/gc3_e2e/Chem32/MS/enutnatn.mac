@@ -1,0 +1,2488 @@
+            !===============================================================================
+            !  ENUTNATN.MAC: G2715 Autotune Algorithm.   Version 3
+            !
+            ! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+            ! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+            ! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+            ! AGILENT TECHNOLOGIES.
+            !
+            !                     RESTRICTED RIGHTS LEGEND                          
+            !                                                                       
+            ! Use, duplication, or disclosure by the Government is subject to       
+            ! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+            ! Technical Data and Computer Software clause at 52.227-7013.           
+            !                                                                       
+            ! AGILENT TECHNOLOGIES                                               
+            ! Life Sciences and Chemical Analysis Solutions           
+            ! 5301 Stevens Creek Blvd
+            ! Santa Clara, CA 95051-7201
+            ! United States
+            !
+            !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            !  These MACROs are the common macros that are called when tune is invoked.
+            !  They take care of testing for the current instrument configuration and
+            !  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+            !  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+            !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            !  The Purpose:
+            !       Tune the mass spectrometer with up to six ions.
+            !       Tune for positive and negative ions.
+            !       Support for VL, SL, and HT instrument types.
+            !===============================================================================
+            !===============================================================================
+            !  Macros:
+            !           msat_LoadAtuneFile                       msat_SaveAtune
+            !           msat_AutoTuneErr                         msat_GetScanTabName$
+            !           msat_AutoTuneAbortHdlr                   msat_GetProfTabName$
+            !           msat_AtuneRegCleanUp                     msat_SaveAtuneErr
+            !           msat_AutoCleanup                         msat_MakeAtuneTables
+            !           msat_CheckVac                            msat_GetAtuneVal
+            !           msat_CheckAtuneReg                       msat_Abundance
+            !           msat_errormsg                            msat_FindPeaks
+            !           msat_CheckZones                          msat_SetMode
+            !           msat_ResetZones                          msat_AutotuneInit
+            !           msat_CalSwitch                           dynamicInit
+            !           msat_OctOptCleanUp                       AtunePrint
+            !           msat_Octopole                            msat_initTuneMixReg
+            !           msat_SaveDynMasses                       msat_auto
+            !           msat_RestoreDynMasse                     GetIonSource()
+            !           msat_Calibrate 		  	         MSAT_MSGetIonSrcShort$()
+            !           msat_CalibD
+            !
+            !===============================================================================
+            ! global variables:
+            !        DGT,DGF,NEB,VAP,msat_mode,msat_srctype,charge,TuneRegIndex,msat_ABFail,msat_PWFail,
+            !        msat_MAFail,MSD_VL,MSD_SL,MSD_HT,MSD_RF,MSD_46,Peakmax2, NumMass
+            !===============================================================================
+            !===============================================================================
+            !
+             AtuneAtnVer$ = "$Header: /Lassen/Support/tunemac/enutnatn.mac B.04.02 [96] 2009-10-19 clove Exp $"
+             verIx = instr(AtuneAtnVer$, ".mac ") + 5
+             AtuneAtnVer$ =  AtuneAtnVer$[verIx:VerIx + instr(AtuneAtnVer$[VerIx:len(AtuneAtnVer$)]," ") - 1] 
+             remove verIx
+            !
+            !08/18/05  CPL  Updated with Agilent header information.  Changed Ver$ to 1.130 2005-08-18 clove Exp $"
+            !06/15/07  CPL  Updated with fixes for B.03.01, SR1.  Changed Ver$ to 1.131 2007-06-15 clove Exp $"
+            !10/19/09  CPL  Updated with fixes for B.04.02 [96].  Added support for AJS-ES
+            !===============================================================================================
+            name msat_LoadAtuneFile
+            PARAMETER polarity default 0
+            PARAMETER file$ default "Atunes.tun"
+            ! Returns 1 if successfully loads file$ or if file$ is already loaded, 
+            ! otherwise returns 0
+            !==============================================================================================
+            local comparefile1$, comparefile2$, LoadOK, ActPol\
+            
+            ! LL Globalization PVCS#12839
+            local ID_TUNEMAC_Loading_1122
+            local ID_TUNEMAC_The_File_1123  
+            local ID_TUNEMAC_Must_1124      
+            local ID_TUNEMAC_Would_1125     
+            local ID_TUNEMAC_YES_1126       
+            local ID_TUNEMAC_NO_1127        
+            
+            ID_TUNEMAC_Loading_1122 = 18122	
+            ID_TUNEMAC_The_File_1123=18123
+            ID_TUNEMAC_Must_1124    =18124  
+            ID_TUNEMAC_Would_1125   =18125  
+            ID_TUNEMAC_YES_1126     =18126  
+            ID_TUNEMAC_NO_1127      =18127  
+            
+            on error goto LoadAtuneErr
+                
+              !* Check if current if Atunes.tun is the current tune file
+                comparefile1$ = ConvertText$( upper, tunefilename$ )
+                comparefile2$ = ConvertText$ (upper, file$)
+                if instr(comparefile1$, comparefile2$) <> 0 then
+                  !* Check polarity!  
+                  msparm ionpolarity, ActPol
+                  if ActPol <> polarity then
+                    mstn_ChangePolarity polarity,0
+                  endif
+                  LoadOK = 1
+                else
+                  !* pop up dialog box asking to load Atunes.tun. 
+                  !* If the request is denied, exit this macro
+            
+                  !=== Build a Dialog Box ===
+                  if DialogExists("DlgLoadTuneFile") <> 0 then
+                    RemoveDialog "DlgLoadTuneFile"
+                  endif
+                  ! LL Globalization PVCS#12839
+                  title$ = ReadResource$("tunemac",ID_TUNEMAC_Loading_1122) + file$ !"Loading tune file: " + file$
+                  !text$ = "The file, " +file$ + ", must be loaded to continue."
+                  !text2$ = "Would you like to load this file now?"
+                  text$ =  ReadResource$("tunemac",ID_TUNEMAC_The_File_1123) + file$ + ReadResource$("tunemac",ID_TUNEMAC_Must_1124)
+                  text2$ = ReadResource$("tunemac",ID_TUNEMAC_Would_1125)
+                  BeginDialog "DlgLoadTuneFile", 140, 100, 190, 80,title$
+                      StaticText 10, 10, 180, 12, text$
+                      StaticText 10, 20, 110, 24, text2$
+                          
+                      OKButton  20,50,50,14,ReadResource$("tunemac",ID_TUNEMAC_YES_1126) !"Yes"
+                      CancelButton 77,50,50,14,ReadResource$("tunemac",ID_TUNEMAC_NO_1127) !"No"
+                  EndDialog
+                  LoadOK = ShowDialog ("DlgLoadTuneFile") 
+                  if LoadOK = 1 then
+                  !* User pressed OK, load the tune file, "Atunes.tun"
+                    MSGetTuneFile _tunepath$+ file$, polarity,,1
+                    mstn_UpdateStatusBar   
+                  endif
+                  RemoveDialog "DlgLoadTuneFile"
+                endif
+                return LoadOK
+            LoadAtuneErr:
+            on error print
+                RemoveDialog "DlgLoadTuneFile"
+                return 0    
+                
+            endmacro  !msat_LoadAtuneFile
+            
+            !===============================================================================================
+            !===============================================================================================
+            !
+            name msat_AutoTuneErr
+            !
+            !===============================================================================================
+            local _button
+            on error print                 !* ignore errors to use 
+            Local  ID_TUNEMAC_AUTOTUNE_COULD_550
+            
+            ID_TUNEMAC_AUTOTUNE_COULD_550                      =  17550  
+             
+              _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_AUTOTUNE_COULD_550) + _errmsg$)
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_AUTOTUNE_COULD_550) + _errmsg$
+              msat_AutoCleanup
+              msat_AtuneRegCleanUp
+              setabort on                 !* Don't let user abort until can
+              stop
+            endmacro !msat_AutoTuneErr
+            
+            !===============================================================================================
+            name msat_AutoTuneAbortHdlr
+            !===============================================================================================
+              on error print                 !* ignore errors 
+              msat_AutoCleanup
+              msat_AtuneRegCleanUp
+            endmacro  !msat_AutoTuneAbortHdlr
+            
+            !===============================================================================================
+            !===============================================================================================
+            name msat_AtuneRegCleanUp
+            ! Delete the last object in AtuneReg if
+            ! it does not have tables for both positive and
+            ! negative modes
+            !===============================================================================================
+            local LastTune,src$,tabname$
+            
+               LastTune = RegSize(AtuneReg)
+               if LastTune > 0 then
+                 src$=msGetIonSrc$()                   ! installed source
+                 if (src$ = "MM-ES+APCI") then
+                   src$ = "ESCI"
+                 endif
+                 tabname$ = "Scan"+src$+"POS"
+                 if ObjHdrType(AtuneReg[LastTune],tabname$) = 99 then
+                   DelObj AtuneReg[LastTune]
+                   SaveObj AtuneReg, _tunepath$ + "atune.reg", new
+                   return
+                 endif
+                 tabname$ = "Scan"+src$+"NEG"
+                 if ObjHdrType(AtuneReg[LastTune],tabname$) = 99 then
+                   DelObj AtuneReg[LastTune]
+                   SaveObj AtuneReg, _tunepath$ + "atune.reg", new
+                   return
+                 endif
+                 tabname$ = "Prof"+src$+"POS"
+                 if ObjHdrType(AtuneReg[LastTune],tabname$) = 99 then
+                   DelObj AtuneReg[LastTune]
+                   SaveObj AtuneReg, _tunepath$ + "atune.reg", new
+                   return
+                 endif
+                 tabname$ = "Prof"+src$+"NEG"
+                 if ObjHdrType(AtuneReg[LastTune],tabname$) = 99 then
+                   DelObj AtuneReg[LastTune]
+                   SaveObj AtuneReg, _tunepath$ + "atune.reg", new
+                   return
+                 endif
+               endif
+               
+               msManShow = 1  ! sets flag to enable single polarity menus
+            
+            endmacro  !msat_AtuneRegCleanUp
+            
+            !===============================================================================================
+            !===============================================================================================
+            !
+            name msat_AutoCleanup
+            PARAMETER numStepsize default 0.10
+            PARAMETER numAverage default 1
+            !
+            !===============================================================================================
+            on error print                 !* ignore errors to use as error handler
+             
+              MSGetTuneFile OldTuneFile$, OldPolarity,,1
+              ! msat_CalSwitch 0
+            
+              mstn_UpdateStatusBar                         !* Updates the window
+            
+              remove DGT,DGF,NEB,VAP
+              remove msat_mode, msat_srctype, TuneRegIndex
+              remove msat_ABFail,msat_PWFail,msat_MAFail,charge
+              remove OldTuneFile$,OldPolarity
+            
+              MSStepsize ,numStepsize
+              MSAverages ,numAverage
+              
+              mstn_RemoveAbortHandler "msat_AutoTuneAbortHdlr"
+            endmacro  !msat_AutoCleanup
+            
+            !===============================================================================================
+            !===============================================================================================
+            !
+            name msat_CheckAtuneReg  
+            !* Sets the variable MSManShow if autotune register exists
+            !
+            !===============================================================================================
+            
+            Local  ID_TUNEMAC_AUTOTUNE_REGIS_551
+            Local  ID_TUNEMAC_AUTOTUNE_REGIS_552
+            ID_TUNEMAC_AUTOTUNE_REGIS_551                      =  17551  
+            ID_TUNEMAC_AUTOTUNE_REGIS_552                      =  17552  
+                if RegSize(AtuneReg) = -1 then
+                  !* Try loading the Atune register from disk
+                  if filestat(mode,_tunepath$ + "atune.reg") = 1 then
+                    Loadobj _tunepath$ + "atune.reg",, AtuneReg
+                    MSManShow = 1
+                  else
+                    MSMANSHOW = 0
+                  endif
+                else
+                  if filestat(mode,_tunepath$ + "atune.reg") = -1 then
+                    delreg atunereg
+                    MSMANSHOW = 0
+                  else
+                    MSMANShow = 1
+                  endif
+                endif
+                
+                if MSManShow = 1 then
+                   AtunePrint ReadResource$("tunemac",ID_TUNEMAC_AUTOTUNE_REGIS_551)
+                else
+                   AtunePrint ReadResource$("tunemac",ID_TUNEMAC_AUTOTUNE_REGIS_552)
+                endif
+                
+            endmacro   ! msat_CheckAtuneReg  
+            
+             !===============================================================================================
+            !
+            name msat_CheckVac  !* check 1st and 4th vacuum stages
+                                !* (cannot continue without proper vacuum reading)
+            !
+            !===============================================================================================
+              local highpres$,forepres$,highpres,forepres
+              Local ID_TUNEMAC_1111
+              Local ID_TUNEMAC_1112
+              ID_TUNEMAC_1112 = 18112
+              ID_TUNEMAC_1111 = 18111
+              msscquery "sens? highpres",highpres$  !read high vacuum pressure
+              msscquery "sens? forepres",forepres$  !read foreline pressure  
+            
+              highpres = val(highpres$)
+              forepres = val(forepres$)
+            
+              if highpres > 0.00005 then
+                 !generate error 1,"High vacuum stage does not give good vacuum." 
+                 generate error 1,ReadResource$("tunemac",ID_TUNEMAC_1111)
+                 return
+              endif
+            
+              if forepres > 4.5 then
+                 !generate error 1, "Foreline vacuum stage does not give good vacuum."
+                 generate error 1,ReadResource$("tunemac",ID_TUNEMAC_1112)
+                 return
+              endif
+            
+            endmacro  !msat_CheckVac
+            
+            !===============================================================================================
+            !===============================================================================================
+            !
+            name msat_errormsg
+            PARAMETER str$ default _err$
+            PARAMETER hdlr$ default _err$
+            !
+            !===============================================================================================
+            local button  
+              evaluate hdlr$
+              button = Alert(str$)
+              AtunePrint str$
+              stop
+            endmacro         !msat_errormsg
+    
+            !===============================================================================================
+            !===============================================================================================
+            name msat_CheckZones           !* check temperatures, pressures, and flows
+                                           !* adjust if needed
+            PARAMETER IonSrc default 0    !* 0=API_ES, 1=APCI, 2=APPI, 3=MM-ES+APCI, 4=Nano, 5=Chip, 6=AJS-ES
+            PARAMETER TuneRegIndex default 2
+            PARAMETER TuneRegName$ default "TuneMixReg"
+            !===============================================================================================
+            ! Global DGT,DGF,NEB,VAP,SGT,SGF
+            ! Sets globals DGT, DGF, NEB, VAP, SGT, SGF
+            
+            Local lDebug;                 lDebug=0
+            Local lTabRow, TabValue, TableValue
+            Local lPolarity, lRow
+            local TimeWait,NewTimeWait
+            local VaporTemp,VaporMax,lSGasTemp,lSGasTMax,lSGasFlow,DryGasTemp, DryGasFlow
+            Local  ID_TUNEMAC_WAITING_553
+            ID_TUNEMAC_WAITING_553                             =  17553  
+              
+              TimeWait = 0
+              VAP = 0
+                          
+              if (IonSrc=1) or (IonSrc=2) or (IonSrc=3) then         !*For APCI/APPI/MM-ES+APCI sources
+                 !*read actual vaporizer temperature
+                 MSZone Vapor,VAP
+            
+                 !* Set vaporizer temperature:
+                 evaluate "lRow = RowByText("+TuneRegName$+"[TuneRegIndex], ""TuneParms"",, ""Parm"",""i="", ""Vaporizer"")"
+                 if lRow <> -1 then
+                   evaluate "VaporTemp = TabVal("+TuneRegName$+"[TuneRegIndex], ""TuneParms"",lRow, ""Default"")"
+                   evaluate "VaporMax = TabVal("+TuneRegName$+"[TuneRegIndex],""TuneParms"",lRow,""Max"")"
+                   if VAP<>VaporTemp then                      
+                      !*set vaporizer temperature using value from tunemix register
+                      MSZone Vaporizer,,,VaporTemp,,VaporMax
+                      if abs(VAP-VaporTemp)>100 then
+                         TimeWait=abs(VAP-VaporTemp)-100
+                      endif
+                   endif
+                 else
+                   if (IonSrc=1) or (IonSrc=2) then        ! APCI or APPI
+                     if VAP<>325 then
+                       !*default setting for vaporizer temperature if no setting indicated in tunemix register
+                       MSZone Vaporizer,,,325,,500
+                       if abs(VAP-325)>100 then
+                         TimeWait=abs(VAP-325)-100
+                       endif
+                     endif
+                   else                    ! multimode source
+                     if VAP<>200 then
+                       !*default setting for vaporizer temperature for ES+APCI multimode source
+                       MSZone Vaporizer,,,200,,250
+                       if abs(VAP-200)>100 then
+                         TimeWait=abs(VAP-200)-100
+                       endif
+                     endif
+                   endif
+                 endif  
+              endif ! if (IonSrc = 1, 2, or 3
+              
+              if IonSrc=6 then            ! Agilent Jet Stream
+                !*read actual Sheath Gas temperature
+                MSZone SGas_Temp,SGT
+                !* Read SGas_Temp value from tunemix register:
+                 evaluate "lRow = RowByText("+TuneRegName$+"[TuneRegIndex], ""TuneParms"",, ""Parm"",""i="", ""SGas_Temp"")"
+                if lRow <> -1 then
+                  evaluate "lSGasTemp = TabVal("+TuneRegName$+"[TuneRegIndex], ""TuneParms"",lRow, ""Default"")"
+                  evaluate "lSGasTMax = TabVal("+TuneRegName$+"[TuneRegIndex],""TuneParms"",lRow,""Max"")"                  
+                  if SGT<>lSGasTemp then                      
+                    !*set SGas_Temp using value from tunemix register
+                    MSZone SGas_Temp,,,lSGasTemp,,lSGasTMax
+                    if abs(SGT-lSGasTemp)>25 then
+                        TimeWait=abs(SGT-lSGasTemp)
+                    endif
+                  endif
+                endif
+                !*read actual Sheath Gas flow
+                MSZone SGasFlow,SGF   
+                !* Read SGasFlow value from tunemix register:
+                evaluate "lRow = RowByText("+TuneRegName$+"[TuneRegIndex], ""TuneParms"",, ""Parm"",""i="", ""SGasFlow"")"
+                  if lRow <> -1 then
+                    evaluate "lSGasFlow = TabVal("+TuneRegName$+"[TuneRegIndex], ""TuneParms"",lRow, ""Default"")"                
+                    if SGF<>lSGasFlow then                      
+                      !*set SGasFlow using value from tunemix register
+                      MSZone SGasFlow,,,lSGasflow
+                    endif
+                  endif                
+              endif ! if IonSrc=6               
+            
+              !*read actual drying gas temperature:
+              MSZone GasTemp,DGT
+                !* Set drying gas temperature:
+                evaluate "lRow = RowByText("+TuneRegName$+"[TuneRegIndex], ""TuneParms"",, ""Parm"",""i="", ""GasTemp"")"
+                if lRow <> -1 then
+                   evaluate "TableValue = TabVal("+TuneRegName$+"[TuneRegIndex],""TuneParms"",lRow,""Default"")"
+                   if DGT <> TableValue then
+                      !*set drying gas temperature by reading from tunemix register
+                      evaluate "DryGasTemp = TabVal("+TuneRegName$+"[TuneRegIndex],""TuneParms"",lRow,""Default"")"
+                      MSZone GasTemp,,,DryGasTemp
+                      if abs(DGT-DryGasTemp)>100 then
+                      ! Only use the longest waiting time
+                         NewTimeWait=abs(DGT-DryGasTemp)-100
+                         if NewTimeWait > TimeWait then
+                           TimeWait=NewTimeWait
+                         endif
+                      endif
+                   endif
+                else  
+                   if DGT<>300 then
+                      MSZone GasTemp,,,300
+                      if abs(DGT-300)>100 then
+                         NewTimeWait=abs(DGT-300)-100
+                         if NewTimeWait > TimeWait then
+                           TimeWait=NewTimeWait
+                         endif
+                      endif
+                   endif
+                endif
+              
+              !*read actual drying gas flow setpoint:
+              MSZone DryingGas,DGF
+                !* Set drying gas flow:
+                evaluate "lRow = RowByText("+TuneRegName$+"[TuneRegIndex], ""TuneParms"",, ""Parm"",""i="", ""DryingGas"")"
+                if lRow <> -1 then
+                   evaluate "TableValue = TabVal("+TuneRegName$+"[TuneRegIndex], ""TuneParms"",lRow, ""Default"")"
+                   if DGF <> TableValue then
+                      !*set drying gas flow by reading from tunemix register
+                      evaluate "DryGasFlow = TabVal("+TuneRegName$+"[TuneRegIndex], ""TuneParms"",lRow, ""Default"")"
+                      MSZone DryingGas,,,DryGasFlow
+                      if (IonSrc=1) or (IonSrc=2) or (IonSrc=3) then   !*For APCI/APPI/MM-ES+APCI sources
+                        if DGF<>5 then
+                          !*default setting for drying gas flow
+                          MSZone DryingGas,,,5
+                        endif
+                      endif
+                   endif
+                else
+                   if (IonSrc=1) or (IonSrc=2) or (IonSrc=3) or (IonSrc=6) then !*For APCI/APPI/MM-ES+APCI/AJS-ES sources
+                      if DGF<>5 then
+                         !*default setting for drying gas flow if no setting indicated in tunemix register
+                         MSZone DryingGas,,,5
+                      endif
+                   else
+                      if DGF<>7 then     ! For API-ES
+                         !*default setting for drying gas flow if no setting indicated in tunemix register
+                         MSZone DryingGas,,,7
+                      endif
+                   endif
+                endif
+              
+                ! >>> Nebulizer Pressure <<<  
+                ! Check if nebulizer pressure is available for the current system.
+                ! If nebulizer pressure is available try to get it from the tune mix reg
+                ! otherwise set it to a hard coded value
+                MSParm IonPolarity, lPolarity
+                If ( MSGetParmID( Zone, MSGetIonSrc$(), lPolarity, Neb_Pres ) > 0 ) then
+                  evaluate "lTabRow = RowByText("+TuneRegName$+\
+                           "[TuneRegIndex], ""TuneParms"",, ""Parm"",""i="", ""Neb_Pres"")"
+                  If lRow > 0 then ! If the value is available from the tune parm table
+                    evaluate "lTableValue = TabVal("+TuneRegName$+\
+                             "[TuneRegIndex],""TuneParms"", lTabRow, ""Default"")"
+                    MSZone Neb_Pres,,,lTableValue
+                  Else
+                    MSZone Neb_Pres,,,20 ! That is the hard coded default
+                  Endif
+                Endif
+            
+              ! If drying gas had to be lowered to 5, do an mson to send the new flow down:
+              ! before implementing the TimeWait.
+                if ((IonSrc = 1) or (IonSrc = 2)) and (DGF <> 5) then
+                  mson
+                endif
+            
+                setabort off
+                if TimeWait > 0 then
+                  while TimeWait > 0
+                    print ReadResource$("tunemac",ID_TUNEMAC_WAITING_553) + val$(TimeWait) + "secs, while temperature reaches set point and stabilizes."
+                    sleep 1
+                    TimeWait = TimeWait - 1
+                  endwhile
+                endif
+                setabort on
+                return 
+            
+            endmacro  !
+
+            !===============================================================================================            
+            !===============================================================================================
+            !
+            name msat_ResetZones                 ! reset zones
+            PARAMETER mode default 0
+            PARAMETER DGT default 300
+            PARAMETER DGF default 5
+            PARAMETER NEB default 20
+            PARAMETER VAP default 0
+            !
+            !===============================================================================================
+            
+              if (mode = 1) or (mode = 2) or (mode = 3) then      !*APCI or APPI or ES+APCI
+                MSZone GasTemp,,,DGT            !*set drying gas temperature
+                MSZone DryingGas,,,DGF          !*set drying gas flow
+                MSZone Neb_Pres,,,NEB           !*set nebulizer pressure
+                MSZone Vapor,,,VAP              !*set vaporizer temperature
+              else                               !*API-ES
+                MSZone GasTemp,,,DGT            !*set drying gas temperature
+                MSZone DryingGas,,,DGF          !*set drying gas flow
+                MSZone Neb_Pres,,,NEB           !*set nebulizer pressure
+              endif
+            
+            endmacro !msat_ResetZones
+            
+            !===============================================================================================
+            !===============================================================================================
+            name msat_CalSwitch
+            PARAMETER switch default 0          !switch 0 = off
+            !
+            ! Turn ON or OFF the calibrant valve based on installed source
+            !===============================================================================================
+            local InstalledSource$
+            
+              InstalledSource$ = MsGetIonSrc$()
+              if switch=1 then
+                if (InstalledSource$="API_ES") then
+                  MSTN_Calibrant 3   !* Turn on bottle B
+                else
+                  MSTN_Calibrant 2   !* Turn on bottle A        ! APCI or APPI or MM sources
+                endif
+                mson
+              else
+                 MSTN_Calibrant 1     !* Turn off the CDS system
+              endif
+            
+            endmacro   !*msat_CalSwitch
+            
+            !===============================================================================================
+            !===============================================================================================
+            name msat_OctOptCleanUp
+            PARAMETER oldSmooth,Mass1,a,b,c,d,e,OldFrag, RampedFrag, OldPolarity
+            !
+            !===============================================================================================
+            on error print
+            
+               MSRampSmooth ,oldSmooth           !reset smoothing to old value
+               MSMassValue 1,,Mass1,,1           !reset mass1 to the original mass
+               MSMassValue 2,,,,a                !reselect all other masses
+               MSMassValue 3,,,,b
+               MSMassValue 4,,,,c
+               MSMassValue 5,,,,d
+               MSMassValue 6,,,,e
+            
+               if RampedFrag = 1 then
+                 if (MSD_SL = 1) or (MSD_HT = 1) then              ! SL or HT model
+                   msdynamic fragment, enable
+                   msat_RestoreDynMasses "fragment"
+                 else
+                   msdynamic fragmentor, enable     ! Other model, with linked fragmentor
+                   msat_RestoreDynMasses "fragmentor"
+                 endif
+               else
+                 if (MSD_SL = 1)  or (MSD_HT = 1) then             ! SL or HT model
+                   msparm fragment,,oldFrag
+                 else
+                   msparm fragmentor,,oldFrag       ! Other model, with linked fragmentor
+                 endif
+               endif
+               MSMassWindow 5
+               if OldPolarity = 1 then
+               !* Reload the negative tune file
+                  mstn_ChangePolarity 1,0
+               endif
+               mstn_RemoveAbortHdlrParam "msat_OctOptCleanUp"
+            endmacro       !msat_OctOptCleanUp
+            
+            !===============================================================================================
+            !===============================================================================================
+            !
+            name msat_octopole                     !Octopole optimization
+            !
+            !* Finds the optimal OpolPeak setting for the new octopole board,
+            !* or the optimal OpolKnee setting for running OpolPeak at 300 for
+            !* the old octopole board.
+            !
+            !===============================================================================================
+            ! Global: MSD_46, MSD_SL, MSD_HT
+            local MfgEnv,oldOpolP,polarity,OctFrag
+            local lens1$, lens2$,lens3$,lens4$,lens5$,lens6$,lens7$,lens8$
+            local RampedFrag,oldFrag,oldSmooth,Mass1,a,b,c,d,e
+            local newOpolP,OldOK,NewOK
+            
+            Local  ID_TUNEMAC_OCTOPOLE_OPTIM_555
+            Local  ID_TUNEMAC_COMPLETED_OCTO_556
+            ID_TUNEMAC_OCTOPOLE_OPTIM_555                      =  17555  
+            ID_TUNEMAC_COMPLETED_OCTO_556                      =  17556  
+              if MSD_46 = 0 then
+                print ReadResource$("tunemac",ID_TUNEMAC_OCTOPOLE_OPTIM_555)
+                return
+              endif
+            
+              on error print
+              RampedFrag = 0
+              msat_SetMode                             ! Sets msat_mode and msat_srctype globals. Set here
+                                                       ! because macro may have been called by menu item.
+                
+              ! Check if it's a Manufacturing instrument:
+                MfgEnv = Check(Variable, PRTestVer$)
+            
+              msparm opolP,oldOpolP
+              msparm ionpolarity, polarity              !*Get the current polarity
+            
+              if (oldOpolP < 300) or (MfgEnv = 1) then
+                                                        !* Default value still in
+                if (polarity = 1) then                  !*  or instrument is a Mfg instrument
+                     MSSaveTuneFile tunefilename$       !* Currently negative polarity
+                     mstn_ChangePolarity 0,0            !* Save the tune file
+                endif                                   !* and switch to positive mode
+            
+                ! Set Fragmentor variable according to mode & polarity:
+                  if (msat_srctype = 0) then           ! ES source
+                    OctFrag = 400          ! ES/positive
+                  else
+                    OctFrag = 250          ! APCI, APPI, ES+APCI/positive
+                  endif
+            
+                !* Look for the fragmentor
+                lens1$ = ""
+                lens2$ = ""
+                lens3$ = ""               !* Initialize to empty string
+                lens4$ = ""               !* because MSDynamic won't reset
+                lens5$ = ""               !* lens strings that are not active
+                lens6$ = ""
+                lens7$ = ""
+                lens8$ = ""
+                msdynamic list,lens1$,lens2$,lens3$,lens4$,lens5$,lens6$,lens7$,lens8$
+            
+                if instr("Fragmentor",lens1$)=1 OR instr("Fragment",lens1$)=1 OR \
+                   instr("Fragmentor",lens2$)=1 OR instr("Fragment",lens2$)=1 OR \
+                   instr("Fragmentor",lens3$)=1 OR instr("Fragment",lens3$)=1 OR \
+                   instr("Fragmentor",lens4$)=1 OR instr("Fragment",lens4$)=1 OR \
+                   instr("Fragmentor",lens5$)=1 OR instr("Fragment",lens5$)=1 OR \
+                   instr("Fragmentor",lens6$)=1 OR instr("Fragment",lens6$)=1 OR \
+                   instr("Fragmentor",lens7$)=1 OR instr("Fragment",lens7$)=1 OR \
+                   instr("Fragmentor",lens8$)=1 OR instr("Fragment",lens8$)=1 then
+                   RampedFrag = 1
+                   if (MSD_SL = 1) or (MSD_HT = 1) then
+                     msat_SaveDynMasses "fragment"       ! SL or HT model
+                     msdynamic fragment, disable
+                   else
+                     msat_SaveDynMasses "fragmentor"     ! Other model, with linked fragmentor
+                     msdynamic fragmentor, disable
+                   endif
+                endif
+            
+                if (MSD_SL = 1) or (MSD_HT = 1) then
+                  msparm fragment,oldFrag,OctFrag        ! SL or HT model
+                else
+                  msparm fragmentor,oldFrag,OctFrag      ! Other model, with linked fragmentor
+                endif
+            
+                if (msat_srctype = 0) then
+                  MSTN_Calibrant 3   !* Turn on bottle B
+                else
+                  MSTN_Calibrant 2   !* Turn on bottle A
+                endif
+                
+                MSMassWindow 3
+                msparm opolK,,280
+                msparm opolP,,300
+                MSSetRamp opolP,150,300,1
+                MSRampSmooth oldSmooth,11
+            
+                ! Set mass to ramp according to mode:
+                  if (msat_srctype = 0) then
+                    MSMassValue 1,Mass1,56,,1        !* mass for ES
+                  else
+                    MSMassValue 1,Mass1,67,,1        !* mass for APCI
+                  endif
+            
+                MSMassValue 2,,,a,0              !* deselect all other masses
+                MSMassValue 3,,,b,0
+                MSMassValue 4,,,c,0
+                MSMassValue 5,,,d,0
+                MSMassValue 6,,,e,0
+            
+            
+                mstn_AddAbortHandler "msat_OctOptCleanUp "+ val$(oldSmooth) +","+\
+                val$(Mass1) + "," +val$(a) +"," +val$(b) + "," +val$(c) + "," +\
+                val$(d) + "," +val$(e) + "," +val$(OldFrag) + "," +val$(RampedFrag) + "," + val$(polarity)
+            
+                setabort on                      !* Don't let user abort until can save
+                                                 !* current status
+            
+                MSSimRamp opolP,1,max
+                msparm opolP,newOpolP            !* save the max value found
+            print newOpolP
+                
+                !* msat_OctOptCleanUp should reset smoothing, MSMassWindow,
+                !* and masses to previous values, including polarity;
+                msat_OctOptCleanUp oldSmooth,Mass1,a,b,c,d,e,OldFrag,RampedFrag, polarity
+                
+                ! Adjust OpolKnee:
+                  msparm opolK,OldOK
+                  NewOK = OldOK + (300-newOpolP)
+                  msparm opolK,,NewOK
+                  msparm opolP,,300
+            
+              endif  !* if oldOpolP <> 300
+            
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_COMPLETED_OCTO_556)
+            endmacro    !* msat_octopole
+            
+            !===============================================================================================            
+            !===============================================================================================
+            name msat_SaveDynMasses
+            PARAMETER lensName$
+            ! Save the current mass and fragmentor settings to register SaveMass
+            !===============================================================================================
+            local i,selected, NumberOfMasses,a$,b$, NumMasses
+            local m1,m2,m3,m4,m5,m6,f1,f2,f3,f4,f5,f6
+            
+               if RegSize(SaveDyn) > -1 then
+                 DelReg SaveDyn
+               endif
+            
+               !* gets the number of tune masses available, also represents highest mass number
+               MSMassValue 0,NumberOfMasses
+            
+               !* initialize variables
+               a$ = lensName$ +",read"
+               b$ = ""
+               
+               msdynamic lensName$, read, 0, NumMasses
+               
+               !NewObj SaveDyn[1],2,1,NumberOfMasses
+               NewObj SaveDyn[1],2,1,NumMasses
+            
+               
+            !   for i = 1 to NumberOfMasses
+               for i = 1 to NumMasses
+                 b$ =  "," + val$(i) + ",m" + val$(i) + ",f" + val$(i)
+                 evaluate "msdynamic " + a$ + b$
+                 evaluate "SetData SaveDyn[1], 1,i," + "m" + val$(i)
+                 evaluate "SetData SaveDyn[1], 0,i," + "f" + val$(i)
+               next i
+            
+            endmacro  !* msat_SaveDynMasses
+            
+            !===============================================================================================
+            !=============================================================================================== 
+            name msat_RestoreDynMasses
+            PARAMETER lensName$
+            PARAMETER ignoreErr default 0
+            ! Restore the mass and fragmentor settings from register SaveMass
+            !===============================================================================================
+            local i,a$,b$,c$,numcols
+            local m1,m2,m3,m4,m5,m6,f1,f2,f3,f4,f5,f6
+            
+              !* initialize variables
+              a$ = lensName$ + ",set"
+              b$ = ""
+              c$ = ""
+            
+              if RegSize (SaveDyn) > 0 then
+                 MSDynamic lensName$,enable
+                 numcols = DataCols(SaveDyn[1])
+                 for i = 1 to numcols
+                    evaluate "m" + val$(i) + " = Data(SaveDyn[1],1,i)"
+                    evaluate "f" + val$(i) + " = Data(SaveDyn[1],0,i)"
+                    b$ = " , m" + val$(i) + ",f" + val$(i) 
+                    c$ =  c$ + b$
+                 next i
+                 evaluate "msdynamic " + a$ + c$
+                 delreg SaveDyn
+              else
+                if ignoreErr = 0 then
+                   generate error , "Error: Cannot restore previous tune mass settings."
+                endif
+              endif
+            endmacro  !* msat_RestoreDynMasses
+            
+            !===============================================================================================
+            !===============================================================================================
+            !
+            name msat_Calibrate  !mass axis and peak width calibrate and optimize lens ramps
+            PARAMETER srcmode default 0        !* 0    API_ES
+                                               !* 1    APCI
+                                               !* 2    APPI
+                                               !* 3    MM-ES+APCI
+            PARAMETER polarity default 0       !* 0    Positive
+                                               !* 1    Negative
+            PARAMETER regIndex default 2
+            PARAMETER whichMode default 0      ! 0 for positive and negative autotune
+                                               ! 1 for positive only autotune
+                                               ! 2 for negative only autotune
+            !
+            ! 10/20/09 CPL Use msat_TargetAb macro from enutngt.mac to meet target abundance
+            ! 03/10/10 CPL Set Iris to HiIris for Neg mode and LowIris for Pos mode
+            ! 06/22/10 CPL Add MSMassValue i,,,,1 to enable selected masses
+            !===============================================================================================
+            local NumMasses,i,m1,m2,m3,m4,m5,m6,ie_val
+            local lowIris,HiIris,Irisrow,currsel4
+            !local LoAb,HiAb,OldGain,CurrAb,count,c$,c,d,killit
+            !local oldAverage
+            local lDebug;		lDebug = 0
+            
+            Local  ID_TUNEMAC_SKIMMER_2_SET_557
+            Local  ID_TUNEMAC_FRAGMENTOR_DYN_558
+            Local  ID_TUNEMAC_LENS_1_SET_TO_559
+            Local  ID_TUNEMAC_LENS_2_SET_TO_560
+            Local  ID_TUNEMAC_IRIS_SET_TO__3_561
+            Local  ID_TUNEMAC_CALIBRATING_MA_562
+            ID_TUNEMAC_SKIMMER_2_SET_557                       =  17557  
+            ID_TUNEMAC_FRAGMENTOR_DYN_558                      =  17558  
+            ID_TUNEMAC_LENS_1_SET_TO_559                       =  17559  
+            ID_TUNEMAC_LENS_2_SET_TO_560                       =  17560  
+            ID_TUNEMAC_IRIS_SET_TO__3_561                      =  17561  
+            ID_TUNEMAC_CALIBRATING_MA_562                      =  17562 
+             
+              MSMassValue 0,NumMasses
+            
+              for i = 1 to NumMasses
+                evaluate "MSMassValue " + val$(i) + ",m" + val$(i)
+                MsMassValue i,,,,1
+              next i
+            
+              MSDynamic Fragmentor,disable
+              msparm Fragmentor,,150
+            
+              !Maximize Skim2: Set to SIMRAMP max for ion 2
+              MSSetRamp skim2,0,15,0.2
+              MSSimramp skim2,2,max
+              msparm skim2,i
+              if i > 8 then
+                 i = 8
+              endif
+              if i < 6 then
+                 i = 6
+              endif
+              MSParm Skim2,, i
+              AtunePrint SPrintF$(i, ReadResource$("tunemac",ID_TUNEMAC_SKIMMER_2_SET_557))
+            
+              dynamicInit RegIndex,"Fragmentor"
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_FRAGMENTOR_DYN_558)
+            
+              !*Maximize Lens1: Set to SIMRAMP for ion 1
+              MSSimramp lens1,1,max
+              msParm lens1,i
+              msParm IonEnergy,ie_val
+              if polarity = 1 then                ! Negative mode
+                 if i < -(ie_val) then
+                    i = -(ie_val)
+                 endif
+                 if i > 0 then
+                    i = 0
+                 endif
+                 msParm lens1,,i
+              else                                ! Positive mode
+                 if i < 0 then
+                    i = 0
+                 endif
+                 if i > ie_val then
+                    i = ie_val
+                 endif
+                 msParm lens1,,i
+              endif
+              AtunePrint SPrintF$(i, ReadResource$("tunemac",ID_TUNEMAC_LENS_1_SET_TO_559))
+            
+              !*Maximize Lens2: Set to SIMRAMP max for ion 2
+              MSSetRamp lens2,0,80,1
+              MSSimramp lens2,2,max
+              MSParm lens2, i
+              AtunePrint SPrintF$(i, ReadResource$("tunemac",ID_TUNEMAC_LENS_2_SET_TO_560))
+              
+              !* 10/22/09 CPL Maximize Iris: Set to SIMRAMP max for ion 3 using 50 pts. 
+              if MSD_46 = 1 then
+                MSParmInfo iris,, LowIris, HiIris
+                MSSetRamp iris, LowIris, HiIris, floor((HiIris-LowIris)/50)
+                MSSimRamp iris, 3, max
+              else
+              !* Set Iris to HiIris for Neg mode and LowIris for Pos mode               
+                MSParmInfo iris,, LowIris, HiIris
+                if polarity = 1 then                ! Negative mode
+                  MSParm iris,,HiIris
+                else                                ! Positive mode
+                  MSParm iris,,LowIris
+                endif !* if MSD_46 <> 1
+              endif  !* if MSD_46 = 1
+              MSParm iris, i
+              AtunePrint SPrintF$(i, ReadResource$("tunemac",ID_TUNEMAC_IRIS_SET_TO__3_561))
+            
+              msat_TargetAb  ! Adjust EMV to meet "VL" target abundances (See enutngt.mac)
+            
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CALIBRATING_MA_562)
+              MSAxis ,,1
+            
+            endmacro  ! msat_Calibrate
+            
+            !===============================================================================================
+            !===============================================================================================
+            name msat_CalibD   ! msat_Calibrate for SL & HT instruments
+            PARAMETER srcmode default 0        !* 0    API_ES
+                                               !* 1    APCI
+                                               !* 2    APPI
+                                               !* 3    MM-ES+APCI
+            PARAMETER polarity default 0       !* 0    Positive
+                                               !* 1    Negative
+            PARAMETER regIndex default 2
+            PARAMETER whichMode default 0      ! 0 for positive and negative autotune
+                                               ! 1 for positive only autotune
+                                               ! 2 for negative only autotune
+            !
+            ! 10/20/09 CPL Use msat_TargetAb_D macro from enutngt.mac to meet target abundance            ! 
+            ! 03/10/10 CPL Set Iris to HiIris for Neg mode and LowIris for Pos mode  
+            ! 06/22/10 CPL Add MSMassValue i,,,,1 to enable selected masses                       
+            !===============================================================================================
+            local NumMasses,i,m1,m2,m3,m4,m5,m6,ie_val
+            local LowIris, HiIris,Irisrow
+            !local LoAb,HiAb,OldGain,CurrAb,count,c$,c,d$,killit
+            !local oldAverage
+            local lDebug;		lDebug = 0
+            
+            Local  ID_TUNEMAC_LENS_1_SET_TO_559
+            Local  ID_TUNEMAC_LENS2DC_SET_TO_563
+            Local  ID_TUNEMAC_IRIS_SET_TO__3_561
+            Local  ID_TUNEMAC_CALIBRATING_MA_562
+            ID_TUNEMAC_LENS_1_SET_TO_559                       =  17559  
+            ID_TUNEMAC_LENS2DC_SET_TO_563                      =  17563  
+            ID_TUNEMAC_IRIS_SET_TO__3_561                      =  17561  
+            ID_TUNEMAC_CALIBRATING_MA_562                      =  17562  
+              
+              MSMassValue 0,NumMasses
+            
+              for i = 1 to NumMasses
+                evaluate "MSMassValue " + val$(i) + ",m" + val$(i)
+                MsMassValue i,,,,1
+              next i
+              
+              !*Maximize Lens1: Set to SIMRAMP for ion 1
+              MSParm lens2DC,,30                  ! To help push ions through
+              MSSimramp lens1,1,max
+              msParm lens1,i
+              msParm IonEnergy,ie_val
+              if polarity = 1 then                ! Negative mode
+                if i < -(ie_val) then
+                  i = -(ie_val)
+                endif
+                if i > 0 then
+                  i = 0
+                endif
+                  msParm lens1,,i
+              else                                ! Positive mode
+                if i < 0 then
+                  i = 0
+                endif
+                if i > ie_val then
+                  i = ie_val
+                endif
+                msParm lens1,,i
+              endif
+              
+              AtunePrint SPrintF$(i, ReadResource$("tunemac",ID_TUNEMAC_LENS_1_SET_TO_559))
+              
+              !*Maximize Lens2DC: Set to SIMRAMP max for ion 2
+              MSSetRamp lens2DC,0,30,0.2
+              MSSimramp lens2DC,2,max
+              MSParm lens2DC, i
+              AtunePrint SPrintF$(i, ReadResource$("tunemac",ID_TUNEMAC_LENS2DC_SET_TO_563))
+                
+              !* Maximize Iris: Set to SIMRAMP max for ion 3
+              if (MSD_46 = 1) then
+                MSParmInfo iris,, LowIris, HiIris
+                MSSetRamp iris, LowIris, HiIris, 5                    
+                MSSimRamp iris,3,max
+              else
+                !* Set Iris to HiIris for Neg mode and LowIris for Pos mode   
+                MSParmInfo iris,, LowIris, HiIris
+                if polarity = 1 then                ! Negative mode
+                  MSParm iris,,HiIris
+                else                                ! Positive mode
+                  MSParm iris,,LowIris
+                endif !* if MSD_46 <> 1
+              endif
+              MSParm iris, i
+              AtunePrint SPrintF$(i, ReadResource$("tunemac",ID_TUNEMAC_IRIS_SET_TO__3_561))
+              
+              msat_TargetAb_D  ! Adjust EMV to meet "SL" & "HT" target abundances (See enutngt.mac)
+                        
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CALIBRATING_MA_562)
+              MSAxis ,,1
+              
+            endmacro  ! msat_CalibD
+            
+            !===============================================================================================            
+            !===============================================================================================
+            !
+            name msat_SaveAtune           ! for saving autotune results, all profile and scan data saved
+            PARAMETER AddTolast default 0 ! 0 = Adds new line to AtuneReg for tune info. 
+            !                             ! 1 = Overwrites last line in AtuneReg with tune info.
+            !===============================================================================================
+            local NumTunes
+            !* Check to see if the save scan register exists in memory
+              NumTunes =  RegSize(AtuneReg)
+              on error msat_AutoTuneErr
+              if NumTunes = -1 then
+                !* If the save scan register is not in memory, try to load from file
+                if filestat(mode,_tunepath$ + "atune.reg") = 1 then
+                  Loadobj _tunepath$ + "atune.reg",, AtuneReg
+                  NumTunes =  RegSize(AtuneReg)
+                endif
+            !* If there are five or more autotunes saved in the register, delete the first one
+              endif
+            
+              if AddToLast = 1 then
+                msat_MakeAtuneTables "AtuneReg",1      ! Overwrites last line in AtuneReg
+              else
+                if NumTunes > 4 then
+                  !* Adding new object, but already have 5 objects; delete first
+                  DelObj AtuneReg[1]
+                endif      
+        
+                !* Add the Atune Table to AtuneReg in the last object position
+                msat_MakeAtuneTables "AtuneReg",0
+              endif
+            
+            !* Write to the register file
+              SaveObj AtuneReg, _tunepath$ + "atune.reg", new
+            endmacro   !msat_SaveAtune
+            
+            
+            !===============================================================================================            
+            !===============================================================================================
+            !
+            name msat_GetScanTabName$
+            !
+            !===============================================================================================
+            local polarity, polarity$,src$
+            
+               msparm ionpolarity,polarity
+               
+               if polarity = 0 then
+                  polarity$ = "POS"      ! standard scan
+               endif
+               if polarity = 1 then
+                  polarity$ = "NEG"
+               endif
+               if polarity = 2 then
+                  polarity$ = "FSPOS"    ! fast scan
+               endif
+               if polarity = 3 then
+                  polarity$ = "FSNEG"
+               endif
+            
+               src$ = MSAT_MSGetIonSrcShort$()
+            
+               return "Scan"+src$+polarity$
+            endmacro   !* msat_GetScanTabName$
+
+            !===============================================================================================            
+            !===============================================================================================
+            !
+            name msat_GetProfTabName$
+            !          
+            !===============================================================================================
+            local polarity, polarity$,src$
+            
+               msparm ionpolarity,polarity
+               
+               if polarity = 0 then
+                  polarity$ = "POS"      ! standard scan
+               endif
+               if polarity = 1 then
+                  polarity$ = "NEG"
+               endif
+               if polarity = 2 then
+                  polarity$ = "FSPOS"    ! fast scan
+               endif
+               if polarity = 3 then
+                  polarity$ = "FSNEG"
+               endif
+            
+               src$ = MSAT_MSGetIonSrcShort$()
+            
+               return "Prof"+src$+polarity$  
+            endmacro   !* msat_GetProfTabName$
+            
+            !===============================================================================================            
+            !===============================================================================================
+            Name msat_MSGetIonSrcShort$
+            !    Returns Name of ion source and truncates to 4 characters. (ueff 070510)
+            !    Note: The name of the ion source is used to create a table name. Table
+            !    names in registers are restricted to 15 characters. To prevent a table name
+            !    too long (such as ScanChipCubeFSPOS) it is trunected e.g.: ScanChipFSPOS 
+            !    where "Chip" is the truncated source name created by this function.
+            !    Tests: Print MSAT_MSGetIonSrcShort$()
+            !           Print MSAT_GetProfTabName$()
+            !           Print MSAT_GetScanTabName$()
+            !===============================================================================================        
+            Local lSRC$
+            
+            lSRC$ = msGetIonSrc$()
+            If ( Len( lSRC$ ) > 4 ) Then
+              If ( lSRC$ = "MM-ES+APCI") Then
+                lSRC$ = "ESCI"
+              EndIf
+            
+              If ( lSRC$ = "CHIPCUBE" ) Then
+                lSRC$ = "Chip"
+              EndIf
+              
+              If ( lSRC$ = "AJS-ES" ) Then
+                lSRC$ = "AJSES"
+              Endif
+                            
+            EndIf
+            Return lSRC$
+            
+            EndMacro
+            
+            !===============================================================================================            
+            !===============================================================================================
+            !
+            name msat_SaveAtuneErr
+            !
+            !===============================================================================================
+            local _button
+            Local  ID_TUNEMAC_ERROR__THE_AUT_564
+            
+            ID_TUNEMAC_ERROR__THE_AUT_564                      =  17564  
+              
+              _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_ERROR__THE_AUT_564),3)
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_ERROR__THE_AUT_564)
+              msat_AtuneRegCleanUp
+            
+            endmacro        !msat_SaveAtuneErr
+            
+            !===============================================================================================            
+            !===============================================================================================
+            name msat_MakeAtuneTables                 !this macro does the actual work for creating the Atune Register
+            PARAMETER reg$  default "AtuneReg"
+            PARAMETER skipNewObj default 0
+            ! Assume the AtuneReg exists
+            !* Add the Atune Table to the Register in the last object position
+            !===============================================================================================
+            local obj$, objnum, HdrType, i, value
+            local ScanTabName$, ProfTabName$, NumMasses
+            
+               ScanTabName$ = msat_GetScanTabName$()
+               ProfTabName$ = msat_GetProfTabName$()
+             
+            !* Add the Atune object to the Register in the last position
+               if skipNewObj = 0 then 
+                 evaluate "NewObj " + reg$ +",1,0,0"
+               endif
+               evaluate "objnum = Regsize(" + reg$ + ")"
+               obj$ = reg$ + "[" + val$(objnum) + "]"
+            
+               evaluate "HdrType = ObjHdrType(" + obj$ + ", Time)"
+               if HdrType = 99  then 
+                 evaluate "NewObjHdrText " + obj$ + ",Time,""" + Time$() + """"
+               else
+                 evaluate "SetObjHdrText " + obj$ + ",Time,""" + Time$() + """"
+               endif
+            
+            !* Check for the existance of the Scan Table
+               evaluate "HdrType = ObjHdrType(" + obj$ + ", " + ScanTabName$ +")"
+               if HdrType <> 99  then 
+                 if HdrType = 4
+                   evaluate "DelTab " + obj$ + "," + ScanTabName$
+                 else
+                   evaluate "DelObjHdr  " + obj$ + ", " + ScanTabName$
+                 endif
+               endif
+            
+            !* Build the new Scan Table
+               evaluate "NewTab " + obj$ + "," + ScanTabName$
+            
+               !* number of peaks
+               evaluate "NewTabHdrVal " + obj$ + ","+ScanTabName$+",NumScanPeaks," + val$(NumScanPeaks)
+               
+              !* abundance of base peak
+               evaluate "NewTabHdrVal " + obj$ + ","+ScanTabName$+", ScanBaseAbund," + val$(ScanBaseAbund)
+            
+              !* base peak (amu)
+               evaluate "NewTabHdrVal " + obj$ + ","+ScanTabName$+", ScanBasePeak," + val$(ScanBasePeak)
+            
+              !* # of data points from spectrum scan
+               evaluate "NewTabHdrVal " + obj$ + ","+ScanTabName$+", ScanTotalIon," + val$(ScanTotalIon)
+            
+               MSMassValue 0, NumMasses
+            
+               for i = 1 to NumMasses
+                   !* abundance at each tune mass  
+                   evaluate "value = ScanAbund" + val$(i)
+                   evaluate "NewTabHdrVal " + obj$ + ","+ScanTabName$+",ScanAbund"+val$(i)+", value" 
+               
+                   !* isotope abundance
+                   evaluate "value = ScanIsoAbund" + val$(i)
+                   evaluate "NewTabHdrVal " + obj$ + ","+ScanTabName$+",ScanIsoAbund"+val$(i)+", value" 
+            
+                   !* isotope mass
+                   evaluate "value = ScanIsoMass" + val$(i)
+                   evaluate "NewTabHdrVal " + obj$ + ","+ScanTabName$+",ScanIsoMass"+val$(i)+", value" 
+              
+                   !* mass (amu) for each tune mass
+                   evaluate "value = ScanMass" + val$(i)
+                   evaluate "NewTabHdrVal " + obj$ + ","+ScanTabName$+",ScanMass"+val$(i)+", value" 
+                next i
+            
+            !* Check for the existance of the Profile Table
+               evaluate "HdrType = ObjHdrType(" + obj$ + ", " + ProfTabName$ +")"
+               if HdrType <> 99  then 
+                 if HdrType = 4
+                   evaluate "DelTab " + obj$ + ", " + ProfTabName$ 
+                 else
+                   evaluate "DelObjHdr  " + obj$ + ", " + ProfTabName$ 
+                 endif
+               endif
+            
+            !* Build the new Profile Table
+               evaluate "NewTab " + obj$ + "," + ProfTabName$ 
+            
+               for i = 1 to NumMasses
+                  !*  mass where maximum abundance occurs
+                  evaluate "value = BasePeak" + val$(i)
+                  evaluate "NewTabHdrVal " + obj$ + ","+ProfTabName$+",BasePeak"+val$(i)+", value" 
+            
+                  !*  maximum abundance of each tune mass
+                  evaluate "value = PeakMax" + val$(i)
+                  evaluate "NewTabHdrVal " + obj$ + ","+ProfTabName$+",PeakMax"+val$(i)+", value" 
+            
+                  !*  minimum abundance of each tune mass
+                  evaluate "value = PeakMin" + val$(i)
+                  evaluate "NewTabHdrVal " + obj$ + ","+ProfTabName$+",PeakMin"+val$(i)+", value" 
+            
+                  !* peak width at 50% height of each tune mass
+                  evaluate "value = PeakWidth" + val$(i)
+                  evaluate "NewTabHdrVal " + obj$ + ","+ProfTabName$+",PeakWidth"+val$(i)+", value" 
+            
+                  !* abundance of precursor
+                  evaluate "value = Precursor" + val$(i)
+                  evaluate "NewTabHdrVal " + obj$ + ","+ProfTabName$+",Precursor"+val$(i)+", value" 
+            
+            
+                  !* abundance of valley
+                  evaluate "value = Valley" + val$(i)
+                  evaluate "NewTabHdrVal " + obj$ + ","+ProfTabName$+",Valley"+val$(i)+", value" 
+            
+                  !* 95% confidence level of Peakm_z
+                  evaluate "value = ConFidm_z" + val$(i)
+                  evaluate "NewTabHdrVal " + obj$ + ","+ProfTabName$+",Confidm_z"+val$(i)+", value" 
+             
+                  !*  abundance of isotope peak 
+                  evaluate "value = IsoAbund" + val$(i)
+                  evaluate "NewTabHdrVal " + obj$ + ","+ProfTabName$+",IsoAbund"+val$(i)+", value" 
+            
+                  !*  mass of isotope peak
+                  evaluate "value = IsoMass" + val$(i)
+                  evaluate "NewTabHdrVal " + obj$ + ","+ProfTabName$+",IsoMass"+val$(i)+", value" 
+            
+                  !* m/z value from curve fitting
+                  evaluate "value = Peakm_z" + val$(i)
+                  evaluate "NewTabHdrVal " + obj$ + ","+ProfTabName$+",Peakm_z"+val$(i)+", value" 
+            
+               next i
+               
+               MSManShow = 1  ! enables single-polarity autotunes
+            
+            endmacro   !msat_MakeAtuneTables
+            
+            !===============================================================================================            
+            !===============================================================================================
+            name msat_GetAtuneVal                ! Get the data for individual index and also does averaging
+            PARAMETER index default 1
+            PARAMETER CPVar$
+            ! Returns the CP Variable name CPVar$ stored in the index-th saved
+            ! atune object; if index = 0 then return the average of the variable
+            ! saved in all available atune objects.
+            !
+            !===============================================================================================
+            local obj$, RetVal, SubTot, IVal, NumVals
+            local HdrType, NumTunes, I, MinI, MaxI
+            local ScanTabName$, ProfTabName$
+            
+              ScanTabName$ = msat_GetScanTabName$()
+              ProfTabName$ = msat_GetProfTabName$()
+            
+              RetVal = -1
+            
+            !* Check to see if the save scan register exists in memory
+              NumTunes =  RegSize(AtuneReg)
+            
+              if NumTunes < 1 then
+              !* If the save scan register is not in memory, try to load from file;
+              !* Successful read will change NumTunes
+                if filestat(mode,_tunepath$ + "atune.reg") = 1 then
+                  Loadobj _tunepath$ + "atune.reg",, AtuneReg
+                  NumTunes =  RegSize(AtuneReg)
+                endif
+                
+                if NumTunes < 1 then
+                   generate error ,"Please execute an autotune before attempting this function or command."
+                   return -1
+                endif
+              endif
+            
+              if index > NumTunes 
+                 generate error ,"The requested index is greater than the number of available autotune records."
+                 return -1
+              else
+                 if index <= 0 then
+                   MinI = 1
+                   MaxI = NumTunes
+                 else  
+                   MinI = index
+                   MaxI = index
+                 endif  
+              endif
+              
+              !* Initialize Subtotals and tune count
+              SubTot = 0
+              NumVals = 0
+              IVal = 0
+              
+              !* For requested tune records (either all if index=0 or just the specific index)
+              for I = MinI to MaxI
+                  obj$ = "AtuneReg[" + val$(I) + "]"
+                  !* Check to see if item exists in ScanParms
+                  evaluate "HdrType = TabHdrType (" + obj$ + "," +ScanTabName$+ "," + CPVar$ + ")"
+                  if HdrType >0 and HdrType < 4
+                  !* Value exists, so note the value
+                      evaluate "IVal = TabHdrVal (" + obj$ + ", "+ScanTabName$+"," + CPVar$ + ")"
+                      SubTot = SubTot + IVal
+                      NumVals = NumVals + 1
+                  else
+                    !* Does not exist in ScanParms; check to see if item exists in ProfileParms
+                      evaluate "HdrType = TabHdrType (" + obj$ + ", "+ ProfTabName$+ "," + CPVar$ + ")"
+                    if HdrType >0 and HdrType < 4
+                      !* Value exists, so note the value
+                       evaluate "IVal = TabHdrVal (" + obj$ + ", "+ProfTabName$+"," + CPVar$ + ")"
+                         SubTot = SubTot + IVal
+                       NumVals = NumVals + 1
+                    endif
+                  endif
+              next I
+              
+              if NumVals = 1 then
+              !* Only one value, so return one value
+                RetVal = SubTot
+              else
+                if NumVals > 1 then
+                !* Generate an average over all values if more than one value
+                 RetVal = SubTot / NumVals
+                endif 
+              endif
+              return RetVal
+            endmacro          ! msat_GetAtuneVal
+            
+            !===============================================================================================            
+            !===============================================================================================
+            !
+            name msat_Abundance
+            PARAMETER returnValue default 0
+            ! Returns one of the following, selected by the parameter returnValue,
+            ! from the most recent MSProfile or MSProfileAvg
+            !   0: Lowest abundance 
+            !   1: Mass number of lowest abundance ion 
+            !   2: Highest abundance
+            !   3: Mass number of highest abundance ion
+            !
+            !===============================================================================================
+            local i,masses,smallestAbund,nextAbund,smallestMassNum
+            local largestAbund, largestMassNum
+            
+              MSMassValue 0,masses
+            
+              for i= 1 to masses
+                 evaluate "nextAbund = peakmax" + val$(i)
+                 if i = 1 then
+                    smallestAbund = nextAbund
+                    smallestMassNum = 1
+                    largestAbund = nextAbund
+                    largestMassNum = 1
+                 else
+                    if smallestAbund > nextAbund then
+                       smallestAbund = nextAbund
+                       smallestMassNum = i
+                    endif
+                    if largestAbund < nextAbund then
+                       largestAbund = nextAbund
+                       largestMassNum = i
+                    endif
+                 endif
+              next i
+            
+              if returnValue = 0 then
+                 return smallestAbund
+              endif
+            
+              if returnValue = 1 then
+                 return smallestMassNum
+              endif
+            
+              if returnValue = 2 then
+                 return largestAbund
+              endif
+            
+              if returnValue = 3 then
+                 return largestMassNum
+              endif
+            
+            endmacro  ! msat_Abundance
+            
+            !===============================================================================================            
+            !===============================================================================================
+            !
+            name msat_FindPeaks
+            PARAMETER polarity default 0
+            PARAMETER skipAdj default 0
+            !* Performs a peak width and mass assignment if needed.  If the mass peaks are very poor, 
+            !* parameters are reset to defaults (except for the mass peak calibration parameters).
+            !===============================================================================================
+            !* GLOBALS used: msat_ABFail,msat_PWFail,msat_MAFail,TuneRegIndex
+            LOCAL NumMasses,abundFail,abundLow,NumFails,i
+            
+            Local  ID_TUNEMAC_FINDPEAKS__INI_565
+            Local  ID_TUNEMAC_INITIALIZING_A_566
+            Local  ID_TUNEMAC_MASS_WINDOW_IN_567
+            Local  ID_TUNEMAC_MASS_AXIS_CALI_568
+            Local  ID_TUNEMAC_ADJUSTING_PEAK_569
+            Local  ID_TUNEMAC_MASS_AXIS_CALI_570
+            Local  ID_TUNEMAC_FINDPEAKS_RESU_571
+            ID_TUNEMAC_FINDPEAKS__INI_565                      =  17565  
+            ID_TUNEMAC_INITIALIZING_A_566                      =  17566  
+            ID_TUNEMAC_MASS_WINDOW_IN_567                      =  17567  
+            ID_TUNEMAC_MASS_AXIS_CALI_568                      =  17568  
+            ID_TUNEMAC_ADJUSTING_PEAK_569                      =  17569  
+            ID_TUNEMAC_MASS_AXIS_CALI_570                      =  17570  
+            ID_TUNEMAC_FINDPEAKS_RESU_571                      =  17571  
+              abundFail = 0
+              
+              ! Calculate the number of criteria that failed.
+              NumFails = msat_PWFail + msat_MAFail
+              if msat_ABFail > 0 then
+                 NumFails = NumFails + 1
+              endif  
+            
+              if AtuneDebug = 1 then
+                 MSProfile -1
+                 MSTN_DoDispPrint -1, ReadResource$("tunemac",ID_TUNEMAC_FINDPEAKS__INI_565)
+              endif
+            
+              !* gets the number of tune masses available, also represents highest mass number
+              MSMassValue 0,NumMasses
+            
+              ! If the largest peak is < 1000 counts, reset to defaults and do a coarse 
+              ! peak find first
+              if (msat_ABFail > 0) or (NumFails > 2) then   
+                  ! require mass axis calibration
+                  AtunePrint ReadResource$("tunemac",ID_TUNEMAC_INITIALIZING_A_566)
+                  msat_ApplyTuneMix TuneRegIndex,1  
+            
+                  AtunePrint ReadResource$("tunemac",ID_TUNEMAC_MASS_WINDOW_IN_567)
+                  MSMassWindow 50
+                  print msProfileAvg (1,1)
+                  msat_SaveMasses
+                  for i = 1 to NumMasses
+                      if i = 2 OR i = 3 then
+                         MSMassValue i,,,,1
+                      else
+                         MSMassValue i,,,,0
+                      endif
+                      evaluate "abundLow = peakmax" + val$(i)
+                      if abundLow < 1000 then
+                         abundFail = 1
+                      endif
+                  next i
+                 
+                  if abundFail = 0 then
+                     AtunePrint ReadResource$("tunemac",ID_TUNEMAC_MASS_AXIS_CALI_568)
+                     ! do mass axis calibration on the 2nd and 3rd mid masses to 
+                     ! avoid some background ions and do 1 iteration
+                     MSAxis ,1,1
+                   endif
+                  msat_RestoreMasses
+                  MSMassWindow = 5
+               endif                  ! end if all three failed
+              
+              !  Peak width and mass assignment
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_ADJUSTING_PEAK_569) 
+              msat_Widths 0.65,0.05,polarity,TuneRegIndex,1
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_MASS_AXIS_CALI_570) + val$(NumMasses)
+              MSAxis NumMasses,1,1
+              
+              if AtuneDebug = 1 then
+                 MSProfile -1
+                 MSTN_DoDispPrint -1, ReadResource$("tunemac",ID_TUNEMAC_FINDPEAKS_RESU_571)
+              endif
+            
+            endmacro !msat_FindPeaks
+            
+            !===============================================================================================            
+            !===============================================================================================
+            !
+            name msat_SetMode       ! Verify the correct source and ionization modes for the
+            PARAMETER charge        ! tunefile and set global variables msat_mode and msat_srctype.
+            !
+            ! For 6100 series instruments and later see function GetIonSource()
+            ! This function also replaces the global variable msat_srctype
+            !===============================================================================================
+            local SrcType$, IonMode$
+            
+              SrcType$ = msGetIonSrc$()                     ! Which source is physically installed.
+            print SrcType$
+              MSGetmode IonMode$                            ! Ionization mode of the loaded tune file.
+                                                            ! (Doesn't necessarily reflect the actual source mode)
+            print IonMode$
+            
+              ! Make sure ionization mode is valid for installed source:
+              if instr(SrcType$,"MM") <> 0 then             ! if it's a MultiMode source
+                if instr(IonMode$,"MM")=0 then              ! non-MM ionization mode
+                  MSMode SrcType$,,1
+                  IonMode$ = SrcType$                     ! Reset the mode variable
+                  mstn_UpdateStatusBar                    !* Updates the window
+                endif
+              else
+                if instr(SrcType$,IonMode$)=0 then        ! if two modes don't match up...
+                  MSMode SrcType$,,1
+                  IonMode$ = SrcType$                     ! Reset the mode variable
+                  mstn_UpdateStatusBar                    !* Updates the window
+                endif
+              endif
+            
+              ! Set the ionization mode global variable:
+              if IonMode$ = "AJS-ES" then
+                msat_mode = 6
+              else
+                if IonMode$ = "MM-APCI" then
+                  msat_mode = 5                !* mode 5 is MultiMode source doing APCI ionization
+                else
+                  if IonMode$ = "MM-ES" then
+                    msat_mode = 4              !* mode 4 is MultiMode source doing ESI ionization
+                  else
+                    if IonMode$ = "MM-ES+APCI" then
+                      msat_mode = 3            !* mode 3 is MultiMode source doing "mixed" ESI and APCI ionization
+                    else
+                      if IonMode$ = "APPI" then
+                        msat_mode = 2          !* mode 2 is APPI ionization
+                      else
+                        if IonMode$ = "APCI" then
+                          msat_mode = 1        !* mode 1 is APCI ionization
+                        else
+                          msat_mode = 0        !* mode 0 is API_ES ionization
+                        endif  !* if IonMode$ = "APCI"
+                      endif  !* if IonMode$ = "APPI"
+                    endif  !* if IonMode$ = "MM-ES+APCI"
+                  endif  !* if IonMode$ = "MM-ES"
+                endif  !* if IonMode$ = "MM-APCI"
+              endif  !* if IonMode$ = "AJS-ES"
+            
+              ! Set the source type global variable:
+              if SrcType$ = "UNKNOWN" then
+                msat_srctype = 99                !* mode 99 is "UNKNOWN" (usually an offline session)
+              else
+                if SrcType$ = "MM-ES+APCI" then
+                  msat_srctype = 3                !* mode 3 is mixed (MM-ES+APCI)
+                else
+                  if SrcType$ = "APPI" then
+                    msat_srctype = 2              !* mode 2 is APPI
+                  else
+                    if SrcType$ = "APCI" then
+                      msat_srctype = 1            !* mode 1 is APCI
+                    else
+                      msat_srctype = 0              !* mode 0 is API_ES
+                    endif
+                  endif
+                endif
+              endif
+            
+            endmacro    !msat_SetMode
+            
+            
+            !===============================================================================================
+            !===============================================================================================                        
+            !
+            name msat_AutotuneInit    
+            !* Initialize autotune parameters; many of these will be overwritten by msat_ApplyTuneMix
+            !* 
+            PARAMETER src$ default "APCI"    ! Source ionization
+            PARAMETER regIndex default 4     ! Tune mix register object
+            !
+            !===============================================================================================
+            Local lhimass
+            Local  ID_TUNEMAC_VAPORIZER_289
+            Local  ID_TUNEMAC_CORONA_290
+            ID_TUNEMAC_VAPORIZER_289                           =  17289  
+            ID_TUNEMAC_CORONA_290                              =  17290  
+              msRampsmooth ,11
+              msAverages ,1
+              msSamples, 12
+              msScanparm threshold,,0
+              msScanparm stepsize,,0.1
+              msStepsize ,0.1
+              msScanparm lowmass,,50
+              msScanparm scantype,,1
+              msPeakparm ,1,,20        ! Gaussian fit of filtered raw, 20% threshold
+              msprofparm showabund,,1  ! absolute abundance display for profile
+              msFiltermass ,gauss,,0.3
+              msMassWindow 5
+            
+              if (MSD_SL = 1) or (MSD_HT = 1) then
+                dynamicInit regIndex,"Fragment"        ! SL or HT model
+              else
+                dynamicInit regIndex,"Fragmentor"      ! Other model, with linked fragmentor
+              endif
+              dynamicInit regIndex,"Quaddc"
+              print msat_SetParm (regIndex,"OpolPeak") 
+              !* Gain setting is handled through enutngt.mac
+              print msat_SetParm (regIndex,"IonEnergy")
+              print msat_SetParm (regIndex,"VCap")
+              !* Vaporizer and Corona Settings for APCI/APPI/MM-ES+APCI sources
+                if (src$ = "APCI") or (src$ = "APPI") or (src$ = "MM-ES+APCI") then
+                    print msat_SetParm (regIndex,ReadResource$("tunemac",\
+                                                ID_TUNEMAC_VAPORIZER_289))
+                  if (src$ = "APCI") or (src$ = "MM-ES+APCI") then
+                      print msat_SetParm (regIndex,ReadResource$("tunemac",\
+                                                    ID_TUNEMAC_CORONA_290))
+                  endif
+                endif
+              !* GasTemp, DryingGas & Neb_Pres handled by msat_CheckZones
+              !* SGasFlow & SGas_Temp handled by msat_CheckZones
+                if (src$ = "AJS-ES") then
+                  print msat_SetParm (regIndex,"NozzleVolt")    
+                endif
+                msat_SetAllWidths ,,regIndex
+            endmacro    !msat_AutotuneInit
+            
+            !===============================================================================================            
+            !===============================================================================================
+            Name DynamicInit 		!check for possible dynamic ramp
+            PARAMETER regIndex default 1
+            PARAMETER lensParm$ default "Fragmentor"
+            ! ueff: Fragment and Fragmentor might be used in the wrong context.
+            ! ueff: 061201 Changed to handle both
+            !===============================================================================================
+            Local	LensRow
+            Local	lDebug;		lDebug = 0
+            Local   lRow		! row in table that holds searched parameter
+            
+            Local  ID_TUNEMAC_MANRAMP_572
+            Local  ID_TUNEMAC_FIXED_573
+            
+            ID_TUNEMAC_MANRAMP_572                             =  17572  
+            ID_TUNEMAC_FIXED_573                               =  17573  
+            
+                If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+                    Print "Enutnatn.mac.DynamicInit called with: RegIndex LensParm =",\
+                          RegIndex, LensParm$
+                Endif
+                LensParm$ = ConvertText$( UPPER, LensParm$ )
+                lRow = RowByText( TuneMixReg[regIndex], "TuneParms", , "Parm", "i=",\
+                                  lensParm$)
+                If ( lRow < 0 ) then ! Parameter was not found in table; Special handling
+                    If ( LensParm$ = "FRAGMENTOR" ) then 
+                         LensParm$ = "FRAGMENT"     
+                    Endif
+                    If ( LensParm$ = "FRAGMENT" ) then
+                         LensParm$ = "FRAGMENTOR"
+                    Endif
+            	! Now FRAGMENTOR and FRAGMENT are switched. Try again to find table row
+                Endif
+                lRow = RowByText( TuneMixReg[regIndex], "TuneParms", , "Parm", "i=",\
+                                  LensParm$)
+                
+            
+                if ConvertText$(upper, TabText$(TuneMixReg[regIndex], TuneParms, \
+            	lRow, "Action")) = "MANRAMP" then
+            	lensrow = RowByText(Tunemixreg[regIndex],"ManRamp",,"Parm","i=",\
+                             lensParm$)
+            	if lensrow > -1 then
+            	    print msat_SetParm (regIndex,lensParm$,"MANRAMP")
+            	else
+            	    print msat_SetParm (regIndex,lensParm$,"fixed")
+            	endif
+                else
+            	print msat_SetParm (regIndex,lensParm$,"fixed")
+                endif
+            endmacro  !* dynamicInit
+            
+            
+            !===============================================================================================
+            !===============================================================================================            
+            !
+            name AtunePrint
+            PARAMETER Msg$
+            !
+            !* Prints Msg$ to the status line.  If the timer flag is set (AtuneTimerOn) to 
+            !* 1, the elapsed time (in minutes) since the tune started is reported.
+            !===============================================================================================
+            
+            Local  ID_TUNEMAC______4_2F_574
+            ID_TUNEMAC______4_2F_574                           =  17574  
+               On Error AtuneTimerOn = 0
+               if AtuneTimerOn = 0 then
+                  Print ">>> " + Msg$
+               else
+                  Print SPrintF$((Time()-AtuneTimer)/60, ReadResource$("tunemac",ID_TUNEMAC______4_2F_574) + Msg$)
+               endif
+            
+            endmacro ! AtunePrint
+            
+            
+            !===============================================================================================
+            !===============================================================================================
+            !
+            name msat_initTuneMixReg
+            !
+            !* If the custom tune mix register version is older than default, copy 
+            !* defaults to the custom tune mix register
+            !===============================================================================================
+            local tmixfile$, deftmixfile$, currentVersion$
+            local retval, customVersion, defaultVersion
+            
+               !* Initialize tunemix file, and current version
+               tmixfile$    = "tune_mix.reg"
+               defTmixFile$ = "def_tmix.reg"
+               currentVersion$ = "002"
+            
+               !* check if custom tune mix register exists in memory
+               if RegSize(CustTMix) <> -1 then
+                  DelReg CustTMix
+               endif
+            
+               !* check if mix_util.mac exists
+               if check(macro,MSUpdateTuneMix) = 0 then
+                  macro _autoMSPath$ + "mix_util.mac"
+               endif
+               
+               !* check if custom tunemix file exists
+               if FileStat(mode, _tunePath$ + tmixfile$) = 1 then
+                  !* custom tunemix file does exist
+                  LoadObj _tunePath$ + tmixfile$,,CustTMix
+               
+                  if ObjHdrType(CustTMix,"Version") = 99 then
+                     !* check if the mix_util.mac exists
+                     if check(macro,MSUpdateTuneMix) = 0 then
+                        macro _autoMSPath$ + "mix_util.mac"
+                     endif
+                     MSUpdateTuneMix      !* update custom tunemix register
+                     retval = 1           !* return 1, custom tunemix register has incorrect version
+                  else
+                     if FileStat(mode, _tunePath$ + "def_tmix.reg") <> -1 then
+                        LoadObj _tunePath$ + defTmixFile$,, DefTMix
+                        DefaultVersion = val(ObjHdrText$(DefTMix, "Version"))
+                     endif   
+                     
+                     !* check custom tunemix register for version match
+                     customVersion = val(ObjHdrText$(CustTMix,"Version"))
+                     
+                     if customVersion < DefaultVersion then
+                        MSUpdateTuneMix   !* update custom tunemix register
+                        retval = 1        !* return 1, custom tunemix register has incorrect version
+                     else
+                        retval = 0        !* return 0, custom tunemix register has correct version
+                     endif
+                  endif
+               else
+                  retval = 2           !* return 2, custom tunemix file does not exist
+               endif
+               
+               delreg CustTMix         ! cleanup registers
+               delreg DefTMix         
+               return retval
+               
+            endmacro   !msat_initTuneMixReg
+            
+            !===============================================================================================            
+            !===============================================================================================
+            name msat_auto              ! Start macro here
+            PARAMETER state default 0   ! 0, do full autotune positive and negative mode, 
+                                        !    standard scan only
+                                        ! 1, do positive mode only, standard scan only
+                                        ! 2, do negative mode only, standard scan only
+                                        ! 3, do full autotune positive and negative mode, 
+                                        !    standard and fast scan
+                                        ! 4, do positive mode only, standard and fast scan
+                                        ! 5, do negative mode only, standard and fast scan
+            !===============================================================================================
+            ! GLOBAL DGT,DGF,NEB,VAP,msat_mode,charge,AtuneTimer
+            ! GLOBAL TuneRegIndex,msat_ABFail,msat_PWFail,msat_MAFail,NumMass
+            ! GLOBAL OldTuneFile$,OldPolarity,OldScanMode,MSD_46,MSD_VL,MSD_SL,MSD_HT,MSD_RF
+            LOCAL FS_alert,srcmode$,mmcheck,mmcheck$,_button,APPItemp$
+            LOCAL LoAb,HiAb,saveAverage,saveStepsize,NumCheckTuneFails,NumMasses
+            LOCAL checkPeaks,a$,b$,c$,d$,e$,f$,OldRFen
+            LOCAL oldWidthOffset,oldMassOffset,oldWidthGain,oldMassGain
+            LOCAL oldOpolK,oldOpolP,GainMsg$
+            Local lAtuneRegInit ! Check whether AtuneReg is loaded
+            Local lDebug;		lDebug = 0
+            Local lIonMode$;	! Holds ionization mode
+            Local lRegIndex;	! Index of tune mix register for source and polarity
+            
+            Local  ID_TUNEMAC_____AUTOTUNE_S_575
+            Local  ID_TUNEMAC_GAINCURVE_REG_323
+            Local  ID_TUNEMAC_UNUSUAL_577
+            Local  ID_TUNEMAC_AUTOTUNE_CANCE_578
+            Local  ID_TUNEMAC_LOADING_ATUNES_579
+            Local  ID_TUNEMAC_POLARITY_SET_T_580
+            Local  ID_TUNEMAC_POLARITY_SET_T_581
+            Local  ID_TUNEMAC_SETTING_TO_THE_582
+            Local  ID_TUNEMAC_THIS_INSTRUMEN_583
+            Local  ID_TUNEMAC_WITH_THE_MULTI_584
+            Local  ID_TUNEMAC_PLEASE_CONTACT_585
+            Local  ID_TUNEMAC_TURNING_ON_APP_586
+            Local  ID_TUNEMAC_CHECKING_VACUU_587
+            Local  ID_TUNEMAC_CHECKING_TEMPE_588
+            Local  ID_TUNEMAC_CALIBRANT_IS_T_589
+            Local  ID_TUNEMAC_CHECKING_TUNE_590
+            Local  ID_TUNEMAC_AUTOTUNE__NO_A_591
+            Local  ID_TUNEMAC_LINKING_SKIMME_592
+            Local  ID_TUNEMAC_DISABLING_LENS_593
+            Local  ID_TUNEMAC_FINDING_TUNE_M_594
+            Local  ID_TUNEMAC_OPTIMIZING_OCT_595
+            Local  ID_TUNEMAC_GENERATING_POS_596
+            Local  ID_TUNEMAC_SAVING_PROFILE_597
+            Local  ID_TUNEMAC_GENERATING_NEG_598
+            Local  ID_TUNEMAC_SAVING_PROFILE_599
+            Local  ID_TUNEMAC_SAVING_NEGATIV_600
+            Local  ID_TUNEMAC_SAVING_POSITIV_601
+            Local  ID_TUNEMAC_AUTOTUNE__NO_A_602
+            Local  ID_TUNEMAC_INITIALIZING_N_603
+            Local  ID_TUNEMAC_INITIALIZING_N_604
+            Local  ID_TUNEMAC_WARNING__THE_M_605
+            Local  ID_TUNEMAC_WARNING__THE_M_606
+            Local  ID_TUNEMAC_AUTOTUNE_COMPL_607
+            Local  ID_TUNEMAC_GAINCURVE_REG_1073
+            
+            ID_TUNEMAC_____AUTOTUNE_S_575                      =  17575  
+            ID_TUNEMAC_GAINCURVE_REG_323                       =  17323  
+            ID_TUNEMAC_UNUSUAL_577                             =  17577  
+            ID_TUNEMAC_AUTOTUNE_CANCE_578                      =  17578  
+            ID_TUNEMAC_LOADING_ATUNES_579                      =  17579  
+            ID_TUNEMAC_POLARITY_SET_T_580                      =  17580  
+            ID_TUNEMAC_LOADING_ATUNES_579                      =  17579  
+            ID_TUNEMAC_POLARITY_SET_T_581                      =  17581  
+            ID_TUNEMAC_SETTING_TO_THE_582                      =  17582  
+            ID_TUNEMAC_THIS_INSTRUMEN_583                      =  17583  
+            ID_TUNEMAC_WITH_THE_MULTI_584                      =  17584  
+            ID_TUNEMAC_PLEASE_CONTACT_585                      =  17585  
+            ID_TUNEMAC_TURNING_ON_APP_586                      =  17586  
+            ID_TUNEMAC_CHECKING_VACUU_587                      =  17587  
+            ID_TUNEMAC_CHECKING_TEMPE_588                      =  17588  
+            ID_TUNEMAC_CALIBRANT_IS_T_589                      =  17589  
+            ID_TUNEMAC_CHECKING_TUNE_590                       =  17590  
+            ID_TUNEMAC_AUTOTUNE__NO_A_591                      =  17591  
+            ID_TUNEMAC_LINKING_SKIMME_592                      =  17592  
+            ID_TUNEMAC_DISABLING_LENS_593                      =  17593  
+            ID_TUNEMAC_FINDING_TUNE_M_594                      =  17594  
+            ID_TUNEMAC_OPTIMIZING_OCT_595                      =  17595  
+            ID_TUNEMAC_GENERATING_POS_596                      =  17596  
+            ID_TUNEMAC_SAVING_PROFILE_597                      =  17597  
+            ID_TUNEMAC_GENERATING_NEG_598                      =  17598  
+            ID_TUNEMAC_SAVING_PROFILE_599                      =  17599  
+            ID_TUNEMAC_SAVING_NEGATIV_600                      =  17600  
+            ID_TUNEMAC_SAVING_POSITIV_601                      =  17601  
+            ID_TUNEMAC_LOADING_ATUNES_579                      =  17579  
+            ID_TUNEMAC_POLARITY_SET_T_581                      =  17581  
+            ID_TUNEMAC_SETTING_TO_THE_582                      =  17582  
+            ID_TUNEMAC_CHECKING_TEMPE_588                      =  17588  
+            ID_TUNEMAC_CALIBRANT_IS_T_589                      =  17589  
+            ID_TUNEMAC_CHECKING_TUNE_590                       =  17590  
+            ID_TUNEMAC_AUTOTUNE__NO_A_602                      =  17602  
+            ID_TUNEMAC_LINKING_SKIMME_592                      =  17592  
+            ID_TUNEMAC_DISABLING_LENS_593                      =  17593  
+            ID_TUNEMAC_INITIALIZING_N_603                      =  17603  
+            ID_TUNEMAC_INITIALIZING_N_604                      =  17604  
+            ID_TUNEMAC_FINDING_TUNE_M_594                      =  17594  
+            ID_TUNEMAC_GENERATING_NEG_598                      =  17598  
+            ID_TUNEMAC_SAVING_PROFILE_597                      =  17597  
+            ID_TUNEMAC_SAVING_NEGATIV_600                      =  17600  
+            ID_TUNEMAC_WARNING__THE_M_605                      =  17605  
+            ID_TUNEMAC_WARNING__THE_M_606                      =  17606  
+            ID_TUNEMAC_AUTOTUNE_COMPL_607                      =  17607  
+            ID_TUNEMAC_GAINCURVE_REG_1073                      =  18073
+            
+            lAtuneRegInit = 1
+            MSGDisplay ON                                !* Make sure graphics turned on
+            ! Start the timer
+            ATuneTimer = time()
+            if Check(Variable, AtuneTimerOn) = 0 then
+              AtuneTimerOn = 0
+            endif
+            Print ReadResource$("tunemac",ID_TUNEMAC_____AUTOTUNE_S_575) \
+                  + Date$(1, ATuneTimer) + " " + Time$(1, AtuneTimer)
+            ! Autotune debugging flag
+            if Check(Variable, AtuneDebug) = 0 then
+              AtuneDebug = 0
+            endif
+            
+            ! Check and load the GainCurve register if necessary:
+            if RegSize(GainCurve) = -1 then
+              !* Register not loaded.  Try loading the register from disk
+              if filestat(mode,_tunepath$ + "GainCurve.reg") = 1 then
+                LoadObj _tunepath$ + "GainCurve.reg",, GainCurve
+              else
+                ! GainCurve.reg has been deleted from this system
+                title$= "Gain Curve Check"
+                line1$= ReadResource$("tunemac",ID_TUNEMAC_GAINCURVE_REG_323)
+                line2$= chr$(13) + chr$(13) \
+                              +ReadResource$("tunemac",ID_TUNEMAC_GAINCURVE_REG_1073)
+                              !+"Please restore file or reload ChemStation software."
+                _button=alert(line1$ + line2$,3,title$)  
+                ! CPL 03/06 Replace Atuneprint statement with Alert.
+              stop
+              endif
+            endif            
+                               
+            if state > 2 then
+            !* Warn the user about fast scan's wider peaks
+            !* Ignore if 6100 series instrument CPL 05/09/2007
+              if ( pre6100() <> 0 ) then
+                FS_alert = msat_FSWarnDialog()   
+                if FS_alert = 0 then     !* user hit cancel button
+                  print ReadResource$("tunemac",ID_TUNEMAC_AUTOTUNE_CANCE_578)
+                  return
+                endif
+              endif
+            endif ! state > 2
+            
+            oldTuneFile$=tunefilename$                   !* Save current tune file
+            msparm polarity,OldPolarity                  !* Save current polarity
+            on error msat_AutoTuneErr
+            mstn_AddAbortHandler "msat_AutoTuneAbortHdlr"
+            
+            if (state=0) or (state=1) or (state=3) or (state=4) then
+              print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+              MSGetTuneFile _tunepath$+"atunes.tun",0,,1   !* Load positive polarity, standard scan mode
+              print ReadResource$("tunemac",ID_TUNEMAC_POLARITY_SET_T_580)
+              mstn_ChangePolarity 0,0
+            else
+              print ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+              MSGetTuneFile _tunepath$+"atunes.tun",1,,1   !* Load negative polarity, standard scan mode
+              print ReadResource$("tunemac",ID_TUNEMAC_POLARITY_SET_T_581)
+              mstn_ChangePolarity 1,0
+            endif
+            
+            msparm polarity,charge                       !* Save current polarity
+            
+            if check(macro,msat_InitTuneMix)=0 then
+              macro _automspath$ + "enutnmix.mac"
+            endif
+            
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SETTING_TO_THE_582)
+            srcMode$ = MSGetIonSrc$()
+            ! If MM-ES+APCI source, put in APCI ionization mode if not otherwise defined
+            if (srcmode$ = "MM-ES+APCI") then
+            	mmcheck = MMBoardUpdate() !* Check instrument for MM source compatibility
+              if mmcheck > 0 then
+                mmcheck$ = ReadResource$("tunemac",ID_TUNEMAC_THIS_INSTRUMEN_583) \
+            	    + chr$(13) \
+            	    + ReadResource$("tunemac",ID_TUNEMAC_WITH_THE_MULTI_584)\
+            	    + chr$(13)+ chr$(13) \
+            	    + ReadResource$("tunemac",ID_TUNEMAC_PLEASE_CONTACT_585)
+            	  _button = alert(mmcheck$, 2)
+            	  msat_AutoCleanup
+            	  stop
+            	endif
+        
+              ! If source type is multimode source, check whether the tunemix register
+              ! holds the ionization mode.  If it doesn't, use the default ionization mode.
+              lIonMode$ = "MM-APCI"		! Default ionization mode for multimode source.
+              lRegIndex = msat_SelectTuneMix( "auto" )
+              If ( ObjHdrType( TuneMixReg[lRegIndex], "IonisationMode"  ) = 0 ) then
+                lIonMode$ = ObjHdrText$( TuneMixReg[lRegIndex], "IonisationMode" )
+              EndIf
+              
+              If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+                Print "MSAT_Auto: TuneMixReg Index =", lRegIndex
+                Print "           IonMode =""" + lIonMode$ + """"
+              EndIf
+              
+            	MSMode lIonMode$
+            endif ! srcmode$ = "MM-ES+APCI"
+            
+            msat_SetMode charge !* Check for valid source/ionization modes
+            
+            if msat_srctype = 2 then                     !* Make sure lamp on if APPI
+              MSSCQuery "config:src:appi:stat?", APPIstat$
+              APPItemp$ = Substring$(APPIstat$,1,,",")
+              if (val(APPItemp$) <> 1) then              !* Lamp is off, so turn it on
+                msscwrite "config:src:appi:lamp 1"
+                print ReadResource$("tunemac",ID_TUNEMAC_TURNING_ON_APP_586)
+                sleep 15
+              endif
+            endif !msat_srctype = 2
+            
+            print msat_initTuneMixReg()       !* Updates the tunemix register to the default version
+            
+            !* Check for AtuneReg, if it doesn't exist, 
+            !* or it can't be loaded from disk, then exit this macro 
+            msat_CheckAtuneReg   ! Sets the global MSManShow for autotune menu
+            lAtuneRegInit = MSManShow
+            
+            ! Obtain the correct index for tune parameters.
+            TuneRegIndex = msat_SelectTuneMix("Auto")
+            mstn_UpdateStatusBar                         !* Updates the window
+            ! deselect 6th mass.  msat_ApplyTuneMix will determine whether 6th mass will be used
+            MSMassValue 6,,,,0
+                
+            msat_AutotuneInit srcMode$,TuneRegIndex !* Loads correct index from tunemix register
+            AtunePrint "Initializing masses and scan parameters."
+            msat_ApplyTuneMix TuneRegIndex,,,1           !* Sets the masses and scan parameters
+            
+            ! CPL 10/20/09 Start  
+            ! Set the abundance targets using msat_LoTarget & msat_HiTarget function calls
+            
+            LoAb = msat_LoTarget()
+            HiAb = msat_HiTarget()
+            
+            ! CPL 10/20/09 End    
+                
+            ! CPL 05/10/07: Use source-specific target abundances for 6100 series
+            ! Get the values for low and high abundance from the appropriate register
+            lRegIndex = MSAT_SelectTuneMix( "auto" ) ! CPL 061115: Returns TuneMixReg Index
+            If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainLowAbund" ) = 1 ) then
+              LoAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainLowAbund" )
+            Endif
+            If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainHighAbund" ) = 1 ) then
+              HiAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainHighAbund" )
+            Endif
+            If ( lDebug > 0 ) then
+              Print "msat_Auto (Pos): LoAb, HiAb, lRegIndex =", LoAb, HiAb, lRegIndex
+              Print "msat_Auto (Pos): SRCMode, MSat_SRCType =", SRCMode, MSat_SRCType
+            Endif
+            ! CPL 05/10/07: End
+            
+            ! CPL 05/03/10: Check the GainCurve register and initialize if necessary:
+              if (RegSize(GainCurve) < 2) then
+                print msat_InitGainCurveReg()  ! Initialize GainCurve register 
+                ResetEMGain,,1                 ! Set GainCurve data register to default values
+              else
+                if (Data (GainCurve[Charge+2], 0,1)=0) then
+                  ResetEMGain,,1               ! No data exists, set GainCurve data register to default values
+                endif       
+              endif 
+            
+            MSStepsize saveStepsize
+            MSAverages saveAverage
+            ! Make sure emgain is used
+            MSUseEmv 0
+            ! Start autotune with Gain of 1.0
+            MSParm Gain,,1    
+            
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKING_VACUU_587)
+            msat_CheckVac                                 !check vacuum status
+            
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKING_TEMPE_588)
+            msat_CheckZones msat_srctype,TuneRegIndex     !check temp and pressure zones
+               
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CALIBRANT_IS_T_589)
+            msat_CalSwitch 1                     !turn calibrant ON, based on installed source
+            
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKING_TUNE_590)
+            msat_CheckTune ,,,1,charge           !run Check Tune to see if tune looks good already
+             
+            ! Calculate the number of criteria that failed in CheckTune.
+            NumCheckTuneFails = msat_PWFail + msat_MAFail
+            if msat_ABFail > 0 then
+              NumCheckTuneFails = NumCheckTuneFails + 1
+            endif
+            ! Gets the number of tune masses available, also represents highest mass number
+            MSMassValue 0,NumMasses
+            ! Set the checkPeaks flag
+            if NumCheckTuneFails = 0 then
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_AUTOTUNE__NO_A_591)
+              checkPeaks = 0      ! no adjustments needed
+            else
+              checkPeaks = 1      ! adjustments needed
+            endif
+            
+            if checkPeaks = 1 then       ! No changes made unless it failed CheckTune
+              ! Initialize strings: 
+              a$=" "
+              b$=" "
+              c$=" "
+              d$=" "
+              e$=" "
+              f$=" "
+              MSDynamic list,a$,b$,c$,d$,e$,f$
+              ! Create one long list of dynamic lenses 
+              a$=a$+","+b$+","+c$+","+d$+","+e$+","+f$
+              a$=ConvertText$(upper,a$)
+               
+              if (MSD_SL = 0) and (MSD_HT = 0) then
+                AtunePrint ReadResource$("tunemac",ID_TUNEMAC_LINKING_SKIMME_592)
+                MSUnlinkParms 0                     !* Link fragmentor and Skim1
+              else
+                ! Check to see if Lens2DC is in the list:
+                b$=ConvertText$(upper,"Lens2DC")
+                if instr(a$,b$) > 0 then            ! it has been dynamically ramped
+                  MSDynamic Lens2DC,disable
+                endif
+                if (MSD_RF = 1) then
+                ! Disable any Lens2RF parameters:             ! SL or HT model with Lens2RF
+                ! Check to see if Amplitude is in the list:   (Must disable Amplitude before querying Enable)
+                b$=ConvertText$(upper,"Lens2RFAmplitude")
+                  if instr(a$,b$) > 0 then          ! it has been dynamically ramped
+                    MSDynamic Lens2RFAmplitude,disable
+                  endif
+                ! Disable the Lens2RF check box if enabled:
+                MSParm Lens2RFEnable,OldRFen
+                  if OldRFen=1 then
+                    AtunePrint ReadResource$("tunemac",ID_TUNEMAC_DISABLING_LENS_593)
+                    MSParm Lens2RFEnable,,0
+                  endif
+                endif !(MSD_RF = 1)
+              endif !(MSD_SL = 0) and (MSD_HT = 0)
+            
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_FINDING_TUNE_M_594)
+              msat_FindPeaks charge             !finds the peaks for calibrating
+                
+              if (MSD_46 = 1) then              ! if it's a G1946x MSD.
+                if (charge = 0) then              ! only do octopole optimization in positive polarity
+                  AtunePrint ReadResource$("tunemac",ID_TUNEMAC_OPTIMIZING_OCT_595)
+                  msat_octopole
+                endif
+              else
+                b$=ConvertText$(upper,"opolP")
+                if instr(a$,b$) > 0 then        ! it has been dynamically ramped
+                  MSDynamic opolP,disable
+                endif
+                MSParm opolP,,650               ! Octople set to 650 for SL & HT models
+              endif !(MSD_46 = 1)
+            
+              if MSD_RF = 1 then                ! If it's an SL or HT model with Lens2RF,
+                msat_RFOpt                      ! Optimize the Lens2RF parameters.
+                msat_WOramp 0.65, 0.05          ! Readjust the peakwidths, (WO ramp only).
+                MSProfile                       ! To make sure report has correct settings.
+              endif
+            
+              msat_CheckGainCurve 1           ! Adjust the Gain/EMV curve
+              msat_WOramp 0.65, 0.05          ! Readjust the peakwidths, (WO ramp only).
+              msaxis
+            endif !* if checkPeaks =1
+            
+            if charge = 0 then
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_GENERATING_POS_596)
+              mstn_DoGenReport ,3                       !print report for atunes.tun for positive mode
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_PROFILE_597)
+              msat_SaveAtune 0                          !saves profile and scan data in atune register
+            else 
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_GENERATING_NEG_598)
+              mstn_DoGenReport ,3                       !print report for atunes.tun for negative mode
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_PROFILE_599)
+              msat_SaveAtune 0                          !saves profile and scan data in atune register
+            endif
+            
+            if (state = 2) or (state = 5) then
+            !* Negative mode only, standard or standard and fast scan selected.
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_NEGATIV_600) 
+              MSSaveTuneFile "atunes.tun",1              !saves atunes.tun for negative mode      
+              ! Perform the fast scan tune adjustment:
+              if (MSD_SL = 1) and (state = 5) then
+                msat_FastScan charge,TuneRegIndex,state
+              else
+                if (MSD_HT = 1) and (state = 5) then
+                  msat_UltraFastScan charge,TuneRegIndex,state
+                endif
+              endif        
+            else
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_POSITIV_601)
+              MSSaveTuneFile "atunes.tun",0              !saves atunes.tun for positive mode
+              ! Perform the fast scan tune adjustment:
+              if (MSD_SL = 1) and ((state = 3) or (state = 4)) then
+                msat_FastScan charge,TuneRegIndex,state
+              else
+                if (MSD_HT = 1) and ((state = 3) or (state = 4)) then
+                  msat_UltraFastScan charge,TuneRegIndex,state
+                endif      
+              endif
+            endif !(state = 2) or (state = 5)
+            
+            mstn_UpdateStatusBar                       !* Updates the window
+            
+            if (state=0) or (state=3) then
+              msdynamic massoffset,disable           !* Disables massOffset to get initial value
+              ! Saving positive tune massOffset value.
+              msparm massOffset,oldMassOffset
+              ! Saving positive tune widthOffset value.
+              ! msdynamic widthOffset,read,1,x,y     !* Mass(x), value(y) of 1st point in dynamic ramp 
+              msdynamic widthOffset,disable          !* Disables widthOffset to get initial value
+              msparm widthOffset,oldWidthOffset
+              ! Saving positive tune widthGain value.
+              msparm widthGain,oldWidthGain
+              ! Saving positive tune massGain Value.
+              msparm massGain,oldMassGain
+              if MSD_46 = 1 then
+              ! Saving positive tune octopole knee value.
+                msparm opolK,oldOpolK
+              endif
+              ! Saving positive tune octopole peak value.
+              msparm opolP,oldOpolP
+            
+              ! Load negative polarity tune file
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_LOADING_ATUNES_579)
+              MSGetTuneFile  _tunepath$+"atunes.tun",1,,1
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_POLARITY_SET_T_581)
+              
+              mstn_ChangePolarity 1,0                    !switch to negative polarity
+              msparm polarity,charge
+            
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SETTING_TO_THE_582)
+              srcMode$ = MSGetIonSrc$()
+              ! If MM-ES+APCI source, put in APCI ionization mode
+              if (srcmode$ = "MM-ES+APCI") then
+                ! The source is a multimode source. 
+                ! The default ionization mode is MM-APCI. 
+                ! If the tunemix register holds the ionization mode, use it.
+                lIonMode$ = "MM-APCI"		! That is the default.
+                lRegIndex = msat_SelectTuneMix( "auto" )
+                if (ObjHdrType( TuneMixReg[lRegIndex], "IonisationMode" ) = 0) then
+                  lIonMode$ = ObjHdrText$(TuneMixReg[lRegIndex], "IonisationMode")
+                endIf
+                        
+                if ( lDebug > 0 ) or ( Getverbose() > 0 ) then
+                  Print "MSAT_Auto: TuneMixReg Index =", lRegIndex
+                  Print "           IonMode =""" + lIonMode$ + """"
+                endIf
+                
+                MSMode lIonMode$
+              endif ! srcmode$ = "MM-ES+APCI"
+                    
+              msat_SetMode charge !* Apply correct source and ionization mode
+              TuneRegIndex = msat_SelectTuneMix("Auto")  !uses the correct register for getting the tunefile values
+              !deselect 6th mass.  msat_ApplyTuneMix will determine whether 6th mass will be used
+              MSMassValue 6,,,,0
+            
+              msat_AutotuneInit srcMode$,TuneRegIndex
+              AtunePrint "Initializing masses and scan parameters."
+              msat_ApplyTuneMix TuneRegIndex,,,1         !sets the masses and scan parameters
+                   
+              ! Check the GainCurve register and initialize if necessary:
+              if (RegSize(GainCurve) < 2) then
+                print msat_InitGainCurveReg()  ! Initialize GainCurve register 
+                ResetEMGain,,1                 ! Set GainCurve data register to default values
+              else
+                if (Data (GainCurve[Charge+2], 0,1)=0) then
+                  ResetEMGain,,1               ! No data exists, set GainCurve data register to default values
+                endif       
+              endif      
+                                      
+              !Make sure emgain is used
+              MSUseEmv 0
+              ! Start autotune with Gain of 1.0
+              MSParm Gain,,1
+              MSStepsize saveStepsize
+              MSAverages saveAverage
+            
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKING_TEMPE_588)
+              msat_CheckZones msat_srctype,TuneRegIndex     !check temp and pressure zones
+              
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CALIBRANT_IS_T_589)
+              msat_CalSwitch 1                           !turn calibrant ON, based on installed source
+              
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKING_TUNE_590)
+              msat_CheckTune ,,,1,charge                 !a quick look to see if tune looks good already
+             
+              ! Calculate the number of criteria that failed in CheckTune.
+              NumCheckTuneFails = msat_PWFail + msat_MAFail
+              if msat_ABFail > 0 then
+                NumCheckTuneFails = NumCheckTuneFails + 1
+              endif
+              
+              ! Gets the number of tune masses available, also represents highest mass number
+              MSMassValue 0,NumMasses
+      
+              ! Set the checkPeaks flag
+              if NumCheckTuneFails = 0 then
+                AtunePrint ReadResource$("tunemac",ID_TUNEMAC_AUTOTUNE__NO_A_602)
+                checkPeaks = 0      ! adjustments needed
+              else
+                checkPeaks = 1      ! adjustments needed
+              endif
+            
+              if checkPeaks = 1 then       ! No changes made unless it failed CheckTune 
+                ! Initialize strings: 
+                a$=" "
+                b$=" "
+                c$=" "
+                d$=" "
+                e$=" "
+                f$=" "
+                MSDynamic list,a$,b$,c$,d$,e$,f$
+                ! Create one long list of dynamic lenses 
+                a$=a$+","+b$+","+c$+","+d$+","+e$+","+f$
+                a$=ConvertText$(upper,a$)
+            
+                if (MSD_SL = 0) and (MSD_HT = 0) then
+                  AtunePrint ReadResource$("tunemac",ID_TUNEMAC_LINKING_SKIMME_592)
+                  MSUnlinkParms 0                          !* Link fragmentor and Skim1
+                else
+                  if (MSD_RF = 1) then
+                    ! Disable any Lens2RF parameters:             ! SL model with Lens2RF
+                    ! (Have to disable Amplitude before querying Enable)
+                    ! Check to see if Amplitude is in the list:
+                    b$=ConvertText$(upper,"Lens2RFAmplitude")
+                    if instr(a$,b$) > 0 then            ! it has been dynamically ramped
+                      MSDynamic Lens2RFAmplitude,disable
+                    endif
+                    ! Check to see if DC is in the list:
+                    b$=ConvertText$(upper,"Lens2DC")
+                    if instr(a$,b$) > 0 then            ! it has been dynamically ramped
+                      MSDynamic Lens2DC,disable
+                    endif
+                    ! Disable the Lens2 RF, if enabled:
+                    MSParm Lens2RFEnable,OldRFen
+                    if OldRFen=1 then
+                      AtunePrint ReadResource$("tunemac",ID_TUNEMAC_DISABLING_LENS_593)
+                      MSParm Lens2RFEnable,,0
+                    endif
+                  endif !(MSD_RF = 1)
+                endif ! (MSD_SL = 0) and (MSD_HT = 0)
+            
+                if lAtuneRegInit = 0 then     ! couldn't find AtuneReg at start of autotune
+                  AtunePrint "Initializing tune parameters."
+                  msat_ApplyTuneMix TuneRegIndex,1        !initialize all variables to default values
+                endif
+                
+                !* Disable widthOffset and massOffset to apply values from positive tune.
+                msdynamic widthOffset,disable              !makes sure WidthOffset is disabled to get one value
+                msdynamic massOffset,disable               !make sure MassOffset is disabled to get one value
+          
+                ! Initializing negative tune widthOffset value from positive tune.
+                msparm widthOffset,,oldWidthOffset        !start with good values for WidthOffset
+          
+                ! Initializing negative tune massOffset value from positive tune.
+                msparm widthGain,,oldWidthGain             !start with good values for WidthGain
+          
+                ! Initializing negative tune widthGain value from positive tune.
+                msparm massOffset,,oldMassOffset          !start with good values for MassOffset
+            
+                ! Initializing negative tune massGain value from positive tune.
+                msparm massGain,,oldMassGain              !start with good values for MassGain
+          
+                ! Initializing octopole parameters.
+                if (MSD_46 = 1) then
+                  AtunePrint ReadResource$("tunemac",ID_TUNEMAC_INITIALIZING_N_603)
+                  msparm opolK,,oldOpolK                   !* set OpolK
+                  AtunePrint ReadResource$("tunemac",ID_TUNEMAC_INITIALIZING_N_604)
+                  msparm opolP,,oldOpolP                   !* set OpolP
+                else
+                  b$=ConvertText$(upper,"opolP")
+                  if instr(a$,b$) > 0 then        ! it has been dynamically ramped
+                    MSDynamic opolP,disable
+                  endif
+                  MSParm opolP,,650               ! Octople set to 650 for SL & HT models
+                endif ! (MSD_46 = 1) 
+                  
+                ! 10/20/09 CPL Start  
+                ! Set the abundance targets using msat_LoTarget & msat_HiTarget function calls
+                
+                LoAb = msat_LoTarget()
+                HiAb = msat_HiTarget()
+                
+                ! 10/20/09 CPL End                            
+                      
+                ! CPL 070510: Uses source-specific target abundances for 6100 series
+                ! Get the values for low and high abundance from the appropriate register
+                lRegIndex = MSAT_SelectTuneMix( "auto" ) ! CPL 061115: Returns TuneMixReg Index
+                If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainLowAbund" ) = 1 ) then
+                  LoAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainLowAbund" )
+                Endif
+                If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainHighAbund" ) = 1 ) then
+                  HiAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainHighAbund" )
+                Endif
+              
+                If ( lDebug > 0 ) then
+                  Print "msat_Auto (Neg): LoAb, HiAb, lRegIndex =", LoAb, HiAb, lRegIndex
+                  Print "msat_Auto (Neg): SRCMode, MSat_SRCType =", SRCMode, MSat_SRCType
+                Endif
+                ! CPL 070510: End
+        
+                AtunePrint ReadResource$("tunemac",ID_TUNEMAC_FINDING_TUNE_M_594)
+                msat_FindPeaks charge,1            !finds the peaks for calibrating
+            
+                if MSD_RF = 1 then                 ! If it's an SL with Lens2RF,
+                  msat_RFOpt                       !   optimize the L2 RF parameters.
+                  msat_WOramp 0.65, 0.05           ! Readjust the peakwidths, (WO ramp only).
+                  MSProfile                        ! To make sure report has correct settings.
+                endif
+          
+                msat_CheckGainCurve 1
+              endif !* if checkPeaks =1
+            
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_GENERATING_NEG_598)
+              mstn_DoGenReport ,3                  !print report for atunes.tun for negative mode
+              !* Save Negative tables in last object; set parameter to 1
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_PROFILE_599)
+              msat_SaveAtune 1                     !saves profile and scan data in atune register
+            
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_NEGATIV_600)
+              MSSaveTuneFile "atunes.tun",1        !saves atunes.tun for negative mode
+                  
+              ! Perform the fast scan tune adjustment:
+              if (MSD_SL = 1) and ((state=3) or (state=5)) then
+                msat_FastScan charge,TuneRegIndex,state
+              else
+                if (MSD_HT = 1) and ((state=3) or (state=5)) then
+                  msat_UltraFastScan charge,TuneRegIndex,state
+                endif ! (MSD_HT = 1)
+              endif !(MSD_SL = 1)
+            
+              ! alert user if multiplier getting high:
+              if instr(GainMsg$,"Warning") > 0 then
+                _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_WARNING__THE_M_605) + chr$(13) + \
+                          "Autotune completed, but system maintenance should be performed.",3)
+                AtunePrint ReadResource$("tunemac",ID_TUNEMAC_WARNING__THE_M_606)
+              endif
+            endif    !* if (state=0) or (state=3)
+            
+            msat_AutoCleanup saveStepsize, saveAverage            
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_AUTOTUNE_COMPL_607)
+            
+            endmacro !msat_auto
+            
+            !===============================================================================================            
+            !===============================================================================================
+            name GetIonSource       ! Get numeric value for Ion Source
+                                    ! -1 if it fails
+                                    ! 0 = API_ES
+                                    ! 1 = APCI
+                                    ! 2 = APPI
+                                    ! 3 = Multi mode
+                                    ! 4 = Nano source  (6100 Series and above)
+                                    ! 5 = ChipCube     (6100 Series and above)
+                                    ! 6 = AJS-ES       (6100 Series and above)
+            !===============================================================================================
+            Local lSrcType$
+            Local lDebug;   lDebug = 0 
+            
+                lSrcType$ = MSGetIonSrc$()        ! Which source is physically installed.
+                lSrcType$ = ConvertText$( upper, lSrcType$ )
+                If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+                    Print "GetIonSource(): Source type =", lSrcType$
+                Endif
+                If lSrcType$ = "AJS-ES" then
+                    Return 6
+                Endif   
+                If lSrcType$ = "CHIPCUBE" then
+                    Return 5
+                Endif
+                If lSrcType$ = "NANOESI" then
+                    Return 4
+                Endif
+                If lSrcType$ = "MM-ES+APCI" then
+            	Return 3
+                Endif
+                If lSrcType$ = "APPI" then
+                    Return 2
+                Endif
+                If lSrcType$ = "APCI" then
+                    Return 1
+                Endif
+                If lSrcType$ = "API_ES" then
+                    Return 0
+                Endif
+                Return -1 
+            endmacro    ! End of GetIonSource()
+            
+            !***********************************************************************************************
+            !********* end of file *************************************************************************

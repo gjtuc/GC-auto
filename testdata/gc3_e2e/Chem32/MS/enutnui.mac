@@ -1,0 +1,53 @@
+! EnuTnUI.mac  Macro to allow toggling between Full and Condensed data collection  **-Oct-96
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+! File:  EnuTnUI.mac
+!
+! Macros:  MSTN_UseCondensedData
+!      	   MSTN_UseFullData
+!
+!
+!====================================================================
+NAME MSTN_UseFullData
+!====================================================================
+    MSTN_FullData = 0x3
+    MSTN_CondensedData = 0x1
+    MSScanparm scantype,,1
+    MSPeakParm ,1
+
+ENDMACRO     !MSTN_UseFullData
+
+
+
+!====================================================================
+NAME MSTN_UseCondensedData
+!====================================================================
+    MSTN_FullData = 0x1
+    MSTN_CondensedData = 0x3
+    MSScanParm scantype,,0
+    MSPeakParm ,0
+
+ENDMACRO     !MSTN_UseCondensedData

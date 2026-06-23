@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="TLBSMSDA" PosStyle="Right" DockRow="0" DockCol="0" Caption="Math Calculation" PanelName="Chem">
+		<StickyButton Name="MultiplySpect" Help="Set the scale of ions in the selected range in MS Spectrum Window" CmdList="DeactivateMSMultiplySpectraButton | ActivateMSMultiplySpectraButton" ImageName="MathMS_SetScale20" ImageNameDisabled="MathMS_SetScale20_d"/>
+		<StickyButton Name="SumSpect" Help="Add selected MS spectrum/spectra to MS Spectrum Window" CmdList=" | ActivateMSSumSpectraButton" ImageName="MathMS_AddSpectrum20" ImageNameDisabled="MathMS_AddSpectrum20_d"/>
+		<StickyButton Name="SubtrSpect" Help="Subtract selected MS spectrum/spectra from the MS Spectrum Window" CmdList=" | ActivateMSSubtractSpectraButton " ImageName="MathMS_SubSpectrum20" ImageNameDisabled="MathMS_SubSpectrum20_d"/>
+		<PushButton Name="ClearSpect" Help="Reset the MS Spectrum Window" Command="DoMSClearSpectra" ImageName="MathMS_Rest20" ImageNameDisabled="MathMS_Rest20_d"/>
+		<PushButton Name="HelpSpect" Help="Help on Calculation Toolbar" Command="DoMSSpectraMathHelp" ImageName="Help20" ImageNameDisabled="Help20_d"/>
+		<PushButton Name="ExitSpect" Help="Exit the Calculation Toolbar mode" Command="DoMSSpectraMathExit" ImageName="Exit20" ImageNameDisabled="Exit20_d"/>
+	</toolbar>
+</graphical_object>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="SignalF" PosStyle="TOP" DockRow="1" DockCol="0" Caption="シグナル処理" PanelName="Chem">
+		<PushButton Name="AlignXaxis" Help="シグナルの時間軸で調整" Command="SIG_AlignAxis 38,0" NewGroup="1" ImageName="Signal_AlignX20" ImageNameDisabled="Signal_AlignX20_d"/>
+		<PushButton Name="AlignYaxis" Help="シグナルのレスポンス軸(縦軸)で調整" Command="SIG_AlignAxis 38,1" ImageName="Signal_Align_Y20" ImageNameDisabled="Signal_Align_Y20_d"/>
+		<PushButton Name="ResetSignalAxis" Help="シグナル調整リセット" Command="SIG_ResetSignalAxis 38" ImageName="Signal_AlignReset20" ImageNameDisabled="Signal_AlignReset20_d"/>
+		<PushButton Name="OverlaySignal" Help="'3D' シグナル重ね書き" Command="SIG_OverlaySignal" ImageName="Signal_3Doverlay20" ImageNameDisabled="Signal_3Doverlay20_d"/>
+		<PushButton Name="FlipSignal" Help="シグナル ミラー表示" Command="SIG_FlipSignal 1" ImageName="Signal_Mirror20" ImageNameDisabled="Signal_Mirror20_d"/>
+		<PushButton Name="SubtractSignal" Help="全シグナルから最後のシグナルを減算" Command="SIG_SubtractSignal" ImageName="Signal_Subtract20" ImageNameDisabled="Signal_Subtract20_d"/>
+		<PushButton Name="IntegrateAll" Help="全てのクロマトグラムを積分" Command="INT_BTNDoIntegFun Integrate" ImageName="Int_Integrate20" ImageNameDisabled="Int_Integrate20_d"/>
+		<PushButton Name="SmoothSignal" Help="全てのシグナル スムース" Command="MS_DoManualSmooth" Visible="0" ImageName="Signal_Smooth20" ImageNameDisabled="Signal_Smooth20_d"/>
+	</toolbar>
+</graphical_object>

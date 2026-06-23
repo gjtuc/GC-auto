@@ -1,0 +1,1796 @@
+! dgbg.mac
+! Background Test
+! First, it reads in the tune_mix.reg to determine the tune ions 
+! (either pass in as parameter or prompt user for input). Then it loads the 
+! TIC and Spectrum into chromreg and msreg registers respectively for 
+! integration and graphical output. At the end, it prints out the tune/isotope 
+! masses, abundances, and percentage and the 40 largest background ions with 
+! abundance above a threshhold.
+!
+! Subroutines:
+!   dgMsBackgrnd$        Main Subroutine
+!   dgMSBbInit$          Initialization routine
+!   dgMsBgCleanup        clean up macro for background test
+!   dgMsBgTableTestLine  adds tune and data anaylsis file name to test box line
+!   dgMsBgLoadDaFile$    loads new data analysis file
+!   dgMsBgDisplayTest    display background test
+!   dgMsBgPrintTest      print routine
+!   dgMsBgEditAcqTune$   show Tune ACQ edit box
+!   dgMsBgRunAcq$        run 20 scans
+!   dgMsBgTimeRange$ get evaluation time range
+!   dgMsBgReadParmFile$  get the mode and polarity of the msparms.txt file
+!
+! Related macros:
+!    tune_mix.reg
+!    enutnmix.mac
+!
+ BackgrndVer$ = "$Header: /cag/triath1b/partsmac/diag/dgbg.mac 1.30 2003-06-23 15:38:37-07 julie_zhao Exp $"
+ verIx = instr(BackgrndVer$, ".mac") + 5
+ BackgrndVer$ =  BackgrndVer$[verIx:VerIx + instr(BackgrndVer$[VerIx:len(BackgrndVer$)]," ") - 1] 
+ remove verIx
+
+!****************************************************************************
+
+NAME dgMsBgInit$
+
+PARAMETER start_time, end_time, bg_height
+
+!
+! Description: Initialization routine
+!
+!****************************************************************************
+! Revision History:
+! 12/08/98 YD   Added detector info for multiple signal support
+! 10/27/00 YD   Added data point checking to resolve the macro crash
+!                      problem.
+!****************************************************************************
+LOCAL Tune_Type$, file$, ScanNum, TuneMixIndex
+LOCAL UseSpecStabReg, oldRelativeHeight, oldInitHeight 
+LOCAL Detector$
+LOCAL i, iLen
+
+
+   if RegSize(ChromReg) < 1 then
+      Print "No chromatogram loaded."
+      STOP
+   endif
+   Detector$ = ""
+   if Check(variable, MS_ChromObjNum) = 0 then
+      MS_ChromObjNum = RegSize(ChromReg)
+   endif
+   if MS_ChromObjNum < 1
+      MS_ChromObjNum = RegSize(ChromReg)
+   endif
+   if (MS_ChromObjNum <= RegSize(ChromReg))
+      Detector$ = ObjHdrText$(ChromReg[MS_ChromObjNum], "Detector")
+   endif
+   ! If could not find the MSD detector name through MS_ChromObjNum,
+   ! try to get the first MSD detector name from ChromReg.
+   if InStr(Detector$, "MSD") = 0
+      iLen = RegSize(ChromReg)
+      for i=1 to iLen
+        Detector$ = ObjHdrText$(ChromReg[i], "Detector")
+        if InStr(Detector$, "MSD") > 0
+            MS_ChromObjNum = i
+            i = iLen + 1 
+        endif 
+      next i
+   endif
+      
+        !*************  GET A SPECTRUM  ****************
+
+!As a speed optimization, check for a SpecStabReg for the same data
+!file.  If present, simply copy SpecStabReg's data over.
+
+  if (regSize(SpecStabReg) > 0) then
+    if (ObjHdrText$(ChromReg,    "RawDataFile") = \
+        ObjHdrText$(SpecStabReg, "RawDataFile")) then
+      UseSpecStabReg = 1
+      ! can we assume that DaDataPath$ & DaDataFile$ are set correctly?
+    endif
+  else   ! SpecStabReg not there or for different file
+    ! An existing Result_Reg with no "TuneType" item triggers a file
+    ! selection
+    if regSize(Result_Reg) > 0 then
+      if ObjHdrType(Result_Reg[1], "TuneType") = 99 then
+        file$= dgMsBgLoadDaFile$(DaDataPath$ + DaDataFile$)
+      endif
+    endif
+  endif !*** if (regSize(SpecStabReg) > 0) ***!
+   
+  Tune_type$ = dgMsBgReadParmFile$(DaDataPath$ + DaDataFile$)
+
+  DelReg Result_Reg
+   
+  start_time = MAX(start_time, ObjHdrVal(ChromReg, "Start"))
+  end_time   = MIN(end_time,   ObjHdrVal(ChromReg, "End"))
+   
+!FIND OUT IF USING TIME OR SCAN NUMBERS 
+  ScanNum = 1
+  ! 10/27/00 YD  Added the following section of code to avoid macro crash
+  if DataCols(ChromReg) < 3
+     print "Test Failed : Not enough MSD data points."
+     return "FAILED."
+  endif
+  on error print
+  for i = 1 to 3
+     if floor(Data(ChromReg, 0, i)) <> Data(ChromReg, 0, i) then
+       ScanNum = 0
+     endif
+  next i
+  on error
+
+    if UseSpecStabReg = 1 then
+    print "Loading background data from SpecStabReg..."
+    DelReg MSReg
+    !JUST GET A SINGLE SPECTRUM 
+    ! YD  Added detector info
+    LoadMSSpectrum MSReg, start_time:start_time, , Detector$  
+    !OVERWRITE IT WITH AVERAGED SPECTRUM FROM SpecStabReg
+    CopyDataRow SpecStabReg, 0,, MSReg
+    CopyDataRow SpecStabReg, 1,, MSReg
+
+  else   !*** LOAD AND AVERAGE ALL SPECTRA IN THE TIME PERIOD ***! 
+   
+    if ScanNum = 1 then
+      Print "LC/MSD Background: averaging spectra " + \
+             Sprintf$(start_time, "%1.0f") + " to " + \
+             Sprintf$(end_time, "%1.0f")
+    else
+      Print "LC/MSD Background: averaging spectra from " + \
+            Sprintf$(start_time, "%1.2f") + " to " + \
+            Sprintf$(end_time, "%1.2f")
+    endif
+
+    !LOAD MS SPECTRUM AND CHECK SIZE  
+    DelReg MSReg
+    ! YD  Added detector info
+    LoadMSSpectrum MSReg, start_time:end_time, , Detector$
+    if RegSize(MSReg) < 0 then
+       print "No MSD Spectrum found."
+       return "Error: No MS Spectrum."
+    endif
+  
+  endif !*** if UseSpecStabReg = 1 ***!
+
+ 
+  
+     ! ************  INITIALIZE RESULT REGISTER  ****************                         
+  
+!Clean up the used result register and copy the restore information to
+!a temporary register
+   
+  delReg RESULT_tmp
+  if RegSize(Result_Reg) > 0 then
+    CopyObj Result_Reg, RESULT_tmp
+    delReg Result_Reg
+  endif
+
+  CopyObj MSReg, Result_Reg
+
+  !*** STORE SOME HEADER ITEMS ***! 
+  SetObjHdrVal  Result_Reg, "StartScan", start_time
+  SetObjHdrVal  Result_Reg, "EndScan",   end_time
+  SetObjHdrVal  Result_Reg, "ScanNum",   ScanNum
+  SetObjHdrText Result_Reg, "TuneType",  Tune_Type$
+  SetObjHdrText Result_Reg, "DateTimeAcq", ObjHdrText$(ChromReg, "DateTime")
+  SetObjHdrText Result_Reg, "OperatorAcq", ObjHdrText$(ChromReg, "Operator")
+  SetObjHdrText Result_Reg, "SampleName",  ObjHdrText$(ChromReg, "SampleName")
+
+  dgMSTestInfo "BackgndChart", "dgMsBgDisplayTest", BackGrndVer$ 
+
+  ! ************* INITIALIZE THE TABLES *****************
+ 
+!BACKGROUND IONS TABLE 
+  NewTab     Result_Reg[1], "BackGndIons"
+  NewColText Result_Reg[1], "BackGndIons", "mz"
+  NewColVal  Result_Reg[1], "BackGndIons", "mzVal"
+  NewColText Result_Reg[1], "BackGndIons", "abundance"
+  NewColVal  Result_Reg[1], "BackGndIons", "AbundVal"
+  NewColText Result_Reg[1], "BackGndIons", "Percent"
+
+!EXPECTED IONS TABLE  
+  CopyTab Result_Reg[1], "BackGndIons", Result_Reg[1], "ExpectedIons"
+   
+!FINAL RESULTS TABLE: WEDGE IT ALL IN HERE 
+  NewTab Result_Reg[1], "TestResultTab"
+  NewColText Result_Reg[1], "TestResultTab", "Text",      
+  NewColText Result_Reg[1], "TestResultTab", "mz1",        
+  NewColText Result_Reg[1], "TestResultTab", "Abundance1", 
+  NewColText Result_Reg[1], "TestResultTab", "Percent1",   
+  NewColText Result_Reg[1], "TestResultTab", "mz2",    
+  NewColText Result_Reg[1], "TestResultTab", "Abundance2", 
+  NewColText Result_Reg[1], "TestResultTab", "Percent2",   
+   
+!MAKE A COPY OF THE TUNE MIX IONS TABLE IN THE TUNE MIX REGISTER 
+  TuneMixIndex = msat_SelectTuneMix(Tune_Type$)
+  CopyTab TuneMixReg[TuneMixIndex], "TuneIons", Result_Reg[1], "TuneIons"
+   
+!ADD A BOGUS TUNE MASS ABOVE THE MASS RANGE SO THE CATEGORIZATION LOOP 
+!WILL COVER THE WHOLE MASS RANGE 
+  GetDataMinMax MSReg, 0
+  InsTabRow Result_Reg[1], "TuneIons"
+  SetTabVal Result_Reg[1], "TuneIons", TabHdrVal(Result_Reg[1], "TuneIons", \
+            "NumberOfRows"), "mz", OBJ_MAX + 1
+!LOAD METHOD SO THAT EVENT_MSD1SPC TABLE EXISTS
+ ! set the method name
+  _MethFile$ = "MSCAFCAL.M"
+ 
+  ! load the acq parameters
+  LoadMethParams
+ 
+  ! load the da method parameters
+  LoadDAmethod
+ 
+  ! call the hook the load method
+  ExecHook "LoadMethod"
+  
+!FIND IONS WITH SPECIFIED THRESHOLD   
+  OldRelativeHeight = TabHdrVal(_DAMethod[1], Event_MSD1SPC, RelativeHeight)
+  OldInitHeight     = TabHdrVal(_DAMethod[1], Event_MSD1SPC, InitHeight)
+  Print "Integrating with threshhold " + val$(bg_height)
+  SetTabHdrVal  _DaMethod[1], Event_Msd1Spc, RelativeHeight, 0
+  SetTabHdrVal  _DaMethod[1], Event_Msd1Spc, InitHeight, bg_height
+  LDMS_IntegrateSpectra 1, 0  ! Find ions
+  
+
+!RESTORE FIND IONS
+  SetTabHdrVal _DAMethod[1], Event_MSD1SPC, RelativeHeight, OldRelativeHeight
+  SetTabHdrVal _DAMethod[1], Event_MSD1SPC, InitHeight, OldInitHeight
+   
+!COPY OVER THE INTRESULT TABLE  
+  CopyTab MSReg, IntResults, Result_Reg[1], IntResults
+
+!COPY DA METHOD INFO 
+  SetObjHdrVal Result_Reg[1], IntegMode, 2
+  CopyTab _DaMethod[1], IntMth6MSD,    Result_Reg[1], IntMth6MSD
+  CopyTab _DaMethod[1], Event_MSD1Spc, Result_Reg[1], Event_MSD1Spc
+  delReg dgTmpDaMethod
+
+  print "DgMSBgInit done."
+  return ""   !*** NO ERRORS ***!
+
+ENDMACRO  !*** dgMsBgInit$ ***!
+
+
+
+!*****************************************************************************
+
+NAME dgMsBackgrnd$
+
+PARAMETER start_time default   1
+PARAMETER end_time   default  20
+PARAMETER bg_height  default 500
+PARAMETER bg_spec    default   0.05
+
+!
+! Description: Consider adding a parameter to control whether tune mix
+!              reg ions arelisted separately
+!
+! Revision History:
+! 09/11/99 YD  Fixed a bug in the Expected Ions searching in this original
+!                     routine  which caused program to crash.
+! 04/21/03 JZ  Setup _ABORT$ string for Background test.
+!*****************************************************************************
+LOCAL ti_counter        ! Tune Ion counter in table TuneIons
+LOCAL TuneMixIndex      ! Index of tune mix register
+LOCAL num_tune_ions     ! Total number of tune ions in TuneMixReg
+LOCAL tune_mass         ! Target Tune mass axis
+LOCAL ion_mass          ! Mass axis in Spectrum
+LOCAL ion_height        ! Mass abundance in Spectrum
+LOCAL rel_height        ! Relative abundance
+LOCAL prev_ion_height   ! Height of next lower ion, used for isotope ratio calcs
+LOCAL NumBkIons         ! maximum number of ions to report
+LOCAL MaxIon            ! Highest abundance ion in table 
+LOCAL BasePeakAbund     ! Highest abundance ion in spectrum
+LOCAL PeakCounter       ! Number of peaks above threshhold
+LOCAL nPeaks            ! Number of integrated mass peaks
+LOCAL BkIon, Peak       ! for loop variables
+LOCAL result$, date$, Time$, BkRow, RowSet$, Text$, Text2$, i
+LOCAL AnnIndex,  BackIon
+LOCAL initReturn$, TitleText$, mz_label$
+LOCAL rownum
+LOCAL findMass, FindMassName$
+
+  ON ERROR goto ERRORTRAP
+
+  NumBkIons =  36      !MAX NUMBER OF IONS TO REPORT
+  result$   =  NlsMsDiag$("Passed")
+
+!INITIALIZATION ROUTINE
+  InitReturn$ = dgMsBgInit$(start_time, end_time, bg_height)
+  if InitReturn$ <> "" then
+    DgMsBgCleanup
+    return InitReturn$
+  endif
+
+! JZ Setup Abort routine
+  if (check(Variable, _abort$) = 0) then
+     _abort$ = ""
+   endif
+  _abort$ = "DgMsBgCleanup;"+_abort$
+
+!GET SOME BASIC STATS
+  nPeaks = TabHdrVal(MSReg[1], IntResults, "NumberOfRows")
+  num_tune_ions = TabHdrVal(Result_Reg[1], "TuneIons", \
+                            "NumberOfRows")
+  TuneMixIndex = msat_SelectTuneMix(ObjHdrText$(Result_Reg, "TuneType"))
+
+!GET BASE PEAK ABUNDANCE
+ !
+  if nPeaks > 0 then
+    rownum = RowByVal(Result_Reg[1], intresults,, "Height", "max")
+    BasePeakAbund = TabVal(Result_Reg[1], intresults, rownum, "height")
+  else
+    BasePeakAbund = 1
+  endif
+  peakCounter = TabHdrVal(MSReg[1], "IntResults", "NumberOfRows")
+
+!ADD TEST SPECIFIC INFO TO RESULT REGISTER    
+  SetObjHdrText Result_Reg[1], "bgPeakText",    Text$
+  SetObjHdrVal  Result_Reg[1], "bgPeakCounter", PeakCounter
+  SetObjHdrVal  Result_Reg[1], "bgThreshold",   bg_height
+  SetObjHdrVal  Result_Reg[1], "bgSpectrum",    bg_spec
+
+!ADD SPECTRUM TITLE TO DISPLAY 
+  Text$ =SprintF$(peakCounter, "%1d ions found above ") + val$(bg_height) + \
+                  " counts"
+  print Text$
+  if ObjHdrVal(Result_Reg, "ScanNum") = 1 then
+    TitleText$ = "MSD1 SPC, scan # " + Sprintf$(start_time, "%1.0f") + \
+                 ":" + Sprintf$(end_time, "%1.0f")
+  else
+    TitleText$ = "MSD1 SPC, time: " + Sprintf$(start_time, "%1.2f") + \
+                 ":" + Sprintf$(end_time, "%1.2f")
+  endif
+  TitleText$ = TitleText$ + " from " + \
+                ObjHdrText$(chromreg[1], "RawDataFile")+": "+text$
+
+  DelAnn Result_Reg[1],,1
+  AnnIndex=NewTextAnn(Result_Reg[1], TitleText$,,,, 1)
+
+  BkRow=0; row=0
+
+!PRINT OUT TUNE IONS FIRST 
+!ADD TITLE BAR FOR TUNE MASSES 
+  InsTabRow  Result_Reg[1], "TestResultTab", 1:3
+  SetTabText Result_Reg[1], "TestResultTab", 1, "mz1",\
+         ObjHdrText$(ChromRes, "InjDateTime")
+  SetTabText Result_Reg[1], "TestResultTab", 1, "Abundance1", \
+                             ObjHdrText$(Result_Reg[1], "TuneType")
+  SetTabText Result_Reg[1], "TestResultTab", 2, "mz1", "Expected Background Ions"
+  row = 3
+  SetTabText Result_Reg[1], "TestResultTab", row, "mz1",        "Calibrant Mass"
+  SetTabText Result_Reg[1], "TestResultTab", row, "Abundance1", "Abundance"
+  SetTabText Result_Reg[1], "TestResultTab", row, "Percent1",   "Percent"
+  SetTabText Result_Reg[1], "TestResultTab", row, "mz2",        "Iso Mass"
+  SetTabText Result_Reg[1], "TestResultTab", row, "Abundance2", "Iso Abund"
+  SetTabText Result_Reg[1], "TestResultTab", row, "Percent2",   "Iso Ratio"
+
+  ! ------------ IDENTIFY AND CATEGORIZE EACH INTEGRATED PEAK ---------------
+  
+  print "Analyzing spectrum..."
+  ti_counter = 1; target=0
+
+  if (nPeaks = 0) then
+     Text$ = SprintF$(bg_height, "Background Ions (thresh. %1.0f cnt)")
+     Print Text$
+     SetTabText Result_Reg[1], "TestResultTab", 2, "mz1", Text$
+     SetTabText Result_Reg[1], "TestResultTab", 2, "Abundance1", "None found"
+     DelTabRow  Result_Reg[1], "TestResultTab", 3
+     DelTabCol  Result_Reg[1], "TestResultTab", "Percent1"
+     DelTabCol  Result_Reg[1], "TestResultTab", "mz2"
+     DelTabCol  Result_Reg[1], "TestResultTab", "Abundance2"
+     DelTabCol  Result_Reg[1], "TestResultTab", "Percent2"
+     SetObjHdrText Result_Reg[1], "BgIonText", "No background ions found " + \
+                    SprintF$(bg_height, "(thresh %1d counts)")
+  else
+
+     for peak = 1 to nPeaks
+       ! print("PEAK = ") + val$(peak)
+       ! print("NPEAKS = ") + val$(nPeaks)
+       if ti_counter <= num_tune_ions then
+         tune_mass = TabVal  (Result_Reg[1], "TuneIons", ti_counter, "mz")
+         mz_label$ = TabText$(Result_Reg[1], "TuneIons", ti_counter, "Name")
+         ion_mass  = TabVal  (Result_Reg[1], "IntResults", peak, "rettime")
+         prev_ion_height = ion_height
+         ion_height = TabVal(Result_Reg[1], "IntResults", peak, "height")
+
+         !CHECK IN CASE THE TUNE_MASS IS MISSING  
+         if (ion_mass > (tune_mass + 1.7)) then
+            ! 1.MISSING TUNE MASS  ( i < t+1.7 )
+            !----------------------------------
+            print SprintF$(tune_mass, "Missing tune mass at %4.2f")
+            InsTabRow  Result_Reg[1], "TestResultTab"
+            row=row+1
+            SetTabText Result_Reg[1], "TestResultTab", row, "Text", "not found"
+            SetTabText Result_Reg[1], "TestResultTab", row, "mz1", \
+                   mz_label$ + SPrintf$(tune_mass, "%8.2f")
+            SetTabText Result_Reg[1], "TestResultTab", row, "Abundance1","0"
+            SetTabText Result_Reg[1], "TestResultTab", row, "Percent1",  "0.0"
+
+            !GOTO NEXT TUNE MASS 
+            ti_counter = ti_counter + 1; target=0
+         endif
+
+         !CLASSIFY AS BACKGROUND ION, TARGET PEAK OR ISOTOPE 
+         if (ion_mass > (tune_mass - 0.3) ) and \
+            (ion_mass < (tune_mass + 1.7) ) then
+               print "Found tune mass at ", tune_mass
+         
+            if (ion_mass > (tune_mass + 0.7) ) then
+              ! 3.ISOTOPE   ( t+ 0.7 < i < t+1.7 )
+              !-----------------------------------
+              print SprintF$(tune_mass, "%4.2f is an isotope")
+              !SAVE ISOTOPE DATA IN RESULT TABLE 
+              if target=0 then
+                !DETECTED ISOTOPE WITHOUT TARGET PEAK 
+                InsTabRow Result_Reg[1], "TestResultTab"
+                row=row+1
+                SetTabText Result_Reg[1], "TestResultTab", row, "Text", \
+                                            "Isotope only"
+              endif
+
+              SetTabText Result_Reg[1], "TestResultTab", row, "mz2", \
+                                           SPrintf$(ion_mass, "%1.2f")
+              SetTabText Result_Reg[1], "TestResultTab", row, "Abundance2", \
+                                          SPrintf$(ion_height, "%1.0f")
+              SetTabText Result_Reg[1], "TestResultTab", row, "Percent2", \
+                            SPrintf$(ion_height/prev_ion_height*100, "%1.1f")
+              
+              !GET NEXT TUNE MASS AND SEARCH FOR NEXT TARGET PEAK 
+              ti_counter = ti_counter + 1; target=0
+             
+            else
+
+              ! 2.TARGET PEAK  ( t-0.3 < i <= t+0.7 )
+              !-------------------------------------
+              !SAVE TARGET PEAK DATA IN RESULT TABLE 
+              print SprintF$(ion_mass, "%4.2f is " + mz_Label$)
+              target=1
+              InsTabRow  Result_Reg[1], "TestResultTab"
+              row=row+1
+              SetTabText Result_Reg[1], "TestResultTab", row, "Text", \
+                                          mz_label$
+              SetTabText Result_Reg[1], "TestResultTab", row, "mz1", \
+                                mz_label$ + SPrintf$(ion_mass, "%8.2f")
+              SetTabText Result_Reg[1], "TestResultTab", row, "Abundance1",\
+                                           SPrintf$(ion_height, "%1.0f")
+              SetTabText Result_Reg[1], "TestResultTab", row, "Percent1", \
+                                SPrintf$(ion_height/BasePeakAbund*100, "%1.1f")
+           
+            endif !*** if (ion_mass > (tune_mass + 0.7) ) ***
+         else
+            ! 4. BACKGROUND ION ( i < t-0.3 )
+            !--------------------------------
+            if ion_height > bg_height then
+               print SprintF$(ion_mass, "%4.2f is a background ion")
+               InsTabRow Result_Reg[1], "BackGndIons"
+               BkRow=BkRow+1
+               rel_height = ion_height / BasePeakAbund
+               ! print ion_mass, ion_height
+               SetTabVal  Result_Reg[1], "BackGndIons", BkRow, "AbundVal", \
+                                            ion_height
+               SetTabVal  Result_Reg[1], "BackGndIons", BkRow, "mzVal", \
+                                            ion_mass
+               SetTabText Result_Reg[1], "BackGndIons", BkRow, "abundance", \
+                                          SPrintf$(ion_height, "%1.0f")
+               SetTabText Result_Reg[1], "BackGndIons", BkRow, "percent",  \
+                                          SPrintf$(rel_height*100, "%1.1f")
+               if rel_height > bg_spec then
+                 !ABOVE RELATIVE ABUNDANCE SPECTRUM 
+                 SetTabText Result_Reg[1], "BackGndIons", BkRow, "mz", \
+                                          SPrintf$(ion_mass, "%1.2f *") 
+                 result$    = NlsMsDiag$("Failed")
+               else
+                 !IN RANGE 
+                 SetTabText Result_Reg[1], "BackGndIons", BkRow, "mz",  \
+                                             SPrintf$(ion_mass, "%1.2f  ")
+               endif
+            endif !***  if ion_height > bg_height ***!
+         endif !*** if (ion_mass > (tune_mass + 1.7)) ***!    
+       endif !*** if ti_counter <= num_tune_ions ***!   
+     next peak !***  for peak = 1 to nPeaks ***!
+     
+     ! Remove any lines where the tune mass and the isotope are both not 
+     ! found
+     NumRows = TabHdrVal(Result_Reg[1], "TestResultTab", "NumberOfRows")
+     for i = 2 to NumRows
+        if TabText$(Result_Reg[1], "TestResultTab", i, "Text") = "not found" \
+           and val(TabText$(Result_Reg[1], "TestResultTab", i, "mz2")) = 0 then
+              DelTabRow Result_Reg[1], "TestResultTab", i
+              i = i - 1
+              NumRows = NumRows - 1
+        endif
+     next i
+    
+   !PICK OUT THE EXPECTED IONS TABLE FROM THE LEFTOVERS 
+     ! make a copy of the result table to add the expected background ions to
+     CopyTab Result_Reg[1], TestResultTab, Result_Reg[1], BackTab 
+     DelTabRow Result_Reg[1], BackTab, -1
+     InsTabRow Result_Reg[1], BackTab
+     SetTabText Result_Reg[1], BackTab, 1, "mz1", "Background"
+     SetTabText Result_Reg[1], BackTab, 1, "Abundance1", "Abundance"
+     SetTabText Result_Reg[1], BackTab, 1, "Percent1", "Percent"
+     
+     Print "Finding expected ions"
+     peak = 1
+     BackIon  = 0
+     RowNum   = 2
+     numpeaks = TabHdrVal(TuneMixReg[TuneMixIndex], "BackGndIons", \
+                            "NumberOfRows") 
+     ! print ("numpeaks = ") + val$(numpeaks) 
+     
+     for i = 1 to numpeaks
+        !FIND IF ANY OF THE EXPECTED IONS ARE IN THE LIST 
+        findMass = TabVal(TuneMixReg[TuneMixIndex], "BackGndIons", i, "mz") 
+        findMassName$ = TabText$(TuneMixReg[TuneMixIndex], "BackGndIons", i, "Name")
+        ! print i, numpeaks, findmass, findmassname$
+        
+        while (BackIon <= (findMass -0.3)) and (peak <= bkrow) do      
+           BackIon = TabVal(Result_Reg[1], "BackGndIons", peak, "mzVal")
+           if (BackIon <= (findMass + 0.7)) and \
+               (BackIon >= (findMass - 0.3)) then
+              print SprintF$(backIon, "Expected background ion at %4.2f")
+              CopyObjTabRow Result_Reg[1], "BackGndIons", peak:peak, \
+                            Result_Reg[1], "ExpectedIons" 
+              InsTabRow Result_Reg[1], BackTab
+              RowNum = TabHdrVal(Result_Reg[1], BackTab, "NumberOfRows")
+              SetTabText Result_Reg[1], BackTab, rowNum, "mz1", SprintF$(FindMass, \
+                         FindMassName$ + "%8.2f")
+              SetTabText Result_Reg[1], BackTab, rowNum, "Abundance1", \
+                         TabText$(Result_Reg[1], "BackGndIons", peak, "Abundance")
+              SetTabText Result_Reg[1], BackTab, rowNum, "Percent1",  \
+                         TabText$(Result_Reg[1], "BackGndIons", peak, "Percent")
+              DelTabRow Result_Reg[1], "BackGndIons", peak
+              ! 09/11/99 YD  Fixed a bug in this original routine which caused program to crash.
+              bkrow = bkrow - 1
+           else 
+              peak = peak + 1
+           endif
+        endwhile   
+     next i
+    
+   !MAKE A COPY OF THE TUNE TARGET AND ISOTOPE TABLE FOR PRINT PURPOSE
+     CopyTab Result_Reg[1], TestResultTab, Result_Reg[1], TuneTab
+     DelTabRow Result_Reg[1], TuneTab, 1:2
+
+   !SORT BACKGROUND ION TABLE BY ABUNDANCE FROM MAX TO MIN
+   !AND COPY THE SORTED ROWS ALSO TO THE TEST RESULT TABLE FOR DIPSLAY PURPOSE 
+     NumBkIons = Min(NumBkIons, TabHdrVal( Result_Reg[1], "BackGndIons", \
+                     "NumberOfRows"))
+     BkRow=0
+     
+   !*** ACTUAL SORT ALGORITHM ***!
+     if NumBkIons < 1 then
+        SetObjHdrText Result_Reg[1], "BgIonText", "No background ions found " + \
+                    SprintF$(bg_height, "(thresh %1d counts)")
+     endif  
+
+     Row = TabHdrVal(Result_Reg, "TestResultTab", "NumberOfRows")
+     for BkIon = 1 to NumBkIons
+        !ADD TITLE FOR BACKGROUND IONS INTO TEST RESULT TABLE 
+        if BkIon = 1 then
+           InsTabRow  Result_Reg[1], "TestResultTab"
+           InsTabRow  Result_Reg[1], "TestResultTab"
+           row = row + 2
+           Text$ = SprintF$(bg_height, "Background Ions (thresh. %1.0f cnt)")
+           SetTabText Result_Reg[1], "TestResultTab", row, "mz1", Text$
+           SetTabText Result_Reg[1], "TestResultTab", row, "Abundance1", \
+                      val$(NumBkIons)
+           Text2$ = SprintF$(bg_spec*100, "*: > %3.1f") + "%"
+           SetTabText Result_Reg[1], "TestResultTab", row, "mz2", Text2$
+
+           SetObjHdrText Result_Reg[1], "BgIonText", val$(nPeaks) + " " + \
+                         Text$ + "; " + Text2$
+
+           !ADD TITLE BAR FOR BACKGROUND IONS 
+           InsTabRow  Result_Reg[1], "TestResultTab"
+           row=row+1
+           SetTabText Result_Reg[1], "TestResultTab", row, "mz1", "Background"
+           SetTabText Result_Reg[1], "TestResultTab", row, "Abundance1", "Abundance"
+           SetTabText Result_Reg[1], "TestResultTab", row, "Percent1", "Percent"
+           SetTabText Result_Reg[1], "TestResultTab", row, "mz2", "Background"
+           SetTabText Result_Reg[1], "TestResultTab", row, "Abundance2", "Abundance"
+           SetTabText Result_Reg[1], "TestResultTab", row, "Percent2", "Percent"
+        
+           !SAVE ROW NUMBER OF FIRST BACKGOURND ENTRY 
+           BkRow=Row
+        
+       endif !*** if BkIon = 1 ***!
+setverbose 0       
+       if BkIon <= Ceil( NumBkIons/2 ) then
+         !USE FIRST SET OF ROWS TO DISPLAY BACKGROUND IONS         
+         InsTabRow  Result_Reg[1], "TestResultTab"
+         row= BkRow + BkIon
+         RowSet$="1"
+       else
+         !USE THE SECOND SET       
+         BkRow = BkRow +1
+         row= BkRow 
+         RowSet$="2"
+       endif
+       
+       !GET NEXT ROW WITH HIGHEST ABUNDANCE 
+       MaxIon = RowByVal(Result_Reg[1], "BackGndIons", BkIon:-1, \
+                                         "AbundVal", "max")
+
+       !APPEND BACKGRD IONS TO THE TUNE MIX RESULTS FOR DISPLAY PURPOSE 
+       SetTabText Result_Reg[1], "TestResultTab", row, "Text", "Background ion"
+       SetTabText Result_Reg[1], "TestResultTab", row, "mz"+RowSet$, \
+                   TabText$(Result_Reg[1], "BackGndIons", MaxIon, "mz")
+       SetTabText Result_Reg[1], "TestResultTab", row, "abundance"+RowSet$, \
+                   TabText$(Result_Reg[1], "BackGndIons", MaxIon, "abundance")
+       SetTabText Result_Reg[1], "TestResultTab", row, "percent"+RowSet$, \
+                   TabText$(Result_Reg[1], "BackGndIons", MaxIon, "percent")
+
+       !SORT TABLE: MOVE CURRENT MAX ABUNDANCE ROW UP 
+       if MaxIon <> BkIon then
+         ExchangeTabRow Result_Reg[1], "BackGndIons", BkIon, MaxIon
+       endif
+     next BkIon !***  for BkIon = 1 to NumBkIons ***!
+                   
+   !USE ONLY THE FIRST NumBkIons BACKGROUND IONS AND DELETE THE REST
+      if NumBkIons < TabHdrVal( Result_Reg[1], "BackGndIons", "NumberOfRows") then
+        DelTabRow Result_Reg[1], "BackGndIons", (NumBkIons+1):-1
+      endif
+      
+   !MOVE THE TUNE IONS TO THE END OF THE TABLE
+      InsTabRow Result_Reg[1], "TestResultTab"
+      RowNum = RowByText(Result_Reg[1], "TestResultTab",, "mz1", "in", \
+                         "Background Ions")
+      MoveTabRow Result_Reg[1], "TestResultTab", RowNum:TabHdrVal(Result_Reg[1], \
+                                "TestResultTab", "NumberOfRows"), 2
+
+   !MOVE THE EXPECTED BACKGROUND IONS TO THE END OF THE TABLE
+   if TabHdrVal(Result_Reg[1], "BackTab", "NumberOfRows") > 1 then
+      InsTabRow Result_Reg, "TestResultTab"
+      RowNum = TabHdrVal(Result_Reg[1], "TestResultTab", "NumberOfRows")
+      for i = 1 to TabHdrVal(Result_Reg[1], "BackTab", "NumberOfRows")
+         InsTabRow Result_Reg[1], "TestResultTab"
+         RowNum = RowNum + 1
+         SetTabText Result_Reg[1], "TestResultTab", RowNum, "mz1", \
+                    TabText$(Result_Reg[1], BackTab, i, "mz1")
+         SetTabText Result_Reg[1], "TestResultTab", RowNum, "Abundance1", \
+                    TabText$(Result_Reg[1], BackTab, i, "Abundance1")
+         SetTabText Result_Reg[1], "TestResultTab", RowNum, "Percent1", \
+                    TabText$(Result_Reg[1], BackTab, i, "Percent1")
+      next i
+    endif
+    
+  endif    ! if nPeaks > 0
+    
+!SAVE IN DIAGNOSIS PATH FOR EASY RESTRIEVAL
+ending:
+   SaveObj Result_Reg, _diagnosePath$ +  "dgbgtest.dgr", NEW
+
+!SAVE IN DATA DIRECTORY FOR ARCHIVING 
+   SaveObj Result_Reg, ObjHdrText$(ChromReg, "RawDataFile") +  \
+           "\dgbgtest.dgr", NEW
+
+   result$ = "Completed"
+   SetObjHdrText Result_Reg[1], "TestResAll", result$
+   dgMsBgDisplayTest 0
+
+   dgMsBgCleanup
+
+   Print "Background test " + result$
+   return result$
+
+ ErrorTrap:
+   On Error
+   if RegSize(Result_Reg) > 0 then
+     SetObjHdrText Result_Reg[1], "ErrMsg", _ErrMsg$
+     SetObjHdrText Result_Reg[1], "ErrMacro", _ErrMacro$
+   endif
+   dgMsPrintError
+   dgMsBgCleanUp
+   Generate Error 55555, "MSD Background Test ("+_ErrMacro$+"):"+_ErrMsg$
+   result$=NlsMsDiag$("Error")
+   if regSize(Result_Reg) > 0 then
+      SetObjHdrText Result_Reg[1], "TestResAll", result$
+   endif
+   return result$
+
+ENDMACRO !dgMsBackgrnd$ (main macro)
+
+
+!*****************************************************************************
+
+NAME dgMsBgCleanup
+
+! 4/21/03 JZ  Remove dgMsBgCleanup from _ABORT$ string
+!*****************************************************************************
+ 
+Local AbortCmd$
+Local Pos, LenAbort, LenCmd
+
+!COPY TEMPORARY REGISTER WITH THE RESTORE INFORMATION  
+!BACK TO THE RESULT REGISTER 
+  if RegSize( RESULT_tmp ) > 0 then
+    delReg Result_Reg
+   CopyObj RESULT_tmp, Result_Reg
+    delReg RESULT_tmp
+  endif
+
+!IF NO RESULT REGISTER EXISTS THEN END THE CLEAN UP HERE 
+  if RegSize(Result_Reg) < 1 then
+    return
+  endif
+ 
+!RESET TUNE GLOBALS 
+  if ObjHdrType(Result_Reg[1], "OldSnapShot") <> 99 then
+     !CLOSE OPEN MS DATA FILE 
+     MsClose
+
+     if ObjHdrVal(Result_Reg[1], "OldSnapShot") <> -1 then
+       SNAPSHOT=ObjHdrVal(Result_Reg[1], "OldSnapShot")
+    endif
+
+     if ObjHdrType(Result_Reg[1], "MsDataPath") <> 99 then
+       MsDataPath$=ObjHdrText$(Result_Reg, "MsDataPath")
+     endif
+     if ObjHdrType(Result_Reg[1], "MsDataFile") <> 99 then
+       MsDataFile$=ObjHdrText$(Result_Reg, "MsDataFile")
+     endif
+   endif
+
+!RESTORE SCAN PARAMETERS 
+   if ObjHdrType(Result_Reg[1], "MsEdDisp") <> 99 then
+     if ObjHdrVal(Result_Reg[1], "MsEdDisp") = 0 then
+       if Check (Variable, oldLowMass) = 1 then
+         MSScanParm LowMass,, oldLowMass
+         MSScanParm HiMass,, oldHiMass
+         MSSamples ,   oldSamples
+         MSStepSize,   oldStepSize
+         MSAverages,   oldAverages
+         MSFilterMass, oldFilter$,, oldFilterParm
+        
+         Remove oldLowMass, oldHiMass, oldSamples, oldStepSize, oldAverages
+         Remove oldFilter$, oldFilterParm
+      endif
+    endif
+   endif
+
+!RESET DA DATA FILE 
+  if ObjHdrType( Result_Reg[1], "OldDaFile" ) <> 99 then
+    DaDataFile$=ObjHdrText$(Result_Reg[1], "OldDaFile")
+  endif
+  if ObjHdrType( Result_Reg[1], "OldDaPath" ) <> 99 then
+    DaDataPath$=ObjHdrText$(Result_Reg[1], "OldDaPath")
+  endif
+
+!CLEAR TUNE WINDOW 
+  clearwin MSDA_MSWin
+
+!RESTORE WINDOW TABLE IF ABORTED DURING MODIFICATION          
+  if RegSize(dgbgTemp) > 0 then
+    if ObjHdrType(dgbgTemp, "Window") <> 99 then
+      delTab  _config[1], "window"
+      CopyTab dgbgtmp, "Window", _config[1], "window"
+   endif
+    delobj dgbgtemp
+  endif
+
+! JZ DELETE CLEAN UP MACRO FROM _ABORT$ STRING
+  AbortCmd$="dgMsBgCleanup;"
+  Pos=InStr(_abort$,Abortcmd$)
+  IF Pos>0 THEN
+    LenAbort=Len(_abort$)
+    LenCmd=Len(AbortCmd$)
+    if Pos=1 THEN
+      _abort$= _abort$[Pos+LenCmd:LenAbort]
+    else
+      if (Pos+LenCmd)<LenAbort
+        _abort$= _abort$[1:Pos-1] + _abort$[Pos+LenCmd:LenAbort]
+      else
+        _abort$= _abort$[1:Pos-1]
+      endif
+    endif
+  ENDIF
+ 
+ENDMACRO !dgMsBgCleanup
+
+ 
+!*****************************************************************************
+
+NAME dgMsBgTableTestLine
+ 
+PARAMETER TestId$
+PARAMETER DaLineNum 
+PARAMETER TuneLineNum 
+
+!
+! Description: Edit an existing test line of the TestId by overwriting the
+!              test line LineNum with "1. Select new data file ("+DaFile$+")."
+!              and also controls the used tune file name in the next line.
+!              Generates the result register temporary.
+!
+!*****************************************************************************
+LOCAL daFile$, daPathFile$, DaPath$, i
+
+!CLEAN UP REGISTER 
+  delreg MSReg
+  DelReg DiagTestResult
+  delReg Result_Reg
+  delReg RESULT_tmp
+
+!TEMPORARY RESULT REGISTER 
+  NewObj Result_Reg, 1, 0, 0
+  SetObjHdrVal Result_Reg[1], "NoDraw", 1
+  SetObjHdrText Result_Reg[1], "Title", "Temporary Background Test Register"
+
+
+!SET DATA FILE LINE  
+!--------------------
+  DaFile$=""
+  if Check(Variable, DaDataFile$) = 1 then
+    if DaDataFile$ <> "" then
+      DaFile$=DaDataFile$
+      SetObjHdrText Result_Reg[1], "OldDaFile", DaFile$
+   endif
+  endif
+
+  DaPath$=""
+  if Check(Variable, DaDataPath$) =1 then
+    if DaPath$ <> "" then
+      DaPath$=DaDataPath$
+     SetObjHdrText Result_Reg[1], "OldDaPath", DaPath$
+   endif
+  endif
+
+  daPathFile$=DaPath$+DaFile$
+
+  if RegSize(diagguireg) > 2 then
+    if ObjHdrType(diagguireg[2],  TestId$) = 4 then
+      
+      !CHECK DATA FILE NAME 
+      if len(DaFile$) > 0 then
+        !SET TUNE FILE TO LOADED TEST PANEL. (Start with "1." which is DaLineNum-4)
+        settabtext diagguireg[2],  TestId$, DaLineNum, txt, \
+                   Val$(DaLineNum-4)+". Change loaded data file from " +DaFile$+ " to ..."
+      else
+        !SET TEST PANEL TEXT 
+        settabtext diagguireg[2],  TestId$, DaLineNum, txt, \
+                   Val$(DaLineNum-4)+". Loaded new data file."
+      endif
+
+      if FileStat( MODE, daPathFile$) <> 2  then
+        !FORCE TO EXECUTE THIS TEST LINE 
+        settabval diagguireg[2], TestId$, DaLineNum, "type", 9
+      else
+        !EXECUTE TEST LINE WILL BE OPTIONAL    
+        settabval diagguireg[2], TestId$, DaLineNum, "type", 5
+      endif
+
+      !SKIP THE NEXT 3 LINE FOR ACQUIRING DATA   
+      for i= DaLineNum+1 To DaLineNum+3
+        settabval diagguireg[2], TestId$, i, "type", 0
+      next i
+
+    endif
+  endif !*** RegSize(diagguireg) > 2 ***!
+
+!SET TUNE FILE LINE 
+  dgMsTuneFileLine TestId$, TuneLineNum
+
+!RESET TO INFO 
+  settabval diagguireg[2], TestId$, TuneLineNum, "type", 0
+
+ENDMACRO !dgMsBgTableTestLine
+
+
+!*****************************************************************************
+
+NAME dgMsBgLoadDaFile$
+
+PARAMETER DaPathFile$    DEFAULT "" 
+PARAMETER RegObjNo       DEFAULT 2            ! attached from test clipboard
+PARAMETER TestTableName$ DEFAULT "MSDBckgndT" ! attached from test clipboard
+PARAMETER RowNo          DEFAULT 5            ! attached from test clipboard
+
+!
+! Description: Load a data file via selection box and use the existing
+!              file. No ACQ tune data acquirement afterwards;
+!              or generate a new data file in diagnose path (_diagnosePath$)
+!              called dgmsbg.d 
+!
+! Global:      _diagnosePath$ (LC)
+!
+!*****************************************************************************
+LOCAL daFile$, ret, IonMode$, Polarity$, err
+
+  if DaPathFile$="" then
+    ret=Alert("Data File Selection"+ CHR$(13) +\
+              CHR$(13) +\
+              "Would you like to use an"+CHR$(13)+\
+              "existing data file?",4, "LC/MSD Background Evaluation")
+  else
+    ret=1
+  endif
+
+!SAVE PARAMETER THAT THIS FUNCTION IS EXECUTED 
+  SetObjHdrVal Result_Reg[1], "LoadDa", ret
+
+!USE AN EXISTING DATA FILE
+   if ret= 1 then
+
+     !WORK AROUND THE DATA ANALYSIS WINDOWS BY SHRINKING THIER SIZE 
+     DelReg dgbgtmp
+     newobj dgbgtmp,1,1,1
+     CopyTab _config[1], "window", dgbgtmp, "window"
+    
+     ON ERROR err=1
+
+     SetTabVal _config[1], "window", 38, "DefWXHigh", 0
+     SetTabVal _config[1], "window", 38, "DefWYHigh", 0
+     SetTabVal _config[1], "window", 38, "DefWXLow",  0
+     SetTabVal _config[1], "window", 38, "DefWYLow",  0
+     SetTabVal _config[1], "window", 44, "DefWXHigh", 0
+     SetTabVal _config[1], "window", 44, "DefWYHigh", 0
+     SetTabVal _config[1], "window", 44, "DefWXLow",  0
+     SetTabVal _config[1], "window", 44, "DefWYLow",  0
+     SetTabVal _config[1], "window", 65, "DefWXHigh", 0
+     SetTabVal _config[1], "window", 65, "DefWYHigh", 0
+     SetTabVal _config[1], "window", 65, "DefWXLow",  0
+     SetTabVal _config[1], "window", 65, "DefWYLow",  0
+
+     !LOAD DATA FILE 
+     err=0
+     LoadFile  DaPathFile$ !*** SHOW DIALOGBOX IF NOT DEFINED ***!
+     DaFile$=DaDataFile$
+   
+     !GET THE CURRENT DATA ANALYSIS FILE INCLUDING THE PATH 
+     DaPathFile$= DaDataPath$+DaDataFile$
+     ON ERROR
+
+     !WORK AROUND THE DATA ANALYSIS WINDOWS BY RESTORING THIER SIZE 
+     clearwin 38; clearwin 44; clearwin 65
+     delTab  _config[1], "window"
+     CopyTab dgbgtmp, "Window", _config[1], "window"
+ 
+     delreg dgbgtmp
+     if err=1 then
+       Generate Error 55555, "MSD Background Test ("+_ErrMacro$+"):"+_ErrMsg$
+     endif
+
+     !SET TUNE MIX MODE OF THE USED DATA FILE 
+     SetObjHdrText Result_Reg[1], "tune_type", dgMsBgReadParmFile$(DaPathFile$)
+
+   else
+
+     !OPEN DIAGNOSIS BACKGROUND TEST FILE 
+     DaFile$=dgMsBgOpenFile$()
+
+     !SAVE THE CURRENT TUNE MIX TYPE
+!     msparm ionpolarity, polarity
+     Polarity = dgMsCheckTunePol()       ! Will switch to Standard scan mode if in Fast mode
+     if Polarity=0 then
+       Polarity$="Positive"
+     endif
+     if Polarity=1 then
+       Polarity$="Negative"
+     endif
+     msgetmode IonMode$
+
+     !SAVE TUNE MIX TYPE 
+     if IonMode$ = "APCI" then
+       SetObjHdrText Result_Reg[1], "tune_type", "APCI "+Polarity$[1:3]
+     else
+       if IonMode$ = "APPI" then
+         SetObjHdrText Result_Reg[1], "tune_type", "APPI "+Polarity$[1:3]
+       else
+         if IonMode$ = "NanoESI" then
+           SetObjHdrText Result_Reg[1], "tune_type", "NanoESI " +Polarity$[1:3]
+         else
+           if IonMode$ = "ChipCube" then
+             SetObjHdrText Result_Reg[1], "tune_type", "ChipCube " +Polarity$[1:3]
+           endif 
+         endif 
+       endif
+     endif
+    
+     !SET THE RIGHT OPTION FOR LOADING A TUNE FILE 
+     dgMsTuneFileLine TestTableName$, RowNo+1
+
+     !OPTIONAL TO EXECUTE THIS TEST LINE 
+     !EDIT ACQ TUNE PARAMETER 
+     settabval diagguireg[RegObjNo], TestTableName$, RowNo+2, "type", 5
+     
+     !FORCE TO EXECUTE THIS TEST LINE 
+     !ACQUIRE NEW DATA 
+     settabval diagguireg[RegObjNo], TestTableName$, RowNo+3, "type", 9
+  
+   endif !***  if ret= 1 ***! 
+
+   return DaFile$
+
+ENDMACRO !dgMsBgLoadDaFile$ 
+
+
+!*************************************************************************
+
+NAME dgMsBgOpenFile$
+
+!
+! Description: This is a modified version of MSTN_acqOpenFile$
+!              Modifies several global variables:
+!              MSManCalOpenF
+!              MSManCalCloseF
+!              TADataFile$
+!              MSFILENUM
+!              SCANNUMON
+!              SNAPSHOT
+!
+!
+! Known Problems: User interface strings are hard-coded.
+!                 The global variable MSDataFile$ is over-written with
+!                 _datafile1$, but MSDataPath$ may potentially be set to
+!                 a path that does not contain this file/subdir.
+!
+!*************************************************************************
+!LOCAL checkfile$
+
+  ON ERROR err=1
+  MsClose 
+  ON ERROR
+
+  if Check(variable, SnapShot) =1 then
+    SetObjHdrVal Result_Reg[1], "OldSnapShot", SNAPSHOT
+  else
+    SetObjHdrVal Result_Reg[1], "OldSnapShot", -1
+  endif
+  SNAPSHOT = 0  !*** GLOBAL USED BY THE TUNE COMMANDS ***!
+
+!SAVE PARAMETER THAT THIS FUNCTION IS EXECUTED 
+  bgDataFile$=_dataPath$ + "dgmsbg.d"
+  SetObjHdrText Result_Reg[1], "bgDataFile", bgDataFile$
+
+!DELETE EXISTING FILE OR DIRECTORY 
+  if FileStat(MODE, bgDataFile$ ) <> -1 then
+    delete bgDataFile$, DONTASK
+  endif
+
+!SET THE DATA FILE INFO AS IN EditFileInfo 
+  ON ERROR err=1
+  SetObjHdrText Result_Reg, "TNOperator", _TNOperator$
+  SetObjHdrText Result_Reg, "TNMiscInfo", _TNMiscInfo$
+  SetObjHdrText Result_Reg, "TNDataName", _TNDataName$
+  SetObjHdrText Result_Reg, "TNInstName", _TNInstName$
+  ON ERROR
+  _TNOperator$ = _Operator$
+  _TNDataName$ = "LC/MSD Background Test data"
+  _TNMiscInfo$ = "LC/MSD Background Test data"
+  _TNInstName$ =_instName$
+
+!MSCreate WILL SET Checkfile$ TO THE FULL PATH OF
+!THE FILE OPEN FOR ACQUISITION  
+  MSCreate bgDataFile$
+  
+  !check if MSCreate worked
+  if FileStat( MODE, bgDataFile$) = -1 then   !MSCreate failed!
+     bgDataFile$ = "" 
+    generate error 1, "The data file selected could not be opened."      
+  else
+  !MSCreate worked
+    on error mstn_ErrAcqOpenFile   
+    MSTN_AddAbortHandler "MSTN_ErrAcqOpenFile"
+        
+    !CONTINUE OPEN DATA ACQ FILE  
+    MSOpen bgDataFile$ 
+
+    on error  !*** CLEAR THE ERROR TRAP ***!
+    MSTN_RemoveAbortHandler "MSTN_ErrAcqOpenFile"
+  endif
+ 
+  
+!USE DATA ANALYSIS GLOBAL VARIABLES 
+  DaDataFile$="dgmsbg.d"
+  DaDataPath$=_dataPath$
+
+  return DaDataFile$
+   
+ENDMACRO !dgMsBgOpenFile$
+    
+
+!*************************************************************************
+
+NAME dgMsBgCloseFile
+
+!
+! Description: Closes the acquisition tune file.
+!
+!*************************************************************************
+LOCAL bgDataFile$
+
+  On Error dgMSPrintError
+  
+  if ObjHdrType(Result_Reg, "bgDataFile") <> 99 then
+    bgDataFile$=ObjHdrText$(Result_Reg, "bgDataFile")
+    print MSTN_closeAcq$()
+
+    !RESTORE SCAN PARAMETERS 
+    On Error Print
+    if ObjHdrVal(Result_Reg[1], "MsEdDisp") = 0 then
+      if Check (Variable, oldLowMass) = 1 then
+        MSScanParm LowMass,, oldLowMass
+        MSScanParm HiMass,, oldHiMass
+        MSSamples ,   oldSamples
+        MSStepSize,   oldStepSize
+        MSAverages,   oldAverages
+        MSFilterMass, oldFilter$,, oldFilterParm
+
+        Remove oldLowMass, oldHiMass, oldSamples, oldStepSize, oldAverages
+        Remove oldFilter$, oldFilterParm
+      endif
+    endif
+  endif
+
+ENDMACRO !dgMsBgCloseFile
+
+ 
+
+!*****************************************************************************
+
+NAME dgMsBgDisplayTest
+
+PARAMETER fromFile DEFAULT 1
+
+!
+! Description: Displays the background result table and a chart of all
+!              collected data points from a *.dgr file (fromFile=1) or
+!              out of the Result_Reg register (FromFile=0)
+!
+!*****************************************************************************
+LOCAL FileName$, TabRow, WinID, NlsTabTitle$, NlsChartTitle$
+LOCAL Screen$, RegMax, i, Reg
+
+!FIND SCREEN REGISTER NUMBER IN DISPLAY MANAGER 
+  RegMax=RegSize(DiagDispReg)
+  Screen$="MSDDIAG"; i=1; reg=0
+  while (i <= RegMax) do
+    title$=ConvertText$(UPPER, ObjHdrText$(DiagDispReg[i], "Title"))
+    if (Screen$=Title$) then
+     reg=i; i=RegMax+1 
+    endif
+    i=i+1
+  endwhile 
+
+  NlsTabTitle$  = NlsMsDiag$("BackgndRes")
+  NlsChartTitle$= NlsMsDiag$("BackgndChart")
+
+!SHOW TABLE AND CLEAR DISPLAY BASED ON RESULT_REG           
+  DIAG_DispMgr "MsdDiag", "BackgndRes", 0
+ 
+  if FromFile=1 then
+     FileName$     = ObjHdrText$(DiagTestResult, "FileName")
+     NlsTabTitle$  = NlsTabTitle$ + " (" + FileName$ +")"
+     NlsChartTitle$= NlsChartTitle$+" (" + FileName$ +")"
+  else
+     !USE DISPLAT MANAGER TO PREPARE SCREEN AND COPY TO       
+     !RESULT_REG TO diagTestResult
+     ret=dgCopyTestResults(Result_Reg, "MsdDiag", "BackgndRes", "MSD", \
+                                       "dgMsBgPrintTest")
+  endif
+
+!DISPLAY TEST RESULT TABLE   
+  WinUpdate OFF
+  if ObjHdrType(DiagDispReg[reg], "TOBackgndRes") <> 99 then
+     delTab DiagDispReg[reg], "TOBackgndRes"
+  endif
+  CopyTab DiagTestResult, TestResultTab, DiagDispReg[reg], TOBackgndRes
+  WinUpdate ON
+
+!SET WIN TITLE WITH OR WITHOUT FILE NAME 
+  TabRow = DIAG_GetScreenTabRow("MsdDiag", "BackgndRes")
+  WinID = TabVal(diagdispreg,"ScreenTab",TabRow,WinID)
+  SetWinTitle WinID, NlsTabTitle$ 
+
+!DISPLAY CHART WHEN NO ERROR DETECTED 
+  if ObjHdrType(DiagTestResult, "NoDraw") = 99 then
+    !DISPLAY CHART AND DELETE FIRST OBJECT  
+    WinUpdate off
+    DIAG_DispMgr "MsdDiag", "BackgndChart"
+    TabRow = DIAG_GetScreenTabRow( "MsdDiag", "BackgndChart")
+    WinID = TabVal(diagdispreg,"ScreenTab",TabRow,WinID)
+    SetWinTitle WinID, NlsChartTitle$
+    WinUpdate on
+  endif
+
+ENDMACRO !dgMsBgDisplayTest
+
+
+!*****************************************************************************
+
+NAME dgMsBgPrintTest
+
+! 
+! Description: Prints the background result table and a chart of all
+!              collected data points
+!
+!*****************************************************************************
+LOCAL i, xl, err, Reg, RegMax, Row, Row2, RowNums, BackRowNums, MidRow, yZoom
+LOCAL HeaderFormat$, Dashes$, Header$, evalStr$
+LOCAL LineFormat$, TitleFormat$, MarkedFormat$, WinTitle$
+LOCAL mzText$, mzName$, mz, Abundance, Percent, annIndex, isPRtest
+
+ 
+!YZOOM IS THE ZOOM RATIO FOR THE FIRST SPECTRUM; 0.20 SHOWS THE BOTTOM 20% 
+  yZoom = 0.2
+
+!DEFINE HEADER AND DASH LINE  
+  HeaderFormat$ = "%%%%%%%%%%%%%%%%% %%%/"
+  TitleFormat$  = "    %%%%%%%%%%  %%%%%%%%%  %%%%%%%"
+  LineFormat$   = "      ####.#    ########   ###.#%"
+  MarkedFormat$ = "      ####.# *  ########   ###.#%"
+  Dashes$ = \
+       "----------------------------------------------------------------------"
+    !   1234567890123456789012345678901234567890123456789012345678901234567890
+    !            1         2         3         4         5         6         7
+
+!CLOSE OPEN JOB IF NECESSARY  
+  GetCurrentPrinterSetup                  !3-02PR utilize current printer setup
+!  ON ERROR print
+!  EndJob
+!  Close #5
+  ON ERROR goto EndPrintOut
+  if RegSize(DiagTestResult) <1 then
+    print "MSD Background Evaluation could not be printed."
+    return
+  endif
+    
+!SET LEFT MARGIN 
+  xl = 4
+
+  if Check(Variable, PRTestVer$) = 0 then
+    isPRTest = 0
+    !BEGIN PRINT OUT AND SET ERROR TRAP TO CLOSE PRINTER DEVICE 
+      GetCurrentPrinterSetup                  !3-02PR utilize current printer setup
+      BeginJob ,,XMax()-13, YMax()-1
+      SetMargin 2, 2, 2
+
+      Header$ = NlsMsDiag$("BackgndReport")
+      SetHeader Header$, XLogMax()/2 - len(Header$)/2
+      SetFooter PageFooterLine$()
+      On Error CloseDeviceBeforeOpenDevice !3-02PR close only if error on OpenDevice
+      OpenDevice "Printer" As #5
+      ON ERROR goto EndPrintOut            !normal error processing - report will abort on error
+      
+    !TEST INFO 
+      Print Using #5, HeaderFormat$, NlsMsDiag$("OperColon"), \
+                       ObjHdrText$( DiagTestResult,"Operator")
+      Print Using #5, HeaderFormat$, NlsMsDiag$("DateColon"), \
+                       ObjHdrText$ (DiagTestResult,"DiagDate") + " " + \
+                       ObjHdrText$ (DiagTestResult,"DiagTime")
+      Print Using #5, HeaderFormat$, "Data File:",      \
+                       ObjHdrText$ (DiagTestResult,"RawDataFile")
+      Print Using #5, HeaderFormat$, "Method File:",    \
+                       ObjHdrText$ (DiagTestResult,"Methodfile") + \
+                       "   Mode: " + ObjHdrText$(DiagTestResult, "TuneType")
+      Print Using #5, HeaderFormat$, "Data Acquired:",  \
+                       ObjHdrText$ (DiagTestResult,"DateTimeAcq")
+      Print Using #5, HeaderFormat$, "Acq. Operator:",  \
+                       ObjHdrText$ (DiagTestResult,"OperatorAcq")
+      Print Using #5, HeaderFormat$, "Sample Name:",    \
+                       ObjHdrText$ (DiagTestResult,"SampleName")
+
+    !PRINT OPTIONAL FILE NAME OF LOADED *.DGR FILE 
+     if ObjHdrText$ (DiagTestResult,"FileName") <> ""  THEN
+       Print Using #5, HeaderFormat$, NlsMsDiag$("FileColon"),  \
+                           ObjHdrText$(DiagTestResult,"FileName")
+     endif
+  else     !*** FINAL TEST HEADER ***!
+    isPRTest = 1
+    MfgHeaderMain NlsMsDiag$("BackgndReport"),, "Da"
+    SetMargin 0, 0, 0
+    SetFooter "  dgBg.mac v. " + BackGrndVer$ + "     " + \
+               " FOR INFORMATION ONLY: no background specifications"
+  endif !*** if Check(. . .) = 0 ***! 
+
+  PageSize = YLogMax()+1  ! 60
+  Print Using #5, "/" 
+
+!DRAWING REGISTER DATA BLOCKS ONLY IF NoDraw DOES NOT EXIST 
+!==========================================================
+  if ObjHdrType(DiagTestResult, "NoDraw")=99 then
+
+    !CHECK REGISTER RANGE TO DRAW 
+     regnum=RegSize(DiagTestResult)
+   
+    !CHECK DRAWING SIZE 
+     drawWinSize=14
+     SetPageLoc xl, YLoc()
+      
+    !USE MSReg WINDOW TO GET GOOD LABELING 
+    !SET DRAWING DESTINATION AND SIZE 
+     SetWinPrintParams MSDA_MSWin, , 74/XLogMax(), \
+                        drawWinSize * 1/PageSize
+
+    !DRAW A ZOOMED WINDOW 
+     GetDataMinMax MSReg[1], 1
+     
+    !GET CURRENT WINDOW TITLE, ADD Y-RANGE ANNOTATION 
+     annIndex = AnnIndex(MSReg, ,,1)
+     if annIndex <> 0 then
+       winTitle$ = AnnText$(MSReg, AnnIndex, "Text")
+       print winTitle$
+       delAnn MSReg, AnnIndex
+     endif
+     annIndex = NewTextAnn(MSReg, WinTitle$ + \
+                        SPrintF$(yZoom * 100, "  (0 to %3.0f") + "%)",,,,1)
+     evalStr$ = "Draw " + VAL$(MSDA_MSWin) + ", MSReg,,0:" + \
+                  val$(OBJ_MAX * yZoom) + ",,1"
+     evaluate evalStr$
+
+    !RESTORE TITLE ANNOTATION 
+      DelAnn MSReg, AnnIndex(MSReg, ,,1)
+      annIndex = NewTextAnn(MSReg, WinTitle$,,,,1)
+      SetPageLoc xl, YLoc() - 1
+      
+    !DRAW THE FULL SCALE WINDOW 
+      evalStr$ = "Draw " + VAL$(MSDA_MSWin) + ", MSReg,,,1,1"
+      evaluate evalStr$
+      
+    !DONE WITH THE MSReg WINDOW; SET DESTINATION BACK TO SCREEN
+      SetWinPrintParams MSDA_MsWin, "Screen"
+      SetWindowSize MSDA_MsWin, 0, 0.6, 0, 0.55
+      SetPageLoc xl, YLoc()
+      
+  endif !***if ObjHdrType( . . . )=99 ***!
+
+!DRAW BACKGROUND IONS TABLE 
+!===========================
+
+  if ObjHdrType(DiagTestResult[1], "BgIonText") <> 99 then
+    print using #5, "    % //",ObjHdrText$(DiagTestResult[1], "BgIonText") 
+  endif
+
+  if ObjHdrType(DiagTestResult, "BackGndIons") <> 99 then
+    RowNums=TabHdrVal(DiagTestResult, "BackGndIons", "NumberOfRows")
+    if RowNums > 0 then
+      !PRINT TITLE BAR 
+       print using #5, TitleFormat$,    "Background", "Abundance", "Percent"
+       print using #5, TitleFormat$+"/","Background", "Abundance", "Percent"
+
+      !PRINT TABLE BODY 
+       MidRow= Ceil( RowNums/2 )
+       for Row=1 to MidRow
+
+         !FIRST COLUMN 
+          mz       =TabVal  (DiagTestResult, "BackGndIons", row, "mzVal")
+          mzText$  =TabText$(DiagTestResult, "BackGndIons", row, "mz")
+          Abundance=TabVal  (DiagTestResult, "BackGndIons", row, "AbundVal")
+          Percent  =val     (TabText$(DiagTestResult, "BackGndIons", row, \
+                                       "Percent"))
+         !LOOK FOR MARKED LINES 
+          if InStr(mzText$, "*") > 0  then
+            print using #5, MarkedFormat$, mz, Abundance, Percent, "%"
+          else
+            print using #5, LineFormat$,   mz, Abundance, Percent, "%"
+          endif
+
+         !SECOND COLUMN            
+          Row2= MidRow + Row
+          if Row2 <= RowNums then
+            mz       =TabVal  (DiagTestResult, "BackGndIons", row2, "mzVal")
+            mzText$  =TabText$(DiagTestResult, "BackGndIons", row2, "mz")
+            Abundance=TabVal  (DiagTestResult, "BackGndIons", row2, \
+                                "AbundVal")
+            Percent  =VAL(TabText$(DiagTestResult, "BackGndIons", row2, \
+                                     "Percent"))
+            !LOOK FOR MARKED LINES 
+             if InStr(mzText$, "*") > 0  then
+               print using #5, MarkedFormat$, mz, Abundance, Percent, "%"
+             else
+               print using #5, LineFormat$,   mz, Abundance, Percent, "%"
+             endif
+          endif
+          print using #5, "/" !*** END PRINTED LINE ROW ***!
+        
+       next Row
+    endif !*** if RowNums > 0 ***!
+  endif !***  if ObjHdrType(DiagTestResult, "BackGndIons") <> 99 ***!
+
+!NEW TABLE 
+  if ObjHdrType(DiagTestResult[1], "tuneTab") <> 99 then
+     RowNums=TabHdrVal(DiagTestResult[1], "tuneTab", "NumberOfRows")
+  else
+     RowNums = 0
+  endif
+  if ObjHdrType(DiagTestResult[1], "BackTab") = 4 then
+     BackRowNums = TabHdrVal(DiagTestResult[1], "BackTab", "NumberOfRows")
+  else
+     BackRowNums = 0
+  endif
+  if RowNums > 1 or BackRowNums > 1 then
+     FormFeed
+     if isPRTest = 1 then
+       print using #5, "/"
+       MfgHeaderPrint 1
+     endif
+   
+   !DRAW TUNETAB TABLE        
+   !===================
+     if ObjHdrType(DiagTestResult[1], "tuneTab") <> 99 then
+       if RowNums > 1 then
+
+         ! print Tune Ions 
+          print using #5, "    Expected Background Ions    " + \
+                               ObjHdrText$(DiagTestResult[1], "TuneType") + "/"
+          print using #5, "    " + dashes$ + "/"
+
+         ! print title bar
+          print using #5, TitleFormat$    , "Tune Mass", "Abundance", "Percent"
+          print using #5, TitleFormat$+"/", "Iso Mass", "Abundance", "Percent"
+
+         ! print table body
+          for Row=1 to RowNums
+
+             ! first column
+             Text$ = TabText$(DiagTestResult, "tuneTab", row, "mz1")
+             Text$ = Text$[len(Text$)-7:len(Text$)]
+
+             if val(Text$) <> 0 then
+               Abundance=val(TabText$(DiagTestResult, "tuneTab", row, \
+                            "Abundance1"))
+               Percent  =val(TabText$(DiagTestResult, "tuneTab", row, \
+                            "Percent1"))
+               print using #5, LineFormat$, val(Text$), Abundance, Percent, "%"
+             else
+               ! blank first column
+               print using #5, TitleFormat$, "", "", ""
+             endif
+
+             ! second column          
+             mz = val(TabText$(DiagTestResult, "tuneTab", row, "mz2"))
+             ! skip second column when zero
+             if mz <> 0 then
+               Abundance = val(TabText$(DiagTestResult, "tuneTab", row, \
+                            "Abundance2"))
+               Percent   = val(TabText$(DiagTestResult, "tuneTab", row, \
+                            "Percent2"))
+               print using #5, LineFormat$, mz, Abundance, Percent, "%"
+             endif
+             print using #5, "/" ! end each line
+         Next Row
+         endif
+      endif
+      
+      Print Using #5, "/"  ! space between tables
+
+   !DRAW EXPECTED BACKGROUND IONS TABLE 
+   !==========================
+     if ObjHdrType(DiagTestResult, "ExpectedIons") <> 99 then
+      
+       RowNums=TabHdrVal(DiagTestResult, "ExpectedIons", "NumberOfRows")
+       if RowNums > 0 then
+         print using #5, "    " + dashes$ + "//"
+         
+         !PRINT TITLE BAR 
+         print #5,  "       Background                       " + \
+                    "   m/z      Abundance   Percent"  
+         
+         for Row = 1 to RowNums
+
+           !FIRST COLUMN
+           mz        = TabVal  (DiagTestResult, "ExpectedIons", row, "mzVal")
+           mzText$   = TabText$(DiagTestResult, "ExpectedIons", row, "mz")
+           mzName$   = TabText$(DiagTestResult, "BackTab", row + 1, "mz1") 
+           mzName$   = mzName$[1:min(35,(len(mzName$)-8))]
+           Abundance = TabVal  (DiagTestResult, "ExpectedIons", row, \
+                                  "AbundVal")
+           Percent   = val (TabText$(DiagTestResult, "ExpectedIons", row, \
+                         "Percent"))
+           
+           !LOOK FOR MARKED LINES 
+           Text$ = SprintF$(mzName$, "    %-35s ") + SprintF$(mzText$, "%10s")
+           Text$ = Text$ + SprintF$(Abundance, " %8.0f") + \
+                   SprintF$(Percent, "%10.1f") + " %"
+           Print #5, Text$
+
+         next Row
+          
+         print using #5, "/    " + dashes$ + "/"
+         
+         if ObjHdrType(DiagTestResult[1], "BgIonText") <> 99 then
+           print using #5, "/" ! space
+           print #5, "    "+ObjHdrText$(DiagTestResult[1], "BgIonText")
+         endif
+       endif
+     endif
+  else
+     if TabHdrVal(DiagTestResult[1], "BackGndIons", "NumberOfRows") > 1 then
+        ! No expected background or tune ions found
+        Print using #5, "/No expected background ions found/"
+     endif
+  endif
+
+  EndJob
+  On Error Print
+  Close #5
+   
+!NORMAL EXIT    
+  print "dgMsBgPrintTest done."
+  return    
+
+  EndPrintOut:
+    ON ERROR print
+    dgMSPrintError
+    if ObjHdrType( DiagGuiReg[1], "ErrMsg") <> 99 then
+      Print using #5, "/"
+      Print #5, "    ERROR: "+ ObjHdrText$(DiagGuiReg[1], "ErrMsg")
+    endif
+    EndJob
+    Close #5
+    return
+
+ENDMACRO !dgMsBgPrintTest
+
+
+
+!***************************************************************************
+
+NAME dgMsBgReadParmFile$
+
+PARAMETER DaPathFile$    !DEFAULT   "c:\hpchem\1\data\dgmsbg.d"
+
+! 
+! Description: Reads the used mode and polarity of the MsDiag.reg
+!              or Msparms.txt file of a data  file directory. If the
+!              file does not exist or an error occurs during reading 
+!              the file the macro returns "". Otherwise it returns 
+!              Mode$+" "+Polarity$ as tune_type for the tune mix register.
+!
+!***************************************************************************
+LOCAL tuneType$, line$, Mode$, Polarity$, done
+
+  ON ERROR return ""
+
+  tuneType$=""
+
+!CHECK IF THE MSDIAG.REG EXIST IF NO MSPARMS.TXT FILE IS FOUND 
+  if FileStat(MODE, daPathFile$+"\Msdiag.reg") = 1 then
+   
+    delReg dgBgDiag
+    LoadObj daPathFile$+"\Msdiag.reg",,dgBgDiag
+    if RegSize(dgBgDiag) > 0 then
+
+      ON ERROR Polarity$="Positive"
+      Polarity$=TabHdrText$(dgBgDiag[1], "StartStopTable", "Polarity")
+
+      ON ERROR IonMode$="APCI"
+      IonMode$ =TabHdrText$(dgBgDiag[1], "StartStopTable", "Ionization")
+      delReg dgBgDiag
+    
+      if IonMode$ = "APCI" then
+        tuneType$ = "APCI "+Polarity$[1:3]
+       else
+        if IonMode$ = "APPI" then
+          tuneType$ = "APPI "+Polarity$[1:3]
+        else
+          if IonMode$ = "NanoESI" then
+            tuneType$ = "NanoESI "+Polarity$[1:3]
+          else
+            if IonMode$ = "ChipCube" then
+              tuneType$ = "ChipCube "+Polarity$[1:3]
+            else
+              tuneType$ = "ESI " +Polarity$[1:3]
+            endif
+          endif
+        endif
+      endif
+    endif !*** if RegSize(dgBgDiag) > 0 ***!
+
+  else
+
+    !CHECK IF THE MSPARMS.TXT FILE EXIST 
+     if FileStat( MODE, DaPathFile$+"\msparms.txt") = 1 then
+      
+       !CLOSE OPEN FILE IF NECESSARY 
+        ON ERROR done=0
+        close #4
+
+       !INITIALIZE THE RESULT VARIABLES 
+        Mode$="ESI"
+        Polarity$="POS"
+        done=0
+
+       !ERROR TRAP ENDS THE LOOP BY "end of file" without 
+       !FINDING THE MODE OR POLARITY IN THE TEXT FILE 
+        ON ERROR goto ERRORTRAP
+
+       OPEN DaPathFile$+"\msparms.txt" FOR INPUT AS #4 
+      
+       repeat
+         !READ LINE FORM MSPARMS.TXT FILE 
+          INPUT #4,  Line$
+          Line$ = ConvertText$(UPPER, line$)
+
+         !SEARCH FOR THE USED MODE 
+          if InStr(line$, "MODE") > 0 then
+            if InStr(line$, "APCI") > 0 then
+              Mode$="APCI"
+            else
+              if InStr(line$, "APPI") > 0 then
+                Mode$="APPI"
+              else
+                if InStr(line$, "Nano") > 0 then
+                  Mode$="NanoESI"
+                else
+                  if InStr(line$, "Chip") > 0 then
+                    Mode$="ChipCube"
+                  else
+                    Mode$="ESI"  ! text entry should be API_ES
+                  endif
+                endif
+              endif
+            endif
+            done=done+1
+          else
+
+           !SEARCH FOR THE USED POLARITY 
+             if InStr(line$, "POLARITY") > 0 then
+               if InStr(line$, "POS") > 0 then
+                 done=done+1
+                 Polarity$="POS"
+               else
+                 if InStr(line$, "NEG") > 0 then
+                   done=done+1
+                   Polarity$="NEG"
+                 endif 
+               endif
+	     endif
+          endif !***  if InStr(line$, "MODE") > 0 ***!
+       until (done=2)
+
+       ERRORTRAP:
+         CLOSE #4 
+         if done = 2 then
+           tuneType$ = Mode$ +" "+ Polarity$
+         endif
+     endif !*** if FileStat(. . .) = 1 ***!
+      
+  endif !*** if FileStat(. . .) = 1 ***!  
+  return tuneType$
+
+ENDMACRO !dgMsBgReadParmFile$
+
+
+
+!*****************************************************************************
+
+NAME dgMsBgEditAcqTune$
+
+PARAMETER doit           DEFAULT 1  ! 1: user gets dialog box for acq parms
+                                    ! otherwise, use Tune mix parms
+PARAMETER RegObjNo       DEFAULT 99 ! PARAMETER attached from test clipboard
+PARAMETER TestTableName$ DEFAULT "" ! PARAMETER attached from test clipboard
+PARAMETER RowNo          DEFAULT 99 ! PARAMETER attached from test clipboard
+
+!
+! Description:
+!
+!*****************************************************************************
+LOCAL tuneType$, tuneIndex
+
+  SetObjHdrVal Result_Reg[1], "MsEdDisp", doit
+
+  MSScanParm   LowMass, oldLowMass
+  MSScanParm   HiMass, oldHiMass
+  MSSamples    oldSamples
+  MSAverages   oldAverages
+  MSStepSize   oldStepSize
+  MSFilterMass oldFilter$,, oldFilterParm
+ 
+  if doit=1 then
+    MsEdDisp
+    return ""
+  else
+    tuneType$=ObjHdrText$(Result_Reg[1], "tune_type")
+    
+    !GET REGISTER NO. FOR TYPE OF TUNING 
+     tuneIndex = MSAT_SelectTuneMix(tuneType$)
+     if tuneIndex < 2 then    
+       print "Tune Mix Register not found."
+       ObjHdrText Result_Reg, "ErrMsg", "Tune Mix not found."
+       Generate Error 1, "Tune Mix not found"
+     endif
+
+    !SET SCAN PARMS FROM TUNE MIX REGISTER        
+     MSScanParm LowMass,,ObjHdrVal(TuneMixReg[tuneIndex], LowMass)
+     MSScanParm HiMass,, ObjHdrVal(TuneMixReg[tuneIndex], HiMass)
+     MSSamples,          ObjHdrVal(TuneMixReg[tuneIndex], Samples)
+    
+    !FORCE TO 4 AVERAGES; 1 IS USED FOR TuneAcq
+     MSAverages, ObjHdrVal(TuneMixReg[tuneIndex], Averages)
+     MSStepSize oldStepSize, ObjHdrVal(TuneMixReg[tuneIndex], StepSize)
+     MSFilterMass , "GAUSS",, 0.3
+
+    return ""
+  endif !*** if doit=1 ***!
+
+ENDMACRO !dgMsBgEditAcqTune$ 
+
+
+
+!*****************************************************************************
+
+NAME dgMsBgRunAcq$
+
+PARAMETER AcqRun DEFAULT 1
+
+!
+! Description:
+!
+!*****************************************************************************
+! Revision History:
+! 07/12/99 YD  Sets the MS_ChromObjNum after LoadTIC.
+! ============================================================================
+LOCAL nScans, bgDataFile$, err, ret$
+
+  nScans = 5
+  
+  delReg chromReg
+  delReg MsReg
+  bgDataFile$ = "dgmsbg.d"
+  MSDATAFILE$ = bgDataFile$
+
+!DO NSCANS TO ACQUIRE DATA TO THE OPEN MS DATA FILE 
+  if AcqRun = 1 then
+   
+    On Error dgMsBgCloseFile
+    MSTN_AddAbortHandler "dgMsBgCloseFile "
+
+    if ObjHdrType(Result_Reg, "MsEdDisp") = 99 then
+      ret$ = dgMsBgEditAcqTune$(0)
+    endif
+
+    TRUN_NSCANS = nScans
+    print MSTN_RunAcq$()      !*** ACQUISITION IS DONE HERE ***!
+    remove TRUN_NSCANS
+    clearwin MSTN_viewWinNum  !*** CLEAR TUNE WINDOW ***!
+
+    MSTN_RemoveAbortHandler "dgMsBgCloseFile "
+    dgMsBgCloseFile
+   
+    !WAIT UNTIL FILE IS CLOSED 
+      Sleep 3
+
+  endif !*** if AcqRun = 1 ***!
+
+!SET THE DA GLOBAL FILE AND PATH VARIABLE TO LOAD TIC 
+  bgDataPath$ = ObjHdrText$(Result_Reg[1], "RawDataFile")
+  DADataPath$ = bgDataPath$[1 : InStr(bgDataFile$, bgDataFile$)-1 ]
+  DADataFile$ = bgDataFile$
+
+  err=0
+  ON ERROR err=1
+
+!LOAD TIC & SPECTRUM INTO REGS. BUT TEST IF DATA FILE IS LOADED  
+  LoadTIC ChromReg
+  MS_ChromObjNum = RegSize(ChromReg)
+
+!TRY AGAIN 
+  if regSize(ChromReg) < 1 then
+    sleep 3
+    LoadTIC ChromReg
+    MS_ChromObjNum = RegSize(ChromReg)
+  endif
+
+!TIC STILL COULD NOT BE LOADED
+  ON ERROR 
+  if err=1 OR RegSize(ChromReg) < 1 then
+    SetObjHdrText Result_Reg[1], "ErrMsg", "Couldn't load new generated TIC."
+    Generate Error 55555, "MSD Background Test (" + _ErrMacro$ + \
+                         "): Couldn't load new generated TIC."
+  endif
+
+  return ""
+
+ENDMACRO !dgMsBgRunAcq$
+
+!*************************************************************************
+
+print "dgbg.mac v. " + BackgrndVer$ + " loaded."
+
+!*************************************************************************

@@ -1,0 +1,872 @@
+
+! $Header: /PHX3D/parts/macros/report/intevent.mac 4.11 2001-08-15 04:07:42-04 fkremser Exp $
+!
+! This is the DoPrintIntEvent macro, which is called from PrintDAMethod.
+!
+!   The output device (file or printer) has to be opened, configured and
+!   closed by the caller.
+!   Page numbering, page headers and footers are configured by the caller.
+!
+
+! ============================================================================
+! Revision History:
+! 03/23/99 YD  Extended the width of the print-out table
+! ============================================================================
+Name DoPrintIntEvent
+  local i, Name$
+  local TwelveTone
+  local Dashes$
+  local NumberOfHeaders
+  local HdrName$
+  local HdrValue
+  local Loop
+
+  local ID_PHX3DSUPPORTFILES_INTEGRATION_EV_1
+  local ID_PHX3DSUPPORTFILES_2
+  local ID_PHX3DSUPPORTFILES_3
+  local ID_PHX3DSUPPORTFILES_TAIL_PEAK_SKIM_4
+  local ID_PHX3DSUPPORTFILES_FRONT_PEAK_SKI_5
+  local ID_PHX3DSUPPORTFILES_SKIM_VALLEY_RA_6
+  local ID_PHX3DSUPPORTFILES_7
+  local ID_PHX3DSUPPORTFILES_BASELINE_CORRE_8
+  local ID_PHX3DSUPPORTFILES_9
+  local ID_PHX3DSUPPORTFILES_10
+  local ID_PHX3DSUPPORTFILES_11
+  local ID_PHX3DSUPPORTFILES_12
+  local ID_PHX3DSUPPORTFILES_TANGENT_SKIM_M_13
+  local ID_PHX3DSUPPORTFILES_14
+  local ID_PHX3DSUPPORTFILES_15
+  local ID_PHX3DSUPPORTFILES_16
+  local ID_PHX3DSUPPORTFILES_PEAK_TO_VALLEY_17
+  
+  local ID_PHX3DSUPPORTFILES_355
+  local ID_PHX3DSUPPORTFILES_356
+  local ID_PHX3DSUPPORTFILES_357
+  local ID_PHX3DSUPPORTFILES_358
+
+  ID_PHX3DSUPPORTFILES_INTEGRATION_EV_1              =  17001  
+  ID_PHX3DSUPPORTFILES_2                             =  17002  
+  ID_PHX3DSUPPORTFILES_3                             =  17003  
+  ID_PHX3DSUPPORTFILES_TAIL_PEAK_SKIM_4              =  17004  
+  ID_PHX3DSUPPORTFILES_FRONT_PEAK_SKI_5              =  17005  
+  ID_PHX3DSUPPORTFILES_SKIM_VALLEY_RA_6              =  17006  
+  ID_PHX3DSUPPORTFILES_7                             =  17007  
+  ID_PHX3DSUPPORTFILES_BASELINE_CORRE_8              =  17008  
+  ID_PHX3DSUPPORTFILES_9                             =  17009  
+  ID_PHX3DSUPPORTFILES_10                            =  17010  
+  ID_PHX3DSUPPORTFILES_11                            =  17011  
+  ID_PHX3DSUPPORTFILES_12                            =  17012  
+  ID_PHX3DSUPPORTFILES_TANGENT_SKIM_M_13             =  17013  
+  ID_PHX3DSUPPORTFILES_14                            =  17014  
+  ID_PHX3DSUPPORTFILES_15                            =  17015  
+  ID_PHX3DSUPPORTFILES_16                            =  17016  
+  ID_PHX3DSUPPORTFILES_PEAK_TO_VALLEY_17             =  17017
+  
+  ID_PHX3DSUPPORTFILES_355							 =	 17355
+  ID_PHX3DSUPPORTFILES_356							 =	 17356
+  ID_PHX3DSUPPORTFILES_357							 =	 17357
+  ID_PHX3DSUPPORTFILES_358							 =  17358
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  !print "DoPrintIntEvent"
+
+  PrintIntEvent_HeaderBlock  ID_PHX3DSUPPORTFILES_INTEGRATION_EV_1
+
+  TwelveTone=0
+  if ObjHdrType (_DAMethod[1],"IntegMode")<>99
+    if ObjHdrVal (_DAMethod[1],"IntegMode")<>0
+      TwelveTone=1
+    endif
+  endif
+
+!  if _MassSpec = 0 then
+  ! old code used when not a mass spec system
+!   if TwelveTone=1
+!    print #5,NLSCoreEvent$("TToneInteg")
+!   else
+!    print #5,NLSCoreEvent$("GenieInteg")
+!   endif
+!  else
+  ! for a mass spec system just print a blank line
+   print #5
+!  endif
+
+  print #5,""
+  print #5,"------------------------------------------------------------------------"
+  print #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_2)                 
+  print #5,"------------------------------------------------------------------------"
+  print #5,""
+  print #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_3)
+  print #5,"|--------------------------------------------------------|-------------|"
+  NumberOfHeaders = TabHdrVal(_DAMethod,IntMethod,"NumberOfHead")
+  For Loop = 1 To NumberOfHeaders
+    HdrName$ = TabHdrName$(_DAMethod,IntMethod,Loop)
+    HdrValue = TabHdrVal(_DAMethod,IntMethod,HdrName$)
+	if HdrName$ = "TailPeakSkim" then
+      print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_355), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_TAIL_PEAK_SKIM_4), HdrValue  ! PVCS #10841
+	endif
+	if HdrName$ = "FrontPeakSkim" then
+      print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_356), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_FRONT_PEAK_SKI_5), HdrValue   ! PVCS #10841
+	endif
+	if HdrName$ = "SkimValley" then
+      print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_357), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SKIM_VALLEY_RA_6), HdrValue    ! PVCS #10841
+	endif
+	if HdrName$ = "BaselineCorr" then
+	  if HdrValue = 0 then
+        print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_7), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_BASELINE_CORRE_8)
+	  endif
+	  if HdrValue = 1 then
+        print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_9), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_BASELINE_CORRE_8)
+	  endif
+	  if HdrValue = 2 then
+        print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_10), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_BASELINE_CORRE_8)
+	  endif
+	  if HdrValue = 3 then
+        print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_11), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_BASELINE_CORRE_8)
+	  endif
+	endif
+	if HdrName$ = "TanSkimMode" then
+	  if HdrValue = 0 then
+        print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_12), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_TANGENT_SKIM_M_13)
+	  endif
+	  if HdrValue = 1 then
+        print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_14), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_TANGENT_SKIM_M_13)
+	  endif
+	  if HdrValue = 2 then
+        print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_15), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_TANGENT_SKIM_M_13)
+	  endif
+	  if HdrValue = 3 then
+        print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_16), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_TANGENT_SKIM_M_13)
+	  endif
+	endif
+	if HdrName$ = "PeaktoValley" then
+      print using #5,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_358), ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PEAK_TO_VALLEY_17), HdrValue    ! PVCS #10841
+	endif
+  Next Loop
+
+  print #5,""
+  Name$="Event"
+  if ObjHdrType (_DAMethod[1], Name$) = 4 then
+    if TwelveTone=1
+      if TabHdrVal (_DAMethod[1], Name$, "UseForInteg")>0
+        Print12ToneEventTab Name$
+      endif
+    else
+      PrintEventTab Name$
+    endif
+  endif
+  i = 1
+  Name$ = ObjHdrName$ (_DAMethod[1], i)
+  while Name$ <> "" do
+    if InStr (Name$, "Event_") = 1 then
+      if ObjHdrType (_DAMethod[1], Name$) = 4 then
+        if TwelveTone=1
+          if TabHdrVal (_DAMethod[1], Name$, "UseForInteg")>0
+            Print12ToneEventTab Name$
+          endif
+        else
+          PrintEventTab Name$
+        endif
+      endif
+    endif
+    i = i + 1
+    Name$ = ObjHdrName$ (_DAMethod[1], i)
+  endwhile
+  DoPrintManEvent
+!  DoPrintAdvBase
+  DoPrintPeakType
+  print #5, ""
+  print #5, ""
+  
+  !new in B0402
+  !UteB. does not want this in view method - separate more clearly between DataFile and Method
+  !DoPrint_DFManEvent
+
+  print #5, ""
+  print #5, ""
+
+  return
+endmacro
+
+Name PrintIntEvent_HeaderBlock
+parameter  iRCStrID
+  local   NLSFileName_phx3dsupport$
+  local Dashes$
+
+  NLSFileName_phx3dsupport$="phx3dsupport"
+
+  Dashes$ = "========================================================================"
+  print #5, Dashes$
+
+  print #5, Center$ (len(Dashes$), ReadResource$(NLSFileName_phx3dsupport$,iRCStrID))
+                     
+  print #5, Dashes$
+  print #5, ""
+
+
+
+  return
+endmacro
+
+
+! ============================================================================
+! Revision History:
+! 03/23/99 YD  Extended the width of the print-out table
+! ============================================================================
+Name PrintEventTabTitle
+  parameter Table$
+  parameter Type$ default "event"
+  local Title$
+  local Dashes$
+  
+  evaluate "goto "+Type$
+
+event:  
+  if ConvertText$(lower,Table$)="event"
+   Title$=NLSCoreEvent$("EventTitleDef")
+  else
+   if EEV_SpecificTable (Table$)=0
+    Title$=NLSCoreEvent$("EventTitleDet")
+   else
+    Title$=NLSCoreEvent$("EventTitleSig")
+   endif
+  endif
+  Title$=Title$+NLSCoreEvent$("EventTitle")
+  goto endcase
+ 
+manual:
+  Title$=NLSCoreEvent$("ManEventTitle")
+  goto endcase
+  
+DFmanual:
+  Title$=NLSCoreEvent$("DFManEventTitle")
+  Goto endcase
+  
+memory:
+  Title$=NLSCoreEvent$("MemManEventTit")
+  Goto endcase
+  
+  
+endcase:
+  Dashes$ = "------------------------------------------------------------------------"
+  print #5, Dashes$
+
+  print #5, Center$ (len(Dashes$), \
+                     Title$+ " """ + Table$ + """")
+  print #5, Dashes$
+  print #5, ""
+
+
+endmacro
+
+! ==========================================================================
+! Revision History:
+! 03/23/99 YD   Added support for the multiple slope / ion width
+! ==========================================================================
+Name PrintEventTab
+parameter Tab$
+  local nEvents, Event, On$, Off$, Value$, type
+  local Time, EventCode, Value, EventName$
+
+  nEvents = TabHdrVal (_DAMethod[1], Tab$, "NumberOfRows")
+
+  if DevNum() = 5 then
+    ! Destination is PRINTER; check for necessary FormFeed
+    CheckFormFeed 5 + 6 + nEvents
+  endif
+  
+  PrintEventTabTitle Tab$
+  
+  On$  = NLSCoreEvent$("On")
+  Off$ = NLSCoreEvent$("Off")
+  if TabHdrVal (_DAMethod[1], Tab$, "ShouldersOn") = 1 then
+    Value$ = On$
+  else
+    Value$ = Off$
+  endif
+
+  print using #5, NLSCoreEvent$("EvtHeader")
+  
+  print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+                  NLSCoreEvent$("InitReject"), \
+                  TabHdrVal (_DAMethod[1], Tab$, "InitReject")
+                  
+  if (InStr(Tab$, "SPC") = 0)
+	print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+    	              NLSCoreEvent$("InitThresh"), \
+        	          TabHdrVal (_DAMethod[1], Tab$, "InitThresh")
+                  
+  	print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+    	              NLSCoreEvent$("InitWidth"), \
+        	          TabHdrVal (_DAMethod[1], Tab$, "InitWidth")
+  else
+    	  vPrintSlopeWidth "InitThresh"
+  endif
+                  
+  print using #5, NLSCoreEvent$("EvtInitShoulder"), \
+                  NLSCoreEvent$("ShouldersOn"), \
+                  Value$
+
+  Event    = 1
+  while Event <= nEvents do
+    Time      = TabVal (_DAMethod[1], Tab$, Event, "Time")
+    EventCode = TabVal (_DAMethod[1], Tab$, Event, "EventCode")
+    Value     = TabVal (_DAMethod[1], Tab$, Event, "Value")
+    if EventCode >= 0 then
+      if (EventCode = 0) or (EventCode = 10) or \
+         (EventCode = 12) or (EventCode = 13) or \
+         (EventCode = 14) \
+      then
+        Value$ = ""
+      else
+        if (EventCode = 4) or (EventCode = 6) then
+          Value$ = Off$
+        else
+          Value$ = On$
+        endif
+      endif
+    else
+      if (EventCode = -4) or (EventCode = -6) then
+        Value$ = On$
+      else
+        Value$ = Off$
+      endif
+      EventCode = - EventCode
+    endif
+    
+    EventName$ = NLSCoreTimedEvent$(EventCode)
+    
+    
+    if (EventCode >= 0) and (EventCode <= 7) or \
+       (EventCode >= 9) and (EventCode <=11) or \
+       (EventCode = 17) \
+    then
+      type = 0
+    else
+      type = 4
+    endif
+
+    if Len(Value$)>0 then
+      print using #5, NLSCoreEvent$("EventWithStrVal"), \
+                      EventName$, Value$, Time
+    else
+      if Type<>4
+        print using #5, NLSCoreEvent$("EventNoValue"), \
+                        EventName$, Time
+      else
+        print using #5, NLSCoreEvent$("EventWithValue"), \
+                        EventName$, Value, Time
+      endif
+    endif
+    Event = Event + 1
+  endwhile
+  print #5, ""
+  return
+endmacro
+
+
+! ===================================================================================
+! Function Name:    vPrintSlopeWidth
+! Function Description:
+!       This routine gets the Slope and Ion Width data for Full Scan or Cond. Scan
+!       and SIM first. Then, it prints out the data.
+! Parameter Passed In:
+!       sSlopeHdr$ - the header string for the slope, default to "InitSlope"
+! Revision History:
+! 03/23/99 YD  First created.
+! ===================================================================================
+name vPrintSlopeWidth
+    parameter sSlopeHdr$ default "InitSlope"
+    local dSlopeFScan, dSlopeSIM
+    local dWidthFScan, dWidthSIM
+    local sSlope$
+
+    on error print    
+    dSlopeFScan = 1
+    if (TabHdrType(_DaMethod[1], "Event_MSD1SPC", "ScanInitThresh") = 1 )
+        dSlopeFScan = TabHdrVal (_DaMethod[1], "Event_MSD1SPC", "ScanInitThresh")
+    else
+        dSlopeFScan = 1
+    endif
+    
+    dSlopeSIM = 0.1
+    if (TabHdrType(_DaMethod[1], "Event_MSD1SPC", "SIMInitThresh") = 1 )
+        dSlopeSIM = TabHdrVal (_DaMethod[1], "Event_MSD1SPC", "SIMInitThresh")
+    else
+        dSlopeSIM = 0.1
+    endif       
+
+    dWidthFScan = 0.25
+    if (TabHdrType(_DaMethod[1], "Event_MSD1SPC", "ScanInitWidth") = 1 )
+        dWidthFScan = TabHdrVal (_DaMethod[1], "Event_MSD1SPC", "ScanInitWidth")
+    else
+        dWidthFScan = 0.25
+    endif
+
+    dWidthSIM = 0.05
+    if (TabHdrType(_DaMethod[1], "Event_MSD1SPC", "SIMInitWidth") = 1 )
+        dWidthSIM = TabHdrVal (_DaMethod[1], "Event_MSD1SPC", "SIMInitWidth")
+    else
+        dWidthSIM = 0.05
+    endif     
+
+    sSlope$ = sSlopeHdr$ + "FScan"
+    print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+    	              NLSCoreEvent$(sSlope$), \
+        	          dSlopeFScan
+                  
+    print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+    	              NLSCoreEvent$("InitWidthFScan"), \
+        	          dWidthFScan
+        	          
+    sSlope$ = sSlopeHdr$ + "SIM"      	          
+    print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+    	              NLSCoreEvent$(sSlope$), \
+        	          dSlopeSIM
+                  
+    print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+    	              NLSCoreEvent$("InitWidthSIM"), \
+        	          dWidthSIM   
+
+endmacro
+
+
+
+! ====================================================================================
+! Revision History:
+! 03/23/99 YD  Added multiple slope/IonWidth support for the SPC
+! ====================================================================================
+Name Print12ToneEventTab
+parameter Tab$
+  local nEvents, Event, On$, Off$, Value$
+  local Time, EventCode, Value, EventName$
+  local Dashes$
+  local index,Type
+  local TimedEvtsEnum$
+  local Tan$, Drop$
+  local ShouldersOn
+  
+  nEvents = TabHdrVal (_DAMethod[1], Tab$, "NumberOfRows")
+
+  if DevNum() = 5 then
+    ! Destination is PRINTER; check for necessary FormFeed
+    CheckFormFeed 5 + 6 + nEvents
+  endif
+
+  PrintEventTabTitle Tab$
+
+  On$  = NLSCoreEvent$("On")
+  Off$ = NLSCoreEvent$("Off")
+  Tan$ = NLSCoreEvent$("Tan")
+  Drop$ = NLSCoreEvent$("Drop")
+  
+  ShouldersOn = TabHdrVal (_DAMethod[1], Tab$, "ShouldersOn")
+  if ShouldersOn = 0 then
+    Value$ = Off$
+  else
+   if ShouldersOn = 1 then
+    Value$ = Tan$
+   else
+    Value$ = Drop$
+   endif
+  endif
+                  
+  print using #5, NLSCoreEvent$("EvtHeader")
+  
+  if (InStr(Tab$, "SPC") = 0)
+	  print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+    	              NLSCoreEvent$("InitSlope"), \
+        	          TabHdrVal (_DAMethod[1], Tab$, "InitThresh")
+                  
+	  print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+    	              NLSCoreEvent$("InitWidth"), \
+        	          TabHdrVal (_DAMethod[1], Tab$, "InitWidth")
+  else
+  	  vPrintSlopeWidth "InitSlope"
+  endif
+                  
+  print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+                  NLSCoreEvent$("InitReject"), \
+                  TabHdrVal (_DAMethod[1], Tab$, "InitReject")
+                  
+  print using #5, NLSCoreEvent$("EvtInitNumVal"), \
+                  NLSCoreEvent$("InitHeight"), \
+                  TabHdrVal (_DAMethod[1], Tab$, "InitHeight")
+                  
+  print using #5, NLSCoreEvent$("EvtInitShoulder"), \
+                  NLSCoreEvent$("ShouldersOn"), \
+                  Value$
+
+  TimedEvtsEnum$=TabText$(_Config[3],"EEVEvDesc",7,"EnumStrings")
+  Event    = 1
+  while Event <= nEvents do
+    Time      = TabVal (_DAMethod[1], Tab$, Event, "Time")
+    EventCode = TabVal (_DAMethod[1], Tab$, Event, "EventCode")
+    Value     = TabVal (_DAMethod[1], Tab$, Event, "Value")
+              
+    index=RowByVal(EEV_Reg[1],"Lookup",,"EventCode","=",EventCode)
+    if index>0
+     EventName$=SubString$(TimedEvtsEnum$,TabVal(EEV_Reg[1],"Lookup",index,"Combo")+1)
+     Type=EEV_DecodeType(TabVal(EEV_Reg[1],"Lookup",index,"Type"))
+    endif
+
+    if Type=0
+     Value$=Off$
+    else
+     if Type=1
+      Value$=On$
+     else
+      if Type=2
+       Value$=Tan$
+      else
+       if Type=3
+        Value$=Drop$
+       else
+        Value$=""
+       endif 
+      endif
+     endif
+    endif
+
+    if EventCode=20 then !Tangent Skim Mode
+      Value$ = SubString$(TabHdrText$(NLSCore[1],"EEV","SkimModes"),Value+1)
+      Value$ = NLSCoreEvent$(Value$) !STD, EXp, STRGT
+    endif
+
+    if Len(Value$)>0 then
+      print using #5, NLSCoreEvent$("EventWithStrVal"), \
+                      EventName$, Value$, Time
+    else
+      if Type<>4
+        print using #5, NLSCoreEvent$("EventNoValue"), \
+                        EventName$, Time
+      else
+        print using #5, NLSCoreEvent$("EventWithValue"), \
+                        EventName$, Value, Time
+      endif
+    endif
+    Event = Event + 1
+  endwhile
+  print #5, ""
+  return
+endmacro
+
+!
+! This is the DoPrintAdvBase macro, which is called from DoPrintIntEvent.
+!
+!   The output device (file or printer) has to be opened, configured and
+!   closed by the caller.
+!   Page numbering, page headers and footers are configured by the caller.
+!
+
+Name DoPrintAdvBase
+  ! Use the new ObjHdr item that is writeable by macros
+  If ObjHdrType(_DAMethod[1],"IntegMode") <> 99 Then
+    If ObjHdrVal(_DAMethod[1],"IntegMode") > 0 Then
+      print using #5, NLSCoreEvent$("AdvBaseline"), \
+                      NLSCoreMthText$("YesNo", \
+                                    ObjHdrVal(_DAMethod[1],"IntegMode")-2)
+    endif
+  endif
+  return
+endmacro
+
+!
+! This is the DoPrintPeakType macro, which is called from DoPrintIntEvent.
+!
+!   The output device (file or printer) has to be opened, configured and
+!   closed by the caller.
+!   Page numbering, page headers and footers are configured by the caller.
+!
+
+Name DoPrintPeakType
+  Local PeakType
+
+  If _HPCE=0 then
+    return
+  Endif
+
+  If ObjHdrType (_DAMETHOD[1], "IntMethod") = 4 then
+    If TabHdrType (_DAMETHOD[1], "IntMethod", "PeakTopType") <> 99 then
+      PeakType = TabHdrVal (_DAMETHOD[1], "IntMethod", "PeakTopType")
+
+      ! Use the new ObjHdr item that is writeable by macros
+      print using #5, NLSCoreEvent$("PeakType")
+      If PeakType = 0 Then
+        print using #5, NLSCoreEvent$("PTTHighest")
+      Endif
+      If PeakType = 1 Then
+        print using #5, NLSCoreEvent$("PTTParabolic")
+      Endif
+      If PeakType = 2 Then
+        print using #5, NLSCoreEvent$("PTTGravity")
+      Endif
+      If PeakType = 3 Then
+        print using #5, NLSCoreEvent$("PTTGauss")
+      Endif
+    Endif
+  Endif
+  return
+endmacro
+
+!
+! This is the DoPrintManEvent macro, which is called from DoPrintIntEvent.
+!
+!   The output device (file or printer) has to be opened, configured and
+!   closed by the caller.
+!   Page numbering, page headers and footers are configured by the caller.
+!
+
+Name DoPrintManEvent
+  local i, Name$
+  
+  if ObjHdrType (_DAMethod[1], "ManInt") = 4 then
+    PrintManEventTab "Manint"
+  endif
+  i = 1
+  Name$ = ObjHdrName$ (_DAMethod[1], i)
+  while Name$ <> "" do
+    if InStr (Name$, "ManInt_") = 1 then
+      if ObjHdrType (_DAMethod[1], Name$) = 4 then
+        PrintManEventTab Name$
+      endif
+    endif
+    i = i + 1
+    Name$ = ObjHdrName$ (_DAMethod[1], i)
+  endwhile
+
+  ! Use the new ObjHdr item that is writeable by macros
+  print using #5, NLSCoreEvent$("EventApply"), \
+                  NLSCoreMthText$("YesNo", \
+                                  ObjHdrVal(_DAMethod[1],"ApplyManintExt"))
+                                  
+  return
+endmacro
+
+  
+Name DoPrint_DFManEvent
+  local i, Name$, bDoOnce
+  local ID_PHX3DSUPPORTFILES_DF_INTEGRATION_EV_405  
+  
+  ID_PHX3DSUPPORTFILES_DF_INTEGRATION_EV_405  = 17405
+
+  bDoOnce = 0                                  
+  !in case there is now a DataFile Specific manual integ also print this one                                  
+  if RegSize(_DF_TMP_MINT) > 0
+     i = 1
+     Name$ = ObjHdrName$ (_DF_TMP_MINT[1], i)
+     while Name$ <> "" do
+       if InStr (Name$, "ManInt_") = 1 then
+         if ObjHdrType (_DF_TMP_MINT[1], Name$) = 4 then
+           if bDoOnce = 0
+              PrintIntEvent_HeaderBlock  ID_PHX3DSUPPORTFILES_DF_INTEGRATION_EV_405
+              bDoOnce = 1
+           endif
+           Print_DF_ManEventTab Name$
+         endif
+       endif
+       i = i + 1
+       Name$ = ObjHdrName$ (_DF_TMP_MINT[1], i)
+     endwhile
+  endif
+  
+  return
+EndMacro
+
+
+Name Show_MemManEvent
+  Local PrintOutput$
+  Local ID_PHX3DSUPPORTFILES_MEM_EVENTS_TITLE_421 
+  
+  ID_PHX3DSUPPORTFILES_MEM_EVENTS_TITLE_421 = 17421
+  
+  PrintOutput$=(((_instpath$+"tmpmanevents_")+val$(_Offline))+".txt")
+
+  Open PrintOutput$ For OUTPUT AS # 5
+  Print #5, "Data File: "+DaDataPath$+DaDataFile$
+  print #5, ""
+  DoPrint_MemManEvent
+  Close #5
+  TextViewer ReadResource$("phx3dsupport",ID_PHX3DSUPPORTFILES_MEM_EVENTS_TITLE_421),PrintOutput$,8315  
+  delete PrintOutput$,DONTASK
+  print ""
+EndMacro
+
+
+! print manual events currently in memory
+Name DoPrint_MemManEvent
+  local i, Name$, numObjs, exists,RegObj$,bEvFound
+  Local ID_PHX3DSUPPORTFILES_MEM_EVENTS_TITLE_421 
+  local ID_PHX3DSUPPORTFILES_NO_MANUAL_EVENTS_422
+  
+  ID_PHX3DSUPPORTFILES_MEM_EVENTS_TITLE_421 = 17421
+  ID_PHX3DSUPPORTFILES_NO_MANUAL_EVENTS_422 = 17422
+
+  bEvFound= 0
+ 
+  numObjs = RegSize(CHROMREG)
+  if numObjs > 0
+     PrintIntEvent_HeaderBlock  ID_PHX3DSUPPORTFILES_MEM_EVENTS_TITLE_421
+     i = 1
+     For i=1 To numObjs
+       RegObj$="CHROMREG["+Val$(i)+"]"
+       evaluate "exists=ObjHdrType("+RegObj$+",ManIntEvents)"
+       If exists = 4 Then
+           bEvFound = 1
+           Print_MemManEventTab RegObj$
+       Endif
+     Next i
+     if bEvFound=0
+        Print #5, ReadResource$("phx3dsupport",ID_PHX3DSUPPORTFILES_NO_MANUAL_EVENTS_422)  
+     endif
+  endif
+  
+  return
+endmacro
+
+Name FormatLineForPrintManEventTab
+parameter Command, IntegMode, Time1, Off1, Time2, Off2
+  local  EventName$
+
+  if (Command = 1) 
+    EventName$ = "ManEventBase"
+    if IntegMode = 2
+      EventName$ = "ManEventNeg"
+    endif
+    if IntegMode = 3
+      EventName$ = "ManEventTangent"
+    endif
+    print using #5, NLSCoreEvent$("ManEvent4Values"), \
+                    NLSCoreEvent$(EventName$), Time1, Off1, Time2, Off2
+  else
+    if (Command = 2)
+      print using #5, NLSCoreEvent$("ManEvent1Time"), \
+                      NLSCoreEvent$("ManEventSplit"), Time1
+    else
+      print using #5, NLSCoreEvent$("ManEvent2Time"), \
+                      NLSCoreEvent$("ManEventDelete"),Time1, Time2
+    endif
+  endif
+  
+endmacro
+
+Name PrintManEventTab
+parameter Tab$
+  local nEvents, Event 
+  local Time1, Off1, Time2, Off2, Command, IntegMode, EventName$
+  local Dashes$
+
+  nEvents = TabHdrVal (_DAMethod[1], Tab$, "NumberOfRows")
+
+  if DevNum() = 5 then
+    ! Destination is PRINTER; check for necessary FormFeed
+    CheckFormFeed 5 + 6 + nEvents
+  endif
+
+  PrintEventTabTitle Tab$,"Manual"
+
+  print using #5, NLSCoreEvent$("ManEventHeader")
+
+  Event    = 1
+  while Event <= nEvents do
+    Time1    =  TabVal (_DAMethod[1], Tab$, Event, "TimeStart")
+    Off1     =  TabVal (_DAMethod[1], Tab$, Event, "OffsetStart")
+    Time2    =  TabVal (_DAMethod[1], Tab$, Event, "TimeEnd")
+    Off2     =  TabVal (_DAMethod[1], Tab$, Event, "OffsetEnd")
+    Command  =  TabVal (_DAMethod[1], Tab$, Event, "CommandType")
+    IntegMode = TabVal (_DAMethod[1], Tab$, Event, "IntegMode")
+    
+    FormatLineForPrintManEventTab Command, IntegMode, Time1, Off1, Time2, Off2
+    
+    Event = Event + 1
+  endwhile
+  print #5, ""
+  return
+endmacro
+
+
+Name Print_DF_ManEventTab
+parameter Tab$
+  local nEvents, Event 
+  local Time1, Off1, Time2, Off2, Command, IntegMode, EventName$
+  local Dashes$
+
+  nEvents = TabHdrVal (_DF_TMP_MINT[1], Tab$, "NumberOfRows")
+
+  if DevNum() = 5 then
+    ! Destination is PRINTER; check for necessary FormFeed
+    CheckFormFeed 5 + 6 + nEvents
+  endif
+
+  PrintEventTabTitle Tab$,"DFManual"
+
+  print using #5, NLSCoreEvent$("ManEventHeader")
+
+  Event    = 1
+  while Event <= nEvents do
+    Time1    =  TabVal (_DF_TMP_MINT[1], Tab$, Event, "TimeStart")
+    Off1     =  TabVal (_DF_TMP_MINT[1], Tab$, Event, "OffsetStart")
+    Time2    =  TabVal (_DF_TMP_MINT[1], Tab$, Event, "TimeEnd")
+    Off2     =  TabVal (_DF_TMP_MINT[1], Tab$, Event, "OffsetEnd")
+    Command  =  TabVal (_DF_TMP_MINT[1], Tab$, Event, "CommandType")
+    IntegMode = TabVal (_DF_TMP_MINT[1], Tab$, Event, "IntegMode")
+    
+    FormatLineForPrintManEventTab Command, IntegMode, Time1, Off1, Time2, Off2
+    
+    Event = Event + 1
+  endwhile
+  print #5, ""
+  return
+EndMacro
+
+Name Print_MemManEventTab
+parameter RegObj$
+  local nEvents, Event 
+  local Time1, Off1, Time2, Off2, Command, IntegMode, EventName$
+  local Dashes$, SignalDesc$
+
+  evaluate "nEvents=TabHdrVal("+RegObj$+", ManIntEvents, ""NumberOfRows"")"
+
+  if DevNum() = 5 then
+    ! Destination is PRINTER; check for necessary FormFeed
+    CheckFormFeed 5 + 6 + nEvents
+  endif
+
+  evaluate "SignalDesc$=ObjHdrText$("+RegObj$+",Detector)+"" ""+ObjHdrText$("+RegObj$+",SignalId)"
+
+  PrintEventTabTitle SignalDesc$,"memory"
+
+  print using #5, NLSCoreEvent$("ManEventHeader")
+
+  Event    = 1
+  while Event <= nEvents do
+    evaluate "Time1=TabVal("+RegObj$+",ManIntEvents, Event, ""TimeStart"")"
+    evaluate "Off1=TabVal("+RegObj$+",ManIntEvents, Event, ""OffsetStart"")"
+    evaluate "Time2=TabVal("+RegObj$+",ManIntEvents, Event, ""TimeEnd"")"
+    evaluate "Off2=TabVal("+RegObj$+",ManIntEvents, Event, ""OffsetEnd"")"
+    evaluate "Command=TabVal("+RegObj$+",ManIntEvents, Event, ""CommandType"")"
+    evaluate "IntegMode=TabVal("+RegObj$+",ManIntEvents, Event, ""IntegMode"")"
+    
+    FormatLineForPrintManEventTab Command, IntegMode, Time1, Off1, Time2, Off2
+    
+    Event = Event + 1
+  endwhile
+  print #5, ""
+  return
+EndMacro
+
+
+!============================================================================
+Name DoPrintInteg
+
+
+! This is the DoPrintInteg macro, which is called from PrintDAMethod.
+!
+!   The output device (file or printer) has to be opened, configured and
+!   closed by the caller.
+!   Page numbering, page headers and footers are configured by the caller.
+!
+!============================================================================
+
+  
+endmacro
+

@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="AnnotT" PosStyle="RIGHT" DockRow="0" DockCol="0" Caption="Annotation" PanelName="Chem">
+		<PushButton Name="SetDef" Help="Edit Annotation Options" Command="ANN_EditOptions 1" ImageName="Graph_EditAnnot20" ImageNameDisabled="Graph_EditAnnot20_d"/>
+		<RadioButton Name="New" Help="Add Annotation to window" Command="ANN_SetAnnotMenuSelection New,1" Group="1" ImageName="Graph_AddAnnot20" ImageNameDisabled="Graph_AddAnnot20_d"/>
+		<RadioButton Name="Line" Help="Draw line in window" Command="ANN_SetAnnotMenuSelection Line,1" Group="1" ImageName="Graph_DrawLine20" ImageNameDisabled="Graph_DrawLine20_d"/>
+		<RadioButton Name="Move" Help="Move (Drag) / Change (Click) Annotation" Command="ANN_SetAnnotMenuSelection Move,1" Group="1" ImageName="Graph_MoveAnnot20" ImageNameDisabled="Graph_MoveAnnot20_d"/>
+		<RadioButton Name="Delete" Help="Delete Annotation from window" Command="ANN_SetAnnotMenuSelection Delete,1" Group="1" ImageName="Graph_DeleteAnnot20" ImageNameDisabled="Graph_DeleteAnnot20_d"/>
+		<RadioButton Name="NewWMF" Help="Add new 'EMF' Annotation to window" Command="ANN_SetAnnotMenuSelection NewWmf,1" Group="1" ImageName="Graph_AddEMF20" ImageNameDisabled="Graph_AddEMF20_d"/>
+		<PushButton Name="ToggleOverlay" Help="Toggles between Separate and Overlay of signals" Command='ANN_ToggleWindowOption "Overlay",-1' ImageName="Graph_ToggleDisplay20" ImageNameDisabled="Graph_ToggleDisplay20_d"/>
+		<PushButton Name="ToggleFullScale" Help="Toggles between all in the Same Scale and each in Full Scale" Command='ANN_ToggleWindowOption "FullScale",-1' ImageName="Graph_ToggleScale20" ImageNameDisabled="Graph_ToggleScale20_d"/>
+		<PushButton Name="ToggleNames" Help="Toggles between Compound Names and No Compound Names to display" Command="Win_ToggleWindowOption Names,,,38" ImageName="Graph_ToggleCompound20" ImageNameDisabled="Graph_ToggleCompound20_d"/>
+		<PushButton Name="ToggleTimes" Help="Toggles between Retention Times and No Retention Times to display" Command="Win_ToggleWindowOption Times,,,38" ImageName="Graph_ToggleRetentionTime20" ImageNameDisabled="Graph_ToggleRetentionTime20_d"/>
+		<PushButton Name="ToggleBaseline" Help="Toggles between Base Line and No Base Line to display" Command="Win_ToggleWindowOption Baseline,,,38" ImageName="Graph_ToggleBaseline20" ImageNameDisabled="Graph_ToggleBaseline20_d"/>
+		<PushButton Name="ToggleobjTitles" Help="Toggles between Object Titles and No Object Titles to display" Command="Win_ToggleWindowOption ObjTitles" ImageName="Graph_ToggleTitles20" ImageNameDisabled="Graph_ToggleTitles20_d"/>
+		<PushButton Name="ToggleAxis" Help="Toggles between Axis and No Axis to display" Command="Win_ToggleWindowOption Axis" ImageName="Graph_ToggleAxis20" ImageNameDisabled="Graph_ToggleAxis20_d"/>
+		<PushButton Name="PrintWindow" Help="Print Window" Command="Win_ToggleWindowOption PrintWindow" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="ClipWindow" Help="Copy Window to Clipboard" Command="Win_ToggleWindowOption ClipWindow" ImageName="Graph_CopyClipboard20" ImageNameDisabled="Graph_CopyClipboard20_d"/>
+	</toolbar>
+</graphical_object>

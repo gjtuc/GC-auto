@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="lstatus" PosStyle="TOP" DockRow="1" DockCol="0" Caption="Status" PanelName="Main">
+		<StatusList Name="SysStatus" Help="Shows ChemStation Status" NewGroup="1" Enable="1" Width="300" Font="Microsoft Sans Serif, 10, Bold" Border="NoBorder" Justify="Center" Height="20" BkColor="LightGreen" Text="Ready" UseElements="0|0|0|1|1|1" Alias='SysGreen=LightGreen|SysBlue=LightSteelBlue|SysRed=LightSalmon|SysYellow=LightYellow|SysMagenta=Orchid|SysCyan=Aquamarine|SysWhite=GhostWhite|MthGreen=LawnGreen|MthBlue=RoyalBlue|MthRed=Red|MthYellow=Yellow|MthMagenta=Magenta|MthCyan=Cyan|MthWhite=White' Separator="/" Symbols="SysGreen|SysBlue|SysRed|SysYellow|SysMagenta|SysCyan|SysWhite|MthGreen|MthBlue|MthRed|MthYellow|MthMagenta|MthCyan|MthWhite|" Elements="1|1|SysGreen|Ready|MthGreen|"/>
+		<StatusList Name="TimeStatus" Help="Shows run time status" NewGroup="1" Enable="1" Width="100" Font="Microsoft Sans Serif, 10, Bold" Border="NoBorder" Justify="Center" Height="20" ForeColor="Yellow" BkColor="DarkBlue" Text="0 min" UseElements="1|0|0|0" Alias="" Separator="/" Symbols="0|1" Elements="|| min| "/>
+		<StatusList Name="Time" Help="Shows run time" Enable="1" Width="100" Font="Microsoft Sans Serif, 10, Bold" Border="NoBorder" Justify="Center" Height="20" ForeColor="Yellow" BkColor="DarkBlue" Text="0 min" UseElements="0|1|0|0" Alias="" Separator="/" Symbols="0|1" Elements="|| min| "/>
+		<!-- ==================================================================== -->
+		<PushButton Name="MethodStatus" Help="Method modification status" Command="" NewGroup="1" Enable="0" ImageName="Method20" ImageNameDisabled="Method20"/>
+		<Static Name="MethodStatusText" Help="" Border="NoBorder" Text="Method:"/>
+		<Static Name="Method" Help="Current method name" Border="NoBorder" Text="--" Font="Microsoft Sans Serif, 8, Bold"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="SequenceStatus" Help="Sequence modification status" Command="" NewGroup="1" Enable="0" ImageName="Sequence20" ImageNameDisabled="Sequence20"/>
+		<Static Name="SequenceStatusText" Help="" Border="NoBorder" Text="Sequence:"/>
+		<Static Name="Sequence" Help="Current sequence name" Border="NoBorder" Text="--" Font="Microsoft Sans Serif, 8, Bold"/>
+	</toolbar>
+</graphical_object>
+
+
+

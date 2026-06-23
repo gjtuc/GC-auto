@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<ModuleRegistration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="file://RCNetRegistrationScheme.xsd" xsi:schemaLocation="file://RCNetRegistrationScheme.xsd RCNetRegistrationScheme.xsd">
+	<Instruments>
+	<!-- Moved content to Agilent.LC.1200Series.RCNet.Registration.xml -->	
+	</Instruments>
+	<MergeOrderID>2</MergeOrderID>
+</ModuleRegistration>

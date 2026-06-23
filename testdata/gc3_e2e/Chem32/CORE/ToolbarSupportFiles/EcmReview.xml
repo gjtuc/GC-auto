@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+  <toolbar Name="EcmReview" PosStyle="TOP" DockRow="0" DockCol="1" Caption="ECM" PanelName="Main">
+    <Static Name="ECMName" Visible="1" Enable="1" Text="ECM" Border="NoBorder"/>
+    <StickyButton Name="ECMLogin" Help="ECM Login Logout" CmdList="IR_Command_Logout|IR_Command_Login" ImageName="ECM_Logon20" ImageNameDisabled="ECM_Logon20_d"/>
+    <PushButton Name="Preferences" Help="Open Preferences Dialog" Command="IR_Command_Preferences" Visible="1" ImageName="Preferences20" ImageNameDisabled="Preferences20_d"/>
+    <PushButton Name="ECMOpenTemplate" Help="Load Report Template from ECM" Command='IR_Command_LoadTemplateFromEcm' Visible="1" ImageName="Report_LoadTemplateFromEcm20" ImageNameDisabled="Report_LoadTemplateFromEcm20_d"/>
+    <PushButton Name="ECMExportPdf" Help="Export a pdf report to ECM" Command='IR_Command_ExportPdfToEcm' Visible="1" ImageName="Report_ExportPdfToEcm20" ImageNameDisabled="Report_ExportPdfToEcm20_d"/>
+  </toolbar>
+</graphical_object>

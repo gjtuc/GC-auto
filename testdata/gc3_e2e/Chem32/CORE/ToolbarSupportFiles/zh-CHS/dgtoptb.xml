@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 sp2 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="dgTopTB" PosStyle="TOP" Caption="“dgTopTB”" PanelName="Main">
+		<Static Name="ResultsLabel" Text="测试结果/日志" Border="NoBorder"/>
+		<PushButton Name="Open" Help="打开先前保存的测试结果或日志" Command="dgOpenTestResult" Group="0" ImageName="Diag_OpenResults20" ImageNameDisabled="Diag_OpenResults20_d"/>
+		<PushButton Name="Save" Help="保存最新的测试结果" Command="dgExecSaveMacro" Group="0" ImageName="Diag_SaveResults20" ImageNameDisabled="Diag_SaveResults20_d"/>
+		<PushButton Name="Print" Help="打印最新的测试结果" Command="dgExecPrintMacro" Group="0" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<RadioButton Name="OQPVBtn" Help="将可能的 OQ/PV 故障调用到症状列表中。" Command="dgSelectSymptomGroup OQPVsymptoms, OQPVBtn" DisplayText="1" Text="OQ/PV" NewGroup="1" Group="1"/>
+		<RadioButton Name="AnalytBtn" Help="将可能的分析问题调用到症状列表中。" Command="dgSelectSymptomGroup AnalSymptoms, AnalytBtn" DisplayText="1" Text="分析" Group="1"/>
+		<Static Name="SymptomsLabel" Text="观察到的症状" Border="NoBorder"/>
+		<NonEditCombobox Name="SymptomSelect" Help="选择症状以将可能的故障调用到原因列表中。" Enable="1" Table="DiagGUIReg,4,FMSymptoms" Selection="1" Width="200" IsPath="0"/>
+		<Static Name="CausesLabel" Text="可能原因" Border="NoBorder"/>
+		<NonEditCombobox Name="CauseSelect" Help="选择原因确认簿上要评价的故障原因" Enable="1" Table="DiagGUIReg,4,FMCauses" Selection="1" Width="200" IsPath="0"/>
+	</toolbar>
+</graphical_object>

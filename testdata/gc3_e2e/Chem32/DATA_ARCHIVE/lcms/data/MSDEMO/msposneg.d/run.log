@@ -1,0 +1,18 @@
+  67 41e0 37b4ae1c    0
+Method       Method started                                 16:45:32 08/13/99
+  67 41e0 37b4ae1c    0
+Method       Instrument running sample vial# 1              16:45:32 08/13/99
+   0 1da9 37b4ae7e  600
+1100 PMP   1 Pressure = 70.5 bar                            16:47:10 08/13/99
+   0 1da7 37b4ae7e  600
+1100 THM   1 Column temperature = 40.0 °C                   16:47:10 08/13/99
+   0 1da7 37b4b00c  600
+1100 THM   1 Column temperature = 40.0 °C                   16:53:48 08/13/99
+  70 41de 37b4b00d    0
+CP Macro     Analyzing rawdata MSPOSNEG.D                   16:53:49 08/13/99
+   0 1da9 37b4b0d6  600
+1100 PMP   1 Pressure = 41.7 bar                            16:57:10 08/13/99
+  67 41e0 37b4b204    0
+Method       Instrument run completed                       17:02:12 08/13/99
+  67 41e0 37b4b204    0
+Method       Method completed                               17:02:12 08/13/99

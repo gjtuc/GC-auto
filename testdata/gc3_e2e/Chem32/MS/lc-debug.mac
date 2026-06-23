@@ -1,0 +1,822 @@
+!file: LC-DEBUG.MAC
+!
+! contains special macros for debugging purpose of LC Chemstation
+
+
+NAME DebugMenu
+  MenuDelete "Debug"
+  MenuAdd "Debug", "Show Registers",    "VR"  ,," "
+  MenuAdd "Debug", "Print Actual Window","PrintActWnd"     ,," "
+  MenuAdd "Debug", "Print Current View ","PrintCurrentView",," "
+
+  MenuAdd "Debug", ,"SEPARATOR"
+  MenuAdd "Debug", "Trace Messages",       "TraceMsgs"  ,," "
+  MenuAdd "Debug", "Debug ON",             "DebugOutON"  ,," "
+  MenuAdd "Debug", "Debug OFF",            "DebugOutOFF" ,," "
+  MenuAdd "Debug", "Debug SHOW(-> off)",   "ShowDebugLog",," "
+  MenuAdd "Debug", ,"SEPARATOR"
+  MenuAdd "Debug", "Error Message",        "ErrMsg"  ,," "
+ENDMACRO
+
+name ErrMsg
+  listmessages on
+  ON ERROR Goto endprint
+
+  print ">> Error  : ", _ERROR
+  print ">> Message: ", _ERRMSG$
+  print ">> Macro  : ", _ERRMacro$
+  print ">> Line   : ", _ERRLine
+  print ">> File   : ", _ERRFile$
+
+  endprint:
+    return
+endmacro
+
+name TraceMsgs
+  listmessages ON
+  setverbose 0
+  logging 1,,ERASE
+  return
+endmacro
+
+
+name DebugOutON
+  listmessages ON
+  cmdline ON
+  setverbose 3
+  logging 6,,ERASE
+  return
+endmacro
+
+
+name DebugOutOFF
+  ! cmdline OFF
+  setverbose 0
+  logging 0
+  return
+endmacro
+
+name ShowDebugLog
+  setverbose 0
+  logging 0  
+  execnowait "notepad "+_ExePath$+"LOGGING.TXT", 1
+  return
+endmacro
+
+
+
+NAME PrintActWnd
+LOCAL Win
+ Win=ActiveWindow()
+ IF Win > 0 THEN
+   Print "Win=",Win,"  Cmd=", TabText$(_CONFIG[1],WINDOW,Win,Command)
+ ELSE
+   Print "Win=",Win
+ ENDIF
+RETURN
+ENDMACRO
+
+
+NAME PrintCurrentView
+  Print TabHdrText$(_CONFIG[1],WINDOW,CurrentView)
+RETURN
+ENDMACRO
+
+
+!=====================================================================
+!            Ulrich's macros
+!=====================================================================
+
+
+!***************************
+Name Obj_BuildBoxCtrl !*
+!***************************
+  AddPipeTabLevel _Config[6],  ShowObjHdrBox,,"ObjTab","","",""
+  AddPipeTabLevel _Config[6],  ShowObjHdrBox,,"ObjTab","","",""
+  AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"Expression","'['",1,1,0
+  AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"ObjTab","#",1,2,0
+  AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"ObjTab","type",2,3,0
+  settabval       _Config[6],  ShowObjHdrBox,3,"ColHidden",1
+  AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"ObjTab","name",2,4,0
+  settabval       _Config[6],  ShowObjHdrBox,4,"ColHidden",1
+  AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"Expression","'], '+col$(4)+','",2,5,0
+  AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"ObjTab","value",2,6,0
+  settabval       _Config[6],  ShowObjHdrBox,6,"ColHidden",1
+  AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"Expression","'\9'",1,7,0
+  AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"Expression","{col(3)=0?'""'+col$(6)+'""':{col(3)=1?col(6):'{table}'}}",2,8,0
+
+
+  SetTabHdrText   _Config[6],  ShowObjHdrBox, "FormatModule",  ""
+  SetTabHdrText   _Config[6],  ShowObjHdrBox, "FormatKeyword", "String"
+endmacro
+
+!***************************
+Name Obj_BuildBoxOdt  !*
+!***************************
+  CopyTab       _config[2],odt,_config[3],"ShowObjHdrBox"
+  instabrow     _config[3],ShowObjHdrBox,1:5
+  settabval     _config[3],ShowObjHdrBox,1,"ExtractorRowNr",1
+  settabval     _config[3],ShowObjHdrBox,1,"Width",1
+  settabtext    _config[3],ShowObjHdrBox,1,"Format",""     
+  settabtext    _config[3],ShowObjHdrBox,1,"ExpFormat",""
+  settabval     _config[3],ShowObjHdrBox,1,"MinPower",0
+  settabval     _config[3],ShowObjHdrBox,1,"MaxPower",0
+  settabval     _config[3],ShowObjHdrBox,1,"ExpChars",0
+
+  settabval     _config[3],ShowObjHdrBox,2,"ExtractorRowNr",2
+  settabval     _config[3],ShowObjHdrBox,2,"Width",2
+  settabtext    _config[3],ShowObjHdrBox,2,"Format","%d"     
+  settabtext    _config[3],ShowObjHdrBox,2,"ExpFormat",""
+  settabval     _config[3],ShowObjHdrBox,2,"MinPower",0
+  settabval     _config[3],ShowObjHdrBox,2,"MaxPower",0
+  settabval     _config[3],ShowObjHdrBox,2,"ExpChars",0
+
+  settabval     _config[3],ShowObjHdrBox,3,"ExtractorRowNr",5
+  settabval     _config[3],ShowObjHdrBox,3,"Width",19
+  settabtext    _config[3],ShowObjHdrBox,3,"Format",""     
+  settabtext    _config[3],ShowObjHdrBox,3,"ExpFormat",""
+  settabval     _config[3],ShowObjHdrBox,3,"MinPower",0
+  settabval     _config[3],ShowObjHdrBox,3,"MaxPower",0
+  settabval     _config[3],ShowObjHdrBox,3,"ExpChars",0
+
+  settabval     _config[3],ShowObjHdrBox,4,"ExtractorRowNr",7
+  settabval     _config[3],ShowObjHdrBox,4,"Width",1
+  settabtext    _config[3],ShowObjHdrBox,4,"Format",""     
+  settabtext    _config[3],ShowObjHdrBox,4,"ExpFormat",""
+  settabval     _config[3],ShowObjHdrBox,4,"MinPower",0
+  settabval     _config[3],ShowObjHdrBox,4,"MaxPower",0
+  settabval     _config[3],ShowObjHdrBox,4,"ExpChars",0
+
+  settabval     _config[3],ShowObjHdrBox,5,"ExtractorRowNr",8
+  settabval     _config[3],ShowObjHdrBox,5,"Width",60
+  settabtext    _config[3],ShowObjHdrBox,5,"Format",""     
+  settabtext    _config[3],ShowObjHdrBox,5,"ExpFormat",""
+  settabval     _config[3],ShowObjHdrBox,5,"MinPower",0
+  settabval     _config[3],ShowObjHdrBox,5,"MaxPower",0
+  settabval     _config[3],ShowObjHdrBox,5,"ExpChars",0
+  settabtext    _Config[3],ShowObjHdrBox,5,"ComplementForm","%-g"
+  settabtext    _Config[3],ShowObjHdrBox,5,"Format","%-s"
+
+  settabhdrtext _config[3],ShowObjHdrBox,"Delimiter",""
+  settabhdrtext _config[3],ShowObjHdrBox,"FirstDelimiter",""
+  settabhdrtext _config[3],ShowObjHdrBox,"LastDelimiter",""
+  settabhdrtext _config[3],ShowObjHdrBox,"EndOfLine","|"
+
+  settabhdrtext _config[3],ShowObjHdrBox,"ExtractorTbl",ShowObjHdrBox
+  settabhdrtext _config[3],ShowObjHdrBox,"Destination","temp$"
+endmacro
+
+!***********************************!
+name OS_AdjustCtrlTab
+!***********************************!
+parameter ShowStrings,ShowNumbers,ShowTables
+local i
+  i = TabHdrVal(_config[6],ShowObjHdrBox,NumberofRows)
+
+  while i>8
+    RemovePipeTabCol _config[6],ShowObjHdrBox,i
+    i = i-1
+  endwhile
+
+  i=9
+  if ShowStrings = 0
+    AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"Expression","col(3)<>0",2,i,1
+    settabval       _Config[6],  ShowObjHdrBox,i,"ColHidden",1
+    i=i+1
+  endif
+
+  if ShowNumbers = 0
+    AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"Expression","col(3)<>1",2,i,1
+    settabval       _Config[6],  ShowObjHdrBox,i,"ColHidden",1
+    i=i+1
+  endif
+
+  if ShowTables = 0
+    AddPipeTabCol   _Config[6],  ShowObjHdrBox,,"Expression","col(3)<>4",2,i,1
+    settabval       _Config[6],  ShowObjHdrBox,i,"ColHidden",1
+  endif
+
+endmacro
+
+!***********************************!
+name OS_VRShowTabWinButton$
+!***********************************!
+parameter NOfObjs,OS_SelReg$,OS_SelObjHdr$,OS_WinNum
+local Result,i,j,NVType
+
+  if len(OS_SelObjHdr$) = 0
+    Result = alert("Please select a table first",3,\
+                   _InstName$+": Show Object Header Items")   
+    OS_SelObjHdr$ = ""
+  else
+    i = instr(OS_SelObjHdr$,",")+1
+    j = instr(OS_SelObjHdr$[i:len(OS_SelObjHdr$)],",")-2
+    evaluate "NVType=objhdrtype("+OS_SelReg$+OS_SelObjHdr$[1:4]+","+OS_SelObjHdr$[i:j+i]+")"
+    if NVType <> 4
+      Result = alert("Please select a table first",3,\
+                     _InstName$+": Show Object Header Items")   
+      OS_SelObjHdr$ = ""
+    else
+      evaluate "edtab OS_WinNum,"+OS_SelReg$+OS_SelObjHdr$[1:4]+","+OS_SelObjHdr$[i:j+i]
+    endif
+  endif
+  return OS_SelObjHdr$
+endmacro
+
+!***********************************!
+name OS_VRPrintButton
+!***********************************!
+parameter NOfObjs,OS_SelReg$
+local Result,Temp$
+
+  if  NOfObjs = 0
+    print OS_SelReg$+" contains no objects!"
+  else
+    DelTab _config[3],PrintObjHdrBox
+    CopyTab _config[3],ShowObjHdrBox,_config[3],PrintObjHdrBox
+    settabhdrtext _config[3],PrintObjHdrBox,"EndOfLine",chr$(13)+chr$(10)
+    settabhdrtext _config[3],PrintObjHdrBox,"Destination","Temp$"
+    DelTabRow _config[3],PrintObjHdrBox,4
+
+    evaluate "PipeTab _config[6],ShowObjHdrBox,_config[3],PrintObjHdrBox,"+OS_SelReg$+",-1"
+
+    on error Result = 4
+    EndJob
+    close #5
+    on error
+
+    OpenDevice "Printer" As #5
+    SetMargin 2, 2, 2
+    BeginJob ,,XMax()-13, YMax()-1
+    SetHeader "Object Header Item/Table Listing of "+OS_SelReg$
+ 
+    print #5,Temp$
+    EndJob
+    close #5
+
+    DelTab _config[3],PrintObjHdrBox
+  endif
+endmacro
+
+!***********************************!
+name OS_VREditButton$
+!***********************************!
+parameter OS_SelReg$,OS_SelObjHdr$
+local Result,i,j,NVType,OS_ObjHdrString$,ObjHdrNumber,ObjHdrParam$,Cancel
+
+  if len(OS_SelObjHdr$) = 0
+    Result = alert("Please select an object header item first",3,\
+                   _InstName$+": Show Object Header Items")   
+    OS_SelObjHdr$ = ""
+  else
+    i = instr(OS_SelObjHdr$,",")+1
+    j = instr(OS_SelObjHdr$[i:len(OS_SelObjHdr$)],",")-2
+    ObjHdrParam$=OS_SelReg$+OS_SelObjHdr$[1:4]+", "+OS_SelObjHdr$[i:j+i]
+    evaluate "NVType=objhdrtype("+ObjHdrParam$+")"
+    if NVType = 4
+      Cancel = OS_ShowTabInfo(OS_SelReg$+OS_SelObjHdr$[1:4]+","+OS_SelObjHdr$[i:j+i])
+    else
+      Cancel=0
+      RemoveDialog(OS_EditObjHdr)
+      BeginDialog OS_EditObjHdr,50,50,200,60,_InstName$+": Edit Object Header Item"
+      StaticText    10, 10,180, 10,"Edit   "+ObjHdrParam$+":"
+      OKButton     120, 40, 30, 15
+      CancelButton 160, 40, 30, 15
+      if NVType = 0
+        EditBox       10, 20,180, 12,OS_ObjHdrString$,,1
+        EndDialog
+        evaluate "OS_ObjHdrString$=objhdrtext$("+ObjHdrParam$+")"
+        Result = ShowDialog(OS_EditObjHdr)
+        RemoveDialog(OS_EditObjHdr)
+        if Result=1
+          on error Result = 0
+          evaluate "SetObjHdrText "+ObjHdrParam$+","""+OS_ObjHdrString$+""""
+          on error
+          if Result = 0
+            Result = alert("Could not write to "+ObjHdrParam$+" due to """+_ErrMsg$+"""",3,\
+                           _InstName$+": Edit Object Header Items")   
+          endif
+        endif
+      else
+        if NVType = 1
+          NumberBox       10, 20,180, 12,OS_ObjHdrNumber
+          EndDialog
+          evaluate "OS_ObjHdrNumber=objhdrval("+ObjHdrParam$+")"
+          Result = ShowDialog(OS_EditObjHdr)
+          RemoveDialog(OS_EditObjHdr)
+          if Result=1
+            on error Result = 0
+            evaluate "SetObjHdrVal "+ObjHdrParam$+","+val$(OS_ObjHdrNumber)
+            on error
+            if Result = 0
+              Result = alert("Could not write to "+ObjHdrParam$+" due to """+_ErrMsg$+"""",3,\
+                             _InstName$+": Edit Object Header Items")   
+            endif
+          endif
+        endif
+      endif
+    endif
+  endif
+  return val$(Cancel)+OS_SelObjHdr$
+endmacro
+
+
+!***********************************!
+name OS_VRPrintRegisters
+!***********************************!
+parameter OS_AllRegs$
+local Result,j,strlen,pos
+
+  on error j=1
+  EndJob
+  close #5
+  on error
+
+  OpenDevice "Printer" As #5
+  SetMargin 2, 2, 2
+  BeginJob ,,XMax()-13, YMax()-1
+  SetHeader "Register List of "+_InstName$
+
+  j = instr(OS_AllRegs$,"|")
+  strlen = len(OS_AllRegs$)
+  pos = 1
+
+  while j>0
+    print #5,OS_AllRegs$[pos:pos+j-2]
+    pos = pos+j
+    j = instr(OS_AllRegs$[pos:strlen],"|")
+  endwhile
+  print #5,OS_AllRegs$[pos:strlen]
+
+  EndJob
+  close #5
+endmacro
+
+!***********************************!
+name VR
+!***********************************!
+local Result,i,j,NOfObjs,\ 
+      OS_AllRegs$,    OS_SelReg$,OS_WinNum,\  
+      OS_AllObjHdr$,  OS_SelObjHdr$,OS_TabInfo$,\
+      OS_ShowStrings,OS_ShowNumbers,OS_ShowTables,Temp$
+
+  OS_AllRegs$ = RegName$(1)
+  OS_SelReg$  = OS_AllRegs$
+  OS_ShowStrings = 1
+  OS_ShowNumbers = 1
+  OS_ShowTables  = 1
+
+  i=2
+  repeat
+    Temp$=RegName$(i)
+    if Temp$ <> ""
+      OS_AllRegs$ = OS_AllRegs$+"|"+Temp$
+    endif
+    i = i+1
+  until Temp$ = ""
+
+  Result = 1
+
+  while Result <> 0
+
+    OS_TabRegBox
+    Result = ShowDialog(OS_TabReg)
+
+    if Result = 0
+      RemoveDialog OS_TabReg
+      return
+    endif
+
+    if Result = 2
+      ! print registers
+      OS_VRPrintRegisters OS_AllRegs$
+    endif
+
+    if Result = 3
+      ! show CP
+      show
+    endif
+
+    if Result = 1
+      while (OS_ShowStrings = 0)  AND\
+            (OS_ShowNumbers = 0)  AND\
+            (OS_ShowTables  = 0)
+
+        Result = alert("Please select at least one item type to show",3,\
+                       _InstName$+": Show Object Header Items")   
+
+        Result = ShowDialog(OS_TabReg)
+        if Result = 0
+          RemoveDialog OS_TabReg
+          return
+        endif
+
+      endwhile
+
+      OS_AdjustCtrlTab OS_ShowStrings,OS_ShowNumbers,OS_ShowTables
+
+      print "searching for object header items in",OS_SelReg$
+      OS_AllObjHdr$ = ""
+
+      settabhdrtext _config[3],ShowObjHdrBox,"Destination","OS_AllObjHdr$"
+
+      evaluate "NOfObjs = RegSize("+OS_SelReg$+")"
+      if NOfObjs > 0
+        evaluate "PipeTab _config[6],ShowObjHdrBox,_config[3],ShowObjHdrBox,"+OS_SelReg$+",-1"
+      endif
+
+      OS_ObjHdrBox OS_SelReg$
+
+      Result = 2
+      OS_WinNum = 3
+      while Result >= 2
+        Result =  ShowDialog(OS_ShowObjHdr)
+
+        if (Result = 2)
+          !Edit button
+          OS_SelObjHdr$=OS_VREditButton$(OS_SelReg$,OS_SelObjHdr$)
+          evaluate "PipeTab _config[6],ShowObjHdrBox,_config[3],ShowObjHdrBox,"+OS_SelReg$+",-1"
+          if OS_SelObjHdr$[1]="0"
+            Result=0
+          else
+            OS_SelObjHdr$=OS_SelObjHdr$[2:len(OS_SelObjHdr$)]
+          endif
+        else
+          if (Result = 3)
+            ! show table window
+            OS_SelObjHdr$=OS_VRShowTabWinButton$(NOfObjs,OS_SelReg$,OS_SelObjHdr$,OS_WinNum)
+          else
+            if (Result = 4)
+            ! print contents of list box
+              OS_VRPrintButton NOfObjs,OS_SelReg$
+            else
+              if (Result = 5)
+                !show CP
+                show
+              endif
+            endif
+          endif
+        endif
+      endwhile
+      OS_SelObjHdr$ = ""
+    endif
+  endwhile
+
+  RemoveDialog OS_ShowObjHdr
+
+endmacro
+
+!***********************************!
+name OS_ShowTabInfoEdit$           !*
+!***********************************!
+parameter OS_TabInfo$,OS_SelTab$,Selection$
+local OS_NVParam$,Result,OS_TabHdrString$,OS_TabHdrNumber,i,j,k,NewText$
+
+  if instr(Selection$,"(")<1
+    Result = alert("Please select a column or header item to edit",3,\
+                  _InstName$+": Table Info")
+    return OS_TabInfo$
+  endif
+  OS_NVParam$ = OS_SelTab$+", "+Selection$[1:instr(Selection$,"(")-1]
+  
+  evaluate "Result = TabHdrType("+OS_NVParam$+")"
+  if Result=99
+    Result = alert("Columns not supported yet",3,\
+                   _InstName$+": Table Info")
+  else
+    RemoveDialog(OS_EditTabHdr)
+    BeginDialog OS_EditTabHdr,50,50,200,60,_InstName$+": Edit Table Header Item"
+    StaticText    10, 10,180, 10,"Edit   "+OS_NVParam$+":"
+    OKButton     120, 40, 30, 15
+    CancelButton 160, 40, 30, 15
+    if Result <= 0
+      EditBox       10, 20,180, 12,OS_TabHdrString$,,1
+      EndDialog
+      evaluate "OS_TabHdrString$=TabHdrtext$("+OS_NVParam$+")"
+      Result = ShowDialog(OS_EditTabHdr)
+      RemoveDialog(OS_EditTabHdr)
+      if Result=1
+        on error Result = 0
+        evaluate "SetTabHdrText "+OS_NVParam$+","""+OS_TabHdrString$+""""
+        on error
+        if Result = 0
+          Result = alert("Could not write to "+OS_NVParam$+" due to """+_ErrMsg$+"""",3,\
+                         _InstName$+": Edit Table Header Items")
+        else   
+          NewText$ = Selection$[1:instr(Selection$,":")]+" """+OS_TabHdrString$+""""
+          k=len(OS_TabInfo$)
+          i=instr(OS_TabInfo$,Selection$)
+          j=instr(OS_TabInfo$[i:k],"|")+i-1
+          OS_TabInfo$=OS_TabInfo$[1:i-1]+Newtext$+OS_TabInfo$[j:k]
+        endif
+      endif
+    else
+      NumberBox       10, 20,180, 12,OS_TabHdrNumber
+      EndDialog
+      evaluate "OS_TabHdrNumber=TabhdrVal("+OS_NVParam$+")"
+      Result = ShowDialog(OS_EditTabHdr)
+      RemoveDialog(OS_EditTabHdr)
+      if Result=1
+        on error Result = 0
+        evaluate "SetTabHdrVal "+OS_NVParam$+","+val$(OS_TabHdrNumber)
+        on error
+        if Result = 0
+          Result = alert("Could not write to "+OS_NVParam$+" due to """+_ErrMsg$+"""",3,\
+                         _InstName$+": Edit Table Header Items")   
+        else   
+          NewText$ = Selection$[1:instr(Selection$,":")]+" "+val$(OS_TabHdrNumber)
+          k=len(OS_TabInfo$)
+          i=instr(OS_TabInfo$,Selection$)
+          j=instr(OS_TabInfo$[i:k],"|")+i-1
+          OS_TabInfo$=OS_TabInfo$[1:i-1]+NewText$+OS_TabInfo$[j:k]
+        endif
+      endif
+    endif
+  endif 
+  return OS_TabInfo$
+endmacro
+
+!***********************************!
+name OS_ShowTabInfo                !*
+!***********************************!
+
+parameter OS_SelTab$
+local i,j,pos,strlen,Result,Temp$,Temp2$,Temp3$,\
+      NOfHeaders,NOfCol,NOfRows,Modified,NVType,\
+      OS_TabInfo$,OS_WinNum
+
+  print "analyzing "+OS_SelTab$
+  evaluate "NOfHeaders = TabHdrVal("+OS_SelTab$+",NumberOfHead)"
+  evaluate "NOfCol     = TabHdrVal("+OS_SelTab$+",NumberOfCol)"
+  evaluate "NOfRows    = TabHdrVal("+OS_SelTab$+",NumberOfRows)"
+  evaluate "Modified   = TabHdrVal("+OS_SelTab$+",Modified)"
+
+  OS_TabInfo$ = "standard header items:| |"+\
+                  "NumberOfRows (integer): "+val$(NOfRows)+"|"+\
+                  "NumberOfCol (integer): "+val$(NOfCol)+"|"+\
+                  "NumberOfHead (integer): "+val$(NOfHeaders)+"|"+\
+                  "Modified (integer): "+val$(Modified)
+
+  if NOfHeaders > 4
+    OS_TabInfo$  = OS_TabInfo$ + "| |additional header items:| "
+    for i=5 to NOfHeaders
+      evaluate "Temp$ = TabHdrName$("+OS_SelTab$+","+val$(i)+")"
+
+      On Error NVType = 99
+      evaluate "NVType = TabHdrType("+OS_SelTab$+","""+Temp$+""")"
+      On Error
+
+      if NVType < 1
+        evaluate "Temp2$ = TabHdrText$("+OS_SelTab$+","""+Temp$+""")"
+            
+        j=instr(Temp2$,"|")
+        if j <> 0
+          Temp3$=""
+          while j<>0
+            Temp3$ = Temp3$+Temp2$[1:j]+"|"
+            if j = len(Temp2$)
+              j = 0
+              Temp2$ = ""  
+            else
+              Temp2$ = Temp2$[j+1:len(Temp2$)]
+              j=instr(Temp2$,"|")
+            endif             
+          endwhile
+          Temp2$ = Temp3$+Temp2$
+        endif
+
+        if NVType < 0         
+          OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (fixed string): """+Temp2$+""""
+        else
+          OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (variable string): """+Temp2$+""""
+        endif
+      else
+        if NVType <> 99
+          evaluate "j = TabHdrVal("+OS_SelTab$+","""+Temp$+""")"
+        endif
+
+        if NVType = 1
+          OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (double): "+val$(j)
+        else
+          if NVType = 2
+            OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (float): "+val$(j)
+          else
+            if NVType = 3
+              OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (integer): "+val$(j)
+            else
+              if NVType = 5
+                OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (link): "+val$(j)
+              else
+                OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (no access)"
+              endif         
+            endif         
+          endif         
+        endif         
+      endif
+    next i
+  else
+    OS_TabInfo$  = OS_TabInfo$ + "| |no additional header items "
+  endif
+
+  if NOfCol = 0
+    OS_TabInfo$  = OS_TabInfo$ + "| |no columns "
+  else
+    OS_TabInfo$  = OS_TabInfo$ + "| |columns:| "
+    for i=1 to NOfCol
+      evaluate "Temp$ = TabColName$("+OS_SelTab$+","+val$(i)+")"
+
+      On Error NVType = 99
+      evaluate "NVType = TabColType("+OS_SelTab$+","""+Temp$+""")"
+      On Error
+
+      if NVType < 0         
+        OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (fixed string)"
+      else
+        if NVType = 0
+          OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (variable string)"
+        else
+          if NVType = 1
+            OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (double)"
+          else
+            if NVType = 2
+              OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (float)"
+            else
+              if NVType = 3
+                OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (integer)"
+              else
+                if NVType = 5
+                  OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (link)"
+                else
+                  if NVType = 99
+                    OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (no access)"
+                  else
+                    OS_TabInfo$=OS_TabInfo$+"|"+Temp$+" (internal)"
+                  endif         
+                endif         
+              endif         
+            endif         
+          endif         
+        endif         
+      endif
+    next i
+  endif
+
+  OS_TabInfoBox OS_SelTab$
+
+  Temp$ = "standard header items:"
+  OS_WinNum = 3
+  i = 2
+  
+  while i > 1
+    i =  ShowDialog(OS_TabInfo)
+
+    if i=2
+      evaluate "edtab OS_WinNum,"+OS_SelTab$
+    endif
+
+    if i=4
+      show
+    endif
+
+    if i=5
+      OS_TabInfo$ = OS_ShowTabInfoEdit$(OS_TabInfo$,OS_SelTab$,Temp$)
+    endif
+
+    if i=3
+      on error i=3
+      EndJob
+      close #5
+      on error
+
+      OpenDevice "Printer" As #5
+      SetMargin 2, 2, 2
+      BeginJob ,,XMax()-13, YMax()-1
+      SetHeader "Table Info of "+OS_SelTab$
+
+      j = instr(OS_TabInfo$,"|")
+      strlen = len(OS_TabInfo$)
+      pos = 1
+
+      while j>0
+        print #5,OS_TabInfo$[pos:pos+j-2]
+        pos = pos+j
+        j = instr(OS_TabInfo$[pos:strlen],"|")
+      endwhile
+      print #5,OS_TabInfo$[pos:strlen]
+
+      EndJob
+      close #5
+
+    endif
+  endwhile
+
+  RemoveDialog OS_TabInfo
+  if i = 0
+    return i
+  else
+    return 2
+  endif
+endmacro
+
+! Object header Item Boxes ********************************************
+
+name OS_TabRegBox
+ RemoveDialog OS_TabReg
+ BeginDialog OS_TabReg,50,50,170,173,\
+             _InstName$+": Show Object Header Items"
+ StaticText    10, 10, 80, 10,"select register:"
+ ListBox       10, 20,100,130,OS_AllRegs$,OS_SelReg$
+ StaticText   120, 20, 50, 10,"show"
+ CheckBox     120, 30, 70, 10,"strings",OS_ShowStrings
+ CheckBox     120, 40, 70, 10,"numbers",OS_ShowNumbers
+ CheckBox     120, 50, 70, 10,"tables", OS_ShowTables
+ PushButton    50,153, 30, 15, "Print", 2
+ PushButton   120,133, 40, 15, "Show CP", 3
+ OKButton      90,153, 30, 15
+ CancelButton 130,153, 30, 15
+
+ EndDialog
+endmacro
+
+name OS_ObjHdrBox
+ parameter Reg$
+
+ RemoveDialog OS_ShowObjHdr
+ BeginDialog OS_ShowObjHdr,30,50,260,193,\
+             _InstName$+": Show Object Header Items"
+ StaticText    10, 10,200, 10,"object header items in "+Reg$+":"
+ ListBox       10, 20,240,130,OS_AllObjHdr$,OS_SelObjHdr$
+ OKButton     180,173, 30, 15
+ CancelButton 220,173, 30, 15
+ PushButton   100,173, 30, 15, "Edit", 2
+ PushButton    10,153, 80, 15, "Show Table Window", 3
+ PushButton   140,173, 30, 15, "Print", 4
+ StaticText   100,157, 30, 15, "window:"
+ NumberBox    130,155, 15, 12, OS_WinNum,1,64 
+ PushButton   210,153, 40, 15, "Show CP", 5
+
+ EndDialog
+
+endmacro
+
+name OS_TabInfoBox
+ parameter tab$
+
+ RemoveDialog OS_TabInfo
+ BeginDialog OS_TabInfo,30,50,240,193,\
+             _InstName$+": Table Info of "+tab$
+ ListBox       10, 10,220,140,OS_TabInfo$,Temp$
+ OKButton     160,173, 30, 15
+ CancelButton 200,173, 30, 15
+ PushButton   120,173, 30, 15, "Print", 3
+ PushButton    80,173, 30, 15, "Edit", 5
+ PushButton    10,153, 70, 15, "Show Table Window", 2
+ StaticText   100,156, 40, 10, "window:"
+ NumberBox    130,155, 15, 12, OS_WinNum,1,64 
+ PushButton   190,153, 40, 15, "Show CP", 4
+
+ EndDialog
+endmacro
+
+
+
+!*************************
+Name OS_BuildCtrlTabs !*
+!*************************
+
+  if ObjHdrType(_config[6],"ShowObjHdrBox")=99
+    print "generating object header items control table"
+    Obj_BuildBoxCtrl
+  endif
+
+  if ObjHdrType(_config[3],"ShowObjHdrBox")=99
+    print "generating object header items format table"
+    Obj_BuildBoxOdt
+  endif
+
+endmacro
+
+Name Init_ShowObjHdr
+local Result
+ if check(command, PipeTab) = 0 then
+   listmessages on
+   Result = InstallCmds(hpprp100.dll)
+   print "prompter dll installed as",Result
+ endif
+ if check(variable, OS_inited) = 0 then
+   OS_BuildCtrlTabs
+ endif
+ OS_inited=1
+
+EndMacro
+
+
+
+!===============================================================================
+!               Autoexecute
+!===============================================================================
+
+
+DebugMenu
+Init_ShowObjHdr
+

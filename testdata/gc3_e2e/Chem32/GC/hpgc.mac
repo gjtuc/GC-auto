@@ -1,0 +1,422 @@
+! ========================================================================
+NAME Resolve68GCMethod
+  IF (_6890MethodResolved = 1) THEN
+    _MethodChanged = 1
+  ENDIF
+ENDMACRO
+
+! ========================================================================
+NAME Resolve6850GCMethod
+  IF (_6850MethodResolved = 1) THEN
+    _MethodChanged = 1
+  ENDIF
+ENDMACRO
+
+
+!##################################################################################
+name GetMyItem$
+parameter ModuleID, ItemName$
+local Item$
+
+on error goto TryDriverItem
+
+   Item$ = GetHardwareItem$(ModuleID, ItemName$)
+   return Item$
+
+TryDriverItem:
+   return GetDriverItem$(ModuleID, ItemName$)
+
+endmacro
+
+!##################################################################################
+name GetMyItemDouble
+parameter ModuleID, ItemName$
+local Item
+
+on error goto TryDriverItem
+   
+   Item = GetHardwareItemDouble(ModuleID, ItemName$)
+   return Item
+
+TryDriverItem:
+   return GetDriverItemDouble(ModuleID, ItemName$)
+
+endmacro
+
+!############################################################################
+!  Description:  Returns an integer representing the 
+!      configuration state of the parameter specified  
+!      device.
+!  Parameters: dev_name$$ - string representing a 
+!       configured device where
+!
+!
+!  New string representation of devices:
+!	"GC" = 5890 GC (Classic)
+!       "6850GC" = 6850 GC(Classic) or RC 6850
+!	"68GC" = either 6890 GC(Classic) or RC 6890
+!	"6890Classic" - old 6890 driver (pre-Rapidcontrol)
+!	"6850Classic" - old 6850 driver (pre-rapidcontrol)
+!       "RC7890" = 7890 GC (RC)
+!       "RC6890" = 6890 GC (RC)
+!       "RC6850" = 6850 GC (RC)
+!       "RC6820" = 6820 GC (RC)
+!
+! Notes:  April 2009
+!	We are trying to add the RC6890 driver and avoid changes to add-ons.
+!	In order to do that, the definitions of the strings are changing.
+!	68GC will now mean ANY 6890 device (classic driver or RC).  This is
+!	inconvenient and that is why I remap the string I am looking for  
+!
+!	Info needed:
+!		classic 6890 is "68GC" as drivername in Modules table
+!		classic 6850 is	"6850GC" as drivername in Modules table
+!		5890 is "GC" as drivername in Modules table
+!		RC 6890 is "GCI" as drivername in Modules table and Agilent.Gc.68XXSystem.GC6890 is the unique module id
+!		7890 driver is "GCI" as drivername in Modules table and Agilent.GC.7890System.GC7890 is the unique module id
+!			
+!
+!   TBD:Check if it works for MicroGC
+!    count  - integer indexing variable
+!    serial_num$ - string representing the 
+!         device's serial number
+!  Return Value: 1 | 0 where 
+!    1 = the specified device is configured
+!    0 = the specified device is NOT configured
+!******************************************
+name TestFor_GCDevice
+parameter dev_name$, count, serial_num$
+local i, j, max_row, val$, s_num$, cnt
+local listDevices$ , moduleID$
+local iLookingForClassic, iLookingForRC, szClassicString$, szRCString$
+
+    iLookingForClassic = 0
+    iLookingforRC = 0
+    szClassicString$ = ""
+    szRCString$ = ""
+
+    ! figure out what we are really looking for
+    
+    if (dev_name$ = "68GC") then
+        ! looking for either driver - classic or RC
+        iLookingForClassic = 1
+	iLookingforRC = 1
+        szClassicString$ = "68GC"
+	szRCString$ = "6890"
+    else 
+	if (dev_name$ = "RC6890")
+            ! looking for RC version
+            iLookingForClassic = 0
+	    iLookingforRC = 1
+            szClassicString$ = ""
+	    szRCString$ = "6890"
+    	else 
+            if (dev_name$ = "6890Classic")
+                ! looking for classic version
+                iLookingForClassic = 1
+	        iLookingforRC = 0
+                szClassicString$ = "68GC"
+	        szRCString$ = ""
+            else 
+                if (dev_name$ = "6850GC")
+                    ! looking for either driver - classic or RC
+                    iLookingForClassic = 1
+                    iLookingforRC = 1
+                    szClassicString$ = "6850GC"
+                    szRCString$ = "6850"
+                else 
+                    if (dev_name$ = "RC6850")
+                        ! looking for RC version
+                        iLookingForClassic = 0
+                        iLookingforRC = 1
+                        szClassicString$ = ""
+                        szRCString$ = "6850"        
+                    else 
+                        if (dev_name$ = "6850Classic")
+                            ! looking for classic version
+                            iLookingForClassic = 1
+                            iLookingforRC = 0
+                            szClassicString$ = "6850GC"
+                            szRCString$ = ""
+                        else 
+                            if (dev_name$ = "GC")   ! 5890 case
+                                ! looking for classic version
+                                iLookingForClassic = 1
+                                iLookingforRC = 0
+                                szClassicString$ = "GC"
+                                szRCString$ = ""
+                            else
+                                if (InStr(dev_name$, "7890") > 0)
+                                    ! looking for RC version
+                                    iLookingForClassic = 0
+                                    iLookingforRC = 1
+                                    szClassicString$ = ""
+                                    szRCString$ = "78"
+                                else
+                                    if (dev_name$ = "RC7820")
+                                        ! looking for RC version
+                                        iLookingForClassic = 0
+                                        iLookingforRC = 1
+                                        szClassicString$ = ""
+                                        szRCString$ = "7820"
+                                    else
+                                        ! default - all other cases so check both classic and RC drivers			             
+                                        iLookingForClassic = 1
+                                        iLookingforRC = 1
+                                        szClassicString$ = dev_name$
+                                        szRCString$ = dev_name$
+                                    endif
+                                endif 
+                            endif
+                        endif                       
+                    endif
+                endif
+            endif
+        endif
+    endif
+        
+
+    max_row = TabHdrVal( _Config[1], "moduleInfo", "NumberOfRows" )
+    
+    cnt = 0
+
+    for i = 1 to max_row
+        j = TabVal (_config[1], "moduleInfo", i, "nameRef")
+        driver_name$ = TabText$( _Config[1], "Modules", j, "DriverName" )
+      
+
+        If (driver_name$="GCI") 
+            if (iLookingForRC = 1)  Then 
+                if CHECK(function, RCListDevices$) = 1 then
+                    listDevices$ = RCListDevices$()
+                    if ( INSTR(listDevices$, "GC1") <> 0)  then ! Rapid control GC is present
+                        moduleID$ = RCGetDeviceUniqueModuleID$("GC1")
+                        if(INSTR(moduleID$, szRCString$) <> 0) then
+                            return 1
+                        endif
+                    endif
+                    if ( INSTR(listDevices$, "HSS1") <> 0)  then ! Rapid control headspace is present
+                        moduleID$ = RCGetDeviceUniqueModuleID$("HSS1")
+                        if(INSTR(moduleID$, szRCString$) <> 0) then
+                            return 1
+                        endif
+                    endif
+                    if ( INSTR(listDevices$, "CTC1") <> 0)  then ! Rapid control CTC is present
+                        moduleID$ = RCGetDeviceUniqueModuleID$("CTC1")
+                        if(INSTR(moduleID$, szRCString$) <> 0) then
+                            return 1
+                        endif
+                    endif
+      
+                endif
+            endif
+        else
+            ! Do NOT do an INSTR for the szclassicString$ in driver_name$ because the 5890's "GC" will be found in "68GC"
+            ! and that is not what we want.  EMP  May 2009
+            if (iLookingForClassic = 1) AND ((szClassicString$ = "") or ( driver_name$ = szClassicString$ )) then
+	        cnt = cnt + 1
+	        if (count = 0) or (count = cnt) then
+	            s_num$ = TabText$( _Config[1], "ModuleInfo", i, "serialNumber" )
+	            if (serial_num$ = "") or (serial_num$ = s_num$) then
+	                return 1
+	            endif
+	        endif
+            endif
+        endif
+    next i
+
+    return 0
+endmacro
+
+! ========================================================================
+! Modifies the ODT tables in _Config[3] to change the formatting for
+! the percent columns for various standard report types (Area%, Height%,
+! Norm%, ISTD%, ESTD%).  The purpose is to change to exponential format
+! only for very small numbers.  The defaults for LC and CE were too
+! small (10e-2).  The petroleum customers in particular do not want
+! exponential notation for percentages.  The MinPower column determines
+! when the change-over will occur.  To further complicate matters,
+! the change is necessary throughout 5 different tables.  See
+! more comments below.
+
+name GC_ModifyODTTabs
+  local TabName$, Flag$, RowNum
+  
+  ! Check for the existence of this table header item, and only
+  ! modify tables if the item is not present.  This ensures that
+  ! we only change tables the first time the system is started.
+  ! Upon exiting the changes are saved into config.reg or conf_off.reg.
+  ! If some brave person were to change these, we wouldn't overwrite
+  ! their changes.
+  Flag$ = "GCModified"
+
+  ! ODTFormat is used for Norm%, ISTD%, and ESTD%.
+  
+  TabName$ = "ODTFormat"
+  if TabHdrType(_Config[3], TabName$, Flag$) = 99
+    print "Updating " + TabName$ + " for GC..."
+    RowNum = RowByText(_Config[3], TabName$, , "Name", "=", "ResponsePct")
+    GC_ODTFillResponsePct TabName$, RowNum, "%.5f", -4, 1
+
+    RowNum = RowByText(_Config[3], TabName$, , "Name", "=", "AmountPct")
+    SetTabVal _Config[3], TabName$, RowNum, "MinPower", -5
+
+    NewTabHdrVal _Config[3], TabName$, Flag$, 1, 0, 3, 0, 255
+  endif
+
+  ! The next four tables are used for Area% and Height% for calibrated
+  ! and uncalibrated reports.  Pct<Peak|Sig>IDTab are the tables for
+  ! calibrated reports (the peak names are printed in the last column).
+  ! The formatting for the ID tables must contain a trailing space
+  ! to get everything to line up correctly.
+  ! Pct<Peak|Sig>Tab are for uncalibrated reports.
+  
+  TabName$ = "PctPeakTab"
+  if TabHdrType(_Config[3], TabName$, Flag$) = 99
+    print "Updating " + TabName$ + " for GC..."
+    GC_ODTFillResponsePct TabName$, 7, "%.5f", -4, 1
+    NewTabHdrVal _Config[3], TabName$, Flag$, 1, 0, 3, 0, 255
+  endif
+
+  TabName$ = "PctSigTab"
+  if TabHdrType(_Config[3], TabName$, Flag$) = 99
+    print "Updating " + TabName$ + " for GC..."
+    GC_ODTFillResponsePct TabName$, 7, "%.5f", -4, 1
+    NewTabHdrVal _Config[3], TabName$, Flag$, 1, 0, 3, 0, 255
+  endif
+
+  TabName$ = "PctPeakIDTab"
+  if TabHdrType(_Config[3], TabName$, Flag$) = 99
+    print "Updating " + TabName$ + " for GC..."
+    ! Note:  the trailing space is important here !
+    !                                   vvvvv     !
+    GC_ODTFillResponsePct TabName$, 6, "%.5f ", -4, 1
+    NewTabHdrVal _Config[3], TabName$, Flag$, 1, 0, 3, 0, 255
+  endif
+
+  TabName$ = "PctSigIDTab"
+  if TabHdrType(_Config[3], TabName$, Flag$) = 99
+    print "Updating " + TabName$ + " for GC..."
+    ! Note:  the trailing space is important here !
+    !                                   vvvvv     !
+    GC_ODTFillResponsePct TabName$, 6, "%.5f ", -4, 1
+    NewTabHdrVal _Config[3], TabName$, Flag$, 1, 0, 3, 0, 255
+  endif
+
+endmacro
+
+! ========================================================================
+! Fills in the values for the given row in the ODT TabName$
+! ODTs are used for the standard report formatting.
+
+name GC_ODTFillResponsePct
+  parameter TabName$             ! ODT Table name
+  parameter RowNum               ! Row number for response percent
+  parameter Format$              ! Format string
+  parameter MinPower             ! lower limit for switching to exponent format
+  parameter MaxPower             ! upper limit for switching to exponent format
+
+  SetTabText _Config[3], TabName$, RowNum, "Format", Format$
+  SetTabVal _Config[3], TabName$, RowNum, "MinPower", MinPower
+  SetTabVal _Config[3], TabName$, RowNum, "MaxPower", MaxPower
+endmacro
+
+! ========================================================================
+name IsLabPatrolInstalled
+
+local LPPath$   ! path + exe name of the lab patrol executable
+
+  LPPath$ = GetRegistryKeyText$("software\agilent\instrumentmonitor\ui","path")
+
+  if Len(lpPath$) > 0  
+     LabPatrolInstalled=1
+  else
+     LabPatrolInstalled=0
+  endif
+endmacro
+
+! ========================================================================
+!
+name LabPatrolStartup
+
+local LPPath$   ! path + exe name of the lab patrol executable
+
+  LPPath$ = GetRegistryKeyText$("software\agilent\instrumentmonitor\ui","path")
+
+  !Check to see if a path was found
+  if Len(lppath$) > 0
+      ExecNoWait LPPath$
+  endif
+endmacro
+
+
+!############################################################################
+! return the module number of the product/driver specified
+name GetModuleNumber 
+parameter  productIDRequested$
+
+local modulenumber, productID$
+
+   ! check the number of GCI devices.  If there are some, we want to check the type
+   ! of each to see if it matches what we are looking for.
+   If DevGCI > 0 then
+      For modulenumber = 1 to DevGCI
+         productID$ = GCIGetProductID$(modulenumber)
+         if productID$ = productIDRequested$ then
+            return modulenumber
+         endif
+         
+ 
+      Next modulenumber
+   endif
+   return -1
+endmacro
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! ========================================================================
+! ATTENTION
+!
+! This macro must be the last macro in the file so that it will be 
+! automatically executed.
+
+NAME AutoStartGCMacro
+
+  ! Check for LabPatrol
+  IsLabPatrolInstalled
+   
+  ! For all GC products (including 35900) call a macro that
+  ! will modify the report ODT tables.  The columns for percent
+  ! must be changed so they don't display exponential notation
+  ! at 10e-2 as the LC and CE products do.
+
+  GC_ModifyODTTabs
+
+  ! See if we are a 6890. If we are, then we can do the specific things that
+  ! have to be done
+    
+  IF TestForDevice("68GC",0,"") <> 0 THEN
+    _6890MethodResolved = 0
+    macro _ProductPath$ + "hp68gc00.mac"
+    SetHook "LoadMethod","Resolve68GCMethod"
+  ENDIF
+  IF TestForDevice("6850GC",0,"") <> 0 THEN
+    _6850MethodResolved = 0
+    macro _ProductPath$ + "hp685000.mac"
+    SetHook "LoadMethod","Resolve6850GCMethod"
+  ENDIF
+  
+  
+  macro "gcinfo.mac"
+  If (TestForDevice("7890",0,"") <> 0) or (TestForDevice("RC6850",0,"") <> 0) or (TestForDevice("RC6890",0,"") <> 0) then
+    sampler = -1
+  endif
+ENDMACRO
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! ========================================================================
+! DO NOT PLACE ANYTHING BELOW THIS LINE, THE AutoStartGCMacro MUST
+! BE THE LAST MACRO IN THIS FILE
+
+
+

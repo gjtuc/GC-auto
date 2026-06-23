@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="TopDaTB" PosStyle="TOP" Caption="Data Analysis" DockRow="0" DockCol="0" PanelName="Main">
+		<Static Name="Signals" Visible="1" Enable="1" Text="Signals" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadSignal" Help="Load Signal(s) and Spectra of a Data File" Command="LoadFile" ImageName="Load_signal20" ImageNameDisabled="Load_signal20_d"/>
+		<PushButton Name="MergeSignal" Help="Load Signal(s) of a Data File and overlay with current signals" Command="LoadFile ,1" ImageName="Overlay_signal20" ImageNameDisabled="Overlay_signal20_d"/>
+		<Static Name="Methods" Visible="1" Enable="1" Text="Methods" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadMethod" Help="Load a Method" Command="TLB_LoadMethod" ImageName="Load_method20" ImageNameDisabled="Load_method20_d"/>
+		<PushButton Name="SaveMethod" Help="Save current Method" Command="TLB_SaveCurrentMethod" ImageName="Save_method20" ImageNameDisabled="Save_method20_d"/>
+		<PushButton Name="RunTimeChecklist" Help="Edit Run Time Checklist" Command="METH.EDRUNTIMECHKLST" ImageName="Edit_RunTimeChecklist20" ImageNameDisabled="Edit_RunTimeChecklist20_d"/>
+		<PushButton Name="MethodStatus" Help="Method modification status" Command="" Enable="0" ImageName="Method20" ImageNameDisabled="Method20"/>
+		<!--  <NonEditCombobox Name="MethodFile" Help="Select from most previously loaded Method Files" Enable="1" Table="_Config,1,MethodFile" Selection="1" Width="200"/> -->
+		<StatusList Name="MethodFile" Text="" Font="Microsoft Sans Serif, 8, Regular" BkColor="white" Help="Actual Method File" Width="250" Enable="1" Border="NoBorder"/>
+		<StickyButton Name="HideNavtable" Help="Hide/Show Navigation Table" CmdList="NavTableShow Off|NavTableShow On" State="1" NewGroup="1" ImageName="Report_TableTool20" ImageNameDisabled="Report_TableTool20_d"/>
+		<PushButton Name="Preferences" Help="Open Preferences Dialog" Command='CpRequest "Cp2", "DlgPreferences"' Visible="1" ImageName="Preferences20" ImageNameDisabled="Preferences20_d"/>
+		<PushButton Name="XSRMultiSeq" Help="Start OpenLAB IR" Command="ECM_XSRMultiSeq" Visible="0" ImageName="XSRMulti20" ImageNameDisabled="XSRMulti20_d"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="ChemstoreLock" Help="Lock Chemstation Session" Command="ChemStoreLock.ChemStoreSessionLock 1,0" NewGroup="1" Visible="0" ImageName="Chemstore_Lock20" ImageNameDisabled="Chemstore_Lock20_d"/>
+		<PushButton Name="ChemstoreClient" Help="Chemstore Review Client" Command="ChemStoreShowReviewClient" Visible="0" ImageName="Chemstore_ReviewClient20" ImageNameDisabled="Chemstore_ReviewClient20_d"/>
+	</toolbar>
+</graphical_object>

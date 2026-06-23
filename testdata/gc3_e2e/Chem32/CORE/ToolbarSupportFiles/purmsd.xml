@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="PURMSD" PosStyle="BOTTOM" Caption="Peak Purity" PanelName="Chem">
+		<PushButton Name="PrevImpPeak" Help="Select previous 'impure' peak" Command='PUR_StatusBarFunction "PrevImpure","MSD"' NewGroup="1" ImageName="PeakPur_PrevImpurePeak16" ImageNameDisabled="PeakPur_PrevImpurePeak16_d"/>
+		<PushButton Name="PrevPeak" Help="Select previous peak" Command='PUR_StatusBarFunction "PrevPeak","MSD"' ImageName="PeakPur_PrevPeak16" ImageNameDisabled="PeakPur_PrevPeak16_d"/>
+		<Static Name="PeakNumber" Text="--" Help="Number and time of current peak" Width="200" Enable="1"/>
+		<PushButton Name="NextPeak" Help="Select next peak" Command='PUR_StatusBarFunction "NextPeak","MSD"' ImageName="PeakPur_NextPeak16" ImageNameDisabled="PeakPur_NextPeak16_d"/>
+		<PushButton Name="PrevNextPeak" Help="Select next 'impure' peak" Command='PUR_StatusBarFunction "NextImpure","MSD"' ImageName="PeakPur_NextImpurePeak16" ImageNameDisabled="PeakPur_NextImpurePeak16_d"/>
+		<!-- <Static Name="Detector" Text="- no info -" Help="Information on the Peak Purity" Width="200" Enable="1"/> -->
+		<Static Name="PurityInfo" Text="" Help="Information on the Peak Purity" Width="200" Enable="1"/>
+		<PushButton Name="Print" Help="Make a printout of the current peak purity" Command='PUR_StatusBarFunction "Print","MSD"' ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="Close" Help="Close the Peak Purity display" Command='PUR_StatusBarFunction "Close", "MSD"' ImageName="Exit20" ImageNameDisabled="Exit20_d"/>
+	</toolbar>
+</graphical_object>

@@ -1,0 +1,266 @@
+[Signature]
+ID605=Qdzw1kQ5EC.5kG20D6h./vzl00000000
+[Version]
+ID=G2715 Version: A.06.05
+[General]
+Type=0
+Run Duration=900.00
+NoLimit=2
+NoMSD=0
+PeakWidth=9.00
+ScanSpeedOverride=0
+Solvent Delay=0.00
+IonizationMode=5
+Tune File=atunes.tun
+Acq Mode=0
+Acq Mode 2=0
+Acq Mode 3=0
+Acq Mode 4=0
+Signal Summary=
+Signal Summary 2=
+Signal Summary 3=
+Signal Summary 4=
+Signal Active=1
+Signal Active 2=1
+Signal Active 3=0
+Signal Active 4=0
+Cycle Time=50
+Cycle Time 2=50
+Cycle Time 3=0
+Cycle Time 4=0
+Polarity=0
+Polarity 2=1
+Polarity 3=0
+Polarity 4=0
+Group Ions=1
+Group Ions 2=1
+Group Ions 3=1
+Group Ions 4=1
+Zones=3
+Scan Groups=1
+Scan Groups 2=1
+Scan Groups 3=1
+Scan Groups 4=1
+Data Curves=2
+Data Curve Rate=1000
+[DynamicParm 1]
+GlobalId=11
+Enable=0
+DynamicValues=
+[DynamicParm 2 1]
+GlobalId=-1
+Enable=0
+DynamicValues=
+[DynamicParm 3 1]
+GlobalId=-1
+Enable=0
+DynamicValues=
+[DynamicParm 4 1]
+GlobalId=-1
+Enable=0
+DynamicValues=
+[Zone 1]
+ID=6
+On=1
+Soft Max=350.00
+Set Point=350.00
+Type=0
+[Zone 2]
+ID=13
+On=1
+Soft Max=13.00
+Set Point=6.00
+Type=0
+[Zone 3]
+ID=14
+On=1
+Soft Max=60.00
+Set Point=40.00
+Type=0
+[Ions 1]
+Group Name=Group 1
+Start Time=0.00
+Row OnOff=1
+Resolution=0
+Gain=1.0
+Plot Index 1=0
+Plot Index 2=0
+Number of Ions=1
+Ion 1=195.0,880
+Frgmtr Ion 1=200
+[Ions 2 1]
+Group Name=1
+Start Time=0.00
+Row OnOff=1
+Resolution=1
+Gain=1.0
+Plot Index 1=0
+Plot Index 2=0
+Number of Ions=1
+Ion 1=74.1,880
+Frgmtr Ion 1=200
+[Ions 3 1]
+Group Name=1
+Start Time=0.00
+Row OnOff=1
+Resolution=1
+Gain=1.0
+Plot Index 1=0
+Plot Index 2=0
+Number of Ions=1
+Ion 1=74.1,880
+Frgmtr Ion 1=200
+[Ions 4 1]
+Group Name=1
+Start Time=0.00
+Row OnOff=1
+Resolution=1
+Gain=1.0
+Plot Index 1=0
+Plot Index 2=0
+Number of Ions=1
+Ion 1=74.1,880
+Frgmtr Ion 1=200
+[Scan 1]
+Start Time=0.00
+Row OnOff=1
+Low Mass=50.0
+High Mass=500.0
+Threshold=50
+Sampling=6
+Stepsize=0.10
+Gain=1.0
+Fragmentor=80
+Low Plot 1=270.0
+High Plot 1=272.0
+Low Plot 2=310.0
+High Plot 2=312.0
+[Scan 2 1]
+Start Time=0.00
+Row OnOff=1
+Low Mass=50.0
+High Mass=500.0
+Threshold=50
+Sampling=6
+Stepsize=0.10
+Gain=1.0
+Fragmentor=80
+Low Plot 1=268.0
+High Plot 1=270.0
+Low Plot 2=308.0
+High Plot 2=310.0
+[Scan 3 1]
+Start Time=0.00
+Row OnOff=1
+Low Mass=50.0
+High Mass=550.0
+Threshold=500
+Sampling=11
+Stepsize=0.10
+Gain=1.0
+Fragmentor=200
+Low Plot 1=50.0
+High Plot 1=550.0
+Low Plot 2=50.0
+High Plot 2=550.0
+[Scan 4 1]
+Start Time=0.00
+Row OnOff=1
+Low Mass=50.0
+High Mass=550.0
+Threshold=500
+Sampling=11
+Stepsize=0.10
+Gain=1.0
+Fragmentor=200
+Low Plot 1=50.0
+High Plot 1=550.0
+Low Plot 2=50.0
+High Plot 2=550.0
+[Filters]
+Mass Type=1
+Mass Param=0.300
+Mass Sigma=2.00
+Time Type=0
+Time Param=0
+Time Sigma=2.00
+[Filters 2]
+Mass Type=1
+Mass Param=0.300
+Mass Sigma=2.00
+Time Type=0
+Time Param=0
+Time Sigma=2.00
+[Filters 3]
+Mass Type=1
+Mass Param=0.300
+Mass Sigma=2.00
+Time Type=0
+Time Param=0
+Time Sigma=2.00
+[Filters 4]
+Mass Type=1
+Mass Param=0.300
+Mass Sigma=2.00
+Time Type=0
+Time Param=0
+Time Sigma=2.00
+[Plot]
+Plot Type 1=0
+Plot Type 2=1
+[Data Curve 1]
+Type=2
+ID=14
+Signal=0
+[Data Curve 2]
+Type=2
+ID=11
+Signal=0
+[FractionCollection]
+Mode=1
+CSV File=
+Signal 1=1
+Signal 2=1
+Signal 3=0
+Signal 4=0
+Detector=0
+Standard Positive Adducts=0,1,0,0,0
+Standard Negative Adducts=1
+User-defined Positive Adducts=0, ,0, ,0,  
+User-defined Negative Adducts=0, ,0, ,0,  
+Number Of Base Masses=4
+Base Masses 1=270.0
+Base Masses 2=278.0
+Base Masses 3=284.0
+Base Masses 4=310.0
+Model=0
+Min Peak Width=0.10
+Max Peak Width=1.00
+Time Limit=1.00
+MSD Delay=0.00
+MSD Threshold=10000
+MSD Peak Slope=10000
+Other Delay=0.00
+Other Threshold=100
+Other Peak Slope=100
+MSD Window=1.0
+MSD Output Range=250000
+Other Full Scale=0.10
+[Parameters]
+ID 1=1
+Mode 1=1
+Value 1=2000.000000,2000.000000
+ID 2=5
+Mode 2=1
+Value 2=2000.000000,2000.000000
+ID 3=7
+Mode 3=1
+Value 3=2.000000,4.000000
+ID 4=8
+Mode 4=1
+Value 4=8.000000,40.000000
+ID 5=-1
+Mode 5=0
+Value 5=0.000000,0.000000
+[Time Events]
+Number Events=0

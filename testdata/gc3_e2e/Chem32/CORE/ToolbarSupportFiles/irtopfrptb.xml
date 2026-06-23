@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="IRTopFrpTB" PosStyle="TOP" Caption='"TopFrpTB"' PanelName="Main">
+    <PushButton Name="NewReportTemplate" Help="New Report Template" Command="" ImageName="Report_NewTemplate20" ImageNameDisabled="Report_NewTemplate20_d"/>
+    <PushButton Name="OpenReportTemplate" Help="Open a Report Template" Command="" ImageName="Report_OpenTemplate20" ImageNameDisabled="Report_OpenTemplate20_d"/>
+    <PushButton Name="SaveReportTemplate" Help="Save current Report Template" Command="" ImageName="Report_SaveTemplate20" ImageNameDisabled="Report_SaveTemplate20_d"/>
+    <NonEditCombobox Name="FRptLayout" Help="Select from most previously used Report Template" NewGroup="1" Enable="1" Width="200" Table="_Config,1,RDLFile" Selection="1"/>
+    <PushButton Name="PrintReport" Help="Print Report" Command="" NewGroup="1" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+    <PushButton Name="PDFExport" Help="Export report as PDF document" Command="" ImageName="Report_ExportPdf20" ImageNameDisabled="Report_ExportPdf20_d"/>
+    <PushButton Name="Preferences" Help="Open Preferences Dialog" NewGroup="1" Command='CpRequest "Cp2", "DlgPreferences"' Visible="1" ImageName="Preferences20" ImageNameDisabled="Preferences20_d"/>
+  </toolbar>
+</graphical_object>

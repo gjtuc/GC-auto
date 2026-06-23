@@ -1,0 +1,18 @@
+!rtltop.mac
+
+Name RTL_PreViewHook
+
+macro ..\GC\rt_lock.mcx
+Init_RT_Lock
+macro ..\GC\rt_srch.mcx
+Init_RT_Srch
+
+EndMacro
+
+if _Insttype$ = "7820GC"
+   return
+endif
+
+If (TestForDevice("68GC", 0, "") <> 0) or (TestForDevice("GC", 0, "") <> 0) or  (TestForDevice("6850GC", 0, "") <> 0) or  (TestForDevice("7890", 0, "") <> 0) Then
+  SetHook "PreViewMenu", "RTL_PreViewHook"
+EndIf

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="IntegF" PosStyle="TOP" DockRow="1" DockCol="0" Caption="積分" PanelName="Chem">
+		<PushButton Name="Integrate" Help="現在のクロマトグラムを積分" Command="INT_BTNDoIntegFun Integrate" NewGroup="1" ImageName="Int_Integrate20" ImageNameDisabled="Int_Integrate20_d"/>
+		<PushButton Name="AutoIntegrate" Help="自動積分: 現在のクロマトグラムに最適な積分パラメータで積分します" Command="INT_BTNDoIntegFun AutoIntegrate" ImageName="Int_AutoIntegrate20" ImageNameDisabled="Int_AutoIntegrate20_d"/>
+		<PushButton Name="EditEvent" Help="積分イベント テーブル設定" Command="INT_BTNDoIntegFun EditEvents" ImageName="Int_EditEvents20" ImageNameDisabled="Int_EditEvents20_d"/>
+		<!-- ==================================================================== -->
+		<Static Name="ReportText" Text="レポート: " NewGroup="1" Help="" Width="100" Enable="1" Border="NoBorder"/>
+		<StatusList Name="ActualRpt" Text="簡易" Font="Microsoft Sans Serif, 8, Regular" BkColor="white" Help="現在のレポート スタイル" Width="100" Enable="1" Border="NoBorder"/>
+		<PushButton Name="ReportOptions" Help="レポート条件と印刷スタイルを選択します" Command="MenuRptParm" ImageName="Report_Settings20" ImageNameDisabled="Report_settings20_d"/>
+		<PushButton Name="ReportPreview" Help="ピーク定量、計算およびプレビュー" Command="MenuQuantify SCREEN" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="ReportBrowser" Help="保存したレポートファイルの表示" Command="RPTV_ViewReportNewUI InteractiveInjRptGrp" ImageName="Browse_Run_Report20" ImageNameDisabled="Browse_Run_Report20_d"/>
+		<PushButton Name="ReportPrint" Help="ピーク定性、定量結果およびレポート出力" Command="MenuQuantify PRINTER" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="XMLExport" Help="ピーク定性、定量結果およびリモートサーバーへのアップロード結果ファイル" Command="XML_ManualExportUpload" ImageName="Upload_Results20" ImageNameDisabled="Upload_Results20_d"/>
+	</toolbar>
+</graphical_object>

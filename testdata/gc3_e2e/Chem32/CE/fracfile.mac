@@ -1,0 +1,238 @@
+!******************************************************************************
+!
+!   FILE
+!       FRACFILE.MAC
+!
+!   DESCRIPTION
+!              contains HOOK macros to 
+!                                     Load,
+!                                     Save
+!                                 and Print the Fraction Collection Parameter  
+!   RCS
+!       $Header: /cag/DRIVERS/leodef/ce/misc/fracfile.mac 1.6 1996-02-15 08:52:16-08 hmgr Exp $
+!
+!******************************************************************************
+
+
+
+!******************************************************************************
+NAME FC_LoadMethod
+!******************************************************************************
+LOCAL Path$, File$, LogText$
+
+! ------- pseudo constants -------------------------------
+LOCAL FILE, DIR
+  FILE    = 1
+  DIR     = 2
+LOCAL OFF,PressMode,VoltMode,IEFmode
+OFF       = 1
+PressMode = 2
+VoltMode  = 3
+IEFmode   = 4
+
+Path$ = _METHPATH$ + _METHFILE$ + "\"
+File$ = "FRACTCOL.REG"
+
+DelReg FRACTCOL
+
+IF Filestat(MODE, Path$ + File$) = FILE THEN
+  LoadObj Path$ + File$, , FRACTCOL
+  IF ObjHdrVal(FRACTCOL[1],"Mode") <> OFF
+    IF FC_Allowed() = 0
+      SetObjHdrVal FRACTCOL[1], "Mode", OFF
+      LogText$ = "Fraction collection disabled in CE-Mode:" + HPCEMode$("?")
+      Print #2,   LogText$
+      FC_LogEvent LogText$
+      FC_UnLockTimeTable
+      _MethodChanged = 1
+    ELSE
+      ! Control timetable access
+      !-------------------------
+      IF   (ObjHdrVal(FRACTCOL[1],"Mode") = PressMode) OR (ObjHdrVal(FRACTCOL[1],"Mode") = VoltMode)
+        FC_LockTimeTable
+      ELSE
+        FC_UnLockTimeTable
+      ENDIF
+      !-------------------------------------------------
+      ! ---- Warning if capillary info missing ---------
+      !-------------------------------------------------
+      IF (FC_CapInfoAvailable() = 0) AND (_OffLine = 0)
+        LogText$ = "Fraction collection: Missing capillary info."
+        FC_LogEvent LogText$
+      ENDIF
+    ENDIF
+  ELSE
+    FC_UnLockTimeTable
+  ENDIF
+
+  ! upgrade from file version 1.00 to 1.01
+  !---------------------------------------
+  IF ObjHdrText$(FRACTCOL[1],"Version") = "01.00"
+    SetObjHdrText FRACTCOL[1],"Version"     ,"01.01"
+    SetObjHdrVal  FRACTCOL[1],"MigtFrom"    ,  0       
+    SetObjHdrVal  FRACTCOL[1],"MigtTo"      , 60           
+  ENDIF
+ELSE
+  ! --- old method, no fraction collection -----
+  ! --- generate default register --------------
+  FC_DefaultParamReg
+  FC_UnLockTimeTable
+ENDIF
+
+RETURN
+ENDMACRO
+
+
+
+
+
+!******************************************************************************
+NAME FC_SaveMethod
+!******************************************************************************
+LOCAL Path$, File$,Ret
+
+! ------- pseudo constants -------------------------------
+LOCAL OFF,PressMode,VoltMode,IEFmode
+OFF       = 1
+PressMode = 2
+VoltMode  = 3
+IEFmode   = 4
+
+
+Path$ = _METHPATH$ + _METHFILE$ + "\"
+File$ = "FRACTCOL.REG"
+
+IF RegSize(FRACTCOL) > 0
+  IF (ObjHdrVal(FRACTCOL[1],"Mode") <> OFF)
+    IF (FC_CapInfoAvailable() = 0)  AND (_OffLine = 0)
+      Ret = Alert("Fraction collection: Wrong or missing capillary information." +CHR$(10)+CHR$(13)+\
+                  "Enter capillary information first and save method again", 3, "Save Method")
+    ENDIF
+    IF FC_Allowed() = 0
+      SetObjHdrVal FRACTCOL[1], "Mode", OFF
+      FC_UnLockTimeTable
+      _MethodChanged = 1
+      Ret = Alert("Fraction collection disabled in CE-Mode:" + HPCEMode$("?") +CHR$(10)+CHR$(13)+\
+                  "Method saved with fraction collection switched off", 3, "Save Method")
+    ENDIF
+  ENDIF
+   
+  SaveObj FRACTCOL, Path$ + File$, NEW
+ENDIF
+
+RETURN
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME FC_PrintInstMethod
+!******************************************************************************
+LOCAL Line$, Text$
+! ------ pseudo constants
+LOCAL OFF,PressMode,VoltMode,IEFmode
+OFF       = 1
+PressMode = 2
+VoltMode  = 3
+IEFmode   = 4
+
+
+
+IF Check(VARIABLE,PrLeoHPCE) = 0
+  RETURN
+ENDIF
+
+IF PrLeoHPCE = 0
+  RETURN
+ENDIF
+
+IF ObjHdrVal(FRACTCOL[1],"Mode") = OFF
+  Print #5,       ""
+  Print #5,       "     Fraction Collection: OFF "
+  Print #5,       ""
+  Print #5,       ""
+  Print #5,       ""
+  RETURN
+ENDIF
+
+Print #5,       ""
+Print #5,       "     Fraction Collection:"
+Print #5,       ""
+
+FC_GetParamFromReg
+
+IF FC_Mode = PressMode
+  Text$ = "Pressure"
+ELSE
+  IF FC_Mode = VoltMode
+    Text$ = "Voltage"
+  ELSE
+    Text$ = "IEF"
+  ENDIF
+ENDIF
+
+!----------------12345678|012345678901234567890123|------- 
+Print #5,       "        Collection mode          " + Text$
+
+IF FC_PeakList = 1
+  Print #5,     "        Collect all peaks from " + SPRINTF$(FC_MigtFrom,"%.2f") + \
+                                            " to " + SPRINTF$(FC_MigtTo,"%.2f") + " min"
+ELSE
+  Print #5,     "        Collect peaks at         " + SPRINTF$(FC_Migt1,"%.2f") + " min"
+
+  IF FC_Migt2 > 0
+  Print #5,     "                                 " + SPRINTF$(FC_Migt2,"%.2f") + " min"
+  ENDIF
+
+  IF FC_Migt3 > 0
+  Print #5,     "                                 " + SPRINTF$(FC_Migt3,"%.2f") + " min"
+  ENDIF
+
+  IF FC_Migt4 > 0
+  Print #5,     "                                 " + SPRINTF$(FC_Migt4,"%.2f") + " min"
+  ENDIF
+ENDIF
+
+Print #5,       "        First vial               "  + SPRINTF$(FC_FirstVial,"%d")
+
+
+IF FC_Mode = IEFmode
+  Print #5,     "        Collection width         "  + SPRINTF$(FC_CollectWidth,"%.2f") + " min"
+ELSE
+  Print #5,     "        Collection width         "  + SPRINTF$(FC_CollectWidth,"%G") + " %"
+ENDIF
+
+IF FC_Mode = PressMode
+  Print #5,     "        Migr.Time with 50 mbar   "  + SPRINTF$(FC_MTpressure,"%.2f") + " min"
+ENDIF
+
+IF FC_Mode = IEFmode
+  Print #5,     "        Migr.Time with pressure  "  + SPRINTF$(FC_MTpressure,"%.2f") + " min"
+ENDIF
+
+IF (FC_Mode = PressMode) OR (FC_Mode = VoltMode)
+  IF FC_VoltRamp <> 0
+    Print #5,   "        Voltage ramp             "  + SPRINTF$(FC_VoltRampTime,"%.2f") + " min"
+  ENDIF
+ENDIF
+
+Print #5,       ""
+Print #5,       ""
+Print #5,       ""
+
+
+FC_RemoveParamVars
+
+RETURN
+ENDMACRO
+
+
+
+
+!******************************************************************************
+!                       A U T O E X E C U T E
+!******************************************************************************
+
+
+! **************************< end of file >************************************

@@ -1,0 +1,487 @@
+!===============================================================================
+!  mix_util.mac:  Tune mix register utilities
+!
+!  MSUpdateTuneMix:  Update the custom tune mix register file tune_mix.reg
+!                    based on the default tune mix register file def_tmix.reg
+!  MSEditQuadDC
+!
+!===============================================================================
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+!===============================================================================
+!  Macros:
+!	   MSUpdateTuneMix
+!	   MSTM_Update_V1
+!	   MSTM_AddRows_V2
+!	   MSTM_Update_V2
+!	   ErrUpdateTuneMix
+!	   MSEditQuadDC
+!	   MSErrTuneQDC
+!	   
+!===============================================================================
+Name MSUpdateTuneMix
+! Update the custom tune mix register file tune_mix.reg using
+! the default tune mix register file def_tmix.reg
+! Updating will unload the tune mix register TUNEMIXREG from memory 
+! while the disk copy is updated.
+!*********************************************************
+local path$, deffile$, type
+local NumCustObjs,NumDefObjs
+
+!* Initialize path and default file 
+Local  ID_TUNEMAC_UPDATE_OF_CUST_898
+Local  ID_TUNEMAC_INVALID_DEFAUL_899
+Local  ID_TUNEMAC_TUNE_MIX_REGIS_900
+Local  ID_TUNEMAC_NO_CUSTOM_TUNE_901
+Local  ID_TUNEMAC_CUSTOM_TUNE_MI_902
+ID_TUNEMAC_UPDATE_OF_CUST_898                      =  17898  
+ID_TUNEMAC_INVALID_DEFAUL_899                      =  17899  
+ID_TUNEMAC_TUNE_MIX_REGIS_900                      =  17900  
+ID_TUNEMAC_NO_CUSTOM_TUNE_901                      =  17901  
+ID_TUNEMAC_CUSTOM_TUNE_MI_902                      =  17902  
+   path$ = _tunePath$
+   deffile$ = "def_tmix.reg"
+   
+!* Check for existence of default file   
+   if  FileStat(mode, path$ + deffile$) <> 1 then
+   !* Default file does not exist, so prompt for file
+     if SelectFile ( 1, "Update Tune Mix Register", "*.reg", path$, deffile$, type ) = 0 then
+     !* User cancelled
+        message ReadResource$("tunemac",ID_TUNEMAC_UPDATE_OF_CUST_898)
+        return 
+     else
+        if type <> 1 then
+          message ReadResource$("tunemac",ID_TUNEMAC_INVALID_DEFAUL_899)
+          return
+        endif   
+     endif
+   endif
+   
+!* Check for existence of custom tune mix register file   
+   if RegSize(TuneMixReg) <> -1 then
+      DelReg TuneMixReg
+      message ReadResource$("tunemac",ID_TUNEMAC_TUNE_MIX_REGIS_900)
+   endif   
+
+   if FileStat(mode,_tunePath$ + "tune_mix.reg") = 1 then
+   !* Both default and custom tune mix register files exist
+      if RegSize(DefTMix) <> -1 then
+         DelReg DefTMix
+      endif   
+      if RegSize(CustTMix) <> -1 then
+         DelReg CustTMix
+      endif
+      
+      on error ErrUpdateTuneMix
+      
+   !* Load default tune mix register
+   !* Load custom tune mix register
+      LoadObj Path$ + deffile$,,DefTMix   
+      LoadObj _tunePath$ + "tune_mix.reg",,CustTMix   
+      
+      NumCustObjs = RegSize(CustTMix)
+      NumDefObjs = RegSize(DefTMix)
+      
+    !* Update version 1 customization: QuadDC only
+      MSTM_Update_V1 NumCustObjs, NumDefObjs
+    !* Update version 2 customization: Manual ramp tables  
+      MSTM_Update_V2 NumCustObjs, NumDefObjs
+
+    !* Update version 1 customization: Corona only
+      MSTM_Update_V1 NumCustObjs, NumDefObjs,"Corona"
+    !* Update version 1 customization: Gas Temp only  
+      MSTM_Update_V1 NumCustObjs, NumDefObjs,"GasTemp"
+    !* Update version 1 customization: Neb_Pres only
+      MSTM_Update_V1 NumCustObjs, NumDefObjs,"Neb_Pres"
+    !* Update version 1 customization: Vaporizer only  
+      MSTM_Update_V1 NumCustObjs, NumDefObjs,"Vaporizer"
+    !* Update version 1 customization: VCap only  
+      MSTM_Update_V1 NumCustObjs, NumDefObjs,"VCap"
+    !* Update version 1 customization: DryingGas only  
+      MSTM_Update_V1 NumCustObjs, NumDefObjs,"DryingGas"
+
+      !* Save the Default Tune Mix Register as the Custom Mix Register
+      !* This will lose any custom objects not in the default register.
+      Copy _tunepath$ + "tune_mix.reg", _tunepath$ + "tune_mix.bak", dontask
+      SaveObj DefTMix, _tunepath$ + "tune_mix.reg", new
+      !* Clean up the registers
+      DelReg DefTMix
+      DelReg CustTMix
+   else
+      message ReadResource$("tunemac",ID_TUNEMAC_NO_CUSTOM_TUNE_901)
+      Copy path$ + deffile$, _tunepath$ + "tune_mix.reg", dontask
+   endif   
+   message ReadResource$("tunemac",ID_TUNEMAC_CUSTOM_TUNE_MI_902)
+   
+!* Must delete the atune.reg if it exists
+     if filestat(Mode,_tunepath$ + "atune.reg") = 1 then
+     on error print
+           if regsize(atunereg) <> -1 then
+             delreg atunereg
+           endif  
+           copy _tunepath$ + "atune.reg", _tunepath$ + "atune.bak",dontask
+           delete _tunepath$ + "atune.reg",dontask
+     endif  
+
+Endmacro  !* MSUpdateTuneMixReg
+
+!*********************************************************
+Name MSTM_Update_V1
+parameter NumCustObjs, NumDefObjs
+Parameter Param$ default "QuadDC"
+!
+!   Update version 1 customizations: QuadDC only
+!   Assume that CustTMix and DefTMix exist
+!*********************************************************
+local i, Index, DefaultVal, j, Idx
+
+      for i=1 to NumCustObjs 
+      !* Go through all of the objects in the custom tune mix register
+         if ObjHdrType (CustTMix[i],"TuneParms") = 4 then
+         !* the TuneParm table must exist
+            Index = RowByText (CustTMix[i], "TuneParms",,"Parm","i=", Param$)
+            if Index <> -1 then
+              DefaultVal = TabVal (CustTMix[i],"TuneParms",Index,"Default")
+              for j = 1 to NumDefObjs 
+                  if ConvertText$(upper,ObjHdrText$(DefTMix[j],"ShortName")) = \
+                     ConvertText$(upper,ObjHdrText$(CustTMix[i],"ShortName")) then
+                     !* Use the custom object default value for specified parameter in the default 
+                     !* object with the same name
+                     if ObjHdrType (DefTMix[j],"TuneParms") = 4 then
+                       Idx = RowByText (DefTMix[j], "TuneParms",,"Parm","i=", Param$)
+                       SetTabVal DefTMix[j],"TuneParms",Idx,"Default",DefaultVal
+                     endif  
+                  endif   
+              next j              
+            endif  
+         endif   
+      next i
+
+EndMacro  !*MSTM_Update_V1
+
+!*********************************************************
+!*********************************************************
+Name MSTM_AddRows_V2
+parameter reg$
+parameter NumSettings
+!   Update version 2 customizations: Add manually ramped len tables
+!   Assume that CustTMix and DefTMix exist
+!*********************************************************
+local NumMass, LensRow, j, setting, keyword$, mass
+
+!* Get the number of tune masses from the TuneMix register
+   Evaluate "NumMass = ObjHdrVal(" + reg$ + ",""NumIons"")"
+   
+!* Add Quad DC
+
+   !* Use the QuadDC row if it exists else insert a new row
+   evaluate "LensRow = RowByText (" +reg$+ ", ""ManRamp"",,""Parm"",""i="",""QuadDC"")"
+   if LensRow = -1 then
+     evaluate "InsTabRow " + reg$ +", ""ManRamp"",1"
+     LensRow = 1  
+     evaluate "SetTabText " + reg$ +", ""ManRamp"",LensRow,""Parm"",""QuadDC"""
+   endif  
+
+   !* Get the default value for QuadDC out of the TuneParms table   
+   evaluate "j = RowByText (" +reg$+ ", ""TuneParms"",,""Parm"",""i="",""QuadDC"")"
+   if j > -1 then 
+     evaluate "setting = TabVal(" + reg$ + ",""TuneParms"",j,""Default"")"
+     !* Indicate whether ramp is enabled
+     evaluate "keyword$ = convertText$(upper,TabText$(" + reg$ + ",""TuneParms"",j,""Action""))"
+   else
+     setting = 0  
+   endif  
+   
+   !* Initialize the ramp using tune ions and default setting in tune mix reg
+   for j = 1 to NumMass
+     on error mass = 0
+     evaluate "mass = TabVal(" + reg$ + ",""TuneIons"",j,""mz"")"
+     on error
+    
+     evaluate "SetTabVal " + reg$ +", ""ManRamp"",LensRow, ""Mass""+val$(j),mass"
+     evaluate "SetTabVal " + reg$ +", ""ManRamp"",LensRow, ""Setting""+val$(j),setting"
+   next j
+   
+   for j = NumMass+1 to NumSettings
+     evaluate "SetTabVal " + reg$ +", ""ManRamp"",LensRow, ""Mass""+val$(j),0"
+     evaluate "SetTabVal " + reg$ +", ""ManRamp"",LensRow, ""Setting""+val$(j),0"
+   next j
+   
+   
+!* Add fragmentor
+   if MSD_SL = 0 then                           ! Fragmentor/Skim1 linked
+     evaluate "LensRow = RowByText (" +reg$+ ", ""ManRamp"",,""Parm"",""i="",""Fragmentor"")"
+   else                                         ! SL model
+     evaluate "LensRow = RowByText (" +reg$+ ", ""ManRamp"",,""Parm"",""i="",""Fragment"")"
+   endif
+   if LensRow = -1 then
+     evaluate "InsTabRow " + reg$ +", ""ManRamp"",1"
+     LensRow = 1  
+     evaluate "SetTabText " + reg$ +", ""ManRamp"",LensRow,""Parm"",""Fragmentor"""
+   endif  
+   
+   if MSD_SL = 0 then                           ! Fragmentor/Skim1 linked
+     evaluate "j = RowByText (" +reg$+ ", ""TuneParms"",,""Parm"",""i="",""Fragmentor"")"
+   else                                         ! SL model
+     evaluate "j = RowByText (" +reg$+ ", ""TuneParms"",,""Parm"",""i="",""Fragment"")"
+   endif
+   if j > -1 then 
+     evaluate "setting = TabVal(" + reg$ + ",""TuneParms"",j,""Default"")"
+     evaluate "keyword$ = convertText$(upper,TabText$(" + reg$ + ",""TuneParms"",j,""Action""))"
+   else
+     setting = 0  
+   endif
+   
+   for j = 1 to NumMass
+      on error mass = 0
+      evaluate "mass = TabVal(" + reg$ + ",""TuneIons"",j,""mz"")"
+      on error
+      
+      evaluate "SetTabVal " + reg$ +", ""ManRamp"",LensRow, ""Mass""+val$(j),mass"
+      evaluate "SetTabVal " + reg$ +", ""ManRamp"",LensRow, ""Setting""+val$(j),setting"
+   next j
+   
+   for j = NumMass+1 to NumSettings
+      evaluate "SetTabVal " + reg$ +", ""ManRamp"",LensRow, ""Mass""+val$(j),0"
+      evaluate "SetTabVal " + reg$ +", ""ManRamp"",LensRow, ""Setting""+val$(j),0"
+   next j
+
+endmacro  !*MSTM_AddRows_V2
+
+
+!*********************************************************
+!*********************************************************
+Name MSTM_Update_V2
+parameter NumCustObjs, NumDefObjs, NumSettings Default 10
+!
+!   Update version 2 customizations: Add manually ramped len tables
+!   Assume that CustTMix and DefTMix exist
+!*********************************************************
+local i, j, k
+
+      for i=1 to NumCustObjs 
+      !* Go through all of the objects in the custom tune mix register
+      !* Check for the Manually dynamically ramped parameter table
+         if ObjHdrType (CustTMix[i],"ManRamp") = 4 then
+           for j = 1 to NumDefObjs 
+           !* Tables exists, so overwrite new table
+             if ConvertText$(upper,ObjHdrText$(DefTMix[j],"ShortName")) = \
+               ConvertText$(upper,ObjHdrText$(CustTMix[i],"ShortName")) then
+               DelTab DefTMix[j],"ManRamp"       !* no error if no table
+               !* Use the custom manual ramp table in the default 
+               !* object with the same name
+               CopyTab CustTMix[i],"ManRamp",DefTMix[j],"ManRamp"
+             endif   
+           next j  
+         else
+           !* Custom mix register does not have manually ramped tables
+           for j = 1 to NumDefObjs 
+             if ConvertText$(upper,ObjHdrText$(DefTMix[j],"ShortName")) = \
+                ConvertText$(upper,ObjHdrText$(CustTMix[i],"ShortName")) AND \
+                ObjHdrType (DefTMix[j],"ManRamp") = 99 then
+               
+              !* Default mix register doesn't have manual ramp tables either so
+              !* create the new manual dynamic ramp table 
+               NewTab DefTMix[j],"ManRamp"       
+              
+              !* Build the column structure to be used by all of the rows   
+               NewColText DefTMix[j], "ManRamp", "Parm"
+               NewColVal  DefTMix[j], "ManRamp", "Enable"
+               
+               for k = 1 to NumSettings
+                  NewColVal DefTMix[j], "ManRamp", "Mass"+val$(k)
+                  NewColVal DefTMix[j], "ManRamp", "Setting"+val$(k)
+               next k
+               
+               !* Add rows to DefTMix[j]
+               MSTM_AddRows_V2 "DefTMix["+val$(j)+"]", NumSettings
+               
+               !* Store how many pairs were created
+               NewTabHdrVal DefTMix[j], "ManRamp", "NumPairs", NumSettings
+               
+             endif
+           next j
+         endif   
+      next i
+
+EndMacro           !* MSTM_Update_V2
+
+!*********************************************************
+!*********************************************************
+Name  ErrUpdateTuneMix
+!*********************************************************
+Local  ID_TUNEMAC_ERROR__UNABLE_903
+ID_TUNEMAC_ERROR__UNABLE_903                       =  17903  
+on error print
+   print Alert (ReadResource$("tunemac",ID_TUNEMAC_ERROR__UNABLE_903) +_errmsg$,3,"Update Tune Mix")
+
+   if RegSize(DefTMix) <> -1 then
+      DelReg DefTMix
+   endif   
+   if RegSize(CustTMix) <> -1 then
+      DelReg CustTMix
+   endif
+!   Remove ErrUpdateTuneMix
+   Remove MSUpdateTuneMix
+   stop
+endmacro   !* ErrUpdateTuneMix
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!*********************************************************
+Name MSEditQuadDC
+!*********************************************************
+local _button, NumObjs,i,QDCIdx, pos, neg
+
+Local  ID_TUNEMAC_RELOAD_TUNE_MI_905
+Local  ID_TUNEMAC_THE_CUSTOM_TUN_907
+Local  ID_TUNEMAC_POSITIVE_908
+Local  ID_TUNEMAC_NEGATIVE_909
+ID_TUNEMAC_RELOAD_TUNE_MI_905                      =  17905  
+ID_TUNEMAC_THE_CUSTOM_TUN_907                      =  17907  
+ID_TUNEMAC_POSITIVE_908                            =  17908  
+ID_TUNEMAC_NEGATIVE_909                            =  17909  
+   if FileStat(mode,_tunePath$ + "tune_mix.reg") = 1 then
+     if RegSize(TuneMixReg) <> -1 then
+       _button = Alert (ReadResource$("tunemac",ID_TUNEMAC_RELOAD_TUNE_MI_905),4,"Edit Tune Mix Quad DC")
+       if _button = 1 then
+         DelReg TuneMixReg
+         LoadObj _tunepath$ + "tune_mix.reg",,TuneMixReg
+       endif
+     else  
+         LoadObj _tunepath$ + "tune_mix.reg",,TuneMixReg
+     endif   
+   else
+      print Alert(ReadResource$("tunemac",ID_TUNEMAC_THE_CUSTOM_TUN_907),3,"Edit Tune Mix Quad DC")
+      return
+   endif
+   
+   on error MSErrTuneQDC
+   
+   if DialogExists("DlgEditQuadDC") = 0 then
+      BeginDialog "DlgEditQuadDC", 10,10,150,70, "Update Tune Mix QuadDC"
+        StaticText 10, 10, 80, 15, ReadResource$("tunemac",ID_TUNEMAC_POSITIVE_908)
+        NumberBox  50, 10, 40, 15, pos,-20,1,0,1
+        StaticText 10, 30, 80, 15, ReadResource$("tunemac",ID_TUNEMAC_NEGATIVE_909)
+        NumberBox  50, 30, 40, 15, neg,-1,20,0,1
+        OKButton  10, 55, 54, 14
+        CancelButton  70, 55, 54, 14
+      EndDialog
+   endif
+   
+   _button = ShowDialog("DlgEditQuadDC")
+   
+   if _button = 1 then
+      NumObjs = RegSize(TuneMixReg)
+      for i = 1 to NumObjs
+         if ObjHdrType (TuneMixReg[i],"TuneParms") = 4 then
+         !* the TuneParm table must exist
+            QDCIdx = RowByText (TuneMixReg[i], "TuneParms",,"Parm","i=", "QuadDC")
+            if QDCIdx <> -1 then
+               if instr(ConvertText$(upper,ObjHdrText$(TuneMixReg[i],"ShortName")),"POS") <> 0 then
+               !* Update positive modes
+                  SetTabVal TuneMixReg[i],"TuneParms",QDCIdx,"Default",pos
+               else
+                 if instr(ConvertText$(upper,ObjHdrText$(TuneMixReg[i],"ShortName")),"NEG") <> 0 then
+                 !* Update negative modes
+                  SetTabVal TuneMixReg[i],"TuneParms",QDCIdx,"Default",neg
+                 endif
+               endif
+            endif
+          endif  
+      next i
+      SaveObj TuneMixReg, _tunepath$ + "tune_mix.reg", new
+      
+   endif
+   on error print
+   Remove MSErrTuneQDC
+   Remove MSEditQuadDC
+   if DialogExists("DlgEditQuadDC") <> 0 then
+      RemoveDialog "DlgEditQuadDC" 
+   endif
+
+Endmacro    !* MSEditQuadDC
+
+!*********************************************************
+Name MSErrTuneQDC
+!*********************************************************
+on error print
+   Remove MSErrTuneQDC
+   Remove MSEditQuadDC
+   if DialogExists("DlgEditQuadDC") <> 0 then
+      RemoveDialog "DlgEditQuadDC" 
+   endif
+   stop
+Endmacro  !* MSErrTuneQDC
+!===============================================================================
+Name IsDynamic
+Parameter  pParameter$ Default ""
+! Function checks a given parameter name is set as a dynamic ramp parameter
+! <0  parameter is not a dynamic parameter
+! =0  parameter is a dynamic parameter but not enabled
+! >0  parameter is dynamic and enabled with <return value> support points
+! Tests:
+! print IsDynamic( "Dirt" )	    ! -1
+! print IsDynamic( "VCap" )         ! -1
+! print IsDynamic( "DryingGas" )    ! -1
+! print IsDynamic( "Fragment" )     ! >= 0 see MSDynamic List
+! print IsDynamic( "WidthOffset" )  ! >= 0 see MSDynamic List
+!===============================================================================
+Local lParam$
+Local lInfo
+Local lReturn
+    lParam$ = ConvertText$( Upper, pParameter$ )
+    ! Is the parameter recognized by the MS at all ?
+    MSParmInfo lParam$, lInfo
+    If ( lInfo < 1 ) then 
+        Return -1 ! MS unkown parameter
+    Endif
+
+    ! Assume it is an enabled parameter and 
+    ! try to read the number of support points.
+    On Error Goto FailedToRead
+	MSDynamic lParam$, READ, 0, lReturn
+        ! If the number of support points can be read it is an enabled dynamic
+        ! parameter. Pass the number of parameters back. However, check that
+        ! there is at least 1 support points. <1 would be illegal.
+    On Error
+	If ( lReturn < 1 ) then ! not allowed. A dynamic parameter must have at
+	    Print "IsDynamic: no support points. Stop" ! least 1 support point.
+	    Stop
+	Endif
+	Return lReturn
+
+    FailedToRead:
+    ! The parameter has no support points. I can be an disabled parameter
+    ! Try to disable it again. If that fails, the parameter cannot be a 
+    ! dynamic parameter. 
+    lReturn = 0
+    On Error lReturn = -1
+	MSDynamic lParam$, Disable
+    On Error
+    Return  lReturn
+EndMacro
+!===============================================================================
+!* End of File

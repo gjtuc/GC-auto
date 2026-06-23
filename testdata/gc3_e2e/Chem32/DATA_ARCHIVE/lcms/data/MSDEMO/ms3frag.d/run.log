@@ -1,0 +1,18 @@
+ 443 41e0 37b0a94a  202
+Method       Method started:  line# 2 vial# 53 inj# 1       15:35:54 08/10/99
+  67 41e0 37b0a94a    0
+Method       Instrument running sample vial# 53             15:35:54 08/10/99
+   0 1da7 37b0a999  600
+1100 THM   1 Column temperature = 40.0 °C                   15:37:13 08/10/99
+   0 1da9 37b0a999  600
+1100 PMP   1 Pressure = 70.7 bar                            15:37:13 08/10/99
+   0 1da7 37b0ab26  600
+1100 THM   1 Column temperature = 40.0 °C                   15:43:50 08/10/99
+  70 41de 37b0ab26    0
+CP Macro     Analyzing rawdata MS3FRAG.D                    15:43:50 08/10/99
+   0 1da9 37b0abf1  600
+1100 PMP   1 Pressure = 47.5 bar                            15:47:13 08/10/99
+  67 41e0 37b0ad1f    0
+Method       Instrument run completed                       15:52:15 08/10/99
+  67 41e0 37b0ad1f    0
+Method       Method completed                               15:52:15 08/10/99

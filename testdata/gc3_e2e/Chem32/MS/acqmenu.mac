@@ -1,0 +1,323 @@
+local ID_SUPPORTMACFILES__INSTRUMENT_1                       
+local ID_SUPPORTMACFILES_SET_UP_MSD_SIG_2                    
+local ID_SUPPORTMACFILES_SPRITE_SIGNALS_3                    
+local ID_SUPPORTMACFILES_SET_UP_SIGNAL_4                     
+local ID_SUPPORTMACFILES_METHLOADSAVEID_5                     
+local ID_SUPPORTMACFILES_MORE_M_SD_6                         
+local ID_SUPPORTMACFILES_SUBMENU_7                           
+local ID_SUPPORTMACFILES_MORE_DIALOGS_F_8                    
+local ID_SUPPORTMACFILES__INSTRUMENT_MO_9                    
+local ID_SUPPORTMACFILES__SPRAY_CHAMBER_10                   
+local ID_SUPPORTMACFILES_SPRITE_SPRAY_11                     
+local ID_SUPPORTMACFILES_SET_UP_MSD_SPR_12                   
+local ID_SUPPORTMACFILES__FRACTION_COLL_13                   
+local ID_SUPPORTMACFILES_SPRITE_FRACTIO_14                   
+local ID_SUPPORTMACFILES_SET_UP_MSD_FRA_15                   
+local ID_SUPPORTMACFILES__DATA_CURVES_16                     
+local ID_SUPPORTMACFILES_SPRITE_CURVES_17                    
+local ID_SUPPORTMACFILES_SELECT_MSD_INS_18                   
+local ID_SUPPORTMACFILES_SEPARATOR_19                        
+local ID_SUPPORTMACFILES_C_ONTROL_20                         
+local ID_SUPPORTMACFILES_SPRITE_CONTROL_21                   
+local ID_SUPPORTMACFILES_SET_UP_MSD_CON_22                   
+local ID_SUPPORTMACFILES__METHODIDLE_ME_23                   
+local ID_SUPPORTMACFILES_S_WITCH_STREAM_24                   
+local ID_SUPPORTMACFILES_MSSTREAMSELECT_25                   
+local ID_SUPPORTMACFILES_SWITCH_LC_STRE_26                   
+local ID_SUPPORTMACFILES_CONFIGURE_110_27                    
+local ID_SUPPORTMACFILES_MSCONFIGURE_28                      
+local ID_SUPPORTMACFILES_CONFIGURE_THE_29                    
+local ID_SUPPORTMACFILES_30                                  
+local ID_SUPPORTMACFILES_SET_APPI_LAMP_31                    
+local ID_SUPPORTMACFILES_CONTROL_STATUS_32                   
+local ID_SUPPORTMACFILES__INSTRUMENT_SE_33                   
+local ID_SUPPORTMACFILES__ON_34                              
+local ID_SUPPORTMACFILES_MSAPPIUVLAMPON_35                   
+local ID_SUPPORTMACFILES_TURN_ON_APPI_L_36                   
+local ID_SUPPORTMACFILES__APPILAMPON_37                      
+local ID_SUPPORTMACFILES_O_FF_38                             
+local ID_SUPPORTMACFILES_MSAPPIUVLAMPOF_39                   
+local ID_SUPPORTMACFILES_TURN_OFF_APPI_40                    
+local ID_SUPPORTMACFILES__APPILAMPOFF_41                     
+local ID_SUPPORTMACFILES__RUNCONTROL_42                      
+local ID_SUPPORTMACFILES__USE_MANUAL_IN_43                   
+local ID_SUPPORTMACFILES_USE_MANUAL_INJ_44                   
+local ID_SUPPORTMACFILES__FILE__LOAD_45                      
+local ID_SUPPORTMACFILES__SEQUENCE_46                        
+local ID_SUPPORTMACFILES__STANDARD_SEQU_47                   
+local ID_SUPPORTMACFILES__EXTENDED_SEQU_48                   
+local ID_SUPPORTMACFILES_LOADSEQUENCE_49                     
+local ID_SUPPORTMACFILES_LOAD_AN_EXTEND_50                   
+local ID_SUPPORTMACFILES__FILE_SAVE__AS_51                   
+local ID_SUPPORTMACFILES_E_XTENDED_SEQU_52                   
+local ID_SUPPORTMACFILES_SAVESEQUENCE_53                     
+local ID_SUPPORTMACFILES_SAVE_CURRENT_S_54                   
+local ID_SUPPORTMACFILES__SEQUENCE_55                        
+local ID_SUPPORTMACFILES__NEW_SEQUENCE_56                    
+local ID_SUPPORTMACFILES_CREATE_AN_EMPT_57                   
+local ID_SUPPORTMACFILES__SEQUENCE__NEW_58                   
+local ID_SUPPORTMACFILES__STANDARD_59                        
+local ID_SUPPORTMACFILES_SEQUENCENEW_60                      
+local ID_SUPPORTMACFILES_CREATE_AN_EMPT_61                   
+local ID_SUPPORTMACFILES__EXTENDED_62                        
+local ID_SUPPORTMACFILES_SEQUENCENEW_SE_63                   
+local ID_SUPPORTMACFILES_CREATE_AN_EMPT_64                   
+local ID_SUPPORTMACFILES__LOAD_SEQUENCE_65                   
+local ID_SUPPORTMACFILES__LOAD_SEQUENCE_66                   
+local ID_SUPPORTMACFILES_LOAD_A_SEQUENC_67                 
+local ID_SUPPORTMACFILES__SEQUENCE__LOA_68              
+local ID_SUPPORTMACFILES__STANDARD_69                    
+local ID_SUPPORTMACFILES_LOADSEQUENCE_70                
+local ID_SUPPORTMACFILES_LOAD_A_STANDAR_71                 
+local ID_SUPPORTMACFILES__EXTENDED_72                     
+local ID_SUPPORTMACFILES_SAVE_SEQUENCE_73                 
+local ID_SUPPORTMACFILES_SAVE_SEQUENCE_74                 
+local ID_SUPPORTMACFILES_SAVE_CURRENT_S_75              
+local ID_SUPPORTMACFILES__SEQUENCE_SAVE_76               
+local ID_SUPPORTMACFILES_SAVESEQUENCE_77                   
+local ID_SUPPORTMACFILES_SAVE_CURRENT_S_78                
+local ID_SUPPORTMACFILES_SAVE_CURRENT_S_79                
+local ID_SUPPORTMACFILES_A_NALYST_80                      
+local ID_SUPPORTMACFILES_SET_UP_CURRENT_81                
+local ID_SUPPORTMACFILES_ANALYSTSETUP_82                 
+local ID_SUPPORTMACFILES_CHANGE_CURRENT_83               
+local ID_SUPPORTMACFILES_SET_UP_CURRENT_84               
+local ID_SUPPORTMACFILES_ANALYSTSEQSETU_85               
+local ID_SUPPORTMACFILES_CHANGE_CURRENT_86                
+local ID_SUPPORTMACFILES__LAUNCH_ANALYS_87                
+local ID_SUPPORTMACFILES_DUMMY_LAUNCHAN_88               
+local ID_SUPPORTMACFILES_LAUNCH_ANALYST_89              
+local ID_SUPPORTMACFILES__RUN_FILE_TRAN_90               
+local ID_SUPPORTMACFILES_DUMMY_CS2WIFF_91               
+local ID_SUPPORTMACFILES_RUN_THE_CHEMST_92                
+local ID_SUPPORTMACFILES_SELECT_STATPARM_386
+local ID_SUPPORTMACFILES_SELECT_MSD_STATUS_387
+local ID_SUPPORTMACFILES_C_HECK_TUNE_154
+local ID_SUPPORTMACFILES_CHECK_MSD_PERF_156
+ ID_SUPPORTMACFILES__INSTRUMENT_1                   =  17001  
+ ID_SUPPORTMACFILES_SET_UP_MSD_SIG_2                =  17002  
+ ID_SUPPORTMACFILES_SPRITE_SIGNALS_3                =  17003  
+ ID_SUPPORTMACFILES_SET_UP_SIGNAL_4                 =  17004  
+ ID_SUPPORTMACFILES_METHLOADSAVEID_5                =  17005   
+ ID_SUPPORTMACFILES_MORE_M_SD_6                     =  17006  
+ ID_SUPPORTMACFILES_SUBMENU_7                       =  17007  
+ ID_SUPPORTMACFILES_MORE_DIALOGS_F_8                =  17008  
+ ID_SUPPORTMACFILES__INSTRUMENT_MO_9                =  17009  
+ ID_SUPPORTMACFILES__SPRAY_CHAMBER_10               =  17010  
+ ID_SUPPORTMACFILES_SPRITE_SPRAY_11                 =  17011  
+ ID_SUPPORTMACFILES_SET_UP_MSD_SPR_12               =  17012  
+ ID_SUPPORTMACFILES__FRACTION_COLL_13               =  17013  
+ ID_SUPPORTMACFILES_SPRITE_FRACTIO_14               =  17014  
+ ID_SUPPORTMACFILES_SET_UP_MSD_FRA_15               =  17015  
+ ID_SUPPORTMACFILES__DATA_CURVES_16                 =  17016  
+ ID_SUPPORTMACFILES_SPRITE_CURVES_17                =  17017  
+ ID_SUPPORTMACFILES_SELECT_MSD_INS_18               =  17018  
+ ID_SUPPORTMACFILES_SEPARATOR_19                    =  17019  
+ ID_SUPPORTMACFILES_C_ONTROL_20                     =  17020  
+ ID_SUPPORTMACFILES_SPRITE_CONTROL_21               =  17021  
+ ID_SUPPORTMACFILES_SET_UP_MSD_CON_22               =  17022  
+ ID_SUPPORTMACFILES__METHODIDLE_ME_23               =  17023  
+ ID_SUPPORTMACFILES_S_WITCH_STREAM_24               =  17024  
+ ID_SUPPORTMACFILES_MSSTREAMSELECT_25               =  17025  
+ ID_SUPPORTMACFILES_SWITCH_LC_STRE_26               =  17026  
+ ID_SUPPORTMACFILES_CONFIGURE_110_27                =  17027  
+ ID_SUPPORTMACFILES_MSCONFIGURE_28                  =  17028  
+ ID_SUPPORTMACFILES_CONFIGURE_THE_29                =  17029  
+ ID_SUPPORTMACFILES_30                              =  17030  
+ ID_SUPPORTMACFILES_SET_APPI_LAMP_31                =  17031  
+ ID_SUPPORTMACFILES_CONTROL_STATUS_32               =  17032  
+ ID_SUPPORTMACFILES__INSTRUMENT_SE_33               =  17033  
+ ID_SUPPORTMACFILES__ON_34                          =  17034  
+ ID_SUPPORTMACFILES_MSAPPIUVLAMPON_35               =  17035  
+ ID_SUPPORTMACFILES_TURN_ON_APPI_L_36               =  17036  
+ ID_SUPPORTMACFILES__APPILAMPON_37                  =  17037  
+ ID_SUPPORTMACFILES_O_FF_38                         =  17038  
+ ID_SUPPORTMACFILES_MSAPPIUVLAMPOF_39               =  17039  
+ ID_SUPPORTMACFILES_TURN_OFF_APPI_40                =  17040  
+ ID_SUPPORTMACFILES__APPILAMPOFF_41                 =  17041  
+ ID_SUPPORTMACFILES__RUNCONTROL_42                  =  17042  
+ ID_SUPPORTMACFILES__USE_MANUAL_IN_43               =  17043  
+ ID_SUPPORTMACFILES_USE_MANUAL_INJ_44               =  17044  
+ ID_SUPPORTMACFILES__FILE__LOAD_45                  =  17045  
+ ID_SUPPORTMACFILES__SEQUENCE_46                    =  17046  
+ ID_SUPPORTMACFILES__STANDARD_SEQU_47               =  17047  
+ ID_SUPPORTMACFILES__EXTENDED_SEQU_48               =  17048  
+ ID_SUPPORTMACFILES_LOADSEQUENCE_49                 =  17049  
+ ID_SUPPORTMACFILES_LOAD_AN_EXTEND_50               =  17050  
+ ID_SUPPORTMACFILES__FILE_SAVE__AS_51               =  17051  
+ ID_SUPPORTMACFILES_E_XTENDED_SEQU_52               =  17052  
+ ID_SUPPORTMACFILES_SAVESEQUENCE_53                 =  17053  
+ ID_SUPPORTMACFILES_SAVE_CURRENT_S_54               =  17054  
+ ID_SUPPORTMACFILES__SEQUENCE_55                    =  17055  
+ ID_SUPPORTMACFILES__NEW_SEQUENCE_56                =  17056  
+ ID_SUPPORTMACFILES_CREATE_AN_EMPT_57               =  17057  
+ ID_SUPPORTMACFILES__SEQUENCE__NEW_58               =  17058  
+ ID_SUPPORTMACFILES__STANDARD_59                    =  17059  
+ ID_SUPPORTMACFILES_SEQUENCENEW_60                  =  17060  
+ ID_SUPPORTMACFILES_CREATE_AN_EMPT_61               =  17061  
+ ID_SUPPORTMACFILES__EXTENDED_62                    =  17062  
+ ID_SUPPORTMACFILES_SEQUENCENEW_SE_63               =  17063  
+ ID_SUPPORTMACFILES_CREATE_AN_EMPT_64               =  17064  
+ ID_SUPPORTMACFILES__LOAD_SEQUENCE_65               =  17065  
+ ID_SUPPORTMACFILES__LOAD_SEQUENCE_66               =  17066  
+ ID_SUPPORTMACFILES_LOAD_A_SEQUENC_67               =  17067  
+ ID_SUPPORTMACFILES__SEQUENCE__LOA_68               =  17068  
+ ID_SUPPORTMACFILES__STANDARD_69                    =  17069  
+ ID_SUPPORTMACFILES_LOADSEQUENCE_70                 =  17070  
+ ID_SUPPORTMACFILES_LOAD_A_STANDAR_71               =  17071  
+ ID_SUPPORTMACFILES__EXTENDED_72                    =  17072  
+ ID_SUPPORTMACFILES_SAVE_SEQUENCE_73                =  17073  
+ ID_SUPPORTMACFILES_SAVE_SEQUENCE_74                =  17074  
+ ID_SUPPORTMACFILES_SAVE_CURRENT_S_75               =  17075  
+ ID_SUPPORTMACFILES__SEQUENCE_SAVE_76               =  17076  
+ ID_SUPPORTMACFILES_SAVESEQUENCE_77                 =  17077  
+ ID_SUPPORTMACFILES_SAVE_CURRENT_S_78               =  17078  
+ ID_SUPPORTMACFILES_SAVE_CURRENT_S_79               =  17079  
+ ID_SUPPORTMACFILES_A_NALYST_80                     =  17080  
+ ID_SUPPORTMACFILES_SET_UP_CURRENT_81               =  17081  
+ ID_SUPPORTMACFILES_ANALYSTSETUP_82                 =  17082  
+ ID_SUPPORTMACFILES_CHANGE_CURRENT_83               =  17083  
+ ID_SUPPORTMACFILES_SET_UP_CURRENT_84               =  17084  
+ ID_SUPPORTMACFILES_ANALYSTSEQSETU_85               =  17085  
+ ID_SUPPORTMACFILES_CHANGE_CURRENT_86               =  17086  
+ ID_SUPPORTMACFILES__LAUNCH_ANALYS_87               =  17087  
+ ID_SUPPORTMACFILES_DUMMY_LAUNCHAN_88               =  17088  
+ ID_SUPPORTMACFILES_LAUNCH_ANALYST_89               =  17089  
+ ID_SUPPORTMACFILES__RUN_FILE_TRAN_90               =  17090  
+ ID_SUPPORTMACFILES_DUMMY_CS2WIFF_91                =  17091  
+ ID_SUPPORTMACFILES_RUN_THE_CHEMST_92               =  17092  
+ ID_SUPPORTMACFILES_SELECT_STATPARM_386             =  17386
+ ID_SUPPORTMACFILES_SELECT_MSD_STATUS_387           =  17387
+ ID_SUPPORTMACFILES_C_HECK_TUNE_154                 =  17154
+ ID_SUPPORTMACFILES_CHECK_MSD_PERF_156              =  17156
+ ID_SUPPORTMACFILES_METHOD                          =  17510
+ ID_SUPPORTMACFILES_MOL_WEIGHT_CAL                  =  17511
+ ID_SUPPORTMACFILES_SHOW_MW                         =  17512
+ 
+!******************************************************************************
+!*
+!* FILE:  acqmenu.mac
+!*
+!* DESCRIPTION:  Acquisition menus for Triathlon.
+!*
+!* $Header: /cag/triath1b/partsmac/acq/acqmenu.mac 1.46 2003-06-06 10:24:28-07 robertcl Exp $
+!******************************************************************************
+if Dev1946MSD > 0
+   ! For both FULL/SHORT menu 
+   menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_UP_MSD_SIG_2),"SPRITE.Signals",,\
+           ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_UP_SIGNAL_4),"MethLoadSaveIdle",\
+           1000, MSD, 4104000
+           
+   menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_METHOD), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MOL_WEIGHT_CAL),"showmw",,\
+           ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SHOW_MW ), "_METHODIDLE/MethLoadSaveIdle",,,4203150
+
+   ! FULL menu always, SHORT menu only online
+   if ( (TabHdrText$(_Config[1],MenusForViews,MenuCol) = "FullMenuFile") \
+        OR \
+        (_offline = 0) ) then
+      menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MORE_M_SD_6),"SUBMENU",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MORE_DIALOGS_F_8),,,,4113000         
+      menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_MO_9),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPRAY_CHAMBER_10), "SPRITE.Spray",,\
+              ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_UP_MSD_SPR_12),"MethLoadSaveIdle",1400,MSD,4113100
+      if ((MSModelOptions = 3)  OR (MSModelOptions = 5)  OR (MSModelOptions = 7)  \
+       OR (MSModelOptions = 9)  OR (MSModelOptions = 11) OR (MSModelOptions = 13) \
+       OR (MSModelOptions = 15) OR (MSModelOptions = 17) OR (MSModelOptions = 19) \
+       OR (MSModelOptions = 21) OR (MSModelOptions = 23) OR (MSModelOptions = 25) \
+       OR (MSModelOptions = 27)) then
+          menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_MO_9),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FRACTION_COLL_13), "SPRITE.Fraction",,\
+                  ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_UP_MSD_FRA_15),"MethLoadSaveIdle",0,MSD,4113200
+      endif
+      menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_MO_9),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__DATA_CURVES_16), "SPRITE.Curves",,\
+              ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_MSD_INS_18),\
+              "MethLoadSaveIdle",1500,MSD,4113300
+
+      if _offline = 0 then
+        ! MSD More menu
+         menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_MO_9),,"SEPARATOR",,,,,,4113400
+         menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_MO_9),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_C_ONTROL_20), "SPRITE.Control",,\
+                 ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_UP_MSD_CON_22),"_METHODIDLE/MethLoadSaveIdle",1100,MSD,4113500
+         if MSCheckValve() > 0 then
+           menuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_MO_9),ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_S_WITCH_STREAM_24), "MSStreamSelect",,\
+                   ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SWITCH_LC_STRE_26),"_METHODIDLE/MethLoadSaveIdle",1600,MSD,4113600
+         endif
+         menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_MO_9),,"SEPARATOR"
+         menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_MO_9),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_STATPARM_386), "SPRITE.Status",,\
+                 ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_MSD_STATUS_387),,1200,MSD,4113700 
+      endif 
+
+      menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),,"SEPARATOR",,,,,,4124000
+
+      if _offline = 0 then
+        menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_C_HECK_TUNE_154),"msat_CheckTune",,\
+              ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHECK_MSD_PERF_156),"",0,MSD,4124800
+        menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_APPI_LAMP_31), "SUBMENU",,\
+              ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CONTROL_STATUS_32),,,,4124900
+        menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_33),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__ON_34), "MSAPPIUVLampOn",,\
+              ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TURN_ON_APPI_L_36),"_APPILAMPON",0,MSD,4124910
+        menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_33),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_O_FF_38), "MSAPPIUVLampOff",,\
+                ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TURN_OFF_APPI_40),"_APPILAMPOFF",0,MSD,4124920
+        menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),,"SEPARATOR",,,,,,4125010
+      endif
+      
+      menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CONFIGURE_110_27), "MSConfigure",,\
+              ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CONFIGURE_THE_29),"",0,MSD,4125020
+   endif
+
+   !
+   ! Manual injection menu items for the Run Control Pulldown menu 
+   !
+   if _HPCE = 0 AND (MSCheckGCIConfigured() = 0) then
+       if Check(Variable,MSDManInjMenuLink) = 0 then
+           MSDManInjMenuLink = 0x0 ! disables ^ unchecked, however should have been initialized here!!
+       endif
+       menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__RUNCONTROL_42),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__USE_MANUAL_IN_43),\ 
+               "MSToggleManInj",,\
+               ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_USE_MANUAL_INJ_44),\
+    	       "_SEQUENCEIDLE/_METHODIDLE/MSDManInjMenuLink",101,MSD,4002100
+       endif
+  endif
+
+  !
+  ! Analyst support
+  !
+  _AnalystInstalled = 0
+  _AnalystDataPath$ = ""
+  if Check(SYSTEM_VARIABLE, _FEATURES$) = 1
+      if (UpperCase$(_FEATURES$) = "LCMS") AND (Check(FUNCTION, AnalystInstalled) = 1) 
+         if AnalystInstalled() = 1
+            _AnalystInstalled = 1
+            _AnalystDataPath$ = GetAnalystDataPath$()
+            MenuRelabel ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE__LOAD_45), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE_46),ReadResource$("supportmacfiles", ID_SUPPORTMACFILES__STANDARD_SEQU_47)
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE__LOAD_45), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__EXTENDED_SEQU_48),"LoadSequence , , SE",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LOAD_AN_EXTEND_50), _SEQUENCEIDLE,11015,,4309011 
+            MenuRelabel ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_SAVE__AS_51), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE_46), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__STANDARD_SEQU_47)
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_SAVE__AS_51),ReadResource$("supportmacfiles", ID_SUPPORTMACFILES__EXTENDED_SEQU_48),"SaveSequence , ,SE",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_CURRENT_S_54), _SEQUENCEIDLE,080,,4311011 
+
+            MenuDelete ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE_55), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__NEW_SEQUENCE_56)
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE_55),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__NEW_SEQUENCE_56),"SUBMENU",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CREATE_AN_EMPT_57),,1250,,4308000
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE__NEW_58),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__STANDARD_59), "SequenceNew",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CREATE_AN_EMPT_61), _SEQUENCEIDLE,1250,,4308010
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE__NEW_58),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__EXTENDED_62), "SequenceNew SE",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CREATE_AN_EMPT_64), _SEQUENCEIDLE,1250,,4308020
+
+            MenuDelete ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE_55), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__LOAD_SEQUENCE_65)
+            menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE_55),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__LOAD_SEQUENCE_66),"SUBMENU",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LOAD_A_SEQUENC_67),,11015,,4309000
+            menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE__LOA_68),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__STANDARD_59), "LoadSequence",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LOAD_A_STANDAR_71), _SEQUENCEIDLE,11015,,4309010
+            menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE__LOA_68),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__EXTENDED_62), "LoadSequence , , SE",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LOAD_AN_EXTEND_50), _SEQUENCEIDLE,11015,,4309020
+
+            MenuDelete ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE_55), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_SEQUENCE_73)
+            menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE_55),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_SEQUENCE_74),"SUBMENU",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_CURRENT_S_75),,080,,4311000
+            menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE_SAVE_76),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__STANDARD_59), "SaveSequence",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_CURRENT_S_78), _SEQUENCEIDLE,080,,4311010
+            menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SEQUENCE_SAVE_76),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__EXTENDED_62), "SaveSequence , ,SE",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_CURRENT_S_79), _SEQUENCEIDLE,080,,4311020
+          
+            menudelete ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_A_NALYST_80)
+
+            if check(command, AnalystSetup) = 1 then
+              MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_A_NALYST_80),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_UP_CURRENT_81), "AnalystSetup", , ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHANGE_CURRENT_83), , , , 4400000
+              MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_A_NALYST_80),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_UP_CURRENT_84), "AnalystSeqSetup", , ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHANGE_CURRENT_86), , , , 4400010
+              MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_A_NALYST_80),, "SEPARATOR",,,,,,4400020
+            endif
+            
+            menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_A_NALYST_80), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__LAUNCH_ANALYS_87), "dummy=LaunchAnalyst()", , ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LAUNCH_ANALYST_89), , , , 4500000
+            menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_A_NALYST_80), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__RUN_FILE_TRAN_90), "dummy=Cs2Wiff()", , ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_RUN_THE_CHEMST_92), , , , 4500010              
+          endif
+      endif
+  endif
+!! EOF
+!! EOF

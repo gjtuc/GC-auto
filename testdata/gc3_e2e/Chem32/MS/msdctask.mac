@@ -1,0 +1,273 @@
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2006.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+! ueff 051214 WAD, ueff 060329 SCS
+!******************************************************************************
+!*
+!* FILE:  msdctask.mac
+!* CCPATH: Triath1b\dlc_cmds\support\Supportmacfiles\
+!* APPPATH: MS\
+!*
+!* DESCRIPTION:  Macros for the Manual MSD Calibrate view
+!*               (which must be preloaded).
+!*
+!******************************************************************************
+!*
+!* MACROS :    TLB_LoadMSDCStatusTaskBar  to load the status bar depending
+!*                                            on the current task.
+!*           
+
+!mb: MMSC --> MSDC (to be consistent with msdview.mc)
+
+!############################################################################
+!Name TLB_LoadDaStatusTaskBar
+! PARAMETER Task$
+!
+! if GomExist("SubTB","ChromTB") = 1
+!   if GomExist("SubTB|ChromTB",Task$) = 0
+!     GomLoad TLB_DAIniPath$+Task$+".ini",,,"SubTB|ChromTB", \
+!             gomval("SubTB","ChromTB","SelFunPos","x"), \
+!             gomval("SubTB","ChromTB","SelFunPos","y")
+!   endif
+!   GomShow "SubTB|ChromTB",Task$,ON
+!   ! not needed if all are of the same width (hiding each other)
+!   ! TLB_GOMRemoveLoadedChild "SubTB","ChromTB","SelFunPos",Task$
+!   ! TLB_GOMSetLoadedChild "SubTB","ChromTB","SelFunPos",Task$
+! endif
+!
+!EndMacro
+
+!
+!############################################################################
+Name TLB_LoadMSDCStatusTaskBar
+PARAMETER Task$
+Local Filename$, MSDModel$
+Local ID_TUNEMAC_Polarity_Label_1020$
+Local ID_TUNEMAC_Polarity_Help_1021$
+Local ID_TUNEMAC_Polarity_List_1022$
+Local ID_TUNEMAC_Polarity_undef_1023$
+Local ID_TUNEMAC_Polarity_Help_1024$
+Local ID_TUNEMAC_IonMode_Label_1025$
+Local ID_TUNEMAC_IonMode_Help_1026$
+Local ID_TUNEMAC_IonMode_List_1027$
+Local ID_TUNEMAC_IonMode_undef_1028$
+Local ID_TUNEMAC_IonMode_Help_1029$
+Local ID_TUNEMAC_IonModeL_Text_1041$
+Local ID_TUNEMAC_IonModeL_Help_1042$
+Local ID_TUNEMAC_IonMode_Text_1043$
+Local ID_TUNEMAC_IonMode_Help_1044$
+Local ID_TUNEMAC_Cal_Label_1045$
+Local ID_TUNEMAC_Cal_Help_1046$
+Local ID_TUNEMAC_CalMode_List_1047$
+Local ID_TUNEMAC_CalMode_Help_1052$
+Local ID_TUNEMAC_IonMode_ListVL_1053$
+Local ID_TUNEMAC_IonMode_Cmd_1054$
+Local ID_TUNEMAC_ScanMode_List_1055$
+
+    ! Get the instrument model e.g.: G6140A
+    MSAcqInfo
+    MSDModel$ = ObjHdrText$( MSAcqInfo[1], "InstrumentType")
+    If ( Check( VARIABLE, MS_SQ_SL ) < 1 ) then ! needed only for
+        MS_SQ_SL = MSD_SL                       ! Compatability between
+    Endif                                       ! B.01.03 and B.02.01
+    
+        If TLBRExists("",Task$) = 0
+            If ( pre6100() = 1 ) then ! not a G6100 series model
+                If (MS_SQ_SL = 1) then
+                    Filename$ = "MSDTNFSS"   ! G1946D has fast scan drop down
+                Else
+                    Filename$ = "MSDTUNES"
+                Endif
+            Else                                        ! It is a G6100 series
+                If (MS_SQ_SL = 1) then
+                    Filename$ = "MSDTNFSS60" ! has fast scan drop down box
+                Else
+                    Filename$ = "MSDTUNES60"
+                Endif
+            Endif
+            !Fix for PVCS# 16903
+            !TLBRLoad "Chem",_DRIVERPATH$+"Toolbarsupportfiles\"+Filename$+".xml",Task$,
+            TlbrLoadToolbar "Chem",Filename$
+            !End Fix
+        Endif
+        If ( pre6100() <> 1 ) then ! G6100
+            ID_TUNEMAC_Polarity_Label_1020$ = ReadResource$( "tunemac", 18020)
+            ID_TUNEMAC_Polarity_Help_1021$ = ReadResource$( "tunemac", 18021)
+            ID_TUNEMAC_Polarity_List_1022$ = ReadResource$( "tunemac", 18022)
+            ID_TUNEMAC_Polarity_undef_1023$ = ReadResource$( "tunemac", 18023)
+            ID_TUNEMAC_Polarity_Help_1024$ = ReadResource$( "tunemac", 18024)
+            ID_TUNEMAC_IonMode_Label_1025$ = ReadResource$( "tunemac", 18025)
+            ID_TUNEMAC_IonMode_Help_1026$ = ReadResource$( "tunemac", 18026)
+            ID_TUNEMAC_IonMode_List_1027$ = ReadResource$( "tunemac", 18027)
+            ID_TUNEMAC_IonMode_undef_1028$ = ReadResource$( "tunemac", 18028)
+            ID_TUNEMAC_IonMode_Help_1029$ = ReadResource$( "tunemac", 18029)
+            ID_TUNEMAC_IonModeL_Text_1041$ = ReadResource$( "tunemac", 18041)
+            ID_TUNEMAC_IonModeL_Help_1042$ = ReadResource$( "tunemac", 18042)
+            ID_TUNEMAC_IonMode_Text_1043$ = ReadResource$( "tunemac", 18043)
+            ID_TUNEMAC_IonMode_Help_1044$ = ReadResource$( "tunemac", 18044)
+            ID_TUNEMAC_Cal_Label_1045$ = ReadResource$( "tunemac", 18045)
+            ID_TUNEMAC_Cal_Help_1046$ = ReadResource$( "tunemac", 18046)
+            ID_TUNEMAC_CalMode_List_1047$ = ReadResource$( "tunemac", 18047)
+            ID_TUNEMAC_CalMode_Help_1052$ = ReadResource$( "tunemac", 18052)
+            ID_TUNEMAC_IonMode_ListVL_1053$ = ReadResource$( "tunemac", 18053)
+            ID_TUNEMAC_IonMode_Cmd_1054$ = ReadResource$( "tunemac", 18054)
+            ID_TUNEMAC_ScanMode_List_1055$ = ReadResource$( "tunemac", 18055)
+            TLBRSetPropertyText "chem", MSDTUNES, PolarityLabel, Text, \
+                ID_TUNEMAC_Polarity_Label_1020$
+            TLBRSetPropertyText "chem", MSDTUNES, PolarityLabel, Help, \
+                ID_TUNEMAC_Polarity_Help_1021$
+            TLBRSetPropertyText "chem", MSDTUNES, Polarity, TextList, \
+                ID_TUNEMAC_Polarity_List_1022$
+            TLBRSetPropertyText "chem", MSDTUNES, Polarity, DefCommand, \
+                ID_TUNEMAC_Polarity_undef_1023$
+            TLBRSetPropertyText "chem", MSDTUNES, Polarity, Help, \
+                ID_TUNEMAC_Polarity_Help_1024$
+            TLBRSetPropertyText "chem", MSDTUNES, TuneIonModeLabel, Text, \
+                ID_TUNEMAC_IonMode_Label_1025$
+            TLBRSetPropertyText "chem", MSDTUNES, TuneIonModeLabel, Help, \
+                ID_TUNEMAC_IonMode_Help_1026$
+            If (MS_SQ_SL = 1) then 
+                TLBRSetPropertyText "chem", MSDTUNES, TuneIonMode, TextList, \
+                    ID_TUNEMAC_IonMode_List_1027$
+                TLBRSetPropertyText "chem", MSDTUNES, TuneIonMode, CmdList, \
+                    ID_TUNEMAC_IonMode_Cmd_1054$
+                If ( instr( MSDModel$, "6140A") > 0 ) then ! SL-HT
+                    TLBRSetPropertyText "chem", MSDTUNES, ScanMode, TextList,\
+                    ID_TUNEMAC_ScanMode_List_1055$
+                Endif
+            Else                        ! This is VL and VL+ model G61[12]0A
+                TLBRSetPropertyText "chem", MSDTUNES, TuneIonMode, TextList, \
+                    ID_TUNEMAC_IonMode_ListVL_1053$
+                ! The command list stays as it is in the xml file.
+            Endif
+            TLBRSetPropertyText "chem", MSDTUNES, TuneIonMode, DefCommand, ID_TUNEMAC_IonMode_undef_1028$
+            TLBRSetPropertyText "chem", MSDTUNES, TuneIonMode, Help, ID_TUNEMAC_IonMode_Help_1029$
+            TLBRSetPropertyText "chem", MSDTUNES, InstIonModeLabel, Text, ID_TUNEMAC_IonModeL_Text_1041$
+            TLBRSetPropertyText "chem", MSDTUNES, InstIonModeLabel, Help, ID_TUNEMAC_IonModeL_Help_1042$
+            TLBRSetPropertyText "chem", MSDTUNES, InstIonMode, Text, ID_TUNEMAC_IonMode_Text_1043$
+            TLBRSetPropertyText "chem", MSDTUNES, InstIonMode, Help, ID_TUNEMAC_IonMode_Help_1044$
+            TLBRSetPropertyText "chem", MSDTUNES, CalLabel, Text, ID_TUNEMAC_Cal_Label_1045$
+            TLBRSetPropertyText "chem", MSDTUNES, CalLabel, Help, ID_TUNEMAC_Cal_Help_1046$
+            TLBRSetPropertyText "chem", MSDTUNES, CalMode, TextList, ID_TUNEMAC_CalMode_List_1047$
+            TLBRSetPropertyText "chem", MSDTUNES, CalMode, Help, ID_TUNEMAC_CalMode_Help_1052$
+        Endif
+        TLBRShow "Chem", Task$, ,"1"
+        MSTN_UpdateStatusBar
+    
+                ! ueff 051214
+EndMacro        ! TLB_LoadMSDCStatusTaskBar
+!###############################################################################
+Name TLB_HideMSDCStatusTaskBar
+ PARAMETER Task$
+
+ !   if mmc_KeepToolBars = 1
+       TlbrShow "Chem",Task$,,"0"
+ !   else
+ !      TlbrDelete "Chem",Task$
+ !   endif
+
+EndMacro
+
+
+
+!
+!############################################################################
+Name TLB_HideMSDCFunctionTaskBar
+    PARAMETER Taskf$
+
+    if TlbrExists("","MMCgTB") = 1
+  !    if mmc_KeepToolBars = 1
+  !      TlbrShow taskf$,,"0"
+        TlbrShow "Main","MMCgTB",,"0"
+  !    else
+  !      TlbrDelete "Main",taskf$
+  !      TlbrDelete "Main","MMCgTB"
+  !    endif  
+    endif
+EndMacro
+
+
+!############################################################################
+name TLB_LoadMSDCTaskBar
+    parameter Task$
+
+! loads the tool bar for a task
+!  
+!############################################################################
+   TLB_LoadMSDCStatusTaskBar Task$+"S"
+endmacro
+
+!############################################################################
+name TLB_HideMSDCTaskBar
+    parameter Task$
+
+! loads the tool bar for a task
+!  
+!############################################################################
+   ! TLB_HideMSDCFunctionTaskBar Task$+"F"
+    TLB_HideMSDCStatusTaskBar Task$+"S"
+endmacro
+
+
+!############################################################################
+name TLB_SwitchMSDCTask
+    parameter Task$ default ""
+    parameter Reset default 1
+
+! switches between the various tasks of the MS diagnose view.
+!
+! Uses the following global variables: 
+!        RunTaskMac = 0
+!        topdats
+!  
+!############################################################################
+
+    local PrevTask$     ! task switched from
+
+    PrevTask$ = ConvertText$(Upper,TabHdrText$(_Config[1],"View_MSDC","CurrentTask"))
+    if Task$ = ""
+        if PrevTask$ = ""
+            Task$ = "MSDTUNE"   !must be in capital letters!
+        else
+            Task$ = PrevTask$
+        endif
+    else
+        Task$ = ConvertText$(Upper,Task$)
+    endif
+
+    if PrevTask$ = Task$
+       ! if Reset = 0
+       !     if GomExist("TopTB|MMCgTB",Task$+"F") <> 0
+       !         RETURN
+       !     endif
+       ! endif
+        RunTaskMac = 0
+    else
+        RunTaskMac = 1
+    endif
+
+    !TLB_GomSetVal "TopTB","MMCgTs",Task$,"state",1
+
+    ! do whatever is needed to shut down the old task
+
+    ! ?? DASetTheNewViewTab Task$,SaveOld,CopyTaskTab
+
+    ! do whatever is needed to initialize the new task
+
+    TLB_LoadMSDCTaskBar Task$
+
+EndMacro

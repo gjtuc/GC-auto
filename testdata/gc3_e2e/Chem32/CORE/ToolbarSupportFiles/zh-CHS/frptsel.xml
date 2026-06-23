@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 sp2 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="FrptSel" PosStyle="TOP" Caption="“FrptSel”" PanelName="Chem">
+		<NonEditCombobox Name="SelectNewSection" Help="选择要插入的部分" NewGroup="1" Enable="1" DefCommand="FrptSelection" DefCmdParNumber="0" Width="150"/>
+		<RadioButton Name="ZoomInWindow" Help="增大屏幕上报告版面的尺寸" Command="FRPT_Zoom 1" Group="0" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<RadioButton Name="ZoomOutWindow" Help="减小屏幕上报告版面的尺寸" Command="FRPT_Zoom -1" Group="0" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="pointer" Help="选择工具" Command="FRPT_SelectTool 0" NewGroup="1" Group="2" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="graphic" Help="图形工具" Command="FRPT_SelectTool 2" Group="2" ImageName="Report_GraphTool20" ImageNameDisabled="Report_GraphTool20_d"/>
+		<RadioButton Name="table" Help="表工具" Command="FRPT_SelectTool 3" Group="2" ImageName="Report_TableTool20" ImageNameDisabled="Report_TableTool20_d"/>
+		<RadioButton Name="text" Help="文本工具" Command="FRPT_SelectTool 1" Group="2" ImageName="Report_TextTool20" ImageNameDisabled="Report_TextTool20_d"/>
+		<RadioButton Name="number" Help="数字工具" Command="FRPT_SelectTool 5" Group="2" ImageName="Report_NumberTool20" ImageNameDisabled="Report_NumberTool20_d"/>
+		<RadioButton Name="pagebreak" Help="分页工具" Command="FRPT_SelectTool 4" Group="2" ImageName="Report_PageBreak20" ImageNameDisabled="Report_PageBreak20_d"/>
+	</toolbar>
+</graphical_object>

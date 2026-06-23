@@ -1,0 +1,52 @@
+  67 41e0 334c3747    0
+Method       Method started                                 17:41:43 04/09/97
+  67 41e0 334c3748    0
+Method       Instrument running sample vial# 5              17:41:44 04/09/97
+   0 1da4 334c3753    0
+1946A MSD  1 Fragmentor set to 70.00 at runtime 0.00        17:41:55 04/09/97
+   0 1da7 334c37ad  600
+1100 ALS   1 FIA method injecting from vial 5               17:43:25 04/09/97
+   0 1da8 334c37ad  600
+1100 PMP   1 Pressure = 75.9 bar                            17:43:25 04/09/97
+   0 1da9 334c37ad  600
+1100 THM   1 Temperature (left)  = 28.6 °C                  17:43:25 04/09/97
+   0 1da9 334c37ad  600
+1100 THM   1 Temperature (right) = 29.9 °C                  17:43:25 04/09/97
+   0 1da7 334c37e5  600
+1100 ALS   1 FIA method injecting from vial 5               17:44:21 04/09/97
+   0 1da4 334c37e6    0
+1946A MSD  1 Fragmentor set to 85.00 at runtime 0.95        17:44:22 04/09/97
+   0 1da7 334c381c  600
+1100 ALS   1 FIA method injecting from vial 5               17:45:16 04/09/97
+   0 1da4 334c381d    0
+1946A MSD  1 Fragmentor set to 100.00 at runtime 1.86       17:45:17 04/09/97
+   0 1da7 334c384d  600
+1100 ALS   1 FIA method injecting from vial 5               17:46:05 04/09/97
+   0 1da4 334c384e    0
+1946A MSD  1 Fragmentor set to 115.00 at runtime 2.68       17:46:06 04/09/97
+   0 1da7 334c3881  600
+1100 ALS   1 FIA method injecting from vial 5               17:46:57 04/09/97
+   0 1da4 334c3882    0
+1946A MSD  1 Fragmentor set to 130.00 at runtime 3.55       17:46:58 04/09/97
+   0 1da7 334c38b6  600
+1100 ALS   1 FIA method injecting from vial 5               17:47:50 04/09/97
+   0 1da4 334c38b7    0
+1946A MSD  1 Fragmentor set to 145.00 at runtime 4.43       17:47:51 04/09/97
+   0 1da7 334c38eb  600
+1100 ALS   1 FIA method injecting from vial 5               17:48:43 04/09/97
+   0 1da4 334c38ec    0
+1946A MSD  1 Fragmentor set to 160.00 at runtime 5.31       17:48:44 04/09/97
+   0 1da7 334c391d  600
+1100 ALS   1 FIA method injecting from vial 5               17:49:33 04/09/97
+   0 1da4 334c391e    0
+1946A MSD  1 Fragmentor set to 175.00 at runtime 6.14       17:49:34 04/09/97
+   0 1da8 334c394e  600
+1100 PMP   1 Pressure = 89.8 bar                            17:50:22 04/09/97
+   0 1da9 334c394e  600
+1100 THM   1 Temperature (left)  = 28.1 °C                  17:50:22 04/09/97
+   0 1da9 334c394e  600
+1100 THM   1 Temperature (right) = 29.6 °C                  17:50:22 04/09/97
+  67 41e0 334c3952    0
+Method       Instrument run completed                       17:50:26 04/09/97
+  67 41e0 334c3954    0
+Method       Method completed                               17:50:28 04/09/97

@@ -1,0 +1,405 @@
+local 	ID_SUPPORTMACFILES__FILE_125
+local 	ID_SUPPORTMACFILES_SEPARATOR_19
+local 	ID_SUPPORTMACFILES_EXTRACT__IONS_320
+local 	ID_SUPPORTMACFILES_DAUI_MENUEXTRA_321
+local 	ID_SUPPORTMACFILES_EXTRACT_EIC_FR_322
+local 	ID_SUPPORTMACFILES_OVERLAY_BASE_P_323
+local 	ID_SUPPORTMACFILES_LDMS_LOADBP_324
+local 	ID_SUPPORTMACFILES_OVERLAY_BASE_P_325
+local 	ID_SUPPORTMACFILES__SUBTRACT_BACK_326
+local 	ID_SUPPORTMACFILES_LDMS_BSB_327
+local 	ID_SUPPORTMACFILES_SUBTRACT_BACKG_328
+local 	ID_SUPPORTMACFILES__FILE__PRINT_329
+local 	ID_SUPPORTMACFILES_TABULAR__MASS_330
+local 	ID_SUPPORTMACFILES_SPECMS_PRINTSP_331
+local 	ID_SUPPORTMACFILES_PRINT_MASS_SPE_332
+local 	ID_SUPPORTMACFILES_EXPORT_MS_DATA_333
+local 	ID_SUPPORTMACFILES_MSSAVEAIA_334
+local 	ID_SUPPORTMACFILES_EXPORT_THE_CUR_335
+local 	ID_SUPPORTMACFILES_BATCH_CONVERT_336
+local 	ID_SUPPORTMACFILES_MSBATCHSAVEAIA_337
+local 	ID_SUPPORTMACFILES_BATCH_CONVERT_338
+local 	ID_SUPPORTMACFILES__GRAPHICS_339
+local 	ID_SUPPORTMACFILES__FIA_DISPLAY_O_340
+local 	ID_SUPPORTMACFILES_FIADAOPTIONS_341
+local 	ID_SUPPORTMACFILES_EDIT_THE_FIA_D_342
+local 	ID_SUPPORTMACFILES_SHOW_FIA__TABL_343
+local 	ID_SUPPORTMACFILES_FIASHOWTABLE_344
+local 	ID_SUPPORTMACFILES__INTEGRATION_345
+local 	ID_SUPPORTMACFILES_SMOOT_H_346
+local 	ID_SUPPORTMACFILES_MS_DOMANUALSMO_347
+local 	ID_SUPPORTMACFILES_SMOOTH_ALL_SIG_348l
+local 	ID_SUPPORTMACFILES__SPECTRA_349
+local 	ID_SUPPORTMACFILES_SEA_RCH_PEAKS_350
+local 	ID_SUPPORTMACFILES_SEA_RCH_PEAKS_351
+local 	ID_SUPPORTMACFILES_SUBMENU_7
+local 	ID_SUPPORTMACFILES_SELECT_PEAK_RA_352
+local 	ID_SUPPORTMACFILES__SPECTRA_SEA_R_353
+local 	ID_SUPPORTMACFILES__LC_354
+local 	ID_SUPPORTMACFILES_SPCSELECTPEAKP_355
+local 	ID_SUPPORTMACFILES_SEARCH_OVER_LC_356
+local 	ID_SUPPORTMACFILES__CE_357
+local 	ID_SUPPORTMACFILES_SEARCH_OVER_CE_358
+local 	ID_SUPPORTMACFILES__MS_359
+local 	ID_SUPPORTMACFILES_MSPP_DOPRINTPU_360
+local 	ID_SUPPORTMACFILES_SEARCH_OVER_MS_361
+local 	ID_SUPPORTMACFILES_LABEL_IO_NS_362
+local 	ID_SUPPORTMACFILES_LDMS_INTEGRATE_363
+local 	ID_SUPPORTMACFILES_LABEL_IONS_IN_364
+local 	ID_SUPPORTMACFILES_E_DIT_OPTIONS_365
+local 	ID_SUPPORTMACFILES_LDMS_EDITSPINT_366
+local 	ID_SUPPORTMACFILES_EDIT_OPTIONS_F_367
+local 	ID_SUPPORTMACFILES_D_ELETE_MS_ION_368
+local 	ID_SUPPORTMACFILES_MS_DELETEION_369
+local 	ID_SUPPORTMACFILES_DELETE_SPECIFI_370
+local 	ID_SUPPORTMACFILES_LINK_MS_SI_GNA_371
+local 	ID_SUPPORTMACFILES_SPECMS_LINK_372
+local 	ID_SUPPORTMACFILES_LINK_OR_UNLINK_373
+local 	ID_SUPPORTMACFILES_DECONVOL_UTION_374
+local 	ID_SUPPORTMACFILES_DEC_DECONVUIME_375
+local 	ID_SUPPORTMACFILES_DECONVOLUTE_CU_376
+local 	ID_SUPPORTMACFILES__MARK_DECONV_P_377
+local 	ID_SUPPORTMACFILES_DEC_DOMARKUP_378
+local 	ID_SUPPORTMACFILES_MARK_EXPECTED_379
+local 	ID_SUPPORTMACFILES_PEPTIDE__TOOLS_380
+local 	ID_SUPPORTMACFILES_PTA_MWCALC_381
+local 	ID_SUPPORTMACFILES_PROTEIN_PEPTID_382
+local 	ID_SUPPORTMACFILES_TA_BULATE_MASS_383
+local 	ID_SUPPORTMACFILES_SPECMS_VTABULA_384
+local 	ID_SUPPORTMACFILES_TABULATE_THE_M_385
+local 	ID_SUPPORTMACFILES__FILE_SAVE__AS_51
+local 	ID_SUPPORTMACFILES__SEQUENCE_46
+local 	ID_SUPPORTMACFILES__STANDARD_SEQU_47
+local 	ID_SUPPORTMACFILES_E_XTENDED_SEQU_52
+local 	ID_SUPPORTMACFILES_SAVESEQUENCE_53
+local 	ID_SUPPORTMACFILES_SAVE_CURRENT_S_54	
+local 	ID_SUPPORTMACFILES_A_NALYST_80	
+local 	ID_SUPPORTMACFILES__LAUNCH_ANALYS_87	
+local 	ID_SUPPORTMACFILES_DUMMY_LAUNCHAN_88	
+local 	ID_SUPPORTMACFILES_LAUNCH_ANALYST_89	
+local 	ID_SUPPORTMACFILES__RUN_FILE_TRAN_90	
+local 	ID_SUPPORTMACFILES_DUMMY_CS2WIFF_91	
+local 	ID_SUPPORTMACFILES_RUN_THE_CHEMST_92
+local ID_SUPPORTMACFILES_SEARCH_410
+local ID_SUPPORTMACFILES_LC_411
+local ID_SUPPORTMACFILES_CE_412
+local ID_SUPPORTMACFILES_MS_413
+local ID_SUPPORTMACFILES_LABEL_ION_414
+local ID_SUPPORTMACFILES_EDIT_OPT_415
+local ID_SUPPORTMACFILES_EDIT_OPT_FOR_416
+local ID_SUPPORTMACFILES_SPECTRA_417
+local ID_SUPPORTMACFILES_DEL_MSION_418
+local ID_SUPPORTMACFILES_LINK_MS_SIG_419
+local ID_SUPPORTMACFILES_DECONV_420
+local ID_SUPPORTMACFILES_MARK_DECONV_421
+local ID_SUPPORTMACFILES_PEPTOOLS_422
+local ID_SUPPORTMACFILES_TABULATE_423
+local ID_SUPPORTMACFILES_TABULATE_THE_424
+local ID_SUPPORTMACFILES_SPECTRA_LIB_425
+local ID_SUPPORTMACFILES_MS_CRE_426
+local ID_SUPPORTMACFILES_MS_CLOSE_427
+local ID_SUPPORTMACFILES_MS_DEF_428
+local ID_SUPPORTMACFILES_FILE_LOAD_429
+local ID_SUPPORTMACFILES_SEQ_430
+local ID_SUPPORTMACFILES_STD_SEQ_431
+local ID_SUPPORTMACFILES_EXT_SEQ_432
+local ID_SUPPORTMACFILES_LOAD_EXT_SEQ_433
+local ID_SUPPORTMACFILES_SAVE_EXT_SEQ_434
+local ID_SUPPORTMACFILES_LAUNCH_ANALYST_435
+local ID_SUPPORTMACFILES_RUN_FILE_TRANS_436
+local ID_SUPPORTMACFILES_LAUNCH_ANALYST_SW_437
+local ID_SUPPORTMACFILES_RUN_WIFF_438
+
+ID_SUPPORTMACFILES__FILE_125                       =  17125  
+ID_SUPPORTMACFILES_SEPARATOR_19                    =  17019  
+ID_SUPPORTMACFILES_EXTRACT__IONS_320               =  17320  
+ID_SUPPORTMACFILES_DAUI_MENUEXTRA_321              =  17321  
+ID_SUPPORTMACFILES_EXTRACT_EIC_FR_322              =  17322 
+ID_SUPPORTMACFILES_OVERLAY_BASE_P_323              =  17323  
+ID_SUPPORTMACFILES_LDMS_LOADBP_324                 =  17324  
+ID_SUPPORTMACFILES_OVERLAY_BASE_P_325              =  17325  
+ID_SUPPORTMACFILES__SUBTRACT_BACK_326              =  17326  
+ID_SUPPORTMACFILES_LDMS_BSB_327                    =  17327  
+ID_SUPPORTMACFILES_SUBTRACT_BACKG_328              =  17328  
+ID_SUPPORTMACFILES__FILE__PRINT_329                =  17329  
+ID_SUPPORTMACFILES_TABULAR__MASS_330               =  17330  
+ID_SUPPORTMACFILES_SPECMS_PRINTSP_331              =  17331  
+ID_SUPPORTMACFILES_PRINT_MASS_SPE_332              =  17332  
+ID_SUPPORTMACFILES_EXPORT_MS_DATA_333              =  17333  
+ID_SUPPORTMACFILES_MSSAVEAIA_334                   =  17334  
+ID_SUPPORTMACFILES_EXPORT_THE_CUR_335              =  17335 
+ID_SUPPORTMACFILES_BATCH_CONVERT_336               =  17336  
+ID_SUPPORTMACFILES_MSBATCHSAVEAIA_337              =  17337  
+ID_SUPPORTMACFILES_BATCH_CONVERT_338               =  17338  
+ID_SUPPORTMACFILES__GRAPHICS_339                   =  17339  
+ID_SUPPORTMACFILES__FIA_DISPLAY_O_340              =  17340  
+ID_SUPPORTMACFILES_FIADAOPTIONS_341                =  17341  
+ID_SUPPORTMACFILES_EDIT_THE_FIA_D_342              =  17342 
+ID_SUPPORTMACFILES_SHOW_FIA__TABL_343              =  17343  
+ID_SUPPORTMACFILES_FIASHOWTABLE_344                =  17344  
+ID_SUPPORTMACFILES_EDIT_THE_FIA_D_342              =  17342  
+ID_SUPPORTMACFILES__INTEGRATION_345                =  17345  
+ID_SUPPORTMACFILES_SMOOT_H_346                     =  17346  
+ID_SUPPORTMACFILES_MS_DOMANUALSMO_347              =  17347  
+ID_SUPPORTMACFILES_SMOOTH_ALL_SIG_348              =  17348  
+ID_SUPPORTMACFILES__SPECTRA_349                    =  17349  
+ID_SUPPORTMACFILES_SEA_RCH_PEAKS_350               =  17350  
+ID_SUPPORTMACFILES_SEA_RCH_PEAKS_351               =  17351  
+ID_SUPPORTMACFILES_SUBMENU_7                       =  17007  
+ID_SUPPORTMACFILES_SELECT_PEAK_RA_352              =  17352  
+ID_SUPPORTMACFILES__SPECTRA_SEA_R_353              =  17353  
+ID_SUPPORTMACFILES__LC_354                         =  17354  
+ID_SUPPORTMACFILES_SPCSELECTPEAKP_355              =  17355  
+ID_SUPPORTMACFILES_SEARCH_OVER_LC_356              =  17356  
+ID_SUPPORTMACFILES__CE_357                         =  17357  
+ID_SUPPORTMACFILES_SEARCH_OVER_CE_358              =  17358  
+ID_SUPPORTMACFILES__MS_359                         =  17359  
+ID_SUPPORTMACFILES_MSPP_DOPRINTPU_360              =  17360  
+ID_SUPPORTMACFILES_SEARCH_OVER_MS_361              =  17361 
+ID_SUPPORTMACFILES_LABEL_IO_NS_362                 =  17362  
+ID_SUPPORTMACFILES_LDMS_INTEGRATE_363              =  17363  
+ID_SUPPORTMACFILES_LABEL_IONS_IN_364               =  17364  
+ID_SUPPORTMACFILES_E_DIT_OPTIONS_365               =  17365  
+ID_SUPPORTMACFILES_LDMS_EDITSPINT_366              =  17366  
+ID_SUPPORTMACFILES_EDIT_OPTIONS_F_367              =  17367 
+ID_SUPPORTMACFILES_D_ELETE_MS_ION_368              =  17368  
+ID_SUPPORTMACFILES_MS_DELETEION_369                =  17369  
+ID_SUPPORTMACFILES_DELETE_SPECIFI_370              =  17370  
+ID_SUPPORTMACFILES_LINK_MS_SI_GNA_371              =  17371  
+ID_SUPPORTMACFILES_SPECMS_LINK_372                 =  17372  
+ID_SUPPORTMACFILES_LINK_OR_UNLINK_373              =  17373  
+ID_SUPPORTMACFILES_DECONVOL_UTION_374              =  17374  
+ID_SUPPORTMACFILES_DEC_DECONVUIME_375              =  17375  
+ID_SUPPORTMACFILES_DECONVOLUTE_CU_376              =  17376  
+ID_SUPPORTMACFILES__MARK_DECONV_P_377              =  17377  
+ID_SUPPORTMACFILES_DEC_DOMARKUP_378                =  17378  
+ID_SUPPORTMACFILES_MARK_EXPECTED_379               =  17379  
+ID_SUPPORTMACFILES_PEPTIDE__TOOLS_380              =  17380  
+ID_SUPPORTMACFILES_PTA_MWCALC_381                  =  17381  
+ID_SUPPORTMACFILES_PROTEIN_PEPTID_382              =  17382 
+ID_SUPPORTMACFILES_TA_BULATE_MASS_383              =  17383  
+ID_SUPPORTMACFILES_SPECMS_VTABULA_384              =  17384  
+ID_SUPPORTMACFILES_TABULATE_THE_M_385              =  17385 
+ID_SUPPORTMACFILES__FILE_SAVE__AS_51               =  17051  
+ID_SUPPORTMACFILES__SEQUENCE_46                    =  17046  
+ID_SUPPORTMACFILES__STANDARD_SEQU_47               =  17047 
+ID_SUPPORTMACFILES_E_XTENDED_SEQU_52               =  17052  
+ID_SUPPORTMACFILES_SAVESEQUENCE_53                 =  17053  
+ID_SUPPORTMACFILES_SAVE_CURRENT_S_54               =  17054  
+ID_SUPPORTMACFILES_A_NALYST_80                     =  17080  
+ID_SUPPORTMACFILES__LAUNCH_ANALYS_87               =  17087  
+ID_SUPPORTMACFILES_DUMMY_LAUNCHAN_88               =  17088  
+ID_SUPPORTMACFILES_LAUNCH_ANALYST_89               =  17089 
+ID_SUPPORTMACFILES__RUN_FILE_TRAN_90               =  17090  
+ID_SUPPORTMACFILES_DUMMY_CS2WIFF_91                =  17091  
+ID_SUPPORTMACFILES_RUN_THE_CHEMST_92               =  17092  
+ID_SUPPORTMACFILES_SEARCH_410 = 17410
+ID_SUPPORTMACFILES_LC_411 = 17411
+ID_SUPPORTMACFILES_CE_412 = 17412
+ID_SUPPORTMACFILES_MS_413 = 17413
+ID_SUPPORTMACFILES_LABEL_ION_414 = 17414
+ID_SUPPORTMACFILES_EDIT_OPT_415 = 17415
+ID_SUPPORTMACFILES_EDIT_OPT_FOR_416 = 17416
+ID_SUPPORTMACFILES_SPECTRA_417 = 17417
+ID_SUPPORTMACFILES_DEL_MSION_418 = 17418
+ID_SUPPORTMACFILES_LINK_MS_SIG_419 = 17419
+ID_SUPPORTMACFILES_DECONV_420 = 17420
+ID_SUPPORTMACFILES_MARK_DECONV_421 = 17421
+ID_SUPPORTMACFILES_PEPTOOLS_422 = 17422
+ID_SUPPORTMACFILES_TABULATE_423 = 17423
+ID_SUPPORTMACFILES_TABULATE_THE_424 = 17424
+ID_SUPPORTMACFILES_SPECTRA_LIB_425 = 17425
+ID_SUPPORTMACFILES_MS_CRE_426 = 17426
+ID_SUPPORTMACFILES_MS_CLOSE_427 = 17427
+ID_SUPPORTMACFILES_MS_DEF_428 = 17428
+ID_SUPPORTMACFILES_FILE_LOAD_429 = 17429
+ID_SUPPORTMACFILES_SEQ_430 = 17430
+ID_SUPPORTMACFILES_STD_SEQ_431 = 17431
+ID_SUPPORTMACFILES_EXT_SEQ_432 = 17432
+ID_SUPPORTMACFILES_LOAD_EXT_SEQ_433 = 17433
+ID_SUPPORTMACFILES_SAVE_EXT_SEQ_434 = 17434
+ID_SUPPORTMACFILES_LAUNCH_ANALYST_435 = 17435
+ID_SUPPORTMACFILES_RUN_FILE_TRANS_436 = 17436
+ID_SUPPORTMACFILES_LAUNCH_ANALYST_SW_437 = 17437
+ID_SUPPORTMACFILES_RUN_WIFF_438 = 17438
+
+
+!******************************************************************************
+!*
+!* FILE:  msdamenu.mac
+!*
+!* DESCRIPTION:  Data Analysis menus for Triathlon.
+!*
+!* $Header: /cag/triath1b/partsmac/da/msdamenu.mac 1.76 2000-10-31 14:43:25-08 robertcl Exp $ 
+! Revision History:
+! 01/19/99 YD  Added multiple mass spectra support in Tabulate Mass Spectrum
+!                     by calling a new function SPECMS_vTabulateSpectrum
+! 01/22/99 YD  Added Link/Unlink mode under the Spectra pull-down menu
+! 02/24/99 YD  Added _DecSetsUnlinked variable using as a flag in DECONV-
+!                     Unlinked mode.
+! 05/11/99 YD  Changed the accelerator key for the Overlay Base Peak from O
+!                      to k.
+! 07/04/00 YD  Added support for the extended sequence table for LCMS by
+!                     adding both standard and extended sequence menu items.
+! 07/14/00 YD  Added menu for the Analyst.
+!                     Added CS->WIFF converter menu item 
+! 08/30/00 YD  Added code to block the extended sequence when Analyst is
+!                     not installed.
+! 09/07/00 YD  Added _AnalystInstalled and _AnalystDataPath$ variables and their
+!                     related calls.
+! 10/30/00 YD  Changed "Run WIFF Converter" to "Run File Translator"
+! 11/29/05 LL  Added globalization changes.
+!******************************************************************************!
+
+! YD
+
+_DecSetsUnlinked=0
+
+_SpectraLink=1
+on error SetObjHdrVal _Config[1], "SpectraLink", 1
+_SpectraLink = ObjHdrVal (_Config[1], "SpectraLink")
+on error
+
+if ( CHECK(VARIABLE,LDMS_IntegMenuState)=0 ) then
+  LDMS_IntegMenuState=0x03
+endif
+
+! File Menu
+! =========
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125),,"SEPARATOR",,,,,,2003250
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EXTRACT__IONS_320),"DAUI_MenuExtractIons",,\
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EXTRACT_EIC_FR_322),,,,2003260
+if (TabHdrText$(_Config[1],MenusForViews,MenuCol) = "FullMenuFile") then
+  menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_OVERLAY_BASE_P_323), "LDMS_LoadBP",,\
+          ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_OVERLAY_BASE_P_325),,,,2003270
+endif
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SUBTRACT_BACK_326),"LDMS_Bsb",,\
+          ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SUBTRACT_BACKG_328),,,,2003280
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE__PRINT_329),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TABULAR__MASS_330),"SPECMS_PrintSpectrum",,\
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PRINT_MASS_SPE_332),,,,2029350
+
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EXPORT_MS_DATA_333), "MSSaveAIA",,\
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EXPORT_THE_CUR_335),,,,2006400
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_BATCH_CONVERT_336), "MSBatchSaveAIA",,\
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_BATCH_CONVERT_338),,,,2006401
+
+
+!
+! Graphics Menu
+! =============
+IF _HPCE=0 THEN
+    menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__GRAPHICS_339), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FIA_DISPLAY_O_340),"FIADAOptions",,\
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_THE_FIA_D_342),,,,6001100
+    menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__GRAPHICS_339), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SHOW_FIA__TABL_343),"FIAShowTable",,\
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_THE_FIA_D_342),,,,6001100
+ENDIF
+!
+! Integration Menu
+! ================
+if (TabHdrText$(_Config[1],MenusForViews,MenuCol) = "FullMenuFile") then
+   ! Full menu, add smooth near end, just before Update to Enh Integ.
+   menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INTEGRATION_345),,"SEPARATOR",,,,,,6117010
+   menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INTEGRATION_345),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SMOOT_H_346), \
+      "MS_DoManualSmooth" ,, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SMOOTH_ALL_SIG_348),,,,6117020
+else
+   ! Short menu, add smooth just after Auto Integ.
+   menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INTEGRATION_345),,"SEPARATOR",,,,,,6105010
+   menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INTEGRATION_345),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SMOOT_H_346), \
+      "MS_DoManualSmooth",, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SMOOTH_ALL_SIG_348),,,,6105020
+endif
+
+
+!
+! Spectra Menu
+! ============
+if (TabHdrText$(_Config[1],MenusForViews,MenuCol) = "ShortMenuFile") then
+  menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),,"SEPARATOR",,,,,,6414000
+endif
+
+! Replace peak purity scan with a submenu for MS as well as LC
+menudelete ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SEARCH_410)
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SEA_RCH_PEAKS_351),"SUBMENU",,\
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_PEAK_RA_352),,8260,,6410000
+
+if _HPCE=0 then
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_SEA_R_353),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LC_411),"SPCSelectPeakPurityRange",,\
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SEARCH_OVER_LC_356),,8260,,6410020
+else
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_SEA_R_353),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CE_412),"SPCSelectPeakPurityRange",,\
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SEARCH_OVER_CE_358),,8260,,6410020
+endif
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_SEA_R_353),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MS_413),"MSPP_DoPrintPurityRange",,\
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SEARCH_OVER_MS_361),,8260,,6410030
+
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LABEL_ION_414),"LDMS_IntegrateSpectraForLabelIons",,\
+          ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LABEL_IONS_IN_364),,,,6414100
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_OPT_415), \
+        ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LDMS_EDITSPINT_366),,ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_EDIT_OPT_FOR_416),,,,6414200
+!menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),"Find &MS Ions on Load","LDMS_ToggleInteg",,\
+!	"Find Ions in Mass Spectrum when it is loaded",LDMS_IntegMenuState,,,6414300
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SPECTRA_417),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DEL_MSION_418), \
+        "MS_DeleteIon",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DELETE_SPECIFI_370),,,,6414400
+
+! YD
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),,"SEPARATOR",,,,,,6414450
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LINK_MS_SIG_419),"SPECMS_Link",,\
+	ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LINK_OR_UNLINK_373),_SpectraLink,,,6414460
+
+if (_Deconv = 1) then
+  menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),,"SEPARATOR",,,,,,6414500
+  menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DECONV_420),"DEC_DeconvUIMenuSel",,\
+          ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DECONVOLUTE_CU_376), DEC_DeconvUIMenuState,,,6414600
+  menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MARK_DECONV_421),"DEC_DoMarkup",,\
+          ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MARK_EXPECTED_379),,,,6414700	
+endif
+
+if (_PepTools = 1) then
+  if ( CHECK(VARIABLE,PTA_MenuState)=0 ) then
+    PTA_MenuState=0x01
+  endif
+  ! Menu item to install Peptide Tools and display main dialog box
+  menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PEPTOOLS_422),"PTA_MWCalc",,\
+          ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PROTEIN_PEPTID_382), PTA_MenuState,,,6414720	
+
+  ! To disable peptide tools menu item for B.01.01, Now working in B.02.01 JAM
+  ! PTA_MenuState = 0
+endif
+
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),,"SEPARATOR",,,,,,6414750
+! menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),"Ta&bulate Mass Spectrum","ListDataObj ""MSReg[1]""",,\
+!	    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TABULATE_THE_M_385),,,,6414800 
+! 01/19/99 YD Added new SPECMS_vTabulateSpectrum call instead of ListDataObj
+menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__SPECTRA_349),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TABULATE_423),"SPECMS_vTabulateSpectrum",,\
+	    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TABULATE_THE_424),,,,6414800 
+if (TabHdrText$(_Config[1],MenusForViews,MenuCol) = "FullMenuFile") then
+  menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SPECTRA_417),,"SEPARATOR",,,,,,6414850
+endif
+
+! For MS Library Search
+if Check (VARIABLE,_NISTMS)=1 then
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SPECTRA_LIB_425), ,SEPARATOR
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SPECTRA_LIB_425), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MS_CRE_426),"MSSrchExport MSReg[1]"  ,," "
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SPECTRA_LIB_425), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MS_CLOSE_427),"MSSrchGotoNist" ,," "
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SPECTRA_LIB_425), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MS_DEF_428),"print MSSrchEditDefault()"     ,," "
+endif
+
+! 06/30/00 YD  Added support for the extended sequence table
+! 08/30/00 YD  Blocked all the extended sequence menu items if Analyst is not installed.
+! 09/07/00 YD  Added _AnalystInstalled and _AnalystDataPath$ variables and the related calls.
+_AnalystInstalled = 0
+_AnalystDataPath$ = ""
+if Check(SYSTEM_VARIABLE, _FEATURES$) = 1
+      if (UpperCase$(_FEATURES$) = "LCMS") AND (Check(FUNCTION, AnalystInstalled) = 1) 
+        if AnalystInstalled() = 1    
+            _AnalystInstalled = 1
+            _AnalystDataPath$ = GetAnalystDataPath$()
+           MenuRelabel ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_FILE_LOAD_429), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SEQ_430), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_STD_SEQ_431)
+           MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_FILE_LOAD_429), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EXT_SEQ_432),"LoadSequence , , SE",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LOAD_EXT_SEQ_433), _SEQUENCEIDLE,11015,,2016210 
+           MenuRelabel ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_SAVE__AS_51), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SEQ_430), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_STD_SEQ_431)
+           MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_SAVE__AS_51), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EXT_SEQ_432),"SaveSequence , ,SE",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_EXT_SEQ_434), _SEQUENCEIDLE,080,,2018210 
+           menudelete ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_A_NALYST_80)
+           menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_A_NALYST_80), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LAUNCH_ANALYST_435), "dummy=LaunchAnalyst()", , ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LAUNCH_ANALYST_SW_437), , , , 6700000
+           menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_A_NALYST_80), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_RUN_FILE_TRANS_436), "dummy=Cs2Wiff()", , ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_RUN_WIFF_438), , , , 6700010              
+        endif
+      endif
+endif

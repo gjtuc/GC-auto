@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<ModuleRegistration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="file://RCNetRegistrationScheme.xsd">
+  <Instruments>
+    <Instrument UniqueInstID="Agilent.GC.MicroGC" IsInstalled="false">
+      <Module UniqueModuleID="G2801">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC2801ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC2801ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC2801ControlIF</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC2801MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC2801ProcessIF</Class>
+          </ProcessIF>
+          <StatusUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC2801StatusUI</Class>
+          </StatusUI>
+          <SoftConfigUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC2801ConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>MicroGC</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>Agilent G2801 GC</NLSFullModuleName>
+        <ModuleType>eIntegratedGC</ModuleType>
+        <ModuleToken>GC</ModuleToken>
+        <ChromFileType>e181_GC6890A</ChromFileType>
+        <WantUploadSettingsSupport>true</WantUploadSettingsSupport>
+        <Customization>
+          <MethodResolution ShowInconsistencyReport="false" CancelAction="eAcceptUnresolvedSettings"/>
+          <Reporting WantReportHeader="false"/>
+        </Customization>
+      </Module>
+      <NLSInstrumentName>Agilent MicroGC</NLSInstrumentName>
+      <AppFilter>
+        <GC>true</GC>
+      </AppFilter>
+    </Instrument>
+  </Instruments>
+  <MergeOrderID>1</MergeOrderID>
+</ModuleRegistration>

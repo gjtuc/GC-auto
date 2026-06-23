@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 sp2 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="TopIVTB" PosStyle="TOP" Caption="&quot;TopIVTB&quot;" PanelName="Main">
+		<NonEditCombobox Name="IVFile" Help="前に使用されていた機器ベリフィケーション ファイルの選択" NewGroup="1" Enable="1" Table="_Config,1,IVFile" Selection="1" Width="150"/>
+		<PushButton Name="IVResNew" Help="新しい機器ベリフィケーションを作成します" Command="IVResNew" ImageName="OQPV_NewVerification20" ImageNameDisabled="OQPV_NewVerification20_d"/>
+		<PushButton Name="IVResOpen" Help="既にある機器ベリフィケーションを開きます" Command="IVResOpen" ImageName="OQPV_OpenVerification20" ImageNameDisabled="OQPV_OpenVerification20_d"/>
+		<PushButton Name="IVResSave" Help="現在の機器ベリフィケーションを保存します" Command="IVResSave" ImageName="OQPV_SaveVerification20" ImageNameDisabled="OQPV_SaveVerification20_d"/>
+		<PushButton Name="IVEdit" Help="機器ベリフィケーションを編集します" Command="CpRequest &quot;CPIV&quot;,&quot;IVEdit&quot;" ImageName="OQPV_EditVerification20" ImageNameDisabled="OQPV_EditVerification20_d"/>
+		<PushButton Name="IVRun" Help="機器ベリフィケーションを実行します" Command="CpRequest &quot;CPIV&quot;,&quot;IVRun&quot;" ImageName="OQPV_StartVerification20" ImageNameDisabled="OQPV_StartVerification20_d"/>
+		<PushButton Name="IVLogbook" Help="ベリフィケーション ログブックを表示/消去します" NewGroup="1" Command="IVShowLogbook 1" ImageName="OQPV_ToggleLogbook20" ImageNameDisabled="OQPV_ToggleLogbook20_d"/>
+		<PushButton Name="IVCurLogbook" Help="現在のオンライン ログブックを表示/消去" Command="LBK.LOGBOOK" ImageName="Logbook20" ImageNameDisabled="Logbook20_d"/>
+		<PushButton Name="IVSeqLogbook" Help="シーケンス ログブックの表示/非表示します" Command="LBK.OPENSEQLOGBOOK" ImageName="Sequence_logbook20" ImageNameDisabled="Sequence_logbook20_d"/>
+		<PushButton Name="IVPreview" Help="機器ベリフィケーション テスト パラメータ、テスト レポートを表示します" NewGroup="1" Command="IVPrint &quot;SCREEN&quot;" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="IVPrint" Help="機器ベリフィケーション テスト パラメータ、テストレポートを印刷します" Command="IVPrint &quot;PRINTER&quot;" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+	</toolbar>
+</graphical_object>

@@ -1,0 +1,1722 @@
+!*******************************************
+! FILE: HPVTBL.MC
+!
+! DESCRIPTION: 
+!       for vialtable interface
+!
+!* $Header: /cag/DRIVERS/leodef/ce/release/hpvtbl.mac 1.28 1998-06-03 03:27:55-07 hmgr Exp $
+!
+!*******************************************
+
+
+
+!<INCLDEF> ********************************************************************
+
+
+
+
+!<ENDINCLDEF> *****************************************************************
+
+
+!******************************************************************************
+!                       E X P O R T S
+!******************************************************************************
+!
+!   vtLoadVialTable
+!   vtSaveVialTable
+!   vtCopyMethVT
+!   vtEditVialTable
+!   vtPrintMethodVialTable
+!   vtInitSequenceChanged
+!   vtOnSequenceChanged
+!
+
+
+
+
+!******************************************************************************
+!                       M A C R O S
+!******************************************************************************
+
+!******************************************************************************
+NAME vtLoadVialTable
+
+    PARAMETER  methpath$
+!
+!   DESCRIPTION
+!       load the vial table part from the method file and stores it in a temp.
+!       system vial table. A check will be done if there will be conflicts.
+!       This function is called during LoadMethod of the ChemStation.
+!
+!   RETURN
+!       TRUE    if ok
+!       FALSE   if failed
+!
+!******************************************************************************
+    LOCAL Result, Pos, Resolve, Loop, Count
+    
+    ON ERROR GOTO RECOVER_1
+    
+        vtMethodChanged = 0
+
+        vtIndicateLoadMethod
+
+        vtDoLoad = 1
+
+        DelReg  VT_TMP
+        IF ObjHdrType(VIALTABLE, "MethodVT") = 4 THEN
+            DelTab  VIALTABLE, "MethodVT"
+        ENDIF
+        LoadObj methpath$+ "/" + "vtbl.reg" ,, VT_TMP
+
+        CopyTab VT_TMP, "VialTable", VIALTABLE, "MethodVT"
+        
+        IF TabColType(VIALTABLE, "MethodVT", "Ptr") <> 99 THEN
+            DelTabCol VIALTABLE, "MethodVT", "Ptr"
+        ENDIF
+        NewColVal VIALTABLE, "MethodVT", "Ptr", 0
+
+        IF Check(Variable, _vtIsInit) = 0 THEN
+            _vtIsInit = 1
+        ENDIF
+
+        IF (_VTWarnings = 1) AND (_OFFLINE = 0) AND (_SequenceOn = 0) THEN
+            Count = zzvtCountFreeVials()
+            Result = vtCheckMethod(Count)
+            _vtIsInit = 0
+            IF Result = -1 THEN
+                Print "ERROR: Dialog-Box could not be created!"
+		        vtDoLoad = 0
+                RETURN 0
+            ENDIF
+    
+            EVALUATE "IF Check(LABEL,S_"+val$(Result)+")=1;GOTO S_"+val$(Result)+";ELSE;GOTO S_D;ENDIF"
+                S_1:
+                    vtIndicateLoadMethod
+                    NumRows = TabHdrVal(VIALTABLE, "MethodVT", "NumberOfRows")
+                    vtFirstFreeVial = 0
+            
+                    FOR Loop = 1 TO NumRows
+                        IF TabVal(VIALTABLE, "MethodVT", Loop, "MethodUsage") <> 0 THEN
+                            Resolve = TabVal(VIALTABLE, "MethodVT", Loop, "Ptr")
+                
+                            IF (Resolve = 0) Or (Resolve > 0) THEN  ! NO CONFLICT or REPLACE
+                                SetTabVal VIALTABLE, "MethodVT", Loop, "Ptr", Loop
+                            ENDIF
+        
+                            IF Resolve < 0 THEN                     ! MOVE TO FREE VIAL
+                                SetTabVal VIALTABLE, "MethodVT", Loop, "Ptr", zzvtLookForFreeVial(Loop)
+                                vtMethodChanged = 1
+                            ENDIF
+                        ENDIF
+                    NEXT Loop
+    
+                    RETURN 1
+                GOTO endswitch
+                
+                S_0:
+			        vtDoLoad = 0
+                    RETURN 0
+                GOTO endswitch
+                
+                S_3:
+                    NumRows = TabHdrVal(VIALTABLE, "MethodVT", "NumberOfRows")
+            
+                    FOR Loop = 1 TO NumRows
+                        SetTabVal VIALTABLE, "MethodVT", Loop, "Ptr", 0
+                    NEXT Loop
+
+                    RETURN 1
+                GOTO endswitch
+                
+                S_D:    ! NO_CONFLICTS
+                    vtIndicateLoadMethod
+                    NumRows = TabHdrVal(VIALTABLE, "MethodVT", "NumberOfRows")
+            
+                    FOR Loop = 1 TO NumRows
+                        IF TabVal(VIALTABLE, "MethodVT", Loop, "MethodUsage") <> 0 THEN
+                            SetTabVal VIALTABLE, "MethodVT", Loop, "Ptr", Loop
+                        ENDIF
+                    NEXT Loop
+                    
+                    RETURN 1
+                GOTO endswitch
+            endswitch:
+        ELSE
+            _vtIsInit = 0
+            NumRows = TabHdrVal(VIALTABLE, "MethodVT", "NumberOfRows")
+            
+            FOR Loop = 1 TO NumRows
+                IF TabVal(VIALTABLE, "MethodVT", Loop, "MethodUsage") <> 0 THEN
+                    SetTabVal VIALTABLE, "MethodVT", Loop, "Ptr", Loop
+                ELSE
+                    SetTabVal VIALTABLE, "MethodVT", Loop, "Ptr", 0
+                ENDIF
+            NEXT Loop
+                    
+            RETURN 1
+        ENDIF
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+        ! no register available; must be old method
+        _vtIsInit = 0
+        RETURN 1
+
+    TRYEND_1:
+    
+    _vtIsInit = 0
+    RETURN 1
+    
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME vtCopyMethVT
+
+!   PARAMETER 
+!
+!   DESCRIPTION
+!       Copies the method vialtable from the loaded method file which is now
+!       in a temporary register to the system vial table. This function is
+!       called after all other methods parts has been loaded. All possible
+!       conflicts are already solved.
+!
+!   RETURN
+!       nothing       
+!******************************************************************************
+
+    LOCAL Loop, NumRows, NumRows2, Pos, ret
+
+    ON ERROR GOTO RECOVER_1
+        IF vtMethodChanged<>0 THEN
+            _METHODCHANGED = 1
+            Remove vtMethodChanged
+        ENDIF
+
+        NumRows = TabHdrVal(VIALTABLE, "VialTable", "NumberOfRows")
+        NumRows2 = TabHdrVal(VIALTABLE, "MethodVT", "NumberOfRows")
+        IF NumRows2 < NumRows THEN
+            NumRows = NumRows2
+        ENDIF
+
+        FOR Loop = 1 TO NumRows
+            Pos = TabVal(VIALTABLE, "MethodVT", Loop, "Ptr")
+            IF Pos <> 0 THEN
+                SetTabVal VIALTABLE, "VialTable", Pos, "VialType", TabVal(VIALTABLE, "MethodVT", Loop, "VialType")
+                SetTabText VIALTABLE, "VialTable", Pos, "Comment", TabText$(VIALTABLE, "MethodVT", Loop, "Comment")
+                IF (TabText$(VIALTABLE, "VialTable", Pos, "Class") <> "SYSTEM") THEN
+                    SetTabText VIALTABLE, "VialTable", Pos, "Name", TabText$(VIALTABLE, "MethodVT", Loop, "Name")
+                    IF (TabText$(VIALTABLE, "VialTable", Pos, "Class") <> "ANY USE") THEN
+                        SetTabText VIALTABLE, "VialTable", Pos, "Class", TabText$(VIALTABLE, "MethodVT", Loop, "Class")
+                    ENDIF
+                ENDIF
+            ENDIF
+        NEXT Loop
+
+        vtFirstFreeVial = 0
+        IF (TabHdrVal (VIALTABLE, "MethodVT", "Inlet") = 1) And (vtGetRealVial(-10) = 0) THEN
+            Pos = zzvtLookForSystemPosition()
+            SetTabText VIALTABLE, "VialTable", Pos, "Class", "SYSTEM"
+            SetTabText VIALTABLE, "VialTable", Pos, "Name", "@INLET"
+            WHILE (zzvtSetSymbolicVial(, -10, Pos) = 0) DO; ENDWHILE
+        ENDIF
+
+        IF (TabHdrVal (VIALTABLE, "MethodVT", "Outlet") = 1) And (vtGetRealVial(-11) = 0) THEN
+            Pos = zzvtLookForSystemPosition()
+            SetTabText VIALTABLE, "VialTable", Pos, "Class", "SYSTEM"
+            SetTabText VIALTABLE, "VialTable", Pos, "Name", "@OUTLET"
+            WHILE (zzvtSetSymbolicVial(, -11, Pos) = 0) DO; ENDWHILE
+        ENDIF
+
+        IF (TabHdrVal (VIALTABLE, "MethodVT", "Waste") = 1) And (vtGetRealVial(-12) = 0) THEN
+            Pos = zzvtLookForSystemPosition()
+            SetTabText VIALTABLE, "VialTable", Pos, "Class", "SYSTEM"
+            SetTabText VIALTABLE, "VialTable", Pos, "Name", "@WASTE"
+            WHILE (zzvtSetSymbolicVial(, -12, Pos) = 0) DO; ENDWHILE
+        ENDIF
+
+        IF (TabHdrVal (VIALTABLE, "MethodVT", "Flush") = 1) And (vtGetRealVial(-13) = 0) THEN
+            Pos = zzvtLookForSystemPosition()
+            SetTabText VIALTABLE, "VialTable", Pos, "Class", "SYSTEM"
+            SetTabText VIALTABLE, "VialTable", Pos, "Name", "@FLUSH"
+            WHILE (zzvtSetSymbolicVial(, -13, Pos) = 0) DO; ENDWHILE
+        ENDIF
+
+        IF (TabHdrVal (VIALTABLE, "MethodVT", "CleanTubes") = 1) And (vtGetRealVial(-14) = 0) THEN
+            Pos = zzvtLookForSystemPosition()
+            SetTabText VIALTABLE, "VialTable", Pos, "Class", "SYSTEM"
+            SetTabText VIALTABLE, "VialTable", Pos, "Name", "@clean tubes"
+            WHILE (zzvtSetSymbolicVial(, -14, Pos) = 0) DO; ENDWHILE
+        ENDIF
+
+        IF (TabHdrVal (VIALTABLE, "MethodVT", "CleanNeedle") = 1) And (vtGetRealVial(-15) = 0) THEN
+            Pos = zzvtLookForSystemPosition()
+            SetTabText VIALTABLE, "VialTable", Pos, "Class", "SYSTEM"
+            SetTabText VIALTABLE, "VialTable", Pos, "Name", "@clean needle"
+            WHILE (zzvtSetSymbolicVial(, -15, Pos) = 0) DO; ENDWHILE
+        ENDIF
+
+        IF (TabHdrVal (VIALTABLE, "MethodVT", "Waste2") = 1) And (vtGetRealVial(-16) = 0) THEN
+            Pos = zzvtLookForSystemPosition()
+            SetTabText VIALTABLE, "VialTable", Pos, "Class", "SYSTEM"
+            SetTabText VIALTABLE, "VialTable", Pos, "Name", "@WASTE2"
+            WHILE (zzvtSetSymbolicVial(, -16, Pos) = 0) DO; ENDWHILE
+        ENDIF
+
+        IF (TabHdrVal (VIALTABLE, "MethodVT", "Flush2") = 1) And (vtGetRealVial(-17) = 0) THEN
+            Pos = zzvtLookForSystemPosition()
+            SetTabText VIALTABLE, "VialTable", Pos, "Class", "SYSTEM"
+            SetTabText VIALTABLE, "VialTable", Pos, "Name", "@FLUSH2"
+            WHILE (zzvtSetSymbolicVial(, -17, Pos) = 0) DO; ENDWHILE
+        ENDIF
+
+        IF (TabHdrVal (VIALTABLE, "MethodVT", "Waste3") = 1) And (vtGetRealVial(-18) = 0) THEN
+            Pos = zzvtLookForSystemPosition()
+            SetTabText VIALTABLE, "VialTable", Pos, "Class", "SYSTEM"
+            SetTabText VIALTABLE, "VialTable", Pos, "Name", "@WASTE3"
+            WHILE (zzvtSetSymbolicVial(, -18, Pos) = 0) DO; ENDWHILE
+        ENDIF
+
+        IF (TabHdrVal (VIALTABLE, "MethodVT", "Flush3") = 1) And (vtGetRealVial(-19) = 0) THEN
+            Pos = zzvtLookForSystemPosition()
+            SetTabText VIALTABLE, "VialTable", Pos, "Class", "SYSTEM"
+            SetTabText VIALTABLE, "VialTable", Pos, "Name", "@FLUSH3"
+            WHILE (zzvtSetSymbolicVial(, -19, Pos) = 0) DO; ENDWHILE
+        ENDIF
+        
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+
+    vtDoLoad = 0
+    ret = vtCheckVialTable();
+    
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME vtSaveVialTable
+
+!   PARAMETER 
+!
+!   DESCRIPTION
+!       Saves the method part of the system vial table in the method file.
+!       This function is called during SaveMethod of the ChemStation.
+!
+!   RETURN
+!       nothing       
+!******************************************************************************
+    LOCAL File$, Name$
+    LOCAL Loop, NumRow, Usage, Class$
+
+    ON ERROR GOTO RECOVER_1
+
+        File$ = _METHPATH$ + _METHFILE$ + "/" + "vtbl.reg"
+
+        IF ObjHdrType(VIALTABLE, "MethodVT") = 4 THEN
+            DelTab VIALTABLE, "MethodVT"
+        ENDIF
+        NewTab VIALTABLE, "MethodVT"
+
+        NewColVal VIALTABLE, "MethodVT", "VialType", 0
+        NewColText VIALTABLE, "MethodVT", "Class", "not used"
+        NewColText VIALTABLE, "MethodVT", "Name"
+        NewColText VIALTABLE, "MethodVT", "Comment"
+        NewColVal VIALTABLE, "MethodVT", "MethodUsage", 0
+
+        NumRow = TabHdrVal(VIALTABLE, "VialTable", "NumberOfRows")
+        InsTabRow VIALTABLE, "MethodVT", 1:NumRow
+
+        FOR Loop = 1 TO NumRow
+            IF TabVal(VIALTABLE, "VialTable", Loop, "MethodUsage") > 0 THEN
+                SetTabVal VIALTABLE, "MethodVT", Loop, "VialType", TabVal(VIALTABLE, "VialTable", Loop, "VialType")
+                SetTabText VIALTABLE, "MethodVT", Loop, "Class", "METHOD"
+                IF TabText$(VIALTABLE, "VialTable", Loop, "Class") <> "SYSTEM" THEN
+                    SetTabText VIALTABLE, "MethodVT", Loop, "Name", TabText$(VIALTABLE, "VialTable", Loop, "Name")
+                ENDIF
+                SetTabText VIALTABLE, "MethodVT", Loop, "Comment", TabText$(VIALTABLE, "VialTable", Loop, "Comment")
+                SetTabVal VIALTABLE, "MethodVT", Loop, "MethodUsage", TabVal(VIALTABLE, "VialTable", Loop, "MethodUsage")
+            ENDIF
+        NEXT Loop
+        
+        IF vtGetVialUsage(,-10,1) > 0 THEN; NewTabHdrVal VIALTABLE, "MethodVT", "Inlet", 1; ELSE; NewTabHdrVal VIALTABLE, "MethodVT", "Inlet", 0; ENDIF
+        IF vtGetVialUsage(,-11,1) > 0 THEN; NewTabHdrVal VIALTABLE, "MethodVT", "Outlet", 1; ELSE; NewTabHdrVal VIALTABLE, "MethodVT", "Outlet", 0; ENDIF
+        IF vtGetVialUsage(,-12,1) > 0 THEN; NewTabHdrVal VIALTABLE, "MethodVT", "Waste", 1; ELSE; NewTabHdrVal VIALTABLE, "MethodVT", "Waste", 0; ENDIF
+        IF vtGetVialUsage(,-13,1) > 0 THEN; NewTabHdrVal VIALTABLE, "MethodVT", "Flush", 1; ELSE; NewTabHdrVal VIALTABLE, "MethodVT", "Flush", 0; ENDIF
+        IF vtGetVialUsage(,-16,1) > 0 THEN; NewTabHdrVal VIALTABLE, "MethodVT", "Waste2", 1; ELSE; NewTabHdrVal VIALTABLE, "MethodVT", "Waste2", 0; ENDIF
+        IF vtGetVialUsage(,-17,1) > 0 THEN; NewTabHdrVal VIALTABLE, "MethodVT", "Flush2", 1; ELSE; NewTabHdrVal VIALTABLE, "MethodVT", "Flush2", 0; ENDIF
+        IF vtGetVialUsage(,-18,1) > 0 THEN; NewTabHdrVal VIALTABLE, "MethodVT", "Waste3", 1; ELSE; NewTabHdrVal VIALTABLE, "MethodVT", "Waste3", 0; ENDIF
+        IF vtGetVialUsage(,-19,1) > 0 THEN; NewTabHdrVal VIALTABLE, "MethodVT", "Flush3", 1; ELSE; NewTabHdrVal VIALTABLE, "MethodVT", "Flush3", 0; ENDIF
+        IF vtGetVialUsage(,-14,1) > 0 THEN; NewTabHdrVal VIALTABLE, "MethodVT", "CleanTubes", 1; ELSE; NewTabHdrVal VIALTABLE, "MethodVT", "CleanTubes", 0; ENDIF
+        IF vtGetVialUsage(,-15,1) > 0 THEN; NewTabHdrVal VIALTABLE, "MethodVT", "CleanNeedle", 1; ELSE; NewTabHdrVal VIALTABLE, "MethodVT", "CleanNeedle", 0; ENDIF
+
+        
+        DelReg  VT_TMP
+        NewObj  VT_TMP,1,1,1
+        
+        CopyTab VIALTABLE, "MethodVT", VT_TMP, "VialTable"
+        SaveObj  VT_TMP, File$ , NEW 
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+    
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME vtEditVialTable
+
+!    PARAMETER
+!
+!   DESCRIPTION
+!       This function is called, if a cell is selected
+!
+!   RETURN
+!       nothing
+!******************************************************************************
+    LOCAL Win, Pos, HelpPathFile$, HelpID, HelpCmd$
+    Local dlgBoxName$, ret
+
+    ON ERROR GOTO RECOVER_1
+        vtEnableNotify OFF
+
+        IF DialogExists( "VIALTABLE" ) > 0 THEN
+            RemoveDialog "VIALTABLE"
+        ENDIF
+
+        ! identify the Help-ID for indirect UV selection
+        !-----------------------------------------------
+        Pos =Instr(_PRODUCTPATH$, "CE")
+        HelpPathFile$ = _PRODUCTPATH$[1:Pos-1] + "drivers\helpenu\hpce.hlp"
+        HelpID = HelpSubSystemTopic(HelpPathFile$, 4300)
+        HelpCmd$ = SPrintF$ (HelpID, "help %f")
+
+        BeginDialog "VIALTABLE", 5, 5, 310, 300, "Edit system vialtable", 8, "Helv"
+            GroupBox          3,   2, 304,  259,     "Edit system vialtable"
+            TableBox          4,   10, 299,  246,     VIALTABLE, "EditVialTable" , "VialTableDesc", CP2
+            
+            OKButton         22, 283,  50,  12,      "&OK"
+            CancelButton     94, 283,  50,  12,      "&Cancel"
+            ExecPushbutton   166, 283,  50,  12,     "&Print", CP2, zzvtPrintVialTable
+            ExecPushbutton   238, 283,  50,  12,     "&Help", CP2, HelpCmd$
+            ExecPushbutton   238, 268,  50,  12,     "&Advanced...", CP2, zzvtSettings
+        EndDialog
+
+        VialClass$ = ""
+
+        Win = 16
+        SetTabVal _CONFIG[1], "Window", Win, "DefWxlow", 0.0
+        SetTabVal _CONFIG[1], "Window", Win, "DefWxHigh", 1.0
+        SetTabVal _CONFIG[1], "Window", Win, "DefWylow", 0.0
+        SetTabVal _CONFIG[1], "Window", Win, "DefWyHigh", 1.0
+        SetTabVal _CONFIG[1], "Window", Win, "LineStylesOn", 1
+        SetTabVal _CONFIG[1], "Window", Win, "DefWinStyle", 7
+
+        SetWinTitle Win, "Edit Instrument Vial Table"
+
+        ! see if tables available
+        IF ObjHdrType(_CONFIG[3],"VialTableDesc") <> 4
+            zzvtGenVialTableDesc
+        ENDIF
+
+        IF ObjHdrType(VIALTABLE, "EditVialTable") = 4 THEN
+            DelTab VIALTABLE, "EditVialTable"
+        ENDIF
+
+		ret = vtCheckVialTable();
+        CopyTab VIALTABLE, "VialTable", VIALTABLE, "EditVialTable"
+
+        vtInlet = vtGetRealVial(-10);            vtInletMthUsg = vtGetVialUsage(,-10,1)
+        vtOutlet = vtGetRealVial(-11);          vtOutletMthUsg = vtGetVialUsage(,-11,1)
+        vtWaste = vtGetRealVial(-12);            vtWasteMthUsg = vtGetVialUsage(,-12,1)
+        vtFlush = vtGetRealVial(-13);            vtFlushMthUsg = vtGetVialUsage(,-13,1)
+        vtWaste2 = vtGetRealVial(-16);          vtWaste2MthUsg = vtGetVialUsage(,-16,1)
+        vtFlush2 = vtGetRealVial(-17);          vtFlush2MthUsg = vtGetVialUsage(,-17,1)
+        vtWaste3 = vtGetRealVial(-18);          vtWaste3MthUsg = vtGetVialUsage(,-18,1)
+        vtFlush3 = vtGetRealVial(-19);          vtFlush3MthUsg = vtGetVialUsage(,-19,1)
+        vtCleanTubes = vtGetRealVial(-14);  vtCleanTubesMthUsg = vtGetVialUsage(,-14,1)
+        vtCleanNeedle = vtGetRealVial(-15);vtCleanNeedleMthUsg = vtGetVialUsage(,-15,1)
+
+
+        IF vtInlet > 0          THEN; SetTabVal VIALTABLE, "EditVialTable", vtInlet,      "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtInlet,      "MethodUsage")+vtInletMthUsg; ENDIF
+        IF vtOutlet > 0         THEN; SetTabVal VIALTABLE, "EditVialTable", vtOutlet,     "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtOutlet,     "MethodUsage")+vtOutletMthUsg; ENDIF
+        IF vtWaste > 0          THEN; SetTabVal VIALTABLE, "EditVialTable", vtWaste,      "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtWaste,      "MethodUsage")+vtWasteMthUsg; ENDIF
+        IF vtFlush > 0          THEN; SetTabVal VIALTABLE, "EditVialTable", vtFlush,      "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtFlush,      "MethodUsage")+vtFlushMthUsg; ENDIF
+        IF vtWaste2 > 0         THEN; SetTabVal VIALTABLE, "EditVialTable", vtWaste2,     "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtWaste2,     "MethodUsage")+vtWaste2MthUsg; ENDIF
+        IF vtFlush2 > 0         THEN; SetTabVal VIALTABLE, "EditVialTable", vtFlush2,     "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtFlush2,     "MethodUsage")+vtFlush2MthUsg; ENDIF
+        IF vtWaste3 > 0         THEN; SetTabVal VIALTABLE, "EditVialTable", vtWaste3,     "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtWaste3,     "MethodUsage")+vtWaste3MthUsg; ENDIF
+        IF vtFlush3 > 0         THEN; SetTabVal VIALTABLE, "EditVialTable", vtFlush3,     "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtFlush3,     "MethodUsage")+vtFlush3MthUsg; ENDIF
+        IF vtCleanTubes > 0     THEN; SetTabVal VIALTABLE, "EditVialTable", vtCleanTubes, "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtCleanTubes, "MethodUsage")+vtCleanTubesMthUsg; ENDIF
+        IF vtCleanNeedle > 0    THEN; SetTabVal VIALTABLE, "EditVialTable", vtCleanNeedle,"MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtCleanNeedle,"MethodUsage")+vtCleanNeedleMthUsg; ENDIF
+        
+
+        IF ShowDialog("VIALTABLE", HelpID) = 1
+            IF vtInlet > 0          THEN; SetTabVal VIALTABLE, "EditVialTable", vtInlet,      "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtInlet,      "MethodUsage")-vtInletMthUsg; ENDIF
+            IF vtOutlet > 0         THEN; SetTabVal VIALTABLE, "EditVialTable", vtOutlet,     "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtOutlet,     "MethodUsage")-vtOutletMthUsg; ENDIF
+            IF vtWaste > 0          THEN; SetTabVal VIALTABLE, "EditVialTable", vtWaste,      "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtWaste,      "MethodUsage")-vtWasteMthUsg; ENDIF
+            IF vtFlush > 0          THEN; SetTabVal VIALTABLE, "EditVialTable", vtFlush,      "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtFlush,      "MethodUsage")-vtFlushMthUsg; ENDIF
+            IF vtWaste2 > 0         THEN; SetTabVal VIALTABLE, "EditVialTable", vtWaste2,     "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtWaste2,     "MethodUsage")-vtWaste2MthUsg; ENDIF
+            IF vtFlush2 > 0         THEN; SetTabVal VIALTABLE, "EditVialTable", vtFlush2,     "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtFlush2,     "MethodUsage")-vtFlush2MthUsg; ENDIF
+            IF vtWaste3 > 0         THEN; SetTabVal VIALTABLE, "EditVialTable", vtWaste3,     "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtWaste3,     "MethodUsage")-vtWaste3MthUsg; ENDIF
+            IF vtFlush3 > 0         THEN; SetTabVal VIALTABLE, "EditVialTable", vtFlush3,     "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtFlush3,     "MethodUsage")-vtFlush3MthUsg; ENDIF
+            IF vtCleanTubes > 0     THEN; SetTabVal VIALTABLE, "EditVialTable", vtCleanTubes, "MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtCleanTubes, "MethodUsage")-vtCleanTubesMthUsg; ENDIF
+            IF vtCleanNeedle > 0    THEN; SetTabVal VIALTABLE, "EditVialTable", vtCleanNeedle,"MethodUsage", TabVal(VIALTABLE, "EditVialTable", vtCleanNeedle,"MethodUsage")-vtCleanNeedleMthUsg; ENDIF
+
+            IF ObjHdrType(VIALTABLE, "VialTable") = 4 THEN
+                DelTab VIALTABLE, "VialTable"
+            ENDIF
+            RenTab VIALTABLE, "EditVialTable", "VialTable"
+
+            WHILE (zzvtSetSymbolicVial(, -10, vtInlet) = 0) DO; ENDWHILE
+            WHILE (zzvtSetSymbolicVial(, -11, vtOutlet) = 0) DO; ENDWHILE
+            WHILE (zzvtSetSymbolicVial(, -12, vtWaste) = 0) DO; ENDWHILE
+            WHILE (zzvtSetSymbolicVial(, -13, vtFlush) = 0) DO; ENDWHILE
+            WHILE (zzvtSetSymbolicVial(, -16, vtWaste2) = 0) DO; ENDWHILE
+            WHILE (zzvtSetSymbolicVial(, -17, vtFlush2) = 0) DO; ENDWHILE
+            WHILE (zzvtSetSymbolicVial(, -18, vtWaste3) = 0) DO; ENDWHILE
+            WHILE (zzvtSetSymbolicVial(, -19, vtFlush3) = 0) DO; ENDWHILE
+            WHILE (zzvtSetSymbolicVial(, -14, vtCleanTubes) = 0) DO; ENDWHILE
+            vtEnableNotify ON
+            WHILE (zzvtSetSymbolicVial(, -15, vtCleanNeedle) = 0) DO; ENDWHILE
+
+            Remove vtInlet
+            Remove vtOutlet
+            Remove vtWaste
+            Remove vtFlush
+            Remove vtWaste2
+            Remove vtFlush2
+            Remove vtWaste3
+            Remove vtFlush3
+            Remove vtCleanTubes
+            Remove vtCleanNeedle
+
+            Remove vtInletMthUsg
+            Remove vtOutletMthUsg
+            Remove vtWasteMthUsg
+            Remove vtFlushMthUsg
+            Remove vtWaste2MthUsg
+            Remove vtFlush2MthUsg
+            Remove vtWaste3MthUsg
+            Remove vtFlush3MthUsg
+            Remove vtCleanTubesMthUsg
+            Remove vtCleanNeedleMthUsg
+        ELSE
+            IF ObjHdrType(VIALTABLE, "EditVialTable") = 4 THEN
+                DelTab VIALTABLE, "EditVialTable"
+            ENDIF
+        ENDIF
+
+        RemoveDialog "VIALTABLE"
+        Remove VialClass$
+        Remove VialName$
+
+        vtEnableNotify ON
+		ret = vtCheckVialTable();
+
+        Print ""
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+        vtEnableNotify ON
+
+    TRYEND_1:
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME vtPrintMethodVialTable
+
+!    PARAMETER
+!
+!   DESCRIPTION
+!       This macro prints the vialtable-lines, which are used by method
+!       Is used by method printout.
+!
+!   RETURN
+!       nothing
+!******************************************************************************
+    LOCAL Loop, NumRow, ErrorVal
+    LOCAL Offset$
+
+
+
+
+
+
+    Offset$ = "        "
+
+
+    Print Using #5, Offset$+"Vial\#   Used in     Name             Comment/"
+
+    NumRow = TabHdrVal(VIALTABLE, "VialTable", "NumberOfRows")
+    FOR Loop = 1 to NumRow
+        IF TabVal(VIALTABLE, "VialTable", Loop, "MethodUsage") > 0 THEN
+            zzvtPrintVialTableLine Loop, "VialTable", Offset$
+        ENDIF
+    NEXT Loop
+
+
+
+
+
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME zzvtPrintVialTable
+
+!    PARAMETER
+!
+!   DESCRIPTION
+!       This macro prints the whole vialtable
+!
+!   RETURN
+!       nothing
+!******************************************************************************
+    LOCAL Loop, NumRow, ErrorVal
+
+
+    PBegin "PRINTER", "Instrument Vial Table"
+    ErrorVal = 0
+    On Error ErrorVal = _Error
+
+    Print Using #5, "//"
+    Print Using #5, "Vial\#   Used in     Name             Comment/"
+
+    NumRow = TabHdrVal(VIALTABLE, "EditVialTable", "NumberOfRows")
+    FOR Loop = 1 to NumRow
+        zzvtPrintVialTableLine Loop, "EditVialTable"
+    NEXT Loop
+
+    On Error
+    IF ErrorVal <> 0 THEN
+        PrintError "PRINTER"
+    ENDIF
+    PEnd "PRINTER", ""
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME zzvtSettings
+
+!    PARAMETER
+!
+!   DESCRIPTION
+!
+!   RETURN
+!       nothing
+!******************************************************************************
+
+    IF vtSettings() = 1 THEN
+        SetTabHdrVal VIALTABLE, "VialTable", "vtwarnings", _VTWarnings
+        SetTabHdrVal VIALTABLE, "VialTable", "vtsymbolic", _VTSymbolic
+        WinUpdate Off
+        zzvtGenVialTableDesc
+        WinUpdate On
+    ENDIF
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME zzvtSetVialTableLine
+
+    PARAMETER Line
+    PARAMETER VialType  DEFAULT 0
+    PARAMETER Class$    DEFAULT "not used"
+    PARAMETER Name$     DEFAULT ""
+    PARAMETER Comment$  DEFAULT ""
+!
+!   DESCRIPTION
+!       Sets a Vialtable-Row according the given parameters
+!
+!   RETURN
+!       nothing       
+!******************************************************************************
+
+    ON ERROR GOTO RECOVER_1
+
+        SetTabVal VIALTABLE, "VialTable", Line, "VialType", VialType
+        SetTabText VIALTABLE, "VialTable", Line, "Class", Class$
+        SetTabText VIALTABLE, "VialTable", Line, "Name", Name$
+        SetTabText VIALTABLE, "VialTable", Line, "Comment", Comment$
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME zzvtLookForSystemPosition
+
+!   PARAMETER 
+!
+!   DESCRIPTION
+!       This function is used within LoadMethod. It returns a unused row,
+!       or, if none is free, the first row, which is not used by a system vial
+!
+!   RETURN
+!       The next free vial
+!******************************************************************************
+    LOCAL Line
+
+    ON ERROR GOTO RECOVER_1
+
+        Line = zzvtLookForFreeVial(0)
+
+        IF Line = 0 THEN                            
+            Line = 1
+            WHILE TabText$(VIALTABLE, "VialTable", Line, "Class") = "SYSTEM" DO
+                Line = Line + 1
+            ENDWHILE
+        ENDIF
+        
+        RETURN Line
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME zzvtLookForFreeVial
+
+    PARAMETER Line DEFAULT 0
+!
+!   DESCRIPTION
+!       This function is used within LoadMethod. If the loaded method uses a
+!       vial, which is already used by System or Sequence, this function
+!       searches for the next free vial, which could be used.
+!       This search would be done, if the user selects it in the Conflict-Box.
+!
+!   RETURN
+!       The next free vial
+!******************************************************************************
+    LOCAL NumRow, Class$
+
+    ON ERROR GOTO RECOVER_1
+
+        NumRow = TabHdrVal(VIALTABLE, "VialTable", "NumberOfRows")
+
+        vtFirstFreeVial = vtFirstFreeVial + 1
+        WHILE vtFirstFreeVial <= NumRow DO
+            Class$ = TabText$(VIALTABLE, "VialTable", vtFirstFreeVial, "Class")
+            MthUsg = TabVal(VIALTABLE, "MethodVT", vtFirstFreeVial, "MethodUsage")
+            SeqUsg = TabVal(VIALTABLE, "VialTable", vtFirstFreeVial, "SequenceUsage")
+            Name$ = TabText$(VIALTABLE, "VialTable", vtFirstFreeVial, "Name")
+
+            IF ((Class$ = "not used") And \
+                (MthUsg = 0) And \
+                (SeqUsg = 0)) Or \
+               ((Class$ = "ANY USE") And \
+                (MthUsg = 0) And \
+                (SeqUsg = 0)) Or \
+               ((Class$ = "METHOD") And \
+                (MthUsg = 0) And \
+                (SeqUsg = 0) And \
+                (Name$ = "")) OR \
+               ((Class$ = "ANY USE") And \
+                (MthUsg = 0) And \
+                (SeqUsg = 0) And \
+                (Name$ = "")) THEN
+                RETURN vtFirstFreeVial
+            ENDIF
+            vtFirstFreeVial = vtFirstFreeVial + 1
+        ENDWHILE
+        
+        RETURN Line
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME zzvtCountFreeVials
+
+!   PARAMETER none
+!
+!   DESCRIPTION
+!       This function is used within LoadMethod. It counts the free vials
+!       that can be used for moving
+!
+!   RETURN
+!       The count of free vials
+!******************************************************************************
+    LOCAL NumRow, Count, Loop, Class$
+
+    ON ERROR GOTO RECOVER_1
+
+        Count = 0;
+        NumRow = TabHdrVal(VIALTABLE, "VialTable", "NumberOfRows")
+
+        FOR Loop = 1 TO NumRow
+            Class$ = TabText$(VIALTABLE, "VialTable", Loop, "Class")
+            MthUsg = TabVal(VIALTABLE, "MethodVT", Loop, "MethodUsage")
+            SeqUsg = TabVal(VIALTABLE, "VialTable", Loop, "SequenceUsage")
+            Name$ = TabText$(VIALTABLE, "VialTable", Loop, "Name")
+
+            IF ((Class$ = "not used") And \
+                (MthUsg = 0) And \
+                (SeqUsg = 0)) Or \
+               ((Class$ = "ANY USE") And \
+                (MthUsg = 0) And \
+                (SeqUsg = 0)) Or \
+               ((Class$ = "METHOD") And \
+                (MthUsg = 0) And \
+                (SeqUsg = 0) And \
+                (Name$ = "")) Or \
+               ((Class$ = "ANY USE") And \
+                (MthUsg = 0) And \
+                (SeqUsg = 0) And \
+                (Name$ = "")) THEN
+                Count = Count + 1
+            ENDIF
+        NEXT Loop
+        
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+
+    RETURN Count
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME zzvtGenVialTableDesc
+
+!   PARAMETER
+!
+!   DESCRIPTION
+!       This function generates the DDT for the Vialtable-Editbox
+!
+!   RETURN
+!       nothing
+!******************************************************************************
+
+    ON ERROR GOTO RECOVER_1
+
+        IF ObjHdrType(_CONFIG[3], "VialTableDesc") = 4 THEN
+            DelTab _CONFIG[3], "VialTableDesc"
+        ENDIF
+        NewDescTable "VialTableDesc"
+
+        SetTabHdrText _CONFIG[3],"VialTableDesc",RowNumTitle,"Vial#"
+        SetTabHdrVal  _CONFIG[3],"VialTableDesc",RowNumWidth,5
+        SetTabHdrVal  _CONFIG[3],"VialTableDesc",FixedCols, 0
+        SetTabHdrVal  _CONFIG[3],"VialTableDesc",DeleteProtected, 1
+        SetTabHdrVal  _CONFIG[3],"VialTableDesc",InsertProtected, 1
+        SetTabHdrVal  _CONFIG[3],"VialTableDesc",CutProtected, 1
+        SetTabHdrVal  _CONFIG[3],"VialTableDesc",PasteProtected, 1
+
+        SetTabHdrText _CONFIG[3],"VialTableDesc",TableRect, "0, 0, 0, 0"
+
+        SetTabHdrText _CONFIG[3], "VialTableDesc", EvSelCell, "/zzvtEvSelCellVialTable"
+        SetTabHdrText _CONFIG[3], "VialTableDesc", EvUpdCell, "/zzvtEvUpdCellVialTable"
+
+        ! make the table
+!        AddDescRow "VialTableDesc", "Vial Type", "Glass"+"|"+"Plastic"+"|"+"Micro",4, 9,"%s",0,"VialType"
+        AddDescRow "VialTableDesc", "Used in", "METHOD"+"|"+"SEQUENCE"+"|"+"ANY USE"+"|"+"not used",5, 14,"%s",0,"Class"
+!        AddDescRow "VialTableDesc", "M.Use",,1, 6,"%d",0,"MethodUsage"
+!        AddDescRow "VialTableDesc", "S.Use",,1, 6,"%d",0,"SequenceUsage"
+
+        IF _VTSymbolic = 1 THEN
+            AddDescRow "VialTableDesc", "Name", "@INLET"+"|"+"@OUTLET"+"|"+"@WASTE"+"|"+"@WASTE2"+"|"+"@WASTE3"+"|"+"@FLUSH"+"|"+"@FLUSH2"+"|"+"@FLUSH3"+"|"+"@clean tubes",6, 12,"%s",0,"Name"
+        ELSE
+            AddDescRow "VialTableDesc", "Name",,2, 12,"%s",0,"Name"
+        ENDIF
+
+        AddDescRow "VialTableDesc", "Comment",,2, 36,"%s",0,"Comment"
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME zzvtEvSelCellVialTable
+
+    PARAMETER RegObj$
+    PARAMETER TableName$
+    PARAMETER RowNumber
+    PARAMETER ColumnNumber
+    PARAMETER ColumnSource$
+!
+!   DESCRIPTION
+!       This function is called, if a cell is selected
+!
+!   RETURN
+!       nothing
+!******************************************************************************
+
+    ON ERROR GOTO RECOVER_1
+
+        Evaluate "VialClass$ = TabText$("+RegObj$+", "+TableName$+", RowNumber, ""Class"")"
+        Evaluate "VialName$ = TabText$("+RegObj$+", "+TableName$+", RowNumber, ""Name"")"
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME zzvtEvUpdCellVialTable
+
+    PARAMETER RegObj$
+    PARAMETER TableName$
+    PARAMETER RowNumber
+    PARAMETER ColumnNumber
+    PARAMETER ColumnSource$
+    PARAMETER OldValue$
+    PARAMETER NewValue$
+!
+!   DESCRIPTION
+!       This function is called, if a cell is updated
+!
+!   RETURN
+!       nothing
+!******************************************************************************
+    LOCAL NumRows, Loop, MUsage, SUsage, Dummy
+    LOCAL Content$, Class$, Name$
+
+    ON ERROR GOTO RECOVER_1
+                    
+        Evaluate "SUsage = TabVal("+RegObj$+", "+TableName$+", RowNumber, ""SequenceUsage"")"
+        Evaluate "MUsage = TabVal("+RegObj$+", "+TableName$+", RowNumber, ""MethodUsage"")"
+
+        IF ColumnSource$ = "Class" THEN
+            Evaluate "Content$ = TabText$("+RegObj$+", "+TableName$+", RowNumber, ""Class"")"
+
+            IF VialClass$ = "unusable" THEN
+                Dummy = Alert("This vial is unusable."+Chr$(10)+Chr$(13)+"You cannot redefine the ""Used in"" definition.", 3, "Error")
+                Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Class"", ""unusable"""
+                Return
+            ENDIF
+
+            IF VialClass$ = "SYSTEM" And Content$ <> "SYSTEM" THEN
+                IF vtGetVialUsage(VialName$,0,1) = 0 And vtGetVialUsage(VialName$,0,2) = 0 THEN
+                    Evaluate "Name$ = TabText$("+RegObj$+", "+TableName$+", RowNumber, ""Name"")"
+                    Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Name"", """""
+ 
+                    
+                    IF Name$ = "@INLET" THEN; vtInlet = 0; ENDIF
+                    IF Name$ = "@OUTLET" THEN; vtOutlet = 0; ENDIF
+                    IF Name$ = "@WASTE" THEN; vtWaste = 0; ENDIF
+                    IF Name$ = "@FLUSH" THEN; vtFlush = 0; ENDIF
+                    IF Name$ = "@WASTE2" THEN; vtWaste2 = 0; ENDIF
+                    IF Name$ = "@FLUSH2" THEN; vtFlush2 = 0; ENDIF
+                    IF Name$ = "@WASTE3" THEN; vtWaste3 = 0; ENDIF
+                    IF Name$ = "@FLUSH3" THEN; vtFlush3 = 0; ENDIF
+                    IF Name$ = "@clean tubes" THEN; vtCleanTubes = 0; ENDIF
+                    IF Name$ = "@clean needle" THEN; vtCleanNeedle = 0; ENDIF
+                ELSE
+                    Dummy = Alert("This SYSTEM vial is used by your current method."+Chr$(10)+Chr$(13)+"You cannot redefine the ""Used in"" definition.", 3, "Error")
+                    Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Class"", ""SYSTEM"""
+                ENDIF
+                Return
+            ENDIF
+
+            IF Content$ = "ANY USE" THEN
+                Return
+            ENDIF
+
+            IF VialClass$ = "SEQUENCE" And Content$ <> "SEQUENCE" THEN
+                Evaluate "SUsage = TabVal("+RegObj$+", "+TableName$+", RowNumber, ""SequenceUsage"")"
+                IF SUsage > 0 THEN
+                    IF _VTWarnings = 1 THEN
+                        Dummy = Alert("This vial is already used by the SEQUENCE."+Chr$(10)+Chr$(13)+"Redefine vial as: Used in "+Content$+"?", 4, "Warning")
+                        IF Dummy = 0 THEN
+                            Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Class"", "+VialClass$
+                        ENDIF
+                    ENDIF
+                ENDIF
+            ENDIF
+
+            IF VialClass$ = "METHOD" And Content$ <> "METHOD" THEN
+                Evaluate "MUsage = TabVal("+RegObj$+", "+TableName$+", RowNumber, ""MethodUsage"")"
+                IF MUsage > 0 THEN
+                    IF _VTWarnings = 1 THEN
+                        Dummy = Alert("This vial is already used by the METHOD." +Chr$(10)+Chr$(13)+"Redefine vial as: Used in "+Content$+"?", 4, "Warning")
+                        IF Dummy = 0 THEN
+                            Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Class"", "+VialClass$
+                        ENDIF
+                    ENDIF
+                ENDIF
+            ENDIF
+        ENDIF
+
+
+        IF ColumnSource$ = "Name" THEN
+            Evaluate "Content$ = TabText$("+RegObj$+", "+TableName$+", RowNumber, ""Name"")"
+
+            IF VialClass$ = "SYSTEM" THEN
+                IF vtGetVialUsage(VialName$,0,1) = 0 And vtGetVialUsage(VialName$,0,2) = 0 THEN
+                    IF VialName$ = "@INLET" THEN; vtInlet = 0; ENDIF
+                    IF VialName$ = "@OUTLET" THEN; vtOutlet = 0; ENDIF
+                    IF VialName$ = "@WASTE" THEN; vtWaste = 0; ENDIF
+                    IF VialName$ = "@FLUSH" THEN; vtFlush = 0; ENDIF
+                    IF VialName$ = "@WASTE2" THEN; vtWaste2 = 0; ENDIF
+                    IF VialName$ = "@FLUSH2" THEN; vtFlush2 = 0; ENDIF
+                    IF VialName$ = "@WASTE3" THEN; vtWaste3 = 0; ENDIF
+                    IF VialName$ = "@FLUSH3" THEN; vtFlush3 = 0; ENDIF
+                    IF VialName$ = "@clean tubes" THEN; vtCleanTubes = 0; ENDIF
+                    IF VialName$ = "@clean needle" THEN; vtCleanNeedle = 0; ENDIF
+
+                    Evaluate "MUsage = TabVal("+RegObj$+", "+TableName$+", RowNumber, ""MethodUsage"")"
+                    IF MUsage > 0 THEN
+                        Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Class"",""METHOD"""
+                    ELSE 
+                        Evaluate "SUsage = TabVal("+RegObj$+", "+TableName$+", RowNumber, ""SequenceUsage"")"
+                        IF SUsage > 0 THEN
+                            Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Class"",""SEQUENCE"""
+                        ELSE
+                            Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Class"",""not used"""
+                        ENDIF
+                    ENDIF
+                ELSE
+                    Dummy = Alert("This SYSTEM vial is used by your current method."+Chr$(10)+Chr$(13)+"You cannot redefine the ""Name"" of the vial.", 3, "Error")
+                    Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Name"", """+VialName$+""""
+                    Return
+                ENDIF
+            ENDIF
+
+            IF VialClass$ = "unusable" THEN
+                Dummy = Alert("This vial is unusable."+Chr$(10)+Chr$(13)+"You cannot redefine the ""Name"" of the vial.", 3, "Error")
+                Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Name"", """+VialName$+""""
+                Return
+            ENDIF
+
+            Content$ = ConvertText$(trim, Content$)
+            Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Name"", """+Content$+""""
+
+            IF Content$ = "@INLET" Or Content$ = "@OUTLET" Or \
+               Content$ = "@WASTE" Or Content$ = "@FLUSH" Or \
+               Content$ = "@WASTE2" Or Content$ = "@FLUSH2" Or \
+               Content$ = "@WASTE3" Or Content$ = "@FLUSH3" Or \
+               Content$ = "@clean tubes" THEN
+                IF VialClass$ = "SEQUENCE" THEN
+                    Evaluate "SUsage = TabVal("+RegObj$+", "+TableName$+", RowNumber, ""SequenceUsage"")"
+                    IF SUsage > 0 THEN
+                        IF _VTWarnings = 1 THEN
+                            Dummy = Alert("This vial is already used by the SEQUENCE."+Chr$(10)+Chr$(13)+"Redefine vial as SYSTEM vial?", 4, "Warning")
+                            IF Dummy = 0 THEN
+                                Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Name"", """+VialName$+""""
+                                Return
+                            ENDIF
+                        ENDIF
+                    ENDIF
+                ENDIF
+    
+                IF VialClass$ = "METHOD" THEN
+                    Evaluate "MUsage = TabVal("+RegObj$+", "+TableName$+", RowNumber, ""MethodUsage"")"
+                    IF MUsage > 0 THEN
+                        IF _VTWarnings = 1 THEN
+                            Dummy = Alert("This vial is already used by the METHOD." +Chr$(10)+Chr$(13)+"Redefine vial as SYSTEM vial?", 4, "Warning")
+                            IF Dummy = 0 THEN
+                                Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Name"", """+VialName$+""""
+                                Return
+                            ENDIF
+                        ENDIF
+                    ENDIF
+                ENDIF
+    
+                Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Class"", ""SYSTEM"""
+
+                IF Content$ = "@INLET" THEN; Loop = vtInlet; ENDIF
+                IF Content$ = "@OUTLET" THEN; Loop = vtOutlet; ENDIF
+                IF Content$ = "@WASTE" THEN; Loop = vtWaste; ENDIF
+                IF Content$ = "@FLUSH" THEN; Loop = vtFlush; ENDIF
+                IF Content$ = "@WASTE2" THEN; Loop = vtWaste2; ENDIF
+                IF Content$ = "@FLUSH2" THEN; Loop = vtFlush2; ENDIF
+                IF Content$ = "@WASTE3" THEN; Loop = vtWaste3; ENDIF
+                IF Content$ = "@FLUSH3" THEN; Loop = vtFlush3; ENDIF
+                IF Content$ = "@clean tubes" THEN; Loop = vtCleanTubes; ENDIF
+                IF Content$ = "@clean needle" THEN; Loop = vtCleanNeedle; ENDIF
+
+                IF Loop > 0 THEN
+                    Evaluate "SetTabText "+RegObj$+", "+TableName$+", Loop, ""Name"", """""
+    
+                    Evaluate "MUsage = TabVal("+RegObj$+", "+TableName$+", Loop, ""MethodUsage"")"
+                    IF MUsage > 0 THEN
+                        Evaluate "SetTabText "+RegObj$+", "+TableName$+", Loop, ""Class"",""METHOD"""
+                    ELSE 
+                        Evaluate "SUsage = TabVal("+RegObj$+", "+TableName$+", Loop, ""SequenceUsage"")"
+                        IF SUsage > 0 THEN
+                            Evaluate "SetTabText "+RegObj$+", "+TableName$+", Loop, ""Class"",""SEQUENCE"""
+                        ELSE
+                            Evaluate "SetTabText "+RegObj$+", "+TableName$+", Loop, ""Class"",""not used"""
+                        ENDIF
+                    ENDIF
+    
+                    SetTabVal VIALTABLE, "EditVialTable", Loop, "MethodUsage", TabVal(VIALTABLE, "EditVialTable", Loop, "MethodUsage")-vtGetVialUsage(Content$,0,1)
+                ENDIF
+
+                SetTabVal VIALTABLE, "EditVialTable", RowNumber, "MethodUsage", TabVal(VIALTABLE, "EditVialTable", RowNumber, "MethodUsage")+vtGetVialUsage(Content$,0,1)
+
+                IF Content$ = "@INLET" THEN; vtInlet = RowNumber; ENDIF
+                IF Content$ = "@OUTLET" THEN; vtOutlet = RowNumber; ENDIF
+                IF Content$ = "@WASTE" THEN; vtWaste = RowNumber; ENDIF
+                IF Content$ = "@FLUSH" THEN; vtFlush = RowNumber; ENDIF
+                IF Content$ = "@WASTE2" THEN; vtWaste2 = RowNumber; ENDIF
+                IF Content$ = "@FLUSH2" THEN; vtFlush2 = RowNumber; ENDIF
+                IF Content$ = "@WASTE3" THEN; vtWaste3 = RowNumber; ENDIF
+                IF Content$ = "@FLUSH3" THEN; vtFlush3 = RowNumber; ENDIF
+                IF Content$ = "@clean tubes" THEN; vtCleanTubes = RowNumber; ENDIF
+                IF Content$ = "@clean needle" THEN; vtCleanNeedle = RowNumber; ENDIF
+                Return
+            ENDIF
+
+            Content$ = zzvtStripOutChar$(Content$,"@")
+            Content$ = ConvertText$(trim, Content$)
+            IF Len(Content$) > 16 THEN
+                Content$ = Content$[1:16]
+            ENDIF
+            Evaluate "SetTabText "+RegObj$+", "+TableName$+", RowNumber, ""Name"", """+Content$+""""
+        ENDIF
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+
+ENDMACRO
+
+
+
+
+!************************************************************************MANBEG
+NAME    zzvtStripOutChar$
+
+    PARAMETER   StrIn$
+    PARAMETER   StripChar$  DEFAULT  " "
+
+!
+!   DESCRIPTION
+!       Strips the specified 'StripChar$' out of the 'StrIn$' input string.
+!
+!   RETURN
+!       Stripped string
+!************************************************************************ENDMAN
+
+    LOCAL   StrOut$
+    LOCAL   i,length
+    LOCAL   ch$
+
+
+    length = LEN (StrIn$)
+
+    StrOut$ = ""
+    FOR  i=1  TO length
+
+        ch$ = StrIn$ [i]
+        IF  ch$ <> StripChar$  THEN
+            StrOut$ = StrOut$ + ch$
+        ENDIF
+
+    NEXT i
+
+    RETURN  StrOut$
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+NAME zzvtPrintVialTableLine
+
+    PARAMETER Row
+    PARAMETER Table$ DEFAULT "VialTable"
+    PARAMETER Offset$ DEFAULT ""
+
+!
+!   DESCRIPTION
+!       This macro prints a single vialtable line
+!
+!   RETURN
+!       nothing
+!******************************************************************************
+    LOCAL Type
+    LOCAL Type$
+
+
+!    Type = TabVal(VIALTABLE, Table$, Row, "VialType")
+!    IF Type = 0 THEN
+!        Type$ = "Glass"
+!    ELSE
+!        IF Type = 1 THEN
+!            Type$ = "Plastic"
+!        ELSE
+!            IF Type = 2 THEN
+!                Type$ = "Micro"
+!            ELSE
+!                IF Type > 2 THEN
+!                    Type$ = ""
+!                ENDIF
+!            ENDIF
+!        ENDIF
+!    ENDIF
+
+    Print Using #5, Offset$+"  ##     %%%%%%%%%%  %%%%%%%%%%%%%%%% %%%%%%%%%%%%%%%%%%%%/", \
+        Row,\
+        TabText$(VIALTABLE, Table$, Row, "Class"),\
+        TabText$(VIALTABLE, Table$, Row, "Name"),\
+        TabText$(VIALTABLE, Table$, Row, "Comment")
+ENDMACRO
+      
+      
+      
+
+!******************************************************************************
+NAME vtInitSequenceChanged
+
+!   PARAMETER  
+!
+!   DESCRIPTION
+!       initializes the handling of sequence table
+!
+!   RETURN
+!
+!******************************************************************************
+    
+    ON ERROR GOTO RECOVER_1
+
+        IF _OFFLINE = 0 THEN
+            OnEvent "_VTWarnings", "vtSettingsChanged", ,CP
+            OnEvent "_VTSymbolic", "vtSettingsChanged", ,CP
+            OnEvent "_Sequence[1]._Tab.SeqTable1", "vtSequenceChanged", ,ROD
+        ENDIF
+
+        zzvtGenVialTableDesc
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+    
+ENDMACRO
+      
+      
+      
+
+!******************************************************************************
+NAME vtSequenceChanged
+
+    PARAMETER EventCause$
+    PARAMETER EventLevel$
+    PARAMETER EventSubjName$
+    PARAMETER EventObj
+    PARAMETER EventObj2
+    PARAMETER EventPartName$
+    PARAMETER EventIndex
+    PARAMETER EventIndex2
+    PARAMETER EventColName$
+    PARAMETER EventIndexY
+    PARAMETER EventIndexY2
+!
+!   DESCRIPTION
+!       called, if someone changed the sequence table
+!
+!   RETURN
+!
+!******************************************************************************
+    Local Loop, NumRows, Result, Vial, Name$, NewName$, OldName$, Usage, Class$
+    
+    ON ERROR GOTO RECOVER_1
+
+        IF (EventCause$ <> "Changed") OR (_VTWarnings = 0) THEN
+            Return
+        ENDIF
+        
+        IF ObjHdrType(VIALTABLE, "SequenceVT") = 4 THEN
+            DelTab VIALTABLE, "SequenceVT"
+        ENDIF
+        NewTab VIALTABLE, "SequenceVT"
+        NewColText VIALTABLE, "SequenceVT", "Name", ""
+        NewColVal VIALTABLE, "SequenceVT", "SequenceUsage", 0
+        NewColVal VIALTABLE, "SequenceVT", "Ptr", 0
+        InsTabRow VIALTABLE, "SequenceVT", 1:TabHdrVal(VIALTABLE, "VialTable", "NumberOfRows")
+            
+        NumRows = TabHdrVal(_SEQUENCE[1], "SeqTable1", "NumberOfRows")
+        FOR Loop = 1 TO NumRows
+            Vial = TabVal(_SEQUENCE[1], "SeqTable1", Loop, "Vial")
+                
+            IF Vial>0 THEN
+                SetTabVal VIALTABLE, "SequenceVT", Vial, "SequenceUsage", TabVal(VIALTABLE, "SequenceVT", Vial, "SequenceUsage") + 1
+                NewName$ = TabText$(_SEQUENCE[1], "SeqTable1", Loop, "SampleName")
+                NewName$ = zzvtStripOutChar$(NewName$,"@")
+                NewName$ = ConvertText$(trim, NewName$)
+                OldName$ = TabText$(VIALTABLE, "SequenceVT", Vial, "Name")
+                IF NewName$ <> "" THEN
+                    IF (OldName$ = "") OR (OldName$ = NewName$) THEN
+                        SetTabText VIALTABLE, "SequenceVT", Vial, "Name", NewName$
+                    ELSE
+                        SetTabText VIALTABLE, "SequenceVT", Vial, "Name", "*"
+                    ENDIF
+                ENDIF
+            ENDIF
+        NEXT Loop
+
+        Result = 1
+        IF (_VTWarnings = 1) AND (_OFFLINE = 0) AND (_SequenceOn = 0) THEN
+            Result = vtCheckSequence()
+            IF Result = -1 THEN
+                Print "ERROR: Dialog-Box could not be created!"
+                RETURN
+            ENDIF
+        ENDIF
+
+        NumRows = TabHdrVal(VIALTABLE, "SequenceVT", "NumberOfRows")
+        FOR Loop = 1 TO NumRows
+            Usage = TabVal(VIALTABLE, "SequenceVT", Loop, "SequenceUsage")
+            SetTabVal VIALTABLE, "VialTable", Loop, "SequenceUsage", Usage
+            IF Usage > 0 THEN
+                IF (Result = 1) OR (Result = 2) THEN
+                    Class$ = TabText$(VIALTABLE, "VialTable", Loop, "Class")
+                    IF (Class$ <> "SYSTEM") AND (Class$ <> "unusable") THEN 
+                        IF Class$ <> "ANY USE" THEN 
+                            SetTabText VIALTABLE, "VialTable", Loop, "Class", "SEQUENCE"
+                        ENDIF
+                        Name$ = TabText$(VIALTABLE, "SequenceVT", Loop, "Name")
+                        IF Name$ <> "" THEN
+                            SetTabText VIALTABLE, "VialTable", Loop, "Name", Name$
+                        ENDIF
+                    ENDIF
+                ENDIF
+            ENDIF
+        NEXT Loop
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+    
+    Print ""
+
+ENDMACRO
+    
+
+!******************************************************************************
+NAME vtSettingsChanged
+
+    PARAMETER EventCause$       DEFAULT "Changed"
+    PARAMETER EventLevel$       DEFAULT ""
+    PARAMETER EventSubjName$    DEFAULT ""
+    PARAMETER EventObj$         DEFAULT ""
+!
+!   DESCRIPTION
+!       called, if someone changed the vialtable settings variables
+!
+!   RETURN
+!
+!******************************************************************************
+    Local Loop, NumRows, Result, Vial, Name$, NewName$, OldName$, Usage, Class$
+    
+    ON ERROR GOTO RECOVER_1
+
+        IF EventCause$ <> "Changed" THEN
+            Return
+        ENDIF
+        
+        SetTabHdrVal VIALTABLE, "VialTable", "vtwarnings", _VTWarnings
+        SetTabHdrVal VIALTABLE, "VialTable", "vtsymbolic", _VTSymbolic
+        zzvtGenVialTableDesc
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+    
+ENDMACRO
+    
+
+!******************************************************************************
+NAME vtPrintVtblMethodPart
+
+!   PARAMETER  
+!
+!   DESCRIPTION
+!       Prints out the vialtable part of the method during print method.
+!
+!   RETURN
+!
+!******************************************************************************
+    
+    ON ERROR GOTO RECOVER_1
+
+        IF Check(VARIABLE,PrLeoHPCE) = 0 THEN
+          RETURN
+        ENDIF
+
+        IF PrLeoHPCE = 0 THEN
+          RETURN
+        ENDIF
+
+        print #5, ""
+        print #5, "     Vialtable Information for Method:"
+        print #5, ""
+        vtPrintMethodVialTable
+        print #5, ""
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+    
+ENDMACRO
+    
+
+!******************************************************************************
+NAME vtVtblAcqResHook
+
+!   PARAMETER  
+!
+!   DESCRIPTION
+!       Sets in the AcqRes register the real vialnumbers of used symbolic vials.
+!
+!   RETURN
+!
+!******************************************************************************
+    
+    ON ERROR GOTO RECOVER_1
+
+        ! save only info if symbolic vial was used.
+
+        IF vtGetVialUsage(,-10,1)>0 THEN
+            NewObjHdrVal  ACQRES, "vtINLET",  vtGetRealVial(-10)
+        ENDIF
+        IF vtGetVialUsage(,-11,1)>0 THEN
+            NewObjHdrVal  ACQRES, "vtOUTLET", vtGetRealVial(-11)
+        ENDIF
+        IF vtGetVialUsage(,-12,1)>0 THEN
+            NewObjHdrVal  ACQRES, "vtWASTE",  vtGetRealVial(-12)
+        ENDIF
+        IF vtGetVialUsage(,-13,1)>0 THEN
+            NewObjHdrVal  ACQRES, "vtFLUSH",  vtGetRealVial(-13)
+        ENDIF
+        IF vtGetVialUsage(,-16,1)>0 THEN
+            NewObjHdrVal  ACQRES, "vtWASTE2",  vtGetRealVial(-16)
+        ENDIF
+        IF vtGetVialUsage(,-17,1)>0 THEN
+            NewObjHdrVal  ACQRES, "vtFLUSH2",  vtGetRealVial(-17)
+        ENDIF
+        IF vtGetVialUsage(,-18,1)>0 THEN
+            NewObjHdrVal  ACQRES, "vtWASTE3",  vtGetRealVial(-18)
+        ENDIF
+        IF vtGetVialUsage(,-19,1)>0 THEN
+            NewObjHdrVal  ACQRES, "vtFLUSH3",  vtGetRealVial(-19)
+        ENDIF
+        IF vtGetVialUsage(,-14,1)>0 THEN
+            NewObjHdrVal  ACQRES, "vtCLEANTUBES",  vtGetRealVial(-14)
+        ENDIF
+
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+    
+ENDMACRO
+    
+
+!******************************************************************************
+NAME vtVtblPostReportHook
+
+!   PARAMETER  
+!
+!   DESCRIPTION
+!       called after a report has finished.
+!
+!   RETURN
+!
+!******************************************************************************
+    
+    LOCAL Inlet, Outlet, Waste, Flush, Waste2, Flush2, Waste3, Flush3, Clean
+    
+    ON ERROR GOTO RECOVER_1
+
+        Inlet = 0
+        Outlet= 0
+        Waste = 0
+        Flush = 0
+        Clean = 0
+
+        
+        IF ObjHdrType (CHROMRES, "vtINLET") = 1 THEN  ! test for double
+            Inlet = ObjHdrVal (CHROMRES, "vtINLET")
+        ENDIF
+
+        IF ObjHdrType (CHROMRES, "vtOUTLET") = 1 THEN ! test for double
+            Outlet = ObjHdrVal (CHROMRES, "vtOUTLET")
+        ENDIF
+
+        IF ObjHdrType (CHROMRES, "vtWASTE") = 1 THEN  ! test for double
+            Waste = ObjHdrVal (CHROMRES, "vtWASTE")
+        ENDIF
+
+        IF ObjHdrType (CHROMRES, "vtFLUSH") = 1 THEN  ! test for double
+            Flush = ObjHdrVal (CHROMRES, "vtFLUSH")
+        ENDIF
+
+        IF ObjHdrType (CHROMRES, "vtWASTE2") = 1 THEN  ! test for double
+            Waste2 = ObjHdrVal (CHROMRES, "vtWASTE2")
+        ENDIF
+
+        IF ObjHdrType (CHROMRES, "vtFLUSH2") = 1 THEN  ! test for double
+            Flush2 = ObjHdrVal (CHROMRES, "vtFLUSH2")
+        ENDIF
+
+        IF ObjHdrType (CHROMRES, "vtWASTE3") = 1 THEN  ! test for double
+            Waste3 = ObjHdrVal (CHROMRES, "vtWASTE3")
+        ENDIF
+
+        IF ObjHdrType (CHROMRES, "vtFLUSH3") = 1 THEN  ! test for double
+            Flush3 = ObjHdrVal (CHROMRES, "vtFLUSH3")
+        ENDIF
+
+        IF ObjHdrType (CHROMRES, "vtCLEANTUBES") = 1 THEN ! test for double
+            Clean = ObjHdrVal (CHROMRES, "vtCLEANTUBES")
+        ENDIF
+
+        ! print port is always #5 (fix defined!)
+
+        IF Inlet+Outlet+Waste+Flush+Waste2+Flush2+Waste3+Flush3+Clean > 0 THEN
+            PRINT  #5, ""
+            PRINT  #5, "Following symbolic vials were used by method:"
+            PRINT  #5, ""
+        
+            IF Inlet>0 THEN
+                PRINT  #5, "     "+"@INLET"+" :  "+Val$(Inlet)
+            ENDIF
+
+            IF Outlet>0 THEN
+                PRINT  #5, "     "+"@OUTLET"+":  "+Val$(Outlet)
+            ENDIF
+
+            IF Waste>0 THEN
+                PRINT  #5, "     "+"@WASTE"+" :  "+Val$(Waste)
+            ENDIF
+
+            IF Flush>0 THEN
+                PRINT  #5, "     "+"@FLUSH"+" :  "+Val$(Flush)    
+            ENDIF
+
+            IF Waste2>0 THEN
+                PRINT  #5, "     "+"@WASTE2"+" :  "+Val$(Waste2)
+            ENDIF
+
+            IF Flush2>0 THEN
+                PRINT  #5, "     "+"@FLUSH2"+" :  "+Val$(Flush2)
+            ENDIF
+
+            IF Waste3>0 THEN
+                PRINT  #5, "     "+"@WASTE3"+" :  "+Val$(Waste3)
+            ENDIF
+
+            IF Flush3>0 THEN
+                PRINT  #5, "     "+"@FLUSH3"+" :  "+Val$(Flush3)
+            ENDIF
+
+            IF Clean>0 THEN
+                PRINT  #5, "     "+"@clean tubes"+":  "+Val$(Clean)
+            ENDIF
+            
+            PRINT  #5, ""
+        ENDIF
+
+    ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+    TRYEND_1:
+    
+ENDMACRO
+
+
+!******************************************************************************
+NAME vtCloseApp
+
+!   PARAMETER
+!
+!   DESCRIPTION
+!       saves the vialtable to the instrument path if existent!
+!
+!
+!   RETURN
+!       TRUE    if ok
+!       FALSE   if failed
+!
+!******************************************************************************
+LOCAL File$
+
+ON ERROR GOTO RECOVER_1
+    IF _OFFLINE = 0 THEN
+        File$ = _INSTPATH$ + "vialtbl.reg"
+        SaveObj  VIALTABLE, File$ , NEW 
+    ENDIF
+
+ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+
+TRYEND_1:
+    
+ENDMACRO
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

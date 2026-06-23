@@ -1,0 +1,29 @@
+[Toolbar Header]
+Description=Peptide Tools Status bar
+Style=BOTTOM | BORDER | 3D      ; <LEFT | TOP | RIGHT | BOTTOM | FLOAT> 
+ButtonBitmapFile=peptools.bmp 
+ButtonSize=16,16             ; <x>, <y> Size of one button (all must be same)
+BkgndBitmapFile=             ; Background bitmap file
+NCBorder=2                   ; Non-client border width (pixels)
+3DBorder=1                   ; 3D effects border width (pixels)
+GapWidth=4                   ; Gap between buttons (pixels)
+TimeIncr=0.25                ; Tic length (secs) for animated bitmaps
+DefaultColor=192, 192, 192, 0, 0, 0
+3DColor=255, 255, 255, 128, 128, 128
+AltColor1=255,   0,   0, 0, 0, 0
+AltColor2=  0, 255,   0, 0, 0, 0
+AltColor3=255, 255,   0, 0, 0, 0
+AltColor4=196, 196, 196, 0, 0, 0
+
+[Font Info]
+FaceName=Arial               ; Font face name
+Height=8                     ; Height of font (pos point size, neg pixels)
+Weight=400                   ; 400 - normal, 700 - bold
+
+[Items]
+0=1, AUTOSIZE | TEXT | LEFT   | 3DLOWER | NULL, Status here, 70,
+;9989=1, GROUP | TEXT | RIGHT  | NULL, Total:, 7, 
+1=1,GROUP | TEXT | CENTER | 3DLOWER | NULL, , 6, Total number of building blocks in sample
+2=1, GROUP | TEXT | CENTER | 3DLOWER | NULL, , 24, Name of sequence chain or digest protease
+3=1, GROUP | TEXT | CENTER | 3DLOWER | NULL, , 5, Total number of building blocks in current chain
+4=1, GROUP | TEXT | CENTER | 3DLOWER | NULL, , 10, Cursor position in current sequence chain

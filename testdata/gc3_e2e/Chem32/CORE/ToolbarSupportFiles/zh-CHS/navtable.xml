@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="Navtable" PosStyle="Top" DockRow="0" DockCol="0" Caption="导航" PanelName="NavTable">
+		<NonEditCombobox Name="LoadMethodOption" Help="选择方法以浏览" Enable="1" Selection="1" TextList="" DefCommand="TlbrNavtabSetMethod " DefCmdParNumber="1" Width="150"/>
+		<PushButton Name="LoadFirst" Help="调用第一个" Command="NavTab_LoadFirst" ImageName="NavTable_First20" ImageNameDisabled="NavTable_First20_d"/>
+		<PushButton Name="LoadLast" Help="调用最后一个" Command="NavTab_LoadLast" ImageName="NavTable_Last20" ImageNameDisabled="NavTable_Last20_d"/>
+		<PushButton Name="LoadPrev" Help="调用上一个" Command="NavTab_LoadPrev" ImageName="NavTable_Prev20" ImageNameDisabled="NavTable_Prev20_d"/>
+		<PushButton Name="LoadNext" Help="调用下一个" Command="NavTab_LoadNext" ImageName="NavTable_Next20" ImageNameDisabled="NavTable_Next20_d"/>
+		<PushButton Name="AutoStepStart" Help="开始自动步进" Command="NavTab_AutoStepStart" ImageName="NavTable_Play20" ImageNameDisabled="NavTable_Play20_d"/>
+		<PushButton Name="AutoStepPause" Help="暂停" Command="NavTab_AutoStepPause" CpName="Cp2" ImageName="NavTable_Pause20" ImageNameDisabled="NavTable_Pause20_d"/>
+	</toolbar>
+</graphical_object>

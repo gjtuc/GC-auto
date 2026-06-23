@@ -1,0 +1,118 @@
+Reading RegFiles.ini.
+InstallDir:
+C:\Chem32\
+RegFiles.ini:
+C:\Chem32\CORE\RegFiles.ini
+FILE1: INSTALLDIR core\ autotray1200.ocx RegBin False
+FILE2: INSTALLDIR core\ hpctsysui.tlb RegTypelib False
+FILE3: INSTALLDIR core\ hpcthelpids.tlb RegTypelib False
+FILE4: INSTALLDIR core\ hpctsysmsg.dll RegBin False
+FILE5: INSTALLDIR core\ hpctuistatusinterfaces.dll RegBin False
+FILE6: INSTALLDIR core\ agctauditevent.dll RegBin False
+FILE7: INSTALLDIR core\ hpctutil.dll RegBin False
+FILE8: INSTALLDIR core\ agemethod.dll RegBin False
+FILE9: SystemFolder \ spr32x60.ocx RegBin True
+FILE10: SystemFolder \ fpspr70.ocx RegBin True
+FILE11: SystemFolder \ fpspru70.ocx RegBin True
+FILE12: SystemFolder \ ss70pp.dll RegBin True
+FILE13: SystemFolder \ igthreed40.ocx RegBin True
+FILE14: SystemFolder \ igtoolbars50.ocx RegBin True
+FILE15: SystemFolder \ dwsbc32.ocx RegBin True
+FILE16: SystemFolder \ dwvstp32.ocx RegBin True
+FILE17: SystemFolder \ dwspy32.dll RegBin True
+FILE18: INSTALLDIR core\ instconfig.dll RegBinNet False
+FILE19: INSTALLDIR core\ dataserver.exe RegServer False
+FILE20: INSTALLDIR core\ agemg2070.dll RegBinNet False
+FILE21: INSTALLDIR core\ agrcwrapperif.dll RegBin False
+FILE22: INSTALLDIR core\ hpchemifc.tlb RegTypelib False
+FILE23: INSTALLDIR core\ gcidotnetinterface.dll RegBinNet False
+FILE24: INSTALLDIR core\ gcidotnetinterface.tlb RegTypelib False
+FILE25: INSTALLDIR core\ hpct6890gcperf.dll RegBin False
+FILE26: INSTALLDIR core\ ag68xxreport.dll RegBin False
+FILE27: INSTALLDIR core\ rapidcontrolif.tlb RegTypelib False
+FILE28: INSTALLDIR drivers\gci\ gci_ddcom_template.exe RegServer False
+FILE29: INSTALLDIR core\ interop.gci_ddcom_template.dll RegBinNet False
+FILE30: INSTALLDIR core\ aggcalssampleprepif.dll RegBinNet False
+FILE31: INSTALLDIR core\ agtcomstub02.dll RegBin False
+FILE32: INSTALLDIR core\ agtchemrcnetinterfaces.tlb RegTypelib False
+FILE33: INSTALLDIR core\ agtexternalifcbroker.exe RegServer False
+FILE34: INSTALLDIR core\ aggcalssampleprep.dll RegBinNet False
+FILE35: INSTALLDIR core\ aggc68xxwrapperutility.dll RegBinNet False
+FILE36: INSTALLDIR core\ aggcalssamplingdiagram.dll RegBinNet False
+FILE37: INSTALLDIR core\ agcomcallableutilities.dll RegBinNet False
+FILE38: INSTALLDIR core\ aggc7890alstrayui.dll RegBinNet False
+FILE39: INSTALLDIR core\ hpct6850drv.dll RegBin False
+FILE40: INSTALLDIR core\ hpct6850methed.dll RegBin False
+FILE41: INSTALLDIR core\ hpct6890drv.dll RegBin False
+FILE42: INSTALLDIR core\ hpct6890methed.dll RegBin False
+FILE43: INSTALLDIR core\ aggc68xxwrapper.dll RegBinNet False
+FILE44: INSTALLDIR core\ instconfigeditor.exe RegBinNet False
+FILE45: INSTALLDIR core\ aggc68xxmethodconverter.dll RegBinNet False
+FILE46: INSTALLDIR core\ agtchemgc68xxmethodconverter.dll RegBinNet False
+FILE47: INSTALLDIR core\ aggcalstrayui.dll RegBinNet False
+FILE48: INSTALLDIR core\ agtchemrcnetadapter.dll RegBinNet False
+FILE49: INSTALLDIR core\ agilentdevdrvmodulecontrolinterop.dll RegBinNet False
+FILE50: INSTALLDIR core\ agilentdevdrvmodulecontrolinterop.tlb RegTypelib False
+FILE51: INSTALLDIR core\ agilentdevdrvuicontainer.dll RegBinNet False
+FILE52: INSTALLDIR core\ agilentdevdrvuicontainer.tlb RegTypelib False
+FILE53: INSTALLDIR core\ agilentelsdcicadapter.exe RegServer False
+FILE54: INSTALLDIR core\ agtchemlc1200methodconverter.dll RegBinNet False
+
+
+Registering inproc server   C:\Chem32\core\autotray1200.ocx: Success.
+Registering type library    C:\Chem32\core\hpctsysui.tlb: Success.
+Registering type library    C:\Chem32\core\hpcthelpids.tlb: Success.
+Registering inproc server   C:\Chem32\core\hpctsysmsg.dll: Success.
+Registering inproc server   C:\Chem32\core\hpctuistatusinterfaces.dll: Success.
+Registering inproc server   C:\Chem32\core\agctauditevent.dll: Success.
+Registering inproc server   C:\Chem32\core\hpctutil.dll: Success.
+Registering inproc server   C:\Chem32\core\agemethod.dll: Success.
+Registering inproc server   C:\Windows\system32\spr32x60.ocx: Success.
+Registering inproc server   C:\Windows\system32\fpspr70.ocx: Success.
+Registering inproc server   C:\Windows\system32\fpspru70.ocx: Success.
+Registering inproc server   C:\Windows\system32\ss70pp.dll: Success.
+Registering inproc server   C:\Windows\system32\igthreed40.ocx: Success.
+Registering inproc server   C:\Windows\system32\igtoolbars50.ocx: Success.
+Registering inproc server   C:\Windows\system32\dwsbc32.ocx: Success.
+Registering inproc server   C:\Windows\system32\dwvstp32.ocx: Success.
+Registering inproc server   C:\Windows\system32\dwspy32.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\instconfig.dll: Success.
+Registering local server    C:\Chem32\core\dataserver.exe: Success.
+Running Regasm /codebase /s C:\Chem32\core\agemg2070.dll: Success.
+Registering inproc server   C:\Chem32\core\agrcwrapperif.dll: Success.
+Registering type library    C:\Chem32\core\hpchemifc.tlb: Success.
+Running Regasm /codebase /s C:\Chem32\core\gcidotnetinterface.dll: Success.
+Registering type library    C:\Chem32\core\gcidotnetinterface.tlb: Success.
+Registering inproc server   C:\Chem32\core\hpct6890gcperf.dll: Success.
+Registering inproc server   C:\Chem32\core\ag68xxreport.dll: Success.
+Registering type library    C:\Chem32\core\rapidcontrolif.tlb: Success.
+Registering local server    C:\Chem32\drivers\gci\gci_ddcom_template.exe: Success.
+Running Regasm /codebase /s C:\Chem32\core\interop.gci_ddcom_template.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\aggcalssampleprepif.dll: Success.
+Registering inproc server   C:\Chem32\core\agtcomstub02.dll: Success.
+Registering type library    C:\Chem32\core\agtchemrcnetinterfaces.tlb: Success.
+Registering local server    C:\Chem32\core\agtexternalifcbroker.exe: Success.
+Running Regasm /codebase /s C:\Chem32\core\aggcalssampleprep.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\aggc68xxwrapperutility.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\aggcalssamplingdiagram.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\agcomcallableutilities.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\aggc7890alstrayui.dll: Success.
+Registering inproc server   C:\Chem32\core\hpct6850drv.dll: Success.
+Registering inproc server   C:\Chem32\core\hpct6850methed.dll: Success.
+Registering inproc server   C:\Chem32\core\hpct6890drv.dll: Success.
+Registering inproc server   C:\Chem32\core\hpct6890methed.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\aggc68xxwrapper.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\instconfigeditor.exe: Success.
+Running Regasm /codebase /s C:\Chem32\core\aggc68xxmethodconverter.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\agtchemgc68xxmethodconverter.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\aggcalstrayui.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\agtchemrcnetadapter.dll: Success.
+Running Regasm /codebase /s C:\Chem32\core\agilentdevdrvmodulecontrolinterop.dll: Success.
+Registering type library    C:\Chem32\core\agilentdevdrvmodulecontrolinterop.tlb: Success.
+Running Regasm /codebase /s C:\Chem32\core\agilentdevdrvuicontainer.dll: Success.
+Registering type library    C:\Chem32\core\agilentdevdrvuicontainer.tlb: Success.
+Registering local server    C:\Chem32\core\agilentelsdcicadapter.exe: Success.
+Running Regasm /codebase /s C:\Chem32\core\agtchemlc1200methodconverter.dll: Success.
+
+
+Overall Registration Status: Success.

@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="PURDAD" PosStyle="BOTTOM" Caption="Peak Purity" PanelName="Chem">
+		<PushButton Name="PrevImpPeak" Help="Select previous 'impure' peak" Command='PUR_StatusBarFunction "PrevImpure","DAD"' NewGroup="1" ImageName="PeakPur_PrevImpurePeak16" ImageNameDisabled="PeakPur_PrevImpurePeak16_d"/>
+		<PushButton Name="PrevPeak" Help="Select previous peak" Command='PUR_StatusBarFunction "PrevPeak","DAD"' ImageName="PeakPur_PrevPeak16" ImageNameDisabled="PeakPur_PrevPeak16_d"/>
+		<Static Name="PeakNumber" Text="--" Help="Number and time of current peak" Width="200" Enable="1"/>
+		<PushButton Name="NextPeak" Help="Select next peak" Command='PUR_StatusBarFunction "NextPeak","DAD"' ImageName="PeakPur_NextPeak16" ImageNameDisabled="PeakPur_NextPeak16_d"/>
+		<PushButton Name="PrevNextPeak" Help="Select next 'impure' peak" Command='PUR_StatusBarFunction "NextImpure","DAD"' ImageName="PeakPur_NextImpurePeak16" ImageNameDisabled="PeakPur_NextImpurePeak16_d"/>
+		<!-- <Static Name="Detector" Text="- no info -" Help="Information on the Peak Purity" Width="200" Enable="1"/> -->
+		<Static Name="PurityInfo" Text="" Help="Information on the Peak Purity" Width="200" Enable="1"/>
+		<PushButton Name="MoreInfo" Help="Information on the LC Peak Purity" Command='PUR_StatusBarFunction "PurInfo","DAD"' ImageName="PeakPur_Info20" ImageNameDisabled="PeakPur_Info20_d"/>
+		<PushButton Name="IsoPlot" Help="Make Iso-Plot of spectra of selected peak" Command='PUR_StatusBarFunction "IsoPlot","DAD"' ImageName="PeakPur_IsoPlot20" ImageNameDisabled="PeakPur_IsoPlot20_d"/>
+		<PushButton Name="TDPlot" Help="Make 3D-Plot of spectra of selected peak" Command='PUR_StatusBarFunction "TDPlot","DAD"' ImageName="PeakPur_3Dplot20" ImageNameDisabled="PeakPur_3Dplot20_d"/>
+		<PushButton Name="Print" Help="Make a printout of the current peak purity" Command='PUR_StatusBarFunction "Print","DAD"' ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="Close" Help="Close the Peak Purity display" Command='PUR_StatusBarFunction "Close", "DAD"' ImageName="Exit20" ImageNameDisabled="Exit20_d"/>
+	</toolbar>
+</graphical_object>

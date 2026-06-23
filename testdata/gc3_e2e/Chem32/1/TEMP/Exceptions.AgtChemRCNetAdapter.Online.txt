@@ -1,0 +1,2000 @@
+﻿                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   06:23:44.307    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   06:23:44.416    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   06:23:44.416    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   07:26:53.422    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   07:26:53.422    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   07:26:53.516    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   07:26:53.516    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   07:26:55.325    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   07:26:55.325    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   07:26:55.434    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   07:26:55.434    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   08:30:06.578    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   08:30:06.578    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   08:30:06.671    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   08:30:06.671    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   08:30:08.450    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   08:30:08.450    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   08:30:08.575    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   08:30:08.575    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   09:33:17.815    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   09:33:17.815    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   09:33:17.861    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   09:33:17.861    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   09:33:19.281    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   09:33:19.281    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   09:33:19.328    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   09:33:19.328    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   10:36:21.856    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   10:36:21.856    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   10:36:21.903    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   10:36:21.903    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   10:36:23.448    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   10:36:23.448    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   10:36:23.494    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   10:36:23.494    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   11:39:35.059    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   11:39:35.059    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   11:39:35.106    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   11:39:35.106    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   11:39:36.619    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   11:39:36.619    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   11:39:36.650    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   11:39:36.666    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   12:42:50.445    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   12:42:50.445    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   12:42:50.492    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   12:42:50.492    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   12:42:52.005    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   12:42:52.005    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   12:42:52.052    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   12:42:52.052    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   13:46:06.986    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   13:46:06.986    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   13:46:07.033    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   13:46:07.033    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   13:46:08.484    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   13:46:08.484    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   13:46:08.530    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   13:46:08.530    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   14:49:19.876    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   14:49:19.876    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   14:49:19.908    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   14:49:19.923    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   14:49:21.343    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   14:49:21.343    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   14:49:21.390    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   14:49:21.390    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   15:52:32.751    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   15:52:32.751    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   15:52:32.798    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   15:52:32.798    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   15:52:34.592    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   15:52:34.592    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   15:52:34.639    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   15:52:34.639    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   16:55:42.491    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   16:55:42.491    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   16:55:42.537    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   16:55:42.537    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   16:55:44.082    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   16:55:44.082    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   16:55:44.129    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   16:55:44.129    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   17:58:49.515    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   17:58:49.515    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   17:58:49.562    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   17:58:49.562    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   17:58:51.481    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   17:58:51.481    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   17:58:51.528    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   17:58:51.528    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   19:02:16.914    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   19:02:16.914    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   19:02:16.961    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   19:02:16.961    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   19:02:18.302    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   19:02:18.318    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   19:02:18.349    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   19:02:18.349    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   20:05:35.685    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   20:05:35.685    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   20:05:35.732    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   20:05:35.732    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   20:05:37.245    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   20:05:37.245    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   20:05:37.292    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   20:05:37.292    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   21:08:52.612    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   21:08:52.613    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   21:08:52.631    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   21:08:52.633    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   21:08:54.164    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   21:08:54.166    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   21:08:54.185    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   21:08:54.187    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   22:12:08.067    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   22:12:08.069    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   22:12:08.087    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   22:12:08.088    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   22:12:09.190    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   22:12:09.192    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   22:12:09.210    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   22:12:09.212    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   23:15:24.353    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   23:15:24.354    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   23:15:24.391    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   23:15:24.392    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   23:15:25.607    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   23:15:25.608    1:  *** END MULTI LINE ITEM **************************
+6/22/2026   23:15:25.627    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/22/2026   23:15:25.628    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   00:18:41.446    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   00:18:41.448    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   00:18:41.466    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   00:18:41.467    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   00:18:43.233    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   00:18:43.235    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   00:18:43.255    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   00:18:43.257    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   01:21:58.342    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   01:21:58.344    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   01:21:58.361    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   01:21:58.363    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   01:21:59.851    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   01:21:59.853    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   01:21:59.871    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   01:21:59.873    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   02:25:13.704    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   02:25:13.705    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   02:25:13.725    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   02:25:13.727    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   02:25:15.190    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   02:25:15.191    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   02:25:15.211    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   02:25:15.212    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   03:28:31.531    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   03:28:31.533    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   03:28:31.549    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   03:28:31.551    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   03:28:32.989    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   03:28:32.990    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   03:28:33.008    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   03:28:33.009    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   04:31:46.803    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   04:31:46.805    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   04:31:46.825    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   04:31:46.826    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   04:31:48.189    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   04:31:48.190    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   04:31:48.211    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   04:31:48.212    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   05:35:02.150    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   05:35:02.152    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   05:35:02.170    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   05:35:02.171    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   05:35:03.795    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   05:35:03.796    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   05:35:03.815    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   05:35:03.816    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   06:38:15.286    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   06:38:15.287    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   06:38:15.306    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   06:38:15.308    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   06:38:16.815    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   06:38:16.817    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   06:38:16.835    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   06:38:16.837    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   07:41:30.745    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   07:41:30.747    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   07:41:30.767    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   07:41:30.769    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   07:41:32.557    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   07:41:32.558    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   07:41:32.576    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   07:41:32.578    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   08:44:46.543    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   08:44:46.545    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   08:44:46.562    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   08:44:46.563    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   08:44:49.459    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   08:44:49.461    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   08:44:49.480    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   08:44:49.481    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   09:48:03.203    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   09:48:03.205    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   09:48:03.223    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   09:48:03.224    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   09:48:05.441    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   09:48:05.442    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   09:48:05.464    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   09:48:05.465    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   10:51:17.443    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   10:51:17.445    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   10:51:17.464    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   10:51:17.465    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   10:51:19.929    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   10:51:19.931    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   10:51:19.949    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   10:51:19.951    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   11:54:35.431    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   11:54:35.432    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   11:54:35.453    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   11:54:35.455    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   11:54:36.701    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   11:54:36.703    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   11:54:36.721    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   11:54:36.722    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   12:57:54.084    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   12:57:54.086    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   12:57:54.105    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   12:57:54.107    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   12:57:55.715    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   12:57:55.717    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   12:57:55.735    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   12:57:55.737    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   14:01:10.947    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   14:01:10.949    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   14:01:10.969    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   14:01:10.971    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   14:01:12.290    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   14:01:12.291    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   14:01:12.310    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   14:01:12.311    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   15:04:27.620    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   15:04:27.620    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   15:04:27.635    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   15:04:27.651    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   15:04:29.133    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   15:04:29.133    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   15:04:29.148    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   15:04:29.148    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   16:07:32.407    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   16:07:32.407    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   16:07:32.423    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   16:07:32.423    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   16:07:33.811    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   16:07:33.811    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   16:07:33.827    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   16:07:33.827    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   17:10:38.186    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   17:10:38.186    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   17:10:38.202    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   17:10:38.202    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   17:10:39.731    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   17:10:39.731    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   17:10:39.746    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   17:10:39.746    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   18:13:48.840    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   18:13:48.840    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   18:13:48.856    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   18:13:48.856    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   18:13:50.574    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   18:13:50.574    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   18:13:50.590    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   18:13:50.590    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   19:17:03.415    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   19:17:03.416    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   19:17:03.435    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   19:17:03.436    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   19:17:04.788    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   19:17:04.790    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   19:17:04.809    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   19:17:04.810    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   20:20:07.465    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   20:20:07.467    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   20:20:07.487    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   20:20:07.489    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   20:20:09.619    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   20:20:09.621    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   20:20:09.643    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   20:20:09.645    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   21:23:08.041    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   21:23:08.042    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   21:23:08.063    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   21:23:08.064    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   21:23:09.698    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   21:23:09.700    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   21:23:09.725    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   21:23:09.728    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   22:26:06.997    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   22:26:06.999    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   22:26:07.016    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   22:26:07.017    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   22:26:08.593    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnavailable
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   22:26:08.594    1:  *** END MULTI LINE ITEM **************************
+6/23/2026   22:26:08.613    1:  *** BEGIN MULTI LINE ITEM **************************
+                                
+                                Exception
+                                - Message:    eUnknownID
+                                - Source:     AgtChemRCNetAdapter
+                                - TargetSite: Double GetResourceValue(System.String, System.String)
+                                - HelpLink:   
+                                - Data:       System.Collections.ListDictionaryInternal
+                                - StackTrace:
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ResourceCPHelper.GetResourceValue(String DataSource, String ResourceID)
+                                   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.CPCommandHandler.OnCmdResource(CmdEventArgs evarg)
+                                
+6/23/2026   22:26:08.615    1:  *** END MULTI LINE ITEM **************************

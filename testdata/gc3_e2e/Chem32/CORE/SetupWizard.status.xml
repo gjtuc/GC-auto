@@ -1,0 +1,69 @@
+<?xml version="1.0" standalone="yes"?>
+<NewDataSet>
+  <xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:MainDataTable="InstrumentsAndLicenses" msdata:Locale="">
+      <xs:complexType>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element name="InstrumentsAndLicenses" msdata:Locale="">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="Id" type="xs:int" minOccurs="0" />
+                <xs:element name="ParentId" type="xs:int" minOccurs="0" />
+                <xs:element name="ProductNumber" type="xs:string" minOccurs="0" />
+                <xs:element name="LicenseKey" type="xs:string" minOccurs="0" />
+                <xs:element name="LicenseName" type="xs:string" minOccurs="0" />
+                <xs:element name="DisplayName" type="xs:string" minOccurs="0" />
+                <xs:element name="InstrumentName" type="xs:string" minOccurs="0" />
+                <xs:element name="InstrumentNumber" type="xs:int" minOccurs="0" />
+                <xs:element name="Selected" msdata:DataType="System.Windows.Forms.CheckState, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" type="xs:anyType" minOccurs="0" />
+                <xs:element name="LicenseNeeded" type="xs:boolean" default="false" minOccurs="0" />
+                <xs:element name="IsInstalled" type="xs:boolean" default="false" minOccurs="0" />
+                <xs:element name="AllowChanges" type="xs:boolean" default="true" minOccurs="0" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+  <InstrumentsAndLicenses>
+    <Id>1</Id>
+    <ParentId>0</ParentId>
+    <ProductNumber>G2070BA</ProductNumber>
+    <LicenseKey />
+    <LicenseName>GC ChemStation</LicenseName>
+    <DisplayName>GC ChemStation - Instrument 1</DisplayName>
+    <InstrumentName>Instrument 1</InstrumentName>
+    <InstrumentNumber>1</InstrumentNumber>
+    <Selected>1</Selected>
+    <LicenseNeeded>true</LicenseNeeded>
+    <IsInstalled>false</IsInstalled>
+    <AllowChanges>true</AllowChanges>
+  </InstrumentsAndLicenses>
+  <InstrumentsAndLicenses>
+    <Id>2</Id>
+    <ParentId>0</ParentId>
+    <ProductNumber />
+    <LicenseKey />
+    <LicenseName />
+    <DisplayName>General Addon products</DisplayName>
+    <InstrumentNumber>0</InstrumentNumber>
+    <Selected>0</Selected>
+    <LicenseNeeded>false</LicenseNeeded>
+    <IsInstalled>false</IsInstalled>
+    <AllowChanges>true</AllowChanges>
+  </InstrumentsAndLicenses>
+  <InstrumentsAndLicenses>
+    <Id>3</Id>
+    <ParentId>2</ParentId>
+    <ProductNumber>G2189BA</ProductNumber>
+    <LicenseKey />
+    <LicenseName>ECM Integration</LicenseName>
+    <DisplayName>ChemStation OpenLAB Option</DisplayName>
+    <InstrumentNumber>0</InstrumentNumber>
+    <Selected>0</Selected>
+    <LicenseNeeded>false</LicenseNeeded>
+    <IsInstalled>false</IsInstalled>
+    <AllowChanges>true</AllowChanges>
+  </InstrumentsAndLicenses>
+</NewDataSet>

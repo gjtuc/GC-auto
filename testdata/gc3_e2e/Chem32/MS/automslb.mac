@@ -1,0 +1,380 @@
+! $Header: /cag/triath1b/dlc_cmds/mslibsrc/automslb.mac 1.7 1999-07-15 16:53:24-07 mbateman Exp $
+! Generic routines for automatic reporting for MS library search.
+!*****************************************************************************
+!=============================================================================
+name MSReady  
+  PARAMETER MSFile$  
+!----------------------------------------------------------------------------- 
+  if FileStat (MODE, MSFile$) = -1
+    return 0 
+  else      
+    return 1
+  endif
+endmacro
+!=============================================================================
+name idMSLib     
+! Get each chromatogram peak from integration, load the spectra,
+!   send this spectrum to NIST program, get the results, and                        place the hits into a register
+!----------------------------------------------------------------------------- 
+  Local NumOfObjects, ObjIndex, Flag, TableLines, Timeout
+  Local MSLibraryNumber, NISTDirectory$, NumberOfSpectraFound
+  Local SpectraNumber, StartChar, EndChar, OneLine$, Token$
+! Query the NIST directory
+  NISTDirectory$ = PrivateProfileString$("GENERAL","NistDirectory",_AutoMSPath$+"NISTMS.INI","")
+  if LEN(NISTDirectory$) = 0 then
+    return
+  endif
+  NISTDirectory$ =  NISTDirectory$ + "\"
+! Create the table for the results
+  prepareMSLibSrchResultColumns
+! Check objects for a MSD 
+  NumOfObjects = RegSize (ChromReg)
+  TableLines=0
+  for ObjIndex=1 to NumOfObjects 
+    if ObjHdrVal (ChromReg[ObjIndex], "SignalSource") = 3 AND ObjHdrText$(ChromReg[ObjIndex], "SignalId") = "TIC"  
+      Flag = 0
+      setTabHdrText chromRes[1],"autoIDParms","MSmodus","   No MS peaks found" 
+      ! Load any spectra from the IntResults table
+      NumOfRows = TabHdrVal (ChromReg[ObjIndex], IntResults, "NumberOfRows")
+      for RowIndex=1 to NumOfRows
+        Timeout=180
+        Flag = 1
+        TimeStart = TabVal (ChromReg[ObjIndex], IntResults, RowIndex, TimeStart)
+        RetTime = TabVal (ChromReg[ObjIndex], IntResults, RowIndex, RetTime)
+        TimeEnd = TabVal (ChromReg[ObjIndex], IntResults, RowIndex, TimeEnd)
+        print Using "MS compound RetTime: #.### with peak\# #./",RetTime, RowIndex  
+        DelReg MSReg
+        MS_DoAverageOfMassSpectra 1,0,0,TimeStart,TimeEnd,0,0,"chromreg",ObjIndex,0
+        MSSrchExport  
+        ON Error print
+        Delete NISTDirectory$ + "SRCRESLT.TXT", DONTASK
+        Delete NISTDirectory$ + "SRCREADY.TXT", DONTASK
+        ON Error
+        MSSrchFileClear 
+        MSSrchGotoNist On
+        print "MS library search with peak# ", RowIndex
+        Repeat
+          Timeout = Timeout - 2
+          sleep 2
+        Until (MSReady(NISTDirectory$ + "SRCREADY.TXT") <> 0) OR Timeout <= 0
+        ! Check to timeout
+        if Timeout <= 0
+            setTabHdrText chromRes[1],"autoIDParms","MSmodus","   NIST program did not responed."
+            return
+        endif
+        open NISTDirectory$ + "SRCREADY.TXT" For Input As #10
+          input #10,NumberOfSpectraFound
+        close #10
+        if NumberOfSpectraFound > 0
+          setTabHdrText chromRes[1],"autoIDParms","MSmodus","   Automatic library search" 
+          InsTabRow chromRes[1],"MSLibSrchResult"
+          TableLines = TableLines + 1
+          setTabVal chromRes[1],"MSLibSrchResult", TableLines, "RetTime", RetTime
+          setTabVal chromRes[1],"MSLibSrchResult", TableLines, "TimeStart", TimeStart
+          setTabVal chromRes[1],"MSLibSrchResult", TableLines, "TimeEnd", TimeEnd
+          setTabVal chromRes[1],"MSLibSrchResult", TableLines, "Signal", ObjIndex     
+          open NISTDirectory$ + "SRCRESLT.TXT" For Input As #10
+          
+          input using #10, "L", OneLine$           
+          if Instr (OneLine$, "*No Hits found*") <> 0 
+            ! No Hits
+            setTabText chromRes[1],"MSLibSrchResult", TableLines, "LibEntry", "No Hits found"
+          else
+             input using #10, "L", OneLine$ 
+            
+            ! <<Name>>
+            StartChar = Instr(OneLine$,"<<") + 2
+            EndChar = Instr(OneLine$,">>") - 1
+            if StartChar > 0 AND EndChar > StartChar
+              Token$ = OneLine$[StartChar:EndChar]
+              setTabText chromRes[1],"MSLibSrchResult", TableLines, "LibEntry", Token$ 
+            endif
+            if EndChar >= 3 
+              OneLine$ = OneLine$[EndChar+3:Len(OneLine$)]
+            endif
+            ! <<Formula>> 
+            StartChar = Instr(OneLine$,"<<") + 2
+            EndChar = Instr(OneLine$,">>") - 1
+            if StartChar > 0 AND EndChar >= StartChar
+              Token$ = OneLine$[StartChar:EndChar]
+              setTabText chromRes[1],"MSLibSrchResult", TableLines, "Formula", Token$
+            else
+               setTabText chromRes[1],"MSLibSrchResult", TableLines, "Formula","      -" 
+            endif
+            if EndChar >= 3 
+              OneLine$ = OneLine$[EndChar+3:Len(OneLine$)]
+            endif
+            !Match Factor
+            StartChar = Instr(OneLine$,"MF:")
+            if StartChar > 0
+              OneLine$ = OneLine$[StartChar+3:Len(OneLine$)]
+              EndChar = Instr(OneLine$,";")
+              Token$ = OneLine$[1:EndChar-1]
+              setTabText chromRes[1],"MSLibSrchResult", TableLines, "MF", Token$ 
+              OneLine$ = OneLine$[EndChar+1:Len(OneLine$)]
+            endif
+            !Reverse Match Factor
+            StartChar = Instr(OneLine$,"RMF:")
+            if StartChar > 0
+              OneLine$ = OneLine$[StartChar+4:Len(OneLine$)]
+              EndChar = Instr(OneLine$,";")
+              Token$ = OneLine$[1:EndChar-1]
+              setTabText chromRes[1],"MSLibSrchResult", TableLines, "RMF", Token$ 
+              OneLine$ = OneLine$[EndChar+1:Len(OneLine$)]
+            endif
+           !Probablity
+            StartChar = Instr(OneLine$,"Prob:")
+            if StartChar > 0
+              OneLine$ = OneLine$[StartChar+5:Len(OneLine$)]
+              EndChar = Instr(OneLine$,";")
+              Token$ = OneLine$[1:EndChar-1]
+              setTabText chromRes[1],"MSLibSrchResult", TableLines, "Probability", Token$ 
+              OneLine$ = OneLine$[EndChar+1:Len(OneLine$)]
+            endif
+            !CAS
+            StartChar = Instr(OneLine$,"CAS:")
+            if StartChar > 0
+             OneLine$ = OneLine$[StartChar+4:Len(OneLine$)]
+              EndChar = Instr(OneLine$,";")
+              Token$ = OneLine$[1:EndChar-1]  
+              if Instr(Token$, "N/A") = 0  then
+                setTabText chromRes[1],"MSLibSrchResult", TableLines, "CAS", Token$ 
+              endif
+              OneLine$ = OneLine$[EndChar+1:Len(OneLine$)]
+            endif 
+             
+            !MW
+            StartChar = Instr(OneLine$,"Mw:")
+            if StartChar > 0
+             OneLine$ = OneLine$[StartChar+3:Len(OneLine$)]
+              EndChar = Instr(OneLine$,";")
+              Token$ = OneLine$[1:EndChar-1]  
+              if Instr(Token$, "N/A") = 0  then
+                setTabText chromRes[1],"MSLibSrchResult", TableLines, "MW", Token$ 
+              endif
+              OneLine$ = OneLine$[EndChar+1:Len(OneLine$)]
+            endif 
+             
+            ! <<Library Name>> 
+            StartChar = Instr(OneLine$,"<<") + 2
+            EndChar = Instr(OneLine$,">>") - 1
+            if StartChar > 0 AND EndChar >= StartChar
+              Token$ = OneLine$[StartChar:EndChar]
+              MSLibraryNumber = RowByText (chromRes[1],"MSLibraries",,"LibraryName","i=",Token$) 
+              if MSLibraryNumber = -1
+                InsTabRow     chromRes[1],"MSLibraries"  
+                MSLibraryNumber = tabHdrVal(chromRes[1],"MSLibraries", "NumberOfRows")  
+                setTabText    chromRes[1],"MSLibraries", MSLibraryNumber, "LibraryName", Token$
+                setTabText    chromRes[1],"MSLibraries", MSLibraryNumber, "LibraryNumber", val$(MSLibraryNumber)  
+              endif
+              setTabText chromRes[1],"MSLibSrchResult", TableLines, "LibraryNumber",val$(MSLibraryNumber)
+            endif
+            if EndChar >= 3 
+              OneLine$ = OneLine$[EndChar+3:Len(OneLine$)]
+            endif
+             
+            !Library ID (this item last on the line)
+             StartChar = Instr(OneLine$,"Id:")
+            if StartChar > 0
+             OneLine$ = OneLine$[StartChar+3:Len(OneLine$)]
+              EndChar = Instr(OneLine$,".")
+              Token$ = OneLine$[1:EndChar-1]  
+              if Instr(Token$, "N/A") = 0  then
+                setTabText chromRes[1],"MSLibSrchResult", TableLines, "LibraryID", Token$ 
+              endif
+             endif 
+             
+          endif 
+          close #10
+        endif
+      next RowIndex
+    endif
+  Next ObjIndex    
+  ! Sort by Retention Time
+  if TabHdrVal(chromRes[1],"MSLibSrchResult","NumberOfRows") > 1 then
+    SortTabRows chromRes[1],"MSLibSrchResult","RetTime","<="
+  endif
+  return
+endmacro ! idMSLib
+!=============================================================================
+name prepareMSLibSrchResultColumns
+!-----------------------------------------------------------------------------
+! Prepares additional columns of compound table
+!.............................................................................
+    if tabHdrType(chromRes[1], "autoIDParms", "MSmodus") <> 99 then
+      delTabHdr chromRes[1], autoIDParms, MSmodus 
+    endif
+    delTab chromRes[1], "MSLibSrchResult"
+    newTab chromRes[1], "MSLibSrchResult"
+    newColVal  chromRes[1], "MSLibSrchResult", "RetTime", undefined
+    newColVal  chromRes[1], "MSLibSrchResult", "TimeStart", undefined
+    newColVal  chromRes[1], "MSLibSrchResult", "TimeEnd", undefined
+    newColVal  chromRes[1], "MSLibSrchResult", "Signal", undefined
+    newColText chromRes[1], "MSLibSrchResult", "LibEntry", " "
+    newColText chromRes[1], "MSLibSrchResult", "Formula", " "
+    newColText chromRes[1], "MSLibSrchResult", "MW"," "
+    newColText chromRes[1], "MSLibSrchResult", "CAS", " "
+    newColText chromRes[1], "MSLibSrchResult", "LibraryNumber", " "
+    newColText chromRes[1], "MSLibSrchResult", "LibraryID", " "
+    newColText chromRes[1], "MSLibSrchResult", "MF", " "
+    newColText chromRes[1], "MSLibSrchResult", "RMF", " "
+    newColText chromRes[1], "MSLibSrchResult", "Probability", " "
+    delTab chromRes[1], "MSLibraries"
+    newTab chromRes[1], "MSLibraries"
+    newColText chromRes[1], "MSLibraries", "LibraryName", ""
+    newColText chromRes[1], "MSLibraries", "LibraryNumber", ""
+  return
+endmacro ! prepareMSLibSrchResultColumns
+!=============================================================================
+name MSLibResults      
+!-----------------------------------------------------------------------------
+  PARAMETER Destination$
+  LOCAL     FormatRow, TableRow, FormatIndex, Name$, TableNumber, TableIndex
+  LOCAL     ColType, TempString$, FormatType$, Width, WidthSize, NumberOfLibraries
+  if ((destination$ = "PRINTER") or (destination$ = "SCREEN") or (destination$ = "TXT")) \
+     AND TabHdrType (ChromRes[1],autoIDParms,MSmodus) <> 99 then 
+    PRINT USING # 5,"/NIST MS library search mode: %//",tabHdrText$(chromRes,"autoIDparms","MSmodus") 
+    NumberOfLibraries = tabHdrVal(chromRes[1],"MSLibraries", "NumberOfRows")
+    if NumberOfLibraries > 0
+      for FormatRow=1 TO NumberOfLibraries
+        CheckFormFeed 3
+        PRINT USING # 5,"NIST MS library file No.  : %/",tabText$(chromRes[1],"MSLibraries",FormatRow,"LibraryNumber") 
+        PRINT USING # 5,"NIST MS library file name : %//",tabText$(chromRes[1],"MSLibraries",FormatRow,"LibraryName") 
+      Next FormatRow 
+      
+      if ObjHdrType(_config[3],"MSLibFormat") = 99 then
+        newTab     _config[3],MSLibFormat
+        NewColText _config[3],MSLibFormat,"Name"
+        NewColVal  _config[3],MSLibFormat,"Width"
+        NewColText _config[3],MSLibFormat,"Format"
+        NewColText _config[3],MSLibFormat,"Title1"
+        NewColText _config[3],MSLibFormat,"Title2"
+        InsTabRow  _config[3],MSLibFormat
+        SetTabText  _config[3],MSLibFormat,1,"Name","RetTime"
+        SetTabVal   _config[3],MSLibFormat,1,"Width",7
+        SetTabText  _config[3],MSLibFormat,1,"Format","%.3f"
+        SetTabText  _config[3],MSLibFormat,1,"Title1","RetTime"
+        SetTabText  _config[3],MSLibFormat,1,"Title2"," [min] "
+        InsTabRow  _config[3],MSLibFormat
+        SetTabText  _config[3],MSLibFormat,2,"Name","Signal"
+        SetTabVal   _config[3],MSLibFormat,2,"Width",3
+        SetTabText  _config[3],MSLibFormat,2,"Format","%.0f "
+        SetTabText  _config[3],MSLibFormat,2,"Title1","Sig"
+        SetTabText  _config[3],MSLibFormat,2,"Title2",""
+        InsTabRow  _config[3],MSLibFormat
+        SetTabText  _config[3],MSLibFormat,3,"Name","MW"
+        SetTabVal   _config[3],MSLibFormat,3,"Width",4
+        SetTabText  _config[3],MSLibFormat,3,"Format","%s"
+        SetTabText  _config[3],MSLibFormat,3,"Title1"," MW "
+        SetTabText  _config[3],MSLibFormat,3,"Title2",""
+        InsTabRow  _config[3],MSLibFormat
+        SetTabText  _config[3],MSLibFormat,4,"Name","LibraryNumber"
+        SetTabVal   _config[3],MSLibFormat,4,"Width",1
+        SetTabText  _config[3],MSLibFormat,4,"Format","%s"
+        SetTabText  _config[3],MSLibFormat,4,"Title1",""
+        SetTabText  _config[3],MSLibFormat,4,"Title2","#"
+        InsTabRow  _config[3],MSLibFormat
+        SetTabText  _config[3],MSLibFormat,5,"Name","LibraryID"
+        SetTabVal   _config[3],MSLibFormat,5,"Width",7
+        SetTabText  _config[3],MSLibFormat,5,"Format","%s "
+        SetTabText  _config[3],MSLibFormat,5,"Title1","Library"
+        SetTabText  _config[3],MSLibFormat,5,"Title2","  Id   "
+        InsTabRow  _config[3],MSLibFormat
+        SetTabText  _config[3],MSLibFormat,6,"Name","MF"
+        SetTabVal   _config[3],MSLibFormat,6,"Width",5
+        SetTabText  _config[3],MSLibFormat,6,"Format","%s "
+        SetTabText  _config[3],MSLibFormat,6,"Title1","Match"
+        SetTabText  _config[3],MSLibFormat,6,"Title2",""
+        InsTabRow  _config[3],MSLibFormat
+        SetTabText  _config[3],MSLibFormat,7,"Name","Formula"
+        SetTabVal   _config[3],MSLibFormat,7,"Width",16
+        SetTabText  _config[3],MSLibFormat,7,"Format","%s" 
+        SetTabText  _config[3],MSLibFormat,7,"Title1","Formula"
+        SetTabText  _config[3],MSLibFormat,7,"Title2",""
+        InsTabRow  _config[3],MSLibFormat
+        SetTabText  _config[3],MSLibFormat,8,"Name","LibEntry"
+        SetTabVal   _config[3],MSLibFormat,8,"Width",28
+        SetTabText  _config[3],MSLibFormat,8,"Format","%s" 
+        SetTabText  _config[3],MSLibFormat,8,"Title1","Name"
+        SetTabText  _config[3],MSLibFormat,8,"Title2",""
+      endif
+      FormatRow=tabHdrVal( _config[3],MSLibFormat,"NumberOfRows")  
+      TableNumber=tabHdrVal(ChromRes[1],MSLibSrchResult,"NumberOfRows")
+      CheckFormFeed 5 ! Not to split the header
+      ! Write the title1           
+      for FormatIndex=1 to FormatRow  
+        TempString$ = TabText$ (_config[3],MSLibFormat,FormatIndex,"Title1")
+        Width = TabVal (_config[3],MSLibFormat,FormatIndex,"Width")     
+        for WidthSize=LEN(TempString$)+1 to Width
+          TempString$ = TempString$ + " "
+        Next WidthSize   
+        if FormatIndex <> 1       
+          Line$ = Line$ + " " + TempString$
+        else 
+          Line$ = TempString$
+        endif
+      Next FormatIndex  
+      PRINT #5, Line$  
+      
+      ! Write the title2           
+      for FormatIndex=1 to FormatRow  
+        TempString$ = TabText$ (_config[3],MSLibFormat,FormatIndex,"Title2")
+        Width = TabVal (_config[3],MSLibFormat,FormatIndex,"Width")     
+        for WidthSize=LEN(TempString$)+1 to Width
+          TempString$ = TempString$ + " "
+        Next WidthSize   
+        if FormatIndex <> 1       
+          Line$ = Line$ + " " + TempString$
+        else 
+          Line$ = TempString$
+        endif
+      Next FormatIndex  
+      PRINT #5, Line$  
+      
+      ! Write the ----|---      
+      for FormatIndex=1 to FormatRow 
+        Width = TabVal (_config[3],MSLibFormat,FormatIndex,"Width")     
+        if FormatIndex <> 1 
+          Line$ = Line$ +"|"
+        else
+          Line$ = "" 
+        endif      
+        for WidthSize=1 to Width
+          Line$ = Line$ + "-"
+        Next WidthSize
+      Next FormatIndex  
+      PRINT #5, Line$  
+      ! Write the table
+      for TableIndex=1 to TableNumber
+        for FormatIndex=1 to FormatRow
+          Name$ = TabText$ (_config[3],MSLibFormat,FormatIndex,"Name")
+          FormatType$ = TabText$ (_config[3],MSLibFormat,FormatIndex,"Format")
+          Width = TabVal (_config[3],MSLibFormat,FormatIndex,"Width")
+          ColType = TabColType(ChromRes[1],MSLibSrchResult,Name$)
+          if ColType = 1 OR ColType = 0   
+            if ColType = 1 
+              TempString$ = SPrintF$(TabVal(ChromRes[1],MSLibSrchResult,TableIndex,Name$),FormatType$)
+              for WidthSize=LEN(TempString$)+1 to Width
+                TempString$ = " " + TempString$
+              Next WidthSize          
+            else
+              TempString$ = SPrintF$(TabText$(ChromRes[1],MSLibSrchResult,TableIndex,Name$),FormatType$)
+              for WidthSize=LEN(TempString$)+1 to Width
+                TempString$ = TempString$ + " "
+              Next WidthSize          
+            endif
+          endif 
+          if FormatIndex <> 1 
+            Line$ = Line$ + " " + TempString$
+          else  
+            Line$ = TempString$
+          endif                                
+        Next FormatIndex  
+        PRINT #5, Line$ 
+      Next TableIndex 
+    endif
+    PRINT USING # 5,"/=====================================================================/"
+  endif
+  return
+endmacro
+               

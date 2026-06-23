@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="EcmDa" PosStyle="TOP" DockRow="0" DockCol="1" Caption="ECM" PanelName="Main">
+		<Static Name="ECMName" Visible="1" Enable="1" Text="ECM" Border="NoBorder"/>
+    <StickyButton Name="ECMLogin" Help="ECM Login Logout" CmdList="VC_Logout|VC_Login" ImageName="ECM_Logon20" ImageNameDisabled="ECM_Logon20_d"/>
+    <PushButton Name="ECMOpenMethod" Help="Load Method from ECM" Command='VC_OpenMethod' Visible="1" ImageName="ECMLoadMethod20" ImageNameDisabled="ECMLoadMethod20_d"/>
+    <PushButton Name="ECMSaveMethod" Help="Save Method to ECM" Command='VC_SaveMethod' Visible="1" ImageName="ECMSaveMethod20" ImageNameDisabled="ECMSaveMethod20_d"/>
+    <PushButton Name="ECMOpenData" Help="Load Data from ECM" Command='VC_OpenData' Visible="1" ImageName="ECMLoadData20" ImageNameDisabled="ECMLoadData20_d"/>
+    <PushButton Name="ECMSaveData" Help="Save Data to ECM" Command='VC_SaveData' Visible="1" ImageName="ECMSaveData20" ImageNameDisabled="ECMSaveData20_d"/>
+    <PushButton Name="ECMLock" Help="Lock Session" Command='VC_LockSession 1, 1' Visible="1" ImageName="Chemstore_Lock20" ImageNameDisabled="Chemstore_Lock20_d"/>
+		<Static Name="LCDFName" Visible="1" Enable="1" NewGroup="1" Text="Path:" Border="NoBorder"/>
+		<Static Name="LCDFPath" Help="Current ECM Path of the loaded Data" Border="NoBorder" Text="-\-\-\-" Font="Microsoft Sans Serif, 8, Bold"/>
+	</toolbar>
+</graphical_object>

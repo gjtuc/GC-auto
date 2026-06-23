@@ -1,0 +1,148 @@
+	ID_LEGOMACFILES_FILE						          = 17049
+	ID_LEGOMACFILES_NEWTEMPLATE				 	      = 17050
+	ID_LEGOMACFILES_NEWREPORTTEMPLATE			    = 17051
+	ID_LEGOMACFILES_OPENTEMPLATE				      = 17052	
+	ID_LEGOMACFILES_OPENREPORTTEMPLATE		    = 17053
+	ID_LEGOMACFILES_SAVETEMPLATE				      = 17054
+	ID_LEGOMACFILES_SAVEREPORTTEMPLATE			  = 17055
+	ID_LEGOMACFILES_SAVE_TEMPLATE_AS			    = 17056
+	ID_LEGOMACFILES_SAVE_REPORT_TEMPLATE_AS		= 17057
+	ID_LEGOMACFILES_LOAD						          = 17058
+	ID_LEGOMACFILES_LOAD_OPERATIONS				    = 17059
+	ID_LEGOMACFILES_LOAD_FILE_OR_LOAD			    = 17060
+	ID_LEGOMACFILES_LOAD_METHOD					      = 17061
+	ID_LEGOMACFILES_LOAD_A_NEW_METHOD			    = 17062
+	ID_LEGOMACFILES_SIGNAL						        = 17063
+	ID_LEGOMACFILES_LOAD_SIGNAL_SPECTRA			  = 17064
+	ID_LEGOMACFILES_PAGE_SETUP					      = 17065
+	ID_LEGOMACFILES_CHANGE_PAGE_SETUP			    = 17066
+	ID_LEGOMACFILES_PRINTER_SETUP				      = 17067
+	ID_LEGOMACFILES_CHANGE_PRINTER_SETUP		  = 17068
+	ID_LEGOMACFILES_PRINT						          = 17069
+	ID_LEGOMACFILES_PRINT_REPORT				      = 17070
+	ID_LEGOMACFILES_PRINT_PREVIEW				      = 17071
+	ID_LEGOMACFILES_SHOW_REPORT_PREVIEW			  = 17072
+	ID_LEGOMACFILES_REPORT_STYLE				      = 17073
+	ID_LEGOMACFILES_ADDTO_REPORT_STYLE			  = 17074
+	ID_LEGOMACFILES_REMOVE					        	= 17075
+	ID_LEGOMACFILES_REPORT_REMOVE				      = 17076
+	ID_LEGOMACFILES_EXIT						          = 17077
+	ID_LEGOMACFILES_SECTION_OPTIONS				    = 17078
+	ID_LEGOMACFILES_SETUP_DIALS					      = 17079
+	ID_LEGOMACFILES_DELETE_SECTION				    = 17080
+	ID_LEGOMACFILES_SELECTED_SECTION			    = 17081
+	ID_LEGOMACFILES_SETUP_ELEMENT			      	= 17082
+	ID_LEGOMACFILES_SETUP_SELECTED_ELEMENT		= 17083
+	ID_LEGOMACFILES_DELETE_ELEMENT				    = 17084
+	ID_LEGOMACFILES_DELETE_SELECTED_ELEMENT		= 17085
+	ID_LEGOMACFILES_VIEW						          = 17086
+	ID_LEGOMACFILES_ZOOM_IN						        = 17087
+	ID_LEGOMACFILES_ZOOM_OUT				        	= 17088
+	ID_LEGOMACFILES_INCREASE_SIZE				      = 17089
+	ID_LEGOMACFILES_REDUCE_SIZE					      = 17090
+	ID_LEGOMACFILES_ABORT						          = 17091
+	ID_LEGOMACFILES_ABORT_ACTION				      = 17092
+  ID_LEGOMACFILES_CLOSE_APPLICATION			    = 17093
+ 
+
+NLSFileName_LegoMac$="LegoMac"
+
+if (RegSize(FRPT_Config) < 2)
+  DelReg FRPT_Config
+  LoadObj _ProductPath$+_ProductType$+"frpt.reg",,FRPT_Config
+endif
+
+if (Check(macro, FRPTGetNLSString$) = 0)
+  macro frpt.mcx
+endif
+
+
+
+
+!-----------------------------------------------------------------------------
+! File Menu
+!-----------------------------------------------------------------------------
+ menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_NEWTEMPLATE),"FRPT_NewReportTemplate;ShowTitle;FRPT_SelectTool 0;FRPT_RedrawTools",,\
+         ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_NEWREPORTTEMPLATE),,151
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_OPENTEMPLATE),"FRPT_OpenReportTemplate;ShowTitle;FRPT_SelectTool 0;FRPT_RedrawTools",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_OPENREPORTTEMPLATE),,152
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SAVETEMPLATE),"local i;i=FRPT_SaveReportTemplate()",,ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SAVEREPORTTEMPLATE),"AS_IsPermitted_ReportTemplateEdit",153
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SAVE_TEMPLATE_AS),"local i;i=FRPT_SaveReportTemplateAs();ShowTitle",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SAVE_REPORT_TEMPLATE_AS),"AS_IsPermitted_ReportTemplateEdit",154
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),,"SEPARATOR"
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_LOAD),"SUBMENU",,ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_LOAD_OPERATIONS),,150
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_LOAD_FILE_OR_LOAD),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_LOAD_METHOD),"LoadMethod",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_LOAD_A_NEW_METHOD),"_METHODIDLE",2010
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_LOAD_FILE_OR_LOAD),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SIGNAL),"LoadFile """",0,,0",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_LOAD_SIGNAL_SPECTRA),,8300
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),,"SEPARATOR"
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_PAGE_SETUP),FRPTMenu_PageSetUp,,ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_CHANGE_PAGE_SETUP),,159
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_PRINTER_SETUP),"DEVICE;FRPTShowPageDim",,ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_CHANGE_PRINTER_SETUP),,155
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE), ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_PRINT), "FRPT_Test PRINTER",, ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_PRINT_REPORT),"AS_IsPermitted_PrintReportRun",156
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE), ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_PRINT_PREVIEW), "FRPT_Test SCREEN",, ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SHOW_REPORT_PREVIEW),"AS_IsPermitted_PrintReportRun",156
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),,"SEPARATOR"
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE), ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_REPORT_STYLE), "FRPTMenu_AddUserReportStyle",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_ADDTO_REPORT_STYLE),,157
+        
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE), ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_REMOVE), "MenuDelUserReportStyle",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_REPORT_REMOVE),,158
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),,"SEPARATOR"
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_FILE),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_EXIT),"CloseRptLayoutView 1;ClosePhx",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_CLOSE_APPLICATION), "_METHODIDLE/_SEQUENCEIDLE",150
+
+!-----------------------------------------------------------------------------
+! Edit Menu
+!-----------------------------------------------------------------------------
+FRPT_NewSectionEnabled=0
+FRPT_NewSectionEnabled=0
+FRPT_DeleteSectEnabled=0
+FRPT_SetUpElemEnabled =0
+FRPT_DeleteElemEnabled=0
+
+menuadd FRPTGetNLSString$("EditMenu"),FRPTGetNLSString$("NewSectionMenu"),\
+                          "SUBMENU",, FRPTGetNLSString$("NewSMComment")
+menuadd FRPTGetNLSString$("EditMenu"),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SECTION_OPTIONS),"FRPTMenu_Options ",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SETUP_DIALS),FRPT_DeleteSectEnabled,140
+menuadd FRPTGetNLSString$("EditMenu"),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_DELETE_SECTION),"FRPTMenu_Delete ",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SELECTED_SECTION),FRPT_DeleteSectEnabled,167
+menuadd FRPTGetNLSString$("EditMenu"),,"SEPARATOR"
+menuadd FRPTGetNLSString$("EditMenu"),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SETUP_ELEMENT),\
+        "FRPT_SetUpElement "+\
+        "TabHdrVal(FRPT_WorkReg[1],""Selection"",""SelectedSection""),"+\
+        "TabVal(FRPT_WorkReg[1],""Selection"",1,""SelectedItem""),"+\
+        "0,0,-1,-1",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_SETUP_SELECTED_ELEMENT), FRPT_SetUpElemEnabled,168
+menuadd FRPTGetNLSString$("EditMenu"),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_DELETE_ELEMENT),"FRPTMenu_Delete ",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_DELETE_SELECTED_ELEMENT),FRPT_DeleteElemEnabled,170
+
+
+!-----------------------------------------------------------------------------
+! View Menu
+!-----------------------------------------------------------------------------
+
+AddViewMenuBasic ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_VIEW)
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_VIEW),,"SEPARATOR"
+
+FRPT_EnlargeLayoutWndEnabled = 0
+FRPT_ReduceLayoutWndEnabled = 0
+
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_VIEW),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_ZOOM_IN),"FRPT_Zoom 1",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_INCREASE_SIZE),\
+        FRPT_EnlargeLayoutWndEnabled, 141
+
+
+menuadd ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_VIEW),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_ZOOM_OUT),"FRPT_Zoom -1",,\
+        ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_REDUCE_SIZE),\
+        FRPT_ReduceLayoutWndEnabled, 141
+
+
+!-----------------------------------------------------------------------------
+! Abort Menu
+!-----------------------------------------------------------------------------
+
+menustop ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_ABORT),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_ABORT),ReadResource$(NLSFileName_LegoMac$,ID_LEGOMACFILES_ABORT_ACTION)
+
+!-----------------------------------------------------------------------------
+! Help Menu
+!-----------------------------------------------------------------------------
+ConfigureHelpMenu

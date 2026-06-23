@@ -1,0 +1,584 @@
+! Print and edit automatic library search parameters
+
+! Last altered by RZ 16-Apr-93
+
+!==============================================================================
+Name printAutoIDParms
+!------------------------------------------------------------------------------
+ PARAMETER Port default 5, WithHeader Default 0
+
+! Print parameters of post sequence macro
+
+  local timeFrom, timeTo, Sep$
+  local purCheck, IDMode
+Local i, maxLibraryNum
+  
+Local ID_PHX3DSUPPORTFILES__________AUTOM_221
+Local ID_PHX3DSUPPORTFILES___AUTOMATIC_LI_222
+Local ID_PHX3DSUPPORTFILES____SEARCH_TIME_223
+Local ID_PHX3DSUPPORTFILES____LIBRARIES_224
+Local ID_PHX3DSUPPORTFILES____DO_AUTOMATI_225  
+Local ID_PHX3DSUPPORTFILES____DO_TARGET_C_226
+Local ID_PHX3DSUPPORTFILES____DO_TARGET_C_227
+Local ID_PHX3DSUPPORTFILES____SEARCH_THRE_228
+Local ID_PHX3DSUPPORTFILES____CHECK_PEAK_229
+Local ID_PHX3DSUPPORTFILES____CHECK_PEAK_230
+      
+  
+  ID_PHX3DSUPPORTFILES__________AUTOM_221            =  17221  
+  ID_PHX3DSUPPORTFILES___AUTOMATIC_LI_222            =  17222  
+  ID_PHX3DSUPPORTFILES____SEARCH_TIME_223            =  17223  
+  ID_PHX3DSUPPORTFILES____LIBRARIES_224              =  17224  
+  ID_PHX3DSUPPORTFILES____DO_AUTOMATI_225            =  17225  
+  ID_PHX3DSUPPORTFILES____DO_TARGET_C_226            =  17226  
+  ID_PHX3DSUPPORTFILES____DO_TARGET_C_227            =  17227  
+  ID_PHX3DSUPPORTFILES____SEARCH_THRE_228            =  17228  
+  ID_PHX3DSUPPORTFILES____CHECK_PEAK_229             =  17229  
+  ID_PHX3DSUPPORTFILES____CHECK_PEAK_230             =  17230  
+  
+  
+!..............................................................................
+
+  timeFrom = tabHdrVal(_DAmethod, "autoID", "fromSearchTime")
+  timeTo   = tabHdrVal(_DAmethod, "autoID", "toSearchTime")
+  IDMode   = tabHdrVal(_DAmethod, "autoID", "searchMode")
+  purCheck = tabHdrVal(_DAmethod, "autoID", "doPurity")
+
+  if WithHeader = 1
+    Sep$="====================================================================="
+    PRNTPR_CheckFormFeed 8
+    print #Port,Sep$
+    print #Port,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__________AUTOM_221)+_instName$
+    print #Port,Sep$
+    print #Port,""
+  else
+    print using #Port, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___AUTOMATIC_LI_222)
+  endif
+
+  print using #Port, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____SEARCH_TIME_223), timeFrom, timeTo
+  print using #Port, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____LIBRARIES_224)
+  maxLibraryNum = tabHdrVal(_DAMethod, "autoID", "numberOfRows")
+  for i = 1 to maxLibraryNum
+    if tabVal(_DAmethod, "autoID", i, "library") > 0
+      print using #Port, "      %/", tabText$(_DAmethod, "autoID", i, "libFile")
+    endif
+  next i
+  if IDMode = 1
+    print using #Port, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____DO_AUTOMATI_225)
+  else
+    if IDMode = 2
+      print using #Port, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____DO_TARGET_C_226)
+    else
+      print using #Port, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____DO_TARGET_C_227)
+    endIf
+  endIf
+  print using #Port, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____SEARCH_THRE_228), LIB_threshold
+  if purCheck > 0
+    print using #Port, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____CHECK_PEAK_229)
+  else
+    print using #Port, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____CHECK_PEAK_230)
+  endIf
+
+  if WithHeader = 1
+    print #Port,""
+    print #Port,Sep$
+  endif
+
+endMacro ! printAutoIDParms
+
+
+!==============================================================================
+Name displaySearchTemp
+!------------------------------------------------------------------------------
+
+! Displays library search template for editing
+
+  parameter libFile$
+
+Local errorOccured, button, LibSize
+Local ID_PHX3DSUPPORTFILES_SAVING_MODIFIC_231
+Local  ID_PHX3DSUPPORTFILES_GIVEN_LIBRARY_232
+Local ID_PHX3DSUPPORTFILES_NO_LIBRARY_FIL_233
+  
+  ID_PHX3DSUPPORTFILES_NO_LIBRARY_FIL_233            =  17233  
+  ID_PHX3DSUPPORTFILES_SAVING_MODIFIC_231            =  17231  
+  ID_PHX3DSUPPORTFILES_GIVEN_LIBRARY_232             =  17232  
+!..............................................................................
+
+  if libfile$ <> "" then
+    delReg specDummyReg
+    errorOccured = 0
+    on error errorOccured = 1
+    loadObj libFile$,, specDummyReg
+    on error
+
+    if errorOccured = 0 then
+      LibSize = regSize(specDummyReg)
+      SetTabHdrText specDummyReg[LibSize],"LibHeader","File_Name",libFile$
+      button = libSearchTemplate(specDummyReg[LibSize])
+
+      if button > 0 then
+        print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_SAVING_MODIFIC_231)
+        saveObj specDummyReg[1:0], libFile$, new
+      endIf
+    else
+      button = alert(ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_GIVEN_LIBRARY_232), 3, alert2Title$)
+    endIf
+  else
+    button = alert(ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_LIBRARY_FIL_233), 3, alert2Title$)
+  endIf
+
+  delReg specDummyReg
+
+  return
+
+endMacro ! displaySearchTemp
+
+
+!==============================================================================
+Name editAutoIDParms
+!------------------------------------------------------------------------------
+
+! Displays library search parameters of automatic library search for editing
+
+  local timeFrom, timeTo, keepFrom, keepTo
+  local l1, l2, l3, l4
+  local keepL1, keepL2, keepL3, keepL4
+  local keepLib1$, keepLib2$, keepLib3$, keepLib4$
+  local keepLib$, l, keepL
+  local purCheck, IDMode, keepPur, keepMode
+  local button, HelpContext, NL$
+  local cmd$, title$, ext$
+  local keepThresh
+  local i, i$, n, libExist
+  local maxLibNum,maxLibEditNum
+  Local methodChanged, bReadOnly
+  
+Local ID_PHX3DSUPPORTFILES_PREPARING_PARA_234
+Local ID_PHX3DSUPPORTFILES_SELECT_SPECTRA_235
+Local ID_PHX3DSUPPORTFILES_SAVING_AUTOMAT_236
+local ID_PHX3DSUPPORTFILES_LIBRARY_237
+local ID_PHX3DSUPPORTFILES_DOES_NOT_EXIST_238
+local ID_PHX3DSUPPORTFILES_RETURN_TO_LIBR_239
+local ID_PHX3DSUPPORTFILES_AUTOMATIC_LIBR_240
+  
+  ID_PHX3DSUPPORTFILES_PREPARING_PARA_234            =  17234  
+  ID_PHX3DSUPPORTFILES_SELECT_SPECTRA_235            =  17235  
+  ID_PHX3DSUPPORTFILES_SAVING_AUTOMAT_236            =  17236  
+  ID_PHX3DSUPPORTFILES_LIBRARY_237                   =  17237  
+  ID_PHX3DSUPPORTFILES_DOES_NOT_EXIST_238            =  17238  
+  ID_PHX3DSUPPORTFILES_RETURN_TO_LIBR_239            =  17239  
+  ID_PHX3DSUPPORTFILES_AUTOMATIC_LIBR_240            =  17240  
+
+  ! === FS AuditTrail Begin ============================
+  local bResult, EnuFile$, nTransactionID
+  local ID_PHX3DSUPPORTFILES_AUDIT_ChangedFromTimeRange		   
+  local ID_PHX3DSUPPORTFILES_AUDIT_ChangedToTimeRange		        
+  local ID_PHX3DSUPPORTFILES_AUDIT_SwitchedLibrary			   
+  local ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibrary			   
+  local ID_PHX3DSUPPORTFILES_AUDIT_SwitchPurity				   
+  local ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibraryMatch		   
+  local ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibrarySearchMode
+  local ID_PHX3DSUPPORTFILES_AUDIT_ON	            
+  local ID_PHX3DSUPPORTFILES_AUDIT_OFF
+  !local ID_PHX3DSUPPORTFILES_AUDIT_SearchMode1				           
+  !local ID_PHX3DSUPPORTFILES_AUDIT_SearchMode2				       
+  !local ID_PHX3DSUPPORTFILES_AUDIT_SearchMode3
+  local	ID_PHX3DSUPPORTFILES_AUDIT_SearchMode				    
+
+  EnuFile$ = "Phx3dSupport"
+  ID_PHX3DSUPPORTFILES_AUDIT_ChangedFromTimeRange        =  17375		   
+  ID_PHX3DSUPPORTFILES_AUDIT_ChangedToTimeRange		     =  17376   
+  ID_PHX3DSUPPORTFILES_AUDIT_SwitchedLibrary			 =  17377  
+  ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibrary			   	 =  17378
+  ID_PHX3DSUPPORTFILES_AUDIT_SwitchPurity				 =  17379  
+  ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibraryMatch		 =  17380  
+  ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibrarySearchMode	 =  17381
+  ID_PHX3DSUPPORTFILES_AUDIT_ON	                         =  17369
+  ID_PHX3DSUPPORTFILES_AUDIT_OFF				         =  17370
+  ID_PHX3DSUPPORTFILES_AUDIT_SearchMode					 =  17381  ! Initial Value for SearchMode
+  !ID_PHX3DSUPPORTFILES_AUDIT_SearchMode1				 =  17382  ! "Identify by spectral library search"	       
+  !ID_PHX3DSUPPORTFILES_AUDIT_SearchMode2				 =  17383  ! "Target compound analysis using calibration table"	   
+  !ID_PHX3DSUPPORTFILES_AUDIT_SearchMode3				 =  17384  ! "Target compound analysis using spectral library"
+
+  nTransactionId = AuditOpenTransaction()
+  ! === FS AuditTrail End ==============================
+
+  If AS_IsPermitted_SystemSuitabilityEdit=0 then
+    bReadOnly = 1
+  Else
+    bReadOnly = 0
+  Endif
+
+!..............................................................................
+
+  print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_PREPARING_PARA_234)
+
+  lib$  = ""
+  lib1$ = ""
+  lib2$ = ""
+  lib3$ = ""
+  lib4$ = ""
+  path$ = ""
+  type  = -1
+
+  timeFrom = tabHdrVal(_DAmethod, "autoID", "fromSearchTime")
+  keepFrom = timeFrom
+  timeTo   = tabHdrVal(_DAmethod, "autoID", "toSearchTime")
+  keepTo   = timeTo
+
+  maxLibNum = tabHdrVal(_DAMethod, "autoID", "numberOfRows")
+  maxLibEditNum = maxLibNum
+  if maxLibNum > 4 then 
+    maxLibEditNum = 4 ! edit only the first 4 libraries
+  endIf
+
+  if maxLibNum > 0 then
+    for i = 1 to maxLibEditNum
+      i$ = val$(i)
+      evaluate "l"+i$+" = tabVal(_DAMethod, autoID, i, library);"+\
+               "keepL"+i$+" = l"+i$+\
+               ";lib"+i$+"$ = tabText$(_DAMethod, autoID, i, libFile);"+\
+               "keepLib"+i$+"$ = strTrim$(lib"+i$+"$)"
+    next i
+  else ! may be an old method
+    if tabHdrType(_DAMethod, "autoID", "library1") <> 99 then
+      l1 = tabHdrVal(_DAmethod, "autoID", "library1");      keepL1 = l1
+      l2 = tabHdrVal(_DAmethod, "autoID", "library2");      keepL2 = l2
+      l3 = tabHdrVal(_DAmethod, "autoID", "library3");      keepL3 = l3
+      l4 = tabHdrVal(_DAmethod, "autoID", "library4");      keepL4 = l4
+      lib1$ = tabHdrText$(_DAmethod, "autoID", "libFile1"); keepLib1$ = lib1$
+      lib2$ = tabHdrText$(_DAmethod, "autoID", "libFile2"); keepLib2$ = lib2$
+      lib3$ = tabHdrText$(_DAmethod, "autoID", "libFile3"); keepLib3$ = lib3$
+      lib4$ = tabHdrText$(_DAmethod, "autoID", "libFile4"); keepLib4$ = lib4$
+    endIf
+  endIf
+  IDMode = tabHdrVal(_DAmethod, "autoID", "searchMode"); keepMode = IDMode
+  purCheck = tabHdrVal(_DAmethod, "autoID", "doPurity"); keepPur = purCheck
+  keepThresh = LIB_threshold
+
+! Defining dialog box
+
+  removeDialog "autoIDParmBox"
+  LoadDialog  NLSSpecMacDLL$, "autoIDParmBox", "autoIDParmBox", "%s " + _InstName$
+
+  numberBoxParm 10001, timeFrom, 0.0, 999.0
+  numberBoxparm 10010, timeTo, 0.0, 999.0
+
+  checkBoxParm  10011, l1
+  editBoxParm   10012, lib1$, 7
+  checkBoxparm  10013, l2
+  editBoxParm   10014, lib2$, 7
+  checkBoxParm  10015, l3
+  editBoxParm   10016, lib3$, 7
+  checkBoxparm  10017, l4
+  editBoxParm   10018, lib4$, 7
+
+  title$      = ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_SELECT_SPECTRA_235)
+  HelpContext = 8086
+  ext$        = "*.uvl"
+
+  cmd$ = "displaySearchTemp lib%d$"
+  execPushButtonParm 10002,"CP3",printf$(cmd$,1)
+  execPushButtonParm 10003,"CP3",printf$(cmd$,2)
+  execPushButtonParm 10004,"CP3",printf$(cmd$,3)
+  execPushButtonParm 10005,"CP3",printf$(cmd$,4)
+
+  cmd$ = "if(selectFile(1,"""+title$+""","""+ext$+""",path$,lib$,type)>0);"+\
+           "lib%d$ = path$ + lib$; endIf"
+  execPushButtonParm 10006,"CP3",printf$(cmd$,1)
+  execPushButtonParm 10007,"CP3",printf$(cmd$,2)
+  execPushButtonParm 10008,"CP3",printf$(cmd$,3)
+  execPushButtonParm 10009,"CP3",printf$(cmd$,4)
+
+  execPushButtonParm 9,"CP2","help "+val$(HelpContext)
+
+  checkBoxParm  10019, purCheck
+  if LIB_threshold < 0 then; LIB_threshold = 950; endIf
+  numberBoxParm 10020, LIB_threshold, 0, 1000
+
+  optionGroupParm 10021, IDMode
+  endDialog 
+
+! Displaying dialog box
+
+Retry:
+  print  ""  
+  path$  = _LIBPATH$+"\"
+  button = ShowDialog("autoIDParmBox", HelpContext,, bReadOnly)
+  If bReadOnly<>0 Then
+    button = 0  ! always like cancel
+  EndIf
+
+
+  if button = 1 then ! OK
+    print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_SAVING_AUTOMAT_236); libExist = 1
+    NL$ = chr$(13)+chr$(10)
+    for i = 1 to 4
+      evaluate "lib$ = lib" + val$(i) + "$"
+      if strTrim$(lib$) <> "" then
+        if fileStat(mode, lib$) < 0 then
+          button = alert(ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_LIBRARY_237)+NL$+lib$+NL$+\
+                         ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_DOES_NOT_EXIST_238)+NL$+NL$+\
+                         ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_RETURN_TO_LIBR_239), 5, \
+                         alert2title$)
+          if (button = -1)
+            libExist = 0
+          endIf
+
+          if (button = 1)
+            goto Retry
+          endIf
+        endIf
+      endIf
+    next i
+    if libExist = 0
+      goto Cancel       
+    endIf
+
+    delReg workReg; newObj workReg, 1, 0, 0
+    copyTab _config[2], "autoID", workReg, "autoID"
+
+    methodChanged = 0
+    if timeFrom <> keepFrom then; methodChanged = 1; endIf
+    setTabHdrVal workReg, "autoID", "fromSearchTime", timeFrom
+    if timeTo <> keepTo then; methodChanged = 1; endIf
+    setTabHdrVal workReg, "autoID", "toSearchTime", timeTo
+
+    n = 0
+    for i = 1 to 4
+      i$ = val$(i) 
+      evaluate "lib$=strTrim$(lib"+i$+"$);keepLib$=keepLib"+i$+\
+               "$;l=l"+i$+";keepL = keepl"+i$
+
+      if (lib$ <> keepLib$) or (l <> keepL)
+        methodChanged = 1
+      endIf
+
+      if lib$ <> "" then; n = n + 1
+        insTabRow  workReg, "autoID", n
+        setTabVal  workReg, "autoId", n, "library", l
+        setTabText workReg, "autoId", n, "libFile", lib$
+      endIf
+    next i
+
+    setTabHdrVal workReg, "autoID", "searchMode", IDMode
+    setTabHdrVal workReg, "autoID", "doPurity", purCheck
+    if (purCheck <> keepPur) or (IDMode <> keepMode)
+      methodChanged = 1
+    endif
+
+    if methodChanged = 1 then ! put it into _DAMethod
+      for i = 5 to maxLibNum
+        lib$ = strTrim$(tabText$(_DAMethod, "autoID", i, "libFile"))
+        if lib$ <> "" then; n = n + 1
+          insTabRow  workReg,   "autoID", n
+          l = tabVal(_DAMethod, "autoID", i, "library")
+          setTabVal  workReg,   "autoId", n, "library", l
+          setTabText workReg,   "autoId", n, "libFile", lib$
+        endIf        
+      next i
+      delTab _DAMethod[1], "autoID"
+      copyTab workReg, "autoID", _DAMethod[1], "autoID"
+      delReg workReg
+    endIf
+    print ""
+
+    ! === FS AuditTrail Begin ============================================
+    ! From Time
+    if timeFrom <> keepFrom then
+	  bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ChangedFromTimeRange),\
+	                     ConvertText$(TRIM, val$(keepFrom)),\
+	                     ConvertText$(TRIM, val$(timeFrom)))
+	endif
+
+    ! To Time
+    if timeTo <> keepTo then
+	  bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ChangedToTimeRange),\
+	                     ConvertText$(TRIM, val$(keepTo)),\
+	                     ConvertText$(TRIM, val$(timeTo)))
+	endif
+
+	! Libraray Check Box 1
+    if l1 <> keepL1 then
+	  if keepL1 = 1 then
+	    bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SwitchedLibrary),"1"),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ON),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF))
+	  else
+!CH
+		if lib1$ <> "" then
+	    	bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SwitchedLibrary),"1"),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ON))
+		endif
+	  endif
+    endif
+    
+    ! Libraray Check Box 2
+    if l2 <> keepL2 then
+	  if keepL2 = 1 then
+	    bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SwitchedLibrary),"2"),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ON),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF))
+	  else
+!CH
+		if lib2$ <> "" then
+		    bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SwitchedLibrary),"2"),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ON))
+		endif
+	  endif
+    endif	
+    
+    ! Libraray Check Box 3
+    if l3 <> keepL3 then
+	  if keepL3 = 1 then
+	    bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SwitchedLibrary),"3"),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ON),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF))
+	  else
+!CH
+		if lib3$ <> "" then
+		    bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SwitchedLibrary),"3"),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ON))
+		endif
+	  endif
+    endif	
+    
+    ! Libraray Check Box 4
+    if l4 <> keepL4 then
+	  if keepL4 = 1 then
+	    bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SwitchedLibrary),"4"),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ON),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF))
+	  else
+!CH
+		if lib4$ <> "" then
+		    bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SwitchedLibrary),"4"),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ON))
+		endif
+	  endif
+    endif	
+    
+    ! Libraray Path 1
+	if lib1$ <> keepLib1$ then
+	  bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibrary),"1"),\
+	                     keepLib1$,\
+	                     lib1$)  
+	endif
+
+    ! Libraray Path 2
+	if lib2$ <> keepLib2$ then
+	  bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibrary),"2"),\
+	                     keepLib2$,\
+	                     lib2$)  
+	endif
+
+    ! Libraray Path 3
+	if lib3$ <> keepLib3$ then
+	  bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibrary),"3"),\
+	                     keepLib3$,\
+	                     lib3$)  
+	endif
+
+    ! Libraray Path 4
+	if lib4$ <> keepLib4$ then
+	  bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     PrintF$(ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibrary),"4"),\
+	                     keepLib4$,\
+	                     lib4$)  
+	endif
+    
+    ! Purity Check
+    if purCheck <> keepPur then
+	  if keepPur = 1 then
+	     bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SwitchPurity),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ON),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF))
+	  else
+	    bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SwitchPurity),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_OFF),\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ON))
+	  endif
+    endif
+   
+    ! Library match threshold
+	if Lib_threshold <> keepThresh then
+	  bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibraryMatch),\
+	                     ConvertText$(TRIM, val$(keepThresh)),\
+	                     ConvertText$(TRIM, val$(Lib_threshold)))
+    endif
+
+
+    ! Library search mode
+	if IDMode <> keepMode then
+	  local startText$, actualText$
+	  startText$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SearchMode+keepMode)
+	  actualText$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SearchMode+IDMode)
+	  !evaluate "startText$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SearchMode"+val$(keepMode)+")"
+	  !evaluate "actualText$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_SearchMode"+val$(IDMode)+")"
+   
+	  bResult = AuditLog(nTransactionID,\
+	                     1,\
+	                     ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ChangedLibrarySearchMode),\
+	                     startText$,\
+	                     actualText$)
+	endif
+
+	AuditCommitTransaction nTransactionID
+	! === FS AuditTrail End ==============================================
+  else
+	AuditCancelTransaction nTransactionID  ! FS AudtTrail
+  endIf
+
+  AuditCloseTransaction nTransactionID  ! FS AuditTrail
+
+  remove lib$,lib1$,lib2$,lib3$,lib4$,path$,type
+  removeDialog "autoIDParmBox"
+  return
+
+  Cancel:
+    removeDialog "autoIDParmBox"
+    remove lib$,lib1$,lib2$,lib3$,lib4$,path$,type
+    LIB_threshold = keepThresh
+    print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_AUTOMATIC_LIBR_240)
+
+endMacro ! editautoIDParms
+
+

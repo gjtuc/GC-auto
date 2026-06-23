@@ -1,0 +1,77 @@
+
+
+NLSFileName_legomac$ = "legomac"
+
+! ChemStation macro file:   Hpcntl.MAC
+! written by HP, Feb 13, 1998
+
+! Uses the Visual Basic program, HPxcel.EXE, to start the
+!     Excel workbook and macro, Hpcntl00.XLS, and pass to it 
+!     the path to the chromatographic output REPORT01.XLS
+! 
+!  Typical application is as an auto-loading post-run macro:    
+!    MACRO HPCNTL.MAC, GO 
+
+! Feb 26 -- archive before changing the structure to datafile1$ and 2$, 
+
+name hpcntl 
+  local template$
+  local datadir$
+  local xlsfilename$
+  Local tempcmd$
+  
+  NLSFileName_legomac$ = "legomac"
+
+  ID_LEGOMACFILES_HANDLING_1                         =  17001  
+  ID_LEGOMACFILES_CAN_T_FIND_2                       =  17002  
+ 
+  template$ = "Hpcntl00.XLS"       !  The  ".xls" template to process
+  tempcmd$ = "none found"
+
+     xlsfilename$=TabHdrText$(_DAMethod[1],"RptParm","FileName")+"01.xls"
+
+  if (_MethodInjectors = 1) OR (_MethodInjectors = 3)
+    	! get the name of the data ".d" directory
+    	datadir$ = DADATAPATH$+_DATAFILE1$+"\" +xlsfilename$
+  	If (FILESTAT (MODE,datadir$) = 1) then
+
+    		!tempcmd$ = "execwait """+_EXEPATH$+"hpxcel00 "+ \
+	 	    !_EXEPATH$+template$+","+ datadir$+""",1"
+
+			strcmd$ = chr$(34) + _EXEPATH$ + "hpxcel00" + " "     \
+	 	               + _EXEPATH$ + template$ +   \
+					  "," +   datadir$ + chr$(34)
+		
+    		tempcmd$ = "execwait " + strcmd$ + ",1"
+
+    		evaluate tempcmd$
+        	print ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_HANDLING_1)+ datadir$
+        else
+	   	print ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_CAN_T_FIND_2) + datadir$
+	endif
+  endif
+
+  if (_MethodInjectors = 2) OR (_MethodInjectors = 3)
+    	! get the name of the data ".d" directory
+    	datadir$ = DADATAPATH$+_DATAFILE2$+"\" +xlsfilename$
+  	If (FILESTAT (MODE,datadir$) = 1) then
+
+    		!tempcmd$ = "execwait """+_EXEPATH$+"hpxcel00 "+ \
+	 	    !_EXEPATH$+template$+","+ datadir$+""",1"
+
+			strcmd$ = chr$(34) + _EXEPATH$ + "hpxcel00" + " "   \
+	 	               + _EXEPATH$ + template$ +  \
+					  "," +  datadir$ + chr$(34)
+			
+    		tempcmd$ = "execwait " + strcmd$ + ",1"
+		print tempcmd$
+
+    		evaluate tempcmd$
+        	print ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_HANDLING_1)+ datadir$
+        else
+	   	print ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_CAN_T_FIND_2) + datadir$
+	endif
+  endif
+
+endmacro
+

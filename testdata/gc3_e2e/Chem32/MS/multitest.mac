@@ -1,0 +1,730 @@
+! File: Multitest.mac
+! History: 12/30/04    Created by Pat Cormia.
+!          02/14/05    Updated to support VL model, which doesn't have
+!                      multiple signals.
+!          09/15/05    JAM Updated, Remove Need to revisit comments.  Need to load a VL or SL Method before running
+!                      Fixed Offline and Online case, Modified Table Output to have correct format.
+!                      Data Files need to be in the base directory c:\chem32\1\data\.... or
+!                      _datasubdir$ needs to be pointing to the appropriate directory
+!                      if _datasubdir$ is not empty you may need to set to empty 
+!                      _datasubdir$ = "" ! sets datasubdir to empty at command line prompt
+!              
+!                      
+!
+! Description: This macro will is intended to be run on data created by the multimode FIA sequence.
+!              The sequence runs the MultiMode demo sample three times, first in ESI mode, then
+!              in APCI mode, and then in "mixed" mode. Each method will make of 5 injections of 
+!              the Multimode demo sample. Each of the data files contain 2 signals,
+!              positive polarity and negative polarity. This post-sequence macro calculates
+!              the abundances for the expected masses for each file and then the percentages 
+!              for each cpd, mixed mode versus standard mode, and prints a report.
+
+!====================================================================
+NAME MultiTest
+! Description: Main macro. Pulls the EICs and gets the statistics.
+!   
+!====================================================================
+
+  local MultiPath$,a$,part1$,part2$,part3$,part4$,numfiles,multifile1$,multifile2$,multifile3$
+  local MMtestdir$,mmfile$,cpd1,cpd2,cpd3,cpd4,nummasses,TheType$,ThisMSD$
+  local RegCheckPos,RegCheckNeg,numparams,i,j,k,p,TgtFile$,datetime$,tmpdelim,acqdate$
+  local AcqInst$,NameUser$,Detector$,MSDObjIndx,RegMax,ObjectIndex,DetType$,tmpMSD$
+  local MSD1_pol$,MSD2_pol$,ThisPol$,ThisReg$,ThisMass,DoOverlay
+  local Mass1Low,Mass1High,Mass2Low,Mass2High,Mass3Low,Mass3High,Mass4Low,Mass4High
+  local Cpd1ht_avg,Cpd1_Ht_1,Cpd1_Ht_2,Cpd1_Ht_3,Cpd1_Ht_4,Cpd1_Ht_5
+  local Cpd2ht_avg,Cpd2_Ht_1,Cpd2_Ht_2,Cpd2_Ht_3,Cpd2_Ht_4,Cpd2_Ht_5
+  local Cpd3ht_avg,Cpd3_Ht_1,Cpd3_Ht_2,Cpd3_Ht_3,Cpd3_Ht_4,Cpd3_Ht_5
+  local Cpd4ht_avg,Cpd4_Ht_1,Cpd4_Ht_2,Cpd4_Ht_3,Cpd4_Ht_4,Cpd4_Ht_5
+  local numspaces,n,Cpd1_Avg_run1,Cpd1_Avg_run1$,Cpd1_Avg_run3,Cpd1_Avg_run3$
+  local Cpd2_Avg_run1,Cpd2_Avg_run1$,Cpd2_Avg_run3,Cpd2_Avg_run3$
+  local Cpd3_Avg_run2,Cpd3_Avg_run2$,Cpd3_Avg_run3,Cpd3_Avg_run3$
+  local Cpd4_Avg_run2,Cpd4_Avg_run2$,Cpd4_Avg_run3,Cpd4_Avg_run3$
+  local Cpd1_ESI_ratio,Cpd1_ESI_ratio$,Cpd1_ESI_pf$,Cpd2_ESI_ratio,Cpd2_ESI_ratio$,Cpd2_ESI_pf$
+  local Cpd3_APCI_ratio,Cpd3_APCI_ratio$,Cpd3_APCI_pf$,Cpd4_APCI_ratio,Cpd4_APCI_ratio$,Cpd4_APCI_pf$
+  local objNum
+! Indices:
+  local S1_Cpd1_Ht1,S1_Cpd1_Ht2,S1_Cpd1_Ht3,S1_Cpd1_Ht4,S1_Cpd1_Ht5,S1_Cpd1_Avg
+  local S1_Cpd3_Ht1,S1_Cpd3_Ht2,S1_Cpd3_Ht3,S1_Cpd3_Ht4,S1_Cpd3_Ht5,S1_Cpd3_Avg
+  local S2_Cpd2_Ht1,S2_Cpd2_Ht2,S2_Cpd2_Ht3,S2_Cpd2_Ht4,S2_Cpd2_Ht5,S2_Cpd2_Avg
+  local S2_Cpd4_Ht1,S2_Cpd4_Ht2,S2_Cpd4_Ht3,S2_Cpd4_Ht4,S2_Cpd4_Ht5,S2_Cpd4_Avg
+
+
+  ! JAM May Need to do the following
+Local  ID_TUNEMAC_FILE_DOES_NOT_410
+
+Local  ID_TUNEMAC__MMFILE_411
+Local  ID_TUNEMAC_412
+Local  ID_TUNEMAC___MSD_TYPE_413
+Local  ID_TUNEMAC___ACQUISITION_416
+Local  ID_TUNEMAC__DATAFILES_417
+Local  ID_TUNEMAC______ESI_MODE_418
+Local  ID_TUNEMAC______APCI_MODE_421
+Local  ID_TUNEMAC______MIXED_MOD_423
+Local  ID_TUNEMAC_425
+Local  ID_TUNEMAC_426
+Local  ID_TUNEMAC____COMPOUND_427
+Local  ID_TUNEMAC____CRYSTAL_VIO_428
+Local  ID_TUNEMAC____1_HEXANESUL_433
+Local  ID_TUNEMAC________ONIC_AC_434
+Local  ID_TUNEMAC_435
+Local  ID_TUNEMAC_436
+Local  ID_TUNEMAC____COMPOUND_437
+Local  ID_TUNEMAC____CARBAZOLE_438
+Local  ID_TUNEMAC____9_PHENANTHR_440
+Local  ID_TUNEMAC____PASSING_CRI_441
+Local  ID_TUNEMAC_MULTITEST_MAC_442
+ID_TUNEMAC_FILE_DOES_NOT_410                       =  17410  
+
+ID_TUNEMAC__MMFILE_411                             =  17411  
+ID_TUNEMAC_412                                     =  17412  
+ID_TUNEMAC___MSD_TYPE_413                          =  17413  
+ID_TUNEMAC___ACQUISITION_416                       =  17416  
+ID_TUNEMAC__DATAFILES_417                          =  17417  
+ID_TUNEMAC______ESI_MODE_418                       =  17418  
+ID_TUNEMAC______APCI_MODE_421                      =  17421  
+ID_TUNEMAC______MIXED_MOD_423                      =  17423  
+ID_TUNEMAC_425                                     =  17425  
+ID_TUNEMAC_426                                     =  17426  
+ID_TUNEMAC____COMPOUND_427                         =  17427  
+ID_TUNEMAC____CRYSTAL_VIO_428                      =  17428  
+ID_TUNEMAC____1_HEXANESUL_433                      =  17433  
+ID_TUNEMAC________ONIC_AC_434                      =  17434  
+ID_TUNEMAC_435                                     =  17435  
+ID_TUNEMAC_436                                     =  17436  
+ID_TUNEMAC____COMPOUND_437                         =  17437  
+ID_TUNEMAC____CARBAZOLE_438                        =  17438  
+ID_TUNEMAC____9_PHENANTHR_440                      =  17440  
+ID_TUNEMAC____PASSING_CRI_441                      =  17441  
+ID_TUNEMAC_MULTITEST_MAC_442                       =  17442  
+  Cpd1_ESI_pf$ = "Fail"
+  Cpd1_ESI_ratio$ = "Data Error"
+  Cpd2_ESI_pf$ = "Fail"
+  Cpd2_ESI_ratio$ = "Data Error"
+  Cpd3_APCI_pf$ = "Fail"
+  Cpd3_APCI_ratio$ = "Data Error"
+  Cpd4_APCI_pf$ = "Fail"
+  Cpd4_APCI_ratio$ = "Data Error"
+  Cpd1_Avg_run1$ = "Data Error"
+  Cpd1_Avg_run3$ = "Data Error"
+  Cpd2_Avg_run1$ = "Data Error"
+  Cpd2_Avg_run3$ = "Data Error"
+  Cpd3_Avg_run1$ = "Data Error"
+  Cpd3_Avg_run3$ = "Data Error"
+  Cpd4_Avg_run1$ = "Data Error"
+  Cpd4_Avg_run3$ = "Data Error"
+  Cpd1ht_Avg = -2                                 ! No integrated peaks
+  Cpd2ht_Avg = -2                                 ! No integrated peaks
+  Cpd3ht_Avg = -2                                 ! No integrated peaks
+  Cpd4ht_Avg = -2                                 ! No integrated peaks
+  Cpd4_Avg_run3=-2
+  Cpd4_Avg_run2=-2
+  Cpd2_Avg_run3=-2
+  Cpd2_Avg_run1=-2
+  Cpd3_Avg_run3=-2
+  Cpd3_Avg_run2=-2
+  Cpd1_Avg_run3=-2
+  Cpd1_Avg_run1=-2
+
+local Isit_Offline      ! offline or online
+
+! Basic file info here:
+  MultiPath$ = _datapath$+_datasubdir$+"\"
+  ! For printing purposes:
+    a$ = _datapath$      ! c:\chem32\1\data
+    for i=1 to 4
+    evaluate "part"+val$(i)+"$ = Substring$(a$,i,,""\"")"
+    next i
+    printpath$ = part1$+"\\"+part2$+"\\"+part3$+"\\"+part4$
+    
+  numfiles = 3
+  multifile1$ = "Multi_ES"      ! MM-ESI mode
+  multifile2$ = "Multi_CI"      ! MM-APCI mode
+  multifile3$ = "Multi_MX"      ! MM-ES+APCI "mixed" mode
+
+  MMtestdir$ = "c:\mmtest"
+  mmfile$ = mmtestdir$+"\multiperm.txt"
+  if filestat(mode,MMtestdir$)=2 then
+    delete MMtestdir$, dontask
+  endif
+  mkdir MMtestdir$
+
+! Monoisotopic masses:
+  cpd1 = 372.20          ! ESI pos
+  cpd2 = 165.10          ! ESI neg
+  cpd3 = 168.10          ! APCI pos
+  cpd4 = 193.10          ! APCI neg
+  nummasses = 4
+    
+  Isit_Offline = _Offline                ! 0=online session, 1=offline session
+ 
+! Find out instrument configuration: if Online
+  if Isit_Offline = 0 then
+	 MSSCQuery "*idn?", TheType$
+	 ThisMSD$ = Substring$(TheType$,2,,",")     ! Returns the MSD type string
+  endif
+  
+  ! if Offline see ThisMSD$ to offline for report
+  if Isit_Offline = 1 then
+	ThisMSD$ = "offline"
+  endif
+
+! Check for existence of registers:
+  RegCheckPos = RegSize(MultiParmPosReg)
+  if RegCheckPos >-1 then
+    DelReg MultiParmPosReg                 ! delete if it exists
+  endif
+  RegCheckNeg = RegSize(MultiParmNegReg)
+  if RegCheckNeg >-1 then
+    DelReg MultiParmNegReg                 ! delete if it exists
+  endif
+
+! Set up indices:
+  ! MSD1 results:
+    S1_Cpd1_Ht1=1
+    S1_Cpd1_Ht2=2
+    S1_Cpd1_Ht3=3
+    S1_Cpd1_Ht4=4
+    S1_Cpd1_Ht5=5
+      S1_Cpd1_Avg=6
+    S1_Cpd3_Ht1=7
+    S1_Cpd3_Ht2=8
+    S1_Cpd3_Ht3=9
+    S1_Cpd3_Ht4=10
+    S1_Cpd3_Ht5=11
+      S1_Cpd3_Avg=12
+
+  ! MSD2 results:
+    S2_Cpd2_Ht1=13
+    S2_Cpd2_Ht2=14
+    S2_Cpd2_Ht3=15
+    S2_Cpd2_Ht4=16
+    S2_Cpd2_Ht5=17
+      S2_Cpd2_Avg=18
+    S2_Cpd4_Ht1=19
+    S2_Cpd4_Ht2=20
+    S2_Cpd4_Ht3=21
+    S2_Cpd4_Ht4=22
+    S2_Cpd4_Ht5=23
+      S2_Cpd4_Avg=24
+
+  numparams=24
+
+! Set up the registers and objects:
+  for i=1 to numparams
+    NewObj MultiParmPosReg,1,1,numfiles
+  next i
+  if MSD_VL=0 then
+    for i=1 to numparams
+      NewObj MultiParmNegReg,1,1,numfiles
+    next i
+  endif
+
+! Get each file and pull EIC's:
+  for i=1 to numfiles
+    evaluate "TgtFile$=MultiPath$+multifile"+val$(i)+"$+"".d"""
+    LoadFile TgtFile$,,1,,,0             ! Don't use Signal Details
+    ! Get some other information for report header
+    if i=3 then
+      datetime$ = ObjHdrText$(ChromRes[1],"InjDateTime")    ! e.g. "04-Feb-05, 06:35:53"
+      tmpdelim = instr(datetime$,",")
+      if (tmpdelim = 0) then
+        tmpdelim = instr(datetime$,"  ")      ! Look for double-space instead of comma.
+      endif
+      acqdate$ = datetime$[1:tmpdelim-1]      ! e.g. "04-Feb-05"
+      for p=1 to 3
+        evaluate "part"+val$(p)+"$ = Substring$(acqdate$,p,,""-"")"
+      next p
+      if len(part3$)=2 then
+        part3$ = "20"+part3$              ! To make it 4 digits
+      endif
+      acqdate$ = part1$+"-"+part2$+"-"+part3$
+      ObjNum = RegSize(ChromReg)
+      AcqInst$ = "Unknown"
+      for p=1 to ObjNum
+        On Error GoTo NextInstModel
+	AcqInst$ = ObjHdrText$(ChromReg[p],"InstModel")
+NextInstModel:
+      next p
+      ON Error GoTo ErrEIC
+      NameUser$ = ObjHdrText$(ChromReg[ObjNum],"Operator")
+    endif
+
+    ! Load the EIC's
+      for j=1 to 2                       ! two signals (msd1 and msd2)
+        evaluate "Detector$ = MSD"+val$(j)+""
+        ! Find the MSD object in the register
+          MSDObjIndx=-3
+          RegMax = RegSize(ChromReg)
+          for ObjectIndex=1 TO RegMax
+            if ObjHdrType(ChromReg[ObjectIndex],"Detector") = 0 then
+              DetType$ =  ObjHdrText$(ChromReg[ObjectIndex],"Detector") 
+              tmpMSD$= "MSD"+val$(j)
+              if instr(DetType$,tmpMSD$) <> 0 then
+                MSDObjIndx=ObjectIndex
+              endif          
+            endif 
+          next ObjectIndex
+        evaluate "MSD"+val$(j)+"_pol$ = ObjHdrText$(ChromReg["+val$(MSDObjIndx)+"],""Polarity"")"
+        evaluate "ThisPol$ = MSD"+val$(j)+"_pol$"
+        if (ThisPol$="Positive") then
+          ThisReg$ = "MultiParmPosReg"
+        else
+          ThisReg$ = "MultiParmNegReg"
+        endif
+        
+       ! Get EIC's
+         for k=1 to nummasses
+           evaluate "ThisMass = cpd"+val$(k)
+           evaluate "Mass"+val$(k)+"Low = ThisMass - 0.3"
+           evaluate "Mass"+val$(k)+"High = ThisMass + 0.7"
+         next k
+         ! Load EIC's for appropriate polarity:
+           if (ThisPol$="Positive") then
+             DoOverlay = 0
+             LDMS_LoadEic Mass1Low,Mass1High,,,,DoOverlay,Detector$,,TabHdrVal(_config[1],"LoadFileOpts","UseBSB"),0
+             DoOverlay = 1
+             LDMS_LoadEic Mass3Low,Mass3High,,,,DoOverlay,Detector$,,TabHdrVal(_config[1],"LoadFileOpts","UseBSB"),0
+           else
+             DoOverlay = 0
+             LDMS_LoadEic Mass2Low,Mass2High,,,,DoOverlay,Detector$,,TabHdrVal(_config[1],"LoadFileOpts","UseBSB"),0
+             DoOverlay = 1
+             LDMS_LoadEic Mass4Low,Mass4High,,,,DoOverlay,Detector$,,TabHdrVal(_config[1],"LoadFileOpts","UseBSB"),0
+           endif
+
+         ! Draw the EIC's
+           DrawSignals 1
+
+         ! Get integration results for appropriate polarity:
+           if (ThisPol$="Positive") then             ! Signal 1 is positive
+             ! Cpd 1 integration results:
+               if RegSize(RTReg) >-1 then
+                 DelReg RTReg                        ! delete if it exists
+               endif
+               NewObj RTReg,1,1,1
+               if (ObjHdrType(ChromReg[1],"IntResults") = 4) then
+                 if (TabHdrVal(ChromReg[1],"IntResults","NumberOfRows")>0) then       ! equals 99 if table not there
+                   CopyTab ChromReg[1],"IntResults",RTReg[1],"Cpd1IntResults"
+                   SortTabRows RTReg[1],"Cpd1IntResults","Height",">="       ! sort peaks by height
+                   NumTabRows = TabHdrVal(RTReg[1],"Cpd1IntResults","NumberOfRows")
+                   if (TabHdrVal(RTReg[1],"Cpd1IntResults","NumberOfRows") < 5) then
+                     print ReadResource$("tunemac",ID_TUNEMAC_FILE_DOES_NOT_410)
+                     goto Err1Peaks5
+                     ! JAM Remove stop and see what happens
+                   endif
+                   if (TabHdrVal(RTReg[1],"Cpd1IntResults","NumberOfRows") > 5) then
+                     DelTabRow RTReg[1],"Cpd1IntResults", 6:NumTabRows
+                   endif
+                   ! Get peak heights:
+                   Cpd1ht_Avg = 0
+                   for z=1 to 5             ! S1_Cpd1_Ht_5
+                     ! evaluate "Cpd1_Ht_"+val$(z)+" = Trunc(TabVal(RTReg[1],Cpd1IntResults,"+val$(z)+",Height))"
+                     evaluate "Cpd1_Ht_"+val$(z)+" = TabVal(RTReg[1],Cpd1IntResults,"+val$(z)+",Height)"
+                       evaluate "SetData "+ThisReg$+"[S1_Cpd1_Ht"+val$(z)+"],1,"+val$(i)+",cpd1_ht_"+val$(z)
+                     evaluate "Cpd1ht_Avg = Cpd1ht_Avg + cpd1_ht_"+val$(z)
+                   next z
+                   Cpd1ht_Avg = Trunc(Cpd1ht_Avg/5)
+                 else
+                   Cpd1ht_Avg = -2                                 ! No integrated peaks
+                 endif
+               else
+                 Cpd1ht_Avg = -2                                 ! No integrated peaks
+               endif ! * ObjHdrType case
+               evaluate "SetData "+ThisReg$+"[S"+val$(j)+"_Cpd1_Avg],1,"+val$(i)+",cpd1ht_Avg"
+               print Cpd1ht_Avg
+
+Err1Peaks5:
+
+             ! Cpd 3 integration results:
+              ! if RegSize(RTReg) >-1 then
+              !   DelReg RTReg                        ! delete if it exists
+              ! endif
+              NewObj RTReg,1,1,1
+               if (ObjHdrType(ChromReg[2],"IntResults") = 4) then
+                 if (TabHdrVal(ChromReg[2],"IntResults","NumberOfRows")>0) then       ! equals 99 if table not there
+                   CopyTab ChromReg[2],"IntResults",RTReg[2],"Cpd3IntResults"
+                   SortTabRows RTReg[2],"Cpd3IntResults","Height",">="       ! sort peaks by height
+                   NumTabRows = TabHdrVal(RTReg[2],"Cpd3IntResults","NumberOfRows")
+                   if (TabHdrVal(RTReg[2],"Cpd3IntResults","NumberOfRows") < 5) then
+                     print ReadResource$("tunemac",ID_TUNEMAC_FILE_DOES_NOT_410)
+                     GoTo Err2Peaks5
+                     ! JAM Remove stop and see what happens
+                   endif
+                   if (TabHdrVal(RTReg[2],"Cpd3IntResults","NumberOfRows") > 5) then
+                     DelTabRow RTReg[2],"Cpd3IntResults", 6:NumTabRows
+                   endif
+                   ! Get peak heights:
+                   Cpd3ht_Avg = 0
+                   for z=1 to 5             ! S1_Cpd3_Ht_5
+                     ! evaluate "Cpd3_Ht_"+val$(z)+" = Trunc(TabVal(RTReg[2],Cpd3IntResults,"+val$(z)+",Height))"
+                     evaluate "Cpd3_Ht_"+val$(z)+" = TabVal(RTReg[2],Cpd3IntResults,"+val$(z)+",Height)"
+                       evaluate "SetData "+ThisReg$+"[S1_Cpd3_Ht"+val$(z)+"],1,"+val$(i)+",cpd3_ht_"+val$(z)
+                     evaluate "Cpd3ht_Avg = Cpd3ht_Avg + cpd3_ht_"+val$(z)
+                   next z
+                   Cpd3ht_Avg = Trunc(Cpd3ht_Avg/5)
+                 else
+                   Cpd3ht_Avg = -2                                 ! No integrated peaks
+                 endif
+               else
+                 Cpd3ht_Avg = -2                                 ! No integrated peaks
+               endif ! * ObjHdrType case
+               evaluate "SetData "+ThisReg$+"[S1_Cpd3_Avg],1,"+val$(i)+",cpd3ht_Avg"
+Err2Peaks5:
+               print Cpd3ht_Avg
+           else
+             ! Negative Signal compounds:
+             ! Cpd 2 integration results:
+              ! if RegSize(RTReg) >-1 then
+              !   DelReg RTReg                        ! delete if it exists
+              ! endif
+              ! NewObj RTReg,1,1,1
+               if (ObjHdrType(ChromReg[1],"IntResults") = 4) then
+                 if (TabHdrVal(ChromReg[1],"IntResults","NumberOfRows")>0) then       ! equals 99 if table not there
+                   CopyTab ChromReg[1],"IntResults",RTReg[1],"Cpd2IntResults"
+                   SortTabRows RTReg[1],"Cpd2IntResults","Height",">="       ! sort peaks by height
+                   NumTabRows = TabHdrVal(RTReg[1],"Cpd2IntResults","NumberOfRows")
+                   if (TabHdrVal(RTReg[1],"Cpd2IntResults","NumberOfRows") < 5) then
+                     print ReadResource$("tunemac",ID_TUNEMAC_FILE_DOES_NOT_410)
+                     Err3Peaks5
+                     ! JAM Remove stop and see what happens
+                   endif
+                   if (TabHdrVal(RTReg[1],"Cpd2IntResults","NumberOfRows") > 5) then
+                     DelTabRow RTReg[1],"Cpd2IntResults", 6:NumTabRows
+                   endif
+                   ! Get peak heights:
+                   Cpd2ht_Avg = 0
+                   for z=1 to 5             ! S2_Cpd2_Ht_5
+                     ! evaluate "Cpd2_Ht_"+val$(z)+" = Trunc(TabVal(RTReg[1],Cpd2IntResults,"+val$(z)+",Height))"
+                     evaluate "Cpd2_Ht_"+val$(z)+" = TabVal(RTReg[1],Cpd2IntResults,"+val$(z)+",Height)"
+                       evaluate "SetData "+ThisReg$+"[S2_Cpd2_Ht"+val$(z)+"],1,"+val$(i)+",cpd2_ht_"+val$(z)
+                     evaluate "Cpd2ht_Avg = Cpd2ht_Avg + cpd2_ht_"+val$(z)
+                   next z
+                   Cpd2ht_Avg = Trunc(Cpd2ht_Avg/5)
+                 else
+                   Cpd2ht_Avg = -2                                 ! No integrated peaks
+                 endif
+               else
+                 Cpd2ht_Avg = -2                                 ! No integrated peaks
+               endif ! * ObjHdrType case
+               evaluate "SetData "+ThisReg$+"[S2_Cpd2_Avg],1,"+val$(i)+",cpd2ht_Avg"
+Err3Peaks5:
+               print Cpd2ht_Avg
+
+             ! Cpd 4 integration results:
+              ! if RegSize(RTReg) >-1 then
+              !   DelReg RTReg                        ! delete if it exists
+              ! endif
+              NewObj RTReg,1,1,1
+               if (ObjHdrType(ChromReg[2],"IntResults") = 4) then
+                 if (TabHdrVal(ChromReg[2],"IntResults","NumberOfRows")>0) then       ! equals 99 if table not there
+                   CopyTab ChromReg[2],"IntResults",RTReg[2],"Cpd4IntResults"
+                   SortTabRows RTReg[2],"Cpd4IntResults","Height",">="       ! sort peaks by height
+                   NumTabRows = TabHdrVal(RTReg[2],"Cpd4IntResults","NumberOfRows")
+                   if (TabHdrVal(RTReg[2],"Cpd4IntResults","NumberOfRows") < 5) then
+                     print ReadResource$("tunemac",ID_TUNEMAC_FILE_DOES_NOT_410)
+                     GoTo Err4Peaks5
+                     ! JAM Remove stop and see what happens
+                   endif
+                   if (TabHdrVal(RTReg[2],"Cpd4IntResults","NumberOfRows") > 5) then
+                     DelTabRow RTReg[2],"Cpd4IntResults", 6:NumTabRows
+                   endif
+                   ! Get peak heights:
+                   Cpd4ht_Avg = 0
+                   for z=1 to 5             ! S2_Cpd4_Ht_5
+                     ! evaluate "Cpd4_Ht_"+val$(z)+" = Trunc(TabVal(RTReg[2],Cpd4IntResults,"+val$(z)+",Height))"
+                     evaluate "Cpd4_Ht_"+val$(z)+" = TabVal(RTReg[2],Cpd4IntResults,"+val$(z)+",Height)"
+                       evaluate "SetData "+ThisReg$+"[S2_Cpd4_Ht"+val$(z)+"],1,"+val$(i)+",cpd4_ht_"+val$(z)
+                     evaluate "Cpd4ht_Avg = Cpd4ht_Avg + cpd4_ht_"+val$(z)
+                   next z
+                   Cpd4ht_Avg = Trunc(Cpd4ht_Avg/5)
+                 else
+                   Cpd4ht_Avg = -2                                 ! No integrated peaks
+                 endif
+               else
+                 Cpd4ht_Avg = -2                                 ! No integrated peaks
+               endif ! * ObjHdrType case
+               evaluate "SetData "+ThisReg$+"[S2_Cpd4_Avg],1,"+val$(i)+",cpd4ht_Avg"
+Err4Peaks5:
+               print Cpd4ht_Avg
+           endif  !* if (ThisPol$="Positive")
+        LoadFile TgtFile$,,1,,,0             ! Reload the datafile
+        if MSD_VL = 1 then
+          j=j+1         ! so it skips the negative signal
+        endif
+      next j  !* next signal
+  next i  !* next data file
+
+  ! Pull data and calculate ratios:
+    ! Peak heights:
+      ! Cpd 1 peak height results:
+      Cpd1_Avg_run1 = Data (MultiParmPosReg[S1_Cpd1_Avg], 1, 1)     ! 1=ES run, 2=APCI run, 3=mixed run
+        if (Cpd1_Avg_run1 = -2) then
+          Cpd1_Avg_run1$ = "No peak     "
+        else
+          Cpd1_Avg_run1$ = val$(Cpd1_Avg_run1)
+          if len(Cpd1_Avg_run1$) < 12 then
+            numspaces = 12-len(Cpd1_Avg_run1$)
+            for n=1 to numspaces
+              Cpd1_Avg_run1$ = " "+Cpd1_Avg_run1$
+            next n
+          endif
+        endif
+      Cpd1_Avg_run3 = Data (MultiParmPosReg[S1_Cpd1_Avg], 1, 3)
+        if (Cpd1_Avg_run3 = -2) then
+          Cpd1_Avg_run3$ = "No peak     "
+        else
+          Cpd1_Avg_run3$ = val$(Cpd1_Avg_run3)
+          if len(Cpd1_Avg_run3$) < 12 then
+            numspaces = 12-len(Cpd1_Avg_run3$)
+            for n=1 to numspaces
+              Cpd1_Avg_run3$ = " "+Cpd1_Avg_run3$
+            next n
+          endif
+        endif
+      ! Cpd 3 peak height results:
+      Cpd3_Avg_run2 = Data (MultiParmPosReg[S1_Cpd3_Avg], 1, 2)
+        if (Cpd3_Avg_run2 = -2) then
+          Cpd3_Avg_run2$ = "No peak     "
+        else
+          Cpd3_Avg_run2$ = val$(Cpd3_Avg_run2)
+          if len(Cpd3_Avg_run2$) < 12 then
+            numspaces = 12-len(Cpd3_Avg_run2$)
+            for n=1 to numspaces
+              Cpd3_Avg_run2$ = " "+Cpd3_Avg_run2$
+            next n
+          endif
+        endif
+      Cpd3_Avg_run3 = Data (MultiParmPosReg[S1_Cpd3_Avg], 1, 3)
+        if (Cpd3_Avg_run3 = -2) then
+          Cpd3_Avg_run3$ = "No peak     "
+        else
+          Cpd3_Avg_run3$ = val$(Cpd3_Avg_run3)
+          if len(Cpd3_Avg_run3$) < 12 then
+            numspaces = 12-len(Cpd3_Avg_run3$)
+            for n=1 to numspaces
+              Cpd3_Avg_run3$ = " "+Cpd3_Avg_run3$
+            next n
+          endif
+        endif
+    if MSD_VL = 0 then
+      ! Cpd 2 peak height results:
+      Cpd2_Avg_run1 = Data (MultiParmNegReg[S2_Cpd2_Avg], 1, 1)
+        if (Cpd2_Avg_run1 = -2) then
+          Cpd2_Avg_run1$ = "No peak     "
+        else
+          Cpd2_Avg_run1$ = val$(Cpd2_Avg_run1)
+          if len(Cpd2_Avg_run1$) < 12 then
+            numspaces = 12-len(Cpd2_Avg_run1$)
+            for n=1 to numspaces
+              Cpd2_Avg_run1$ = " "+Cpd2_Avg_run1$
+            next n
+          endif
+        endif
+      Cpd2_Avg_run3 = Data (MultiParmNegReg[S2_Cpd2_Avg], 1, 3)
+        if (Cpd2_Avg_run3 = -2) then
+          Cpd2_Avg_run3$ = "No peak     "
+        else
+          Cpd2_Avg_run3$ = val$(Cpd2_Avg_run3)
+          if len(Cpd2_Avg_run3$) < 12 then
+            numspaces = 12-len(Cpd2_Avg_run3$)
+            for n=1 to numspaces
+              Cpd2_Avg_run3$ = " "+Cpd2_Avg_run3$
+            next n
+          endif
+        endif
+      ! Cpd 4 peak height results:
+      Cpd4_Avg_run2 = Data (MultiParmNegReg[S2_Cpd4_Avg], 1, 2)
+        if (Cpd4_Avg_run2 = -2) then
+          Cpd4_Avg_run2$ = "No peak     "
+        else
+          Cpd4_Avg_run2$ = val$(Cpd4_Avg_run2)
+          if len(Cpd4_Avg_run2$) < 12 then
+            numspaces = 12-len(Cpd4_Avg_run2$)
+            for n=1 to numspaces
+              Cpd4_Avg_run2$ = " "+Cpd4_Avg_run2$
+            next n
+          endif
+        endif
+      Cpd4_Avg_run3 = Data (MultiParmNegReg[S2_Cpd4_Avg], 1, 3)
+        if (Cpd4_Avg_run3 = -2) then
+          Cpd4_Avg_run3$ = "No peak     "
+        else
+          Cpd4_Avg_run3$ = val$(Cpd4_Avg_run3)
+          if len(Cpd4_Avg_run3$) < 12 then
+            numspaces = 12-len(Cpd4_Avg_run3$)
+            for n=1 to numspaces
+              Cpd4_Avg_run3$ = " "+Cpd4_Avg_run3$
+            next n
+          endif
+        endif
+    endif
+
+    ! Ratios:
+      ! Compound 1:
+      if (Cpd1_Avg_run3=-2) or (Cpd1_Avg_run1=-2) then
+        Cpd1_ESI_ratio$ = "   NA"
+        Cpd1_ESI_pf$ = "Fail"
+      else
+        Cpd1_ESI_ratio = (Cpd1_Avg_run3/Cpd1_Avg_run1)*100
+          Cpd1_ESI_ratio = (Trunc(Cpd1_ESI_ratio*10))/10
+          Cpd1_ESI_ratio$ = val$(Cpd1_ESI_ratio)
+          if len(Cpd1_ESI_ratio$) < 5 then
+            numspaces = 5-len(Cpd1_ESI_ratio$)
+            for n=1 to numspaces
+              Cpd1_ESI_ratio$ = " "+Cpd1_ESI_ratio$
+            next n
+          endif
+          if Cpd1_ESI_ratio >= 20 then
+            Cpd1_ESI_pf$ = "Pass"
+          else
+            Cpd1_ESI_pf$ = "Fail"
+          endif
+        endif
+      ! Compound 3:
+      if (Cpd3_Avg_run3=-2) or (Cpd3_Avg_run2=-2) then
+        Cpd3_APCI_ratio$ = "   NA"
+        Cpd3_APCI_pf$ = "Fail"
+      else
+        Cpd3_APCI_ratio = (Cpd3_Avg_run3/Cpd3_Avg_run2)*100
+          Cpd3_APCI_ratio = (Trunc(Cpd3_APCI_ratio*10))/10
+          Cpd3_APCI_ratio$ = val$(Cpd3_APCI_ratio)
+          if len(Cpd3_APCI_ratio$) < 5 then
+            numspaces = 5-len(Cpd3_APCI_ratio$)
+            for n=1 to numspaces
+              Cpd3_APCI_ratio$ = " "+Cpd3_APCI_ratio$
+            next n
+          endif
+          if Cpd3_APCI_ratio >= 20 then
+            Cpd3_APCI_pf$ = "Pass"
+          else
+            Cpd3_APCI_pf$ = "Fail"
+          endif
+        endif
+    if MSD_VL = 0 then
+      ! Compound 2:
+      if (Cpd2_Avg_run3=-2) or (Cpd2_Avg_run1=-2) then
+        Cpd2_ESI_ratio$ = "   NA"
+        Cpd2_ESI_pf$ = "Fail"
+      else
+        Cpd2_ESI_ratio = (Cpd2_Avg_run3/Cpd2_Avg_run1)*100
+          Cpd2_ESI_ratio = (Trunc(Cpd2_ESI_ratio*10))/10
+          Cpd2_ESI_ratio$ = val$(Cpd2_ESI_ratio)
+          if len(Cpd2_ESI_ratio$) < 5 then
+            numspaces = 5-len(Cpd2_ESI_ratio$)
+            for n=1 to numspaces
+              Cpd2_ESI_ratio$ = " "+Cpd2_ESI_ratio$
+            next n
+          endif
+          if Cpd2_ESI_ratio >= 20 then
+            Cpd2_ESI_pf$ = "Pass"
+          else
+            Cpd2_ESI_pf$ = "Fail"
+          endif
+        endif
+      ! Compound 4:
+      if (Cpd4_Avg_run3=-2) or (Cpd4_Avg_run2=-2) then
+        Cpd4_APCI_ratio$ = "   NA"
+        Cpd4_APCI_pf$ = "Fail"
+      else
+        Cpd4_APCI_ratio = (Cpd4_Avg_run3/Cpd4_Avg_run2)*100
+          Cpd4_APCI_ratio = (Trunc(Cpd4_APCI_ratio*10))/10
+          Cpd4_APCI_ratio$ = val$(Cpd4_APCI_ratio)
+          if len(Cpd4_APCI_ratio$) < 5 then
+            numspaces = 5-len(Cpd4_APCI_ratio$)
+            for n=1 to numspaces
+              Cpd4_APCI_ratio$ = " "+Cpd4_APCI_ratio$
+            next n
+          endif
+          if Cpd4_APCI_ratio >= 20 then
+            Cpd4_APCI_pf$ = "Pass"
+          else
+            Cpd4_APCI_pf$ = "Fail"
+          endif
+        endif
+    endif
+
+
+ErrEIC:
+
+  ! Print results to text file:
+  print ReadResource$("tunemac",ID_TUNEMAC__MMFILE_411) + mmfile$
+  open mmfile$ for append as #4
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC_412)
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC___MSD_TYPE_413)+ThisMSD$+"        Instrument name: "+AcqInst$+"        Operator name: "+NameUser$
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC___ACQUISITION_416)+acqdate$
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC__DATAFILES_417)
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC______ESI_MODE_418)+printpath$+"\\"+_datasubdir$+"\\"+"Multi_ES.d"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC______APCI_MODE_421)+printpath$+"\\"+_datasubdir$+"\\"+"Multi_CI.d"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC______MIXED_MOD_423)+printpath$+"\\"+_datasubdir$+"\\"+"Multi_MX.d"
+  print using #4,"//|--------------------------------------------------------------------------------------|"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC_425)
+  print using #4,"/|--------------------------------------------------------------------------------------|"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC_426)
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC____COMPOUND_427)
+  print using #4,"/|----------------|-------|----------|--------------|--------------|-----------|--------|"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC____CRYSTAL_VIO_428)+Cpd1_Avg_run1$+" | "+Cpd1_Avg_run3$+" |  "+Cpd1_ESI_ratio$+" \%  |  "+Cpd1_ESI_pf$+"  |"
+  print using #4,"/|----------------|-------|----------|--------------|--------------|-----------|--------|"
+if MSD_VL =0 then
+  print using #4,"/|                |       |          |              |              |           |        |"
+  print using #4,"/|----------------|-------|----------|--------------|--------------|-----------|--------|"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC____1_HEXANESUL_433)+Cpd2_Avg_run1$+" | "+Cpd2_Avg_run3$+" |  "+Cpd2_ESI_ratio$+" \%  |  "+Cpd2_ESI_pf$+"  |"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC________ONIC_AC_434)
+  print using #4,"/|--------------------------------------------------------------------------------------|"
+endif
+  print using #4,"/"
+  print using #4,"////|---------------------------------------------------------------------------------------|"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC_435)
+  print using #4,"/|---------------------------------------------------------------------------------------|"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC_436)
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC____COMPOUND_437)
+  print using #4,"/|----------------|-------|----------|--------------|--------------|------------|--------|"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC____CARBAZOLE_438)+Cpd3_Avg_run2$+" | "+Cpd3_Avg_run3$+" |   "+Cpd3_APCI_ratio$+" \%  |  "+Cpd3_APCI_pf$+"  |"
+  print using #4,"/|----------------|-------|----------|--------------|--------------|------------|--------|"
+if MSD_VL =0 then
+  print using #4,"/|                |       |          |              |              |            |        |"
+  print using #4,"/|----------------|-------|----------|--------------|--------------|------------|--------|"
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC____9_PHENANTHR_440)+Cpd4_Avg_run2$+" | "+Cpd4_Avg_run3$+" |   "+Cpd4_APCI_ratio$+" \%  |  "+Cpd4_APCI_pf$+"  |"
+  print using #4,"/|---------------------------------------------------------------------------------------|"
+endif
+  print using #4,ReadResource$("tunemac",ID_TUNEMAC____PASSING_CRI_441)
+  close #4
+
+! Send the whole thing to the printer:
+  BeginJob
+  FPRINT mmfile$
+  EndJob
+  print ReadResource$("tunemac",ID_TUNEMAC_MULTITEST_MAC_442)
+  return
+
+ErrMultiTest:
+! JAM TODO something related to Error
+return
+
+
+endmacro
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

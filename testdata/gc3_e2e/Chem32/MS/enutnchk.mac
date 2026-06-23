@@ -1,0 +1,650 @@
+!***********************************************************************************************
+! ENUTNCHK.MAC: G2715 Check Tune Algorithm.   Version 2
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+!===============================================================================================
+!  The Purpose:  MSD Check Tune (compare current profile scan with previous autotune)
+!
+!===============================================================================================
+!  Macros:
+!	   msat_SavePWidths
+!	   msat_ResetPWidths
+!	   msat_CheckTuneCleanUp
+!	   msat_ChkTnErrHdlr
+!	   msat_ChkTnAbortHdlr
+!	   msat_NoAbundance
+!	   msat_MeetAbTarget
+!	   msat_MissPWTarget
+!	   msat_MissMARange
+!	   msat_axisWidth
+!	   msat_ShowCheckTuneWarnings
+!	   msat_InitTuneTargets
+!	   msat_CheckTune   
+!
+!===============================================================================================
+!
+! global variables set:
+!   msat_ABFail : abundance under tolerance flag, 0 = abundance ok, 1 = under threshhold
+!   msat_MAFail : mass axis tolerance flag, 0 - mass axis ok, 1 = not ok
+!   msat_PWFail : peak width outside tolerance flag, 0 - peak width ok, 1 - not ok
+!
+! global variables used:
+!   MSProfile variables: peakmax1-6, peakwidth1-6, peakm_z1-6
+! registers loaded and used:
+!   AtuneReg   -  leave loaded on exit
+!
+!===============================================================================================
+!
+!===============================================================================================
+!
+ AtuneChkVer$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/enutnchk.mac 1.31 2003-06-20 11:32:19-07 pcormia Exp $"
+ verIx = instr(AtuneChkVer$, ".mac ") + 5
+ AtuneChkVer$ =  AtuneChkVer$[verIx:VerIx + instr(AtuneChkVer$[VerIx:len(AtuneChkVer$)]," ") - 1] 
+ remove verIx
+!
+!===============================================================================================
+name msat_SavePWidths
+!===============================================================================================
+local i, target, tolerance
+
+  for i = 1 to 6
+    MSPWidths i,target,,tolerance
+    evaluate "msat_OldPWTarget" + val$(i) + "= target"
+    evaluate "msat_OldPWTolerance" + val$(i) + "= tolerance"
+  next i
+endmacro  !msat_SavePWidths
+
+!===============================================================================================
+name msat_ResetPWidths
+parameter defaultTarget default 0.65
+parameter defaultTol default 0.05
+!===============================================================================================
+local i, ok, target, tolerance
+
+  for i = 1 to 6
+    evaluate "ok = check(variable,msat_OldPWTarget" + val$(i) +")"
+    if ok = 1 then
+      evaluate "target = msat_OldPWTarget" + val$(i)
+    else
+      target = defaultTarget
+    endif
+    evaluate "ok = check(variable,msat_OldPWTTolerance" + val$(i) +")"
+    if ok = 1 then
+      evaluate "tolerance = msat_OldPWTolerance" + val$(i) 
+    else
+      target = defaultTolerance
+    endif
+    MSPWidths i,target,,tolerance
+  next i
+endmacro  !msat_ResetPWidths
+
+!=================================================
+name msat_CheckTuneCleanUp
+!=================================================
+on error print
+  remove msat_ABFail, msat_MAFail, msat_PWFail
+  remove TuneRegIndex
+  remove msat_MASSErrLim
+  remove msat_AbundTarget 
+  remove msat_AbundErrLim 
+  MSTN_RemoveAbortHandler "msat_ChkTnAbortHdlr"
+endmacro  !msat_CheckTuneCleanUp
+
+!===============================================================================================
+name msat_ChkTnErrHdlr
+! Note: If autotune calls check tune, an error in check tune will halt
+! autotune
+!===============================================================================================
+local _button
+Local  ID_TUNEMAC_CHECK_TUNE_ERR_609
+ID_TUNEMAC_CHECK_TUNE_ERR_609                      =  17609  
+on error print
+  _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_CHECK_TUNE_ERR_609)+ _errmsg$,3,"Error")
+  msat_CheckTuneCleanUp
+  stop
+endmacro        !msat_ChkTnErrHdlr
+
+!===============================================================================================
+name msat_ChkTnAbortHdlr
+! Note: If autotune calls check tune, an abort in check tune will halt
+! autotune
+!===============================================================================================
+on error print
+  msat_CheckTuneCleanUp
+endmacro        !msat_ChkTnAbortHdlr
+
+!=====================================================
+name msat_NoAbundance
+parameter limit
+! logically equivalent to 
+!  If (peakmax1 < limit) AND (peakmax2 < limit) AND (peakmax3 < limit) AND  \
+!     (peakmax4 < limit) AND (peakmax5 < limit) AND (peakmax6 < limit) then
+! except that it checks for existance of peakmax[i] variable
+!=====================================================
+local retval, i, selected, peakmax
+
+   retval = 1
+   for i = 1 to 6
+     MSMassValue i,,,selected
+     if selected = 1 then
+       evaluate "peakmax = peakmax" + val$(i)
+       if peakmax >= limit then
+       !* if at least one peakmax is over limit, then say found abundance
+         return 0
+       endif
+     endif
+   next i
+   return 1
+endmacro             !* msat_NoAbundance
+
+!==================================================================
+name msat_MeetAbTarget
+parameter ChkLoAb default 100000
+parameter ChkHiAb default 300000
+!Checks to see if mass #2 is within the autotune targets
+!==================================================================
+local retval, origselect
+
+   retval = 0
+   MSMassValue 2,,,origselect,1
+   
+  ! CPL 102009: Use source-specific target abundances for 6100 series
+  ! Get the values for low and high abundance from the appropriate register
+    lRegIndex = MSAT_SelectTuneMix( "auto" ) ! Returns TuneMixReg Index
+    If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainLowAbund" ) = 1 ) then
+      ChkLoAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainLowAbund" )
+    Endif
+    If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainHighAbund" ) = 1 ) then
+      ChkHiAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainHighAbund" )
+    Endif
+   
+   if peakmax2 < ChkLoAb then
+     retval = 1
+   endif
+   if peakmax2 > (ChkHiAb * 1.5) then           ! Allow some buffer for hot multiplier
+     retval = 1
+   endif
+   MSMassValue 2,,,,origselect
+   
+   return retval
+endmacro                   !msat_MeetABTarget
+
+!==================================================================
+name msat_MissPWTarget
+! Logically equivalent to
+!     if(ABS(peakwidth1-PWTarget1) >  PWRange) OR (ABS(peakwidth2-PWTarget1) > PWRange) OR \
+!       (ABS(peakwidth3-PWTarget1) >  PWRange) OR (ABS(peakwidth4-PWTarget1) > PWRange) OR \
+!       (ABS(peakwidth5-PWTarget1) >  PWRange)  then
+! except checks for existance of peakwidth[i]
+!==================================================================
+local i, pwdiff, target, tolerance, selected
+local targchange, maintarg, bigtarg
+
+   targchange = 0                    ! Initialize the flag
+   for i = 1 to 6
+     MSMassValue i,,,selected
+     MSPWidths i,target,,tolerance
+     if i=1 then
+       maintarg = target
+     endif
+     if i=5 then
+       target = 0.74
+     endif
+     if i=6 then
+       target = 0.8
+     endif
+     if selected = 1 then
+       if target > maintarg then   ! masses 5 & 6 have bigger default targets
+         bigtarg = target
+         target = maintarg           ! try the narrower target first
+         targchange = 1
+       endif
+       evaluate "pwdiff = peakwidth" + val$(i) + "- target"
+       if ABS(pwdiff) > ABS(tolerance) then
+         if targchange = 0 then
+           return 1
+         else
+           evaluate "pwdiff = peakwidth" + val$(i) + "- bigtarg"
+           if ABS(pwdiff) > ABS(tolerance) then
+             return 1
+           endif
+         endif
+       endif
+     endif
+     targchange = 0                  ! Reset the flag
+   next i
+   return 0
+endmacro                   !msat_MissPWTarget
+
+!==================================================================
+name msat_MissMARange
+parameter tolerance
+! Logically equivalent to
+!       if (ABS(peakm_z1-Mass1) > MARange) OR (ABS(peakm_z2-Mass2) > MARange) OR \
+!          (ABS(peakm_z3-Mass3) > MARange) OR (ABS(peakm_z4-Mass4) > MARange) OR \
+!          (ABS(peakm_z5-Mass5) > MARange) then
+!       Check validity of peakm_z<i>.
+!==================================================================
+local i, madiff, selected, mass
+
+   for i = 1 to 6
+     MSMassValue i,mass,,selected
+     if selected = 1 then
+      ! use basepeak if peakm_z is invalid
+       evaluate "madiff = peakm_z" + val$(i)
+       if madiff = -1 then
+         evaluate "madiff = basepeak" + val$(i)
+       endif
+       madiff = ABS(madiff - mass)
+
+       if madiff > tolerance then
+         return 1
+       endif
+     endif
+   next i
+   return 0
+endmacro                   !msat_MissMATarget
+
+!================================================
+name msat_axisWidth
+! combine mass axis and peakwidth adjustment
+!================================================
+
+  msAxis ,1,1 
+  msat_widths
+  msAxis ,,1
+
+endmacro
+
+!================================================
+name msat_ShowCheckTuneWarnings
+parameter abfail                !* Abundance out of tolerance
+parameter mafail                !* Mass axis out of tolerance
+parameter pwfail                !* Peak width out of tolerance
+parameter title$
+parameter regIndex
+!================================================
+local line1$, line2$, line3$, _button, cmdstr$
+
+Local  ID_TUNEMAC_SIGNAL_INTENSI_611
+Local  ID_TUNEMAC_MSD_CHECK_TUNE_612
+Local  ID_TUNEMAC_DO_YOU_WISH_TO_613
+Local  ID_TUNEMAC_FAILED_ALLOWAB_614
+Local  ID_TUNEMAC_MSD_CHECK_TUNE_615
+Local  ID_TUNEMAC_DO_YOU_WISH_TO_616
+Local  ID_TUNEMAC_FAILED_ALLOWAB_617
+Local  ID_TUNEMAC_MSD_CHECK_TUNE_618
+Local  ID_TUNEMAC_DO_YOU_WISH_TO_619
+Local  ID_TUNEMAC_FAILED_ALLOWAB_620
+Local  ID_TUNEMAC_MSD_CHECK_TUNE_621
+Local  ID_TUNEMAC_DO_YOU_WISH_TO_622
+ID_TUNEMAC_SIGNAL_INTENSI_611                      =  17611  
+ID_TUNEMAC_MSD_CHECK_TUNE_612                      =  17612  
+ID_TUNEMAC_DO_YOU_WISH_TO_613                      =  17613  
+ID_TUNEMAC_FAILED_ALLOWAB_614                      =  17614  
+ID_TUNEMAC_MSD_CHECK_TUNE_615                      =  17615  
+ID_TUNEMAC_DO_YOU_WISH_TO_616                      =  17616  
+ID_TUNEMAC_FAILED_ALLOWAB_617                      =  17617  
+ID_TUNEMAC_MSD_CHECK_TUNE_618                      =  17618  
+ID_TUNEMAC_DO_YOU_WISH_TO_619                      =  17619  
+ID_TUNEMAC_FAILED_ALLOWAB_620                      =  17620  
+ID_TUNEMAC_MSD_CHECK_TUNE_621                      =  17621  
+ID_TUNEMAC_DO_YOU_WISH_TO_622                      =  17622  
+    cmdstr$ = ""
+    ! abfail is 0 or mass#
+    if abfail <> 0 then
+          line1$= ReadResource$("tunemac",ID_TUNEMAC_SIGNAL_INTENSI_611)
+          line2$= chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_MSD_CHECK_TUNE_612)
+          line3$= chr$(13) + chr$(13) +ReadResource$("tunemac",ID_TUNEMAC_DO_YOU_WISH_TO_613)
+          cmdstr$ = "msat_auto 0"
+    else
+      if mafail = 1 then
+        if pwfail = 1 then
+          line1$= ReadResource$("tunemac",ID_TUNEMAC_FAILED_ALLOWAB_614)
+          line2$= chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_MSD_CHECK_TUNE_615)
+          line3$= chr$(13) + chr$(13) +ReadResource$("tunemac",ID_TUNEMAC_DO_YOU_WISH_TO_616)
+          cmdstr$ = "msat_axisWidth"
+        else
+          line1$= ReadResource$("tunemac",ID_TUNEMAC_FAILED_ALLOWAB_617)
+          line2$= chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_MSD_CHECK_TUNE_618)
+          line3$= chr$(13) + chr$(13) +ReadResource$("tunemac",ID_TUNEMAC_DO_YOU_WISH_TO_619)
+          cmdstr$ = "MSAxis ,,1"
+        endif
+      else
+        if pwfail = 1 then
+          line1$= ReadResource$("tunemac",ID_TUNEMAC_FAILED_ALLOWAB_620)
+          line2$= chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_MSD_CHECK_TUNE_621)
+          line3$= chr$(13) + chr$(13) +ReadResource$("tunemac",ID_TUNEMAC_DO_YOU_WISH_TO_622)
+          cmdstr$ = "msat_widths"
+        endif
+      endif
+    endif
+    if abfail <> 0 OR pwfail = 1 OR mafail = 1 then
+       _button=alert(line1$ + line2$ + line3$,4,title$)
+
+      if _button = 1 then
+        evaluate cmdstr$
+        ! Use average of 3 for profile
+        msat_SetAllWidths ,0.10,regIndex
+        MSProfile            ! workaround for defect #3606 (guarantees new settings downloaded)
+        mstn_PrintChkTnRpt ,7
+      endif
+    endif
+
+endmacro  !msat_ShowCheckTuneWarnings
+
+!==================================================
+name msat_InitTuneTargets
+Parameter UseParams default 0       !use parameters only as default values
+Parameter MARange default   0.13    !use this mass assignment range for mass up to 1000 amu
+Parameter AbTarget default  2000    !use this abundance target for all masses
+Parameter AbRatio default   0.20
+!* NOTE: Make sure that these default values match the
+!* CheckTune parameter values!!!
+!==================================================
+
+  !* Set global variables
+  msat_MassErrLim = MARange
+  msat_AbundTarget = ABTarget
+  msat_AbundErrLim = AbRatio
+
+  if UseParams = 1 then
+    return                !* Exit if user just wanted to use params
+  endif
+  
+  !* User wants to use mstune.ini values 
+  !* Try to load the profile extension DLL
+
+  on error print
+
+  !* See if PrivateProfileInt function is callable
+  if Check(function,PrivateProfileInt) = 0 then
+    !* Not callable so try to load
+    dlcPath$ = _EXEPath$
+    idx = instr(_EXEPath$,"CORE")
+    if idx > 0 then
+      dlcPath$ = dlcPath$[1:idx-1] + "SYS\"
+      mode = filestat(MODE,dlcPath$ + "HPProf01.DLC")
+      if (mode = 1) then 
+        !* Extension DLL exists, so load and use command
+        cmd = installcmds( dlcPath$ + "HPProf01.DLC")
+      else
+        !* DLL does not exist, so return using params already set
+        return
+      endif
+    else 
+      !* Can't load profile code, so return using params already set
+      return
+    endif
+  endif
+
+  !* Assert that PrivateProfileInt is callable
+
+  !* MARange  
+  if abs(MARange) < 1 then
+    !* Not an integer, so convert to integer
+    MARange = MARange * 100
+    msat_MassErrLim = PrivateProfileInt("AutoTune","MassErrLim",_tunepath$+"mstune.ini",MARange)/100
+  else
+    msat_MassErrLim = PrivateProfileInt("AutoTune","MassErrLim",_tunepath$+"mstune.ini",MARange)
+  endif
+
+  !* ABTarget  
+  msat_AbundTarget = PrivateProfileInt("AutoTune","AbundTarget",_tunepath$+"mstune.ini",ABTarget)
+
+  if abs(ABRatio) < 1 then
+    !* Not an integer, so convert to integer
+    ABRatio = ABRatio * 100
+    msat_AbundErrLim = PrivateProfileInt("AutoTune","AbundErrLim",_tunepath$+"mstune.ini",ABRatio)/100
+  else
+    msat_AbundErrLim = PrivateProfileInt("AutoTune","AbundErrLim",_tunepath$+"mstune.ini",ABRatio)
+  endif
+
+endmacro   !msat_InitTuneTargets
+
+!=========================================== 
+name msat_CheckTune  !MSD Check Tune Macro
+  Parameter MARange default   0.13    !use this mass assignment range for mass up to 1000 amu
+  Parameter AbLoTarget default  40000
+  Parameter AbRatio default   0.20
+  Parameter Auto default      0
+  Parameter Polarity default  0
+!* If called by autotune, assumes that calibrant is already switched on
+!
+!===========================================
+  local CONT,initregister,str1$,str2$,str3$,_button
+  local charge,srcmode$,TuneRegIndex,ChkLoAb,ChkHiAb
+  local APPIstat$,APPItemp$,proftabname$,a,oldWidthOffset,oldWidthGain
+
+Local  ID_TUNEMAC_CHECK_TUNE_CAN_623
+Local  ID_TUNEMAC_CHECK_MSD_TUNE_624
+Local  ID_TUNEMAC_TURNING_ON_APP_586
+Local  ID_TUNEMAC_NO_PEAKS_FOUND_625
+Local  ID_TUNEMAC_CHECKTUNE__PEA_626
+Local  ID_TUNEMAC_CHECKTUNE__PEA_627
+Local  ID_TUNEMAC_CHECKTUNE__MAS_628
+Local  ID_TUNEMAC_CHECKTUNE__MAS_629
+Local  ID_TUNEMAC_CHECKTUNE__ABU_630
+Local  ID_TUNEMAC_CHECKTUNE__ABU_631
+Local  ID_TUNEMAC_COMPLETED_CHEC_632
+Local  ID_TUNEMAC_PLEASE_AUTOTUNE_1074
+
+
+ID_TUNEMAC_CHECK_TUNE_CAN_623                      =  17623  
+ID_TUNEMAC_CHECK_MSD_TUNE_624                      =  17624  
+ID_TUNEMAC_TURNING_ON_APP_586                      =  17586  
+ID_TUNEMAC_NO_PEAKS_FOUND_625                      =  17625  
+ID_TUNEMAC_CHECKTUNE__PEA_626                      =  17626  
+ID_TUNEMAC_CHECKTUNE__PEA_627                      =  17627  
+ID_TUNEMAC_CHECKTUNE__MAS_628                      =  17628  
+ID_TUNEMAC_CHECKTUNE__MAS_629                      =  17629  
+ID_TUNEMAC_CHECKTUNE__ABU_630                      =  17630  
+ID_TUNEMAC_CHECKTUNE__ABU_631                      =  17631  
+ID_TUNEMAC_COMPLETED_CHEC_632                      =  17632  
+ID_TUNEMAC_PLEASE_AUTOTUNE_1074                    =  18074
+  
+  on error msat_ChkTnErrHdlr
+  MSTN_AddAbortHandler "msat_ChkTnAbortHdlr" 
+
+  msat_ABFail   = 0   !global var, for abundance adjustment in findpeaks macro, 0 = OFF, 1 is ON
+  msat_PWFail   = 0   !global var, for peakwidth adjustment in findpeaks macro, 0 is OFF, 1 is ON
+  msat_MAFail   = 0   !global var, for mass axis adjustment in findpeaks macro, 0 is OFF, 1 is ON
+
+  if auto = 0 then             ! Called by menu item.
+    msat_SetMode polarity      !* Sets msat_mode and msat_srctype global variables
+    if ((msat_srctype = 3) and (msat_mode<>4)) then
+      MSMode "MM-APCI"         ! Force into MM-APCI ionization mode for a MM-ES+APCI source
+      msat_mode = 5            ! Reset the global variable
+    endif
+  endif
+
+  CONT=1
+
+  initregister = msat_initTuneMixReg()    !updates tunemix register
+
+  !* Check for AtuneReg, if it doesn't exist, 
+  !* or it can't be loaded from disk, then exit this macro 
+  !* Register currently does not exist
+  if RegSize(AtuneReg) = -1 then
+     !* Try loading the Atune register from disk
+     if filestat(mode,_tunepath$ + "atune.reg") = 1 then
+        Loadobj _tunepath$ + "atune.reg",, AtuneReg
+     else
+        if auto = 0 then    ! CheckTune not called by autotune...
+           !* tunemix register is not updated because version is correct
+           if initregister = 0 then
+              str1$ = ReadResource$("tunemac",ID_TUNEMAC_CHECK_TUNE_CAN_623)
+           else
+              !* tunemix register is updated
+              str1$ = "New software was just installed."
+           endif
+           !str2$ =  " Please run autotune first."
+           str2$ = " " + ReadResource$("tunemac",ID_TUNEMAC_PLEASE_AUTOTUNE_1074)
+           str3$ = str1$ + str2$
+           _button = Alert(str3$,3,ReadResource$("tunemac",ID_TUNEMAC_CHECK_MSD_TUNE_624))
+           msat_CheckTuneCleanUp
+           return !* exit macro
+        else   
+           ! Presume that criteria fail for autotune, then test
+           ! CONT=0
+           msat_ABFail =  1
+           msat_PWFail =  1
+           msat_MAFail =  1
+        endif !* if auto...
+     endif !* if filestat...
+  endif !* if regsize...
+
+  if CONT=1 then
+     if auto = 0 then       ! not called by autotune
+        msparm polarity,charge
+        !* Check if current tunefile is Atunes.tun
+        if msat_LoadAtuneFile(charge) = 1 then
+           srcmode$ = msGetIonSrc$()
+           mstn_UpdateStatusBar                       ! Updates the window
+           TuneRegIndex = msat_SelectTuneMix("Auto")  ! uses the correct register for getting the tunefile values
+           msat_AutotuneInit srcmode$,TuneRegIndex    ! initialize fragmentor,quad dc, and zones 
+           msat_ApplyTuneMix TuneRegIndex,,,1         ! sets the masses and scan parameters
+           MSSaveTuneFile _tunepath$ + "atunes.tun",charge 
+           MSGetTuneFile _tunepath$ + "atunes.tun",charge,,1 ! Load atunes.tun with the correct polarity
+
+           msat_CheckZones msat_srctype,TuneRegIndex              !* check temperature, pressure, and flow
+     
+           !* Turn on the calibrant
+           msat_CalSwitch 1
+        else
+           msat_CheckTuneCleanUp
+           return !* exit macro
+        endif !* if msat_LoadAtuneFile...
+     endif !* if auto = 0
+
+    ! 10/20/09 CPL Start  
+    ! Set the abundance targets using msat_LoTarget & msat_HiTarget function calls
+    
+    LoAb = msat_LoTarget()
+    HiAb = msat_HiTarget()
+    
+    ! 10/20/09 CPL End     
+     
+  ! CPL 102009: Use source-specific target abundances for 6100 series
+  ! Get the values for low and high abundance from the appropriate register
+    lRegIndex = MSAT_SelectTuneMix( "auto" ) ! Returns TuneMixReg Index
+    If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainLowAbund" ) = 1 ) then
+      ChkLoAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainLowAbund" )
+    Endif
+    If ( ObjHdrType( TuneMixReg[ lRegIndex ], "GainHighAbund" ) = 1 ) then
+      ChkHiAb = ObjHdrVal( TuneMixReg[ lRegIndex ], "GainHighAbund" )
+
+     if msat_srctype = 2 then                        !* Make sure lamp on if APPI
+       MSSCQuery "config:src:appi:stat?", APPIstat$
+       APPItemp$ = Substring$(APPIstat$,1,,",")
+       if (val(APPItemp$) <> 1) then              !* Lamp is off, so turn it on
+         msscwrite "config:src:appi:lamp 1"
+         print ReadResource$("tunemac",ID_TUNEMAC_TURNING_ON_APP_586)
+         sleep 15
+       endif !* if (val(APPItemp$)...
+     endif !* if msat_srctype = 2
+    endif !* if ( ObjHdrType...
+
+     proftabname$ = msat_GetProfTabName$()
+  
+     MSSamples a,12              ! changed to 12 for fast scan FW change PHC 06/12/2002
+
+     print msProfileAvg (2,1,1)
+
+     if auto=0 then
+        !* warn user of system problem if peaks show no abundances 
+        if msat_NoAbundance(100) = 1 then
+           MSMassWindow 10
+           msparm widthoffset,oldWidthOffset,-1000
+           msparm widthgain,oldWidthGain,-1000
+           print msProfileAvg (2,1,0)
+           if msat_NoAbundance(100) = 1 then
+              _button = alert(ReadResource$("tunemac",ID_TUNEMAC_NO_PEAKS_FOUND_625),3)
+              return       !* Exit macro
+           endif !* if msat_NoAbundance...
+           msparm widthoffset,,oldWidthOffset
+           msparm widthgain,,oldWidthGain
+           MSMassWindow 5
+        endif !* if msat_NoAbundance...
+
+        msat_SetAllWidths ,0.10,TuneRegIndex
+     
+        !* Not called by Autotune
+        !* Print out the Checktune report 
+
+        !**** Note **** printing will do another MSProfile
+        ! Use average of 7 for profile
+        mstn_PrintChkTnRpt ,7   !* Sets msat_ABFail, msat_PWFail, msat_MAFail
+
+     else
+        !* Called by Autotune - do checks that are done in mstn_PrintChkTnRpt
+
+        !* NOTE: The checking code here should be functionally equivalent
+        !* to the checks done in mstn_PrintChkTnRpt
+
+        !* Make sure peakwidths are correct
+        msat_PWFail=msat_MissPWTarget () 
+        if msat_PWFail > 0 then
+           AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKTUNE__PEA_626)
+        else
+           AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKTUNE__PEA_627)
+        endif
+  
+        !* Make sure mass assignments are correct
+        !msat_MAFail= msat_MissMARange(msat_MassErrLim)
+        msat_MAFail= msat_MissMARange(MARange)
+        if msat_MAFail > 0 then
+           AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKTUNE__MAS_628)
+        else
+           AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKTUNE__MAS_629)
+        endif
+  
+        !* Check abundance of mass #2
+        msat_ABFail = msat_MeetAbTarget(ChkLoAb,ChkHiAb)
+        if msat_ABFail > 0 then
+           AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKTUNE__ABU_630)
+        else
+           AtunePrint ReadResource$("tunemac",ID_TUNEMAC_CHECKTUNE__ABU_631)
+        endif
+     endif !* if auto=0
+
+     MSSamples ,a                 !* return to original sample and average values
+
+     if auto=0 then
+        !* Show the checktune dialog if global vars set by checktune report are 1
+        msat_ShowCheckTuneWarnings msat_ABFail,msat_MAFail,msat_PWFail, "MSD Check Tune",TuneRegIndex
+        !* Can remove globals if not autotune
+        msat_CheckTuneCleanUp
+     endif !* if auto=0
+  endif !* if cont=0
+
+  MSTN_RemoveAbortHandler "msat_ChkTnAbortHdlr"
+
+  AtunePrint ReadResource$("tunemac",ID_TUNEMAC_COMPLETED_CHEC_632)
+endmacro   !msat_CheckTune
+
+!****************************************************************************
+!********* end of file ******************************************************

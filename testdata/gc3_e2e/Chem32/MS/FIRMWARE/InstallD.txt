@@ -1,0 +1,458 @@
+ÿû
+
+VxWorks login: target
+Password: 
+
+-> scq "*idn?"
+AGILENT TECHNOLOGIES,5973N,0,3.02.38
+value = 0 = 0x0
+-> printf("%s\n",sysBspRev())
+1.2/22T
+value = 8 = 0x8
+-> printf("SC3VERSION=%d\n",sc3Version())
+SC3VERSION=0
+value = 13 = 0xd
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> ls "/flash/"
+BLINK.O
+BOOT.ASC
+FPGA.HEX
+MSSC.O
+STARTUP
+VXWORKS
+VXWORKS.sym
+httpd.o
+wdsmall_run.o
+BOOTPONLY
+value = 0 = 0x0
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> rm "/flash/BLINK.O"
+value = 0 = 0x0
+-> rm "/flash/MSSC.O"
+value = 0 = 0x0
+-> rm "/flash/STARTUP"
+value = 0 = 0x0
+-> rm "/flash/httpd.o"
+value = 0 = 0x0
+-> rm "/flash/wdsmall_run.o"
+value = 0 = 0x0
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> diskFlash
+erasing bank 1: sector 0
+programming data...
+erasing bank 1: sector 1
+programming data...
+erasing bank 1: sector 2
+programming data...
+erasing bank 1: sector 3
+programming data...
+erasing bank 1: sector 4
+programming data...
+erasing bank 1: sector 5
+programming data...
+erasing bank 1: sector 6
+programming data...
+erasing bank 1: sector 7
+programming data...
+erasing bank 1: sector 8
+programming data...
+erasing bank 1: sector 9
+programming data...
+erasing bank 1: sector 15
+programming data...
+flash update complete...
+value = 0 = 0x0
+-> 
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> scq "*idn?"
+AGILENT TECHNOLOGIES,G6150B,<undef>,3.02.39
+value = 0 = 0x0
+-> printf("%s\n",sysBspRev())
+1.2/22T
+value = 8 = 0x8
+-> printf("SC3VERSION=%d\n",sc3Version())
+SC3VERSION=0
+value = 13 = 0xd
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> ls "/flash/"
+MSSC.O
+BOOT.ASC
+FPGA.HEX
+STARTUP
+httpd.o
+VXWORKS
+VXWORKS.sym
+wdsmall_run.o
+BLINK.O
+value = 0 = 0x0
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> rm "/flash/MSSC.O"
+value = 0 = 0x0
+-> rm "/flash/STARTUP"
+value = 0 = 0x0
+-> rm "/flash/httpd.o"
+value = 0 = 0x0
+-> rm "/flash/wdsmall_run.o"
+value = 0 = 0x0
+-> rm "/flash/BLINK.O"
+value = 0 = 0x0
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> diskFlash
+erasing bank 1: sector 0
+programming data...
+erasing bank 1: sector 1
+programming data...
+erasing bank 1: sector 2
+programming data...
+erasing bank 1: sector 3
+programming data...
+erasing bank 1: sector 4
+programming data...
+erasing bank 1: sector 5
+programming data...
+erasing bank 1: sector 6
+programming data...
+erasing bank 1: sector 7
+programming data...
+erasing bank 1: sector 8
+programming data...
+erasing bank 1: sector 9
+programming data...
+erasing bank 1: sector 15
+programming data...
+flash update complete...
+value = 0 = 0x0
+-> 
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> scq "*idn?"
+AGILENT TECHNOLOGIES,5973N,0,3.02.39
+value = 0 = 0x0
+-> printf("%s\n",sysBspRev())
+1.2/22T
+value = 8 = 0x8
+-> printf("SC3VERSION=%d\n",sc3Version())
+SC3VERSION=0
+value = 13 = 0xd
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> scq "*idn?"
+AGILENT TECHNOLOGIES,G6150B,<undef>,3.02.39
+value = 0 = 0x0
+-> printf("%s\n",sysBspRev())
+1.2/22T
+value = 8 = 0x8
+-> printf("SC3VERSION=%d\n",sc3Version())
+SC3VERSION=0
+value = 13 = 0xd
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> ls "/flash/"
+BLINK.O
+BOOT.ASC
+FPGA.HEX
+MSSC.O
+STARTUP
+VXWORKS
+VXWORKS.sym
+httpd.o
+wdsmall_run.o
+value = 0 = 0x0
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> rm "/flash/BLINK.O"
+value = 0 = 0x0
+-> rm "/flash/MSSC.O"
+value = 0 = 0x0
+-> rm "/flash/STARTUP"
+value = 0 = 0x0
+-> rm "/flash/httpd.o"
+value = 0 = 0x0
+-> rm "/flash/wdsmall_run.o"
+value = 0 = 0x0
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> diskFlash
+erasing bank 1: sector 0
+programming data...
+erasing bank 1: sector 1
+programming data...
+erasing bank 1: sector 2
+programming data...
+erasing bank 1: sector 3
+programming data...
+erasing bank 1: sector 4
+programming data...
+erasing bank 1: sector 5
+programming data...
+erasing bank 1: sector 6
+programming data...
+erasing bank 1: sector 7
+programming data...
+erasing bank 1: sector 8
+programming data...
+erasing bank 1: sector 9
+programming data...
+erasing bank 1: sector 15
+programming data...
+flash update complete...
+value = 0 = 0x0
+-> 
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> scq "*idn?"
+AGILENT TECHNOLOGIES,5973N,0,3.02.39
+value = 0 = 0x0
+-> printf("%s\n",sysBspRev())
+1.2/22T
+value = 8 = 0x8
+-> printf("SC3VERSION=%d\n",sc3Version())
+SC3VERSION=0
+value = 13 = 0xd
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> scq "*idn?"
+AGILENT TECHNOLOGIES,G6150B,<undef>,3.02.39
+value = 0 = 0x0
+-> printf("%s\n",sysBspRev())
+1.2/22T
+value = 8 = 0x8
+-> printf("SC3VERSION=%d\n",sc3Version())
+SC3VERSION=0
+value = 13 = 0xd
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> ls "/flash/"
+MSSC.O
+BOOT.ASC
+FPGA.HEX
+STARTUP
+httpd.o
+VXWORKS
+VXWORKS.sym
+wdsmall_run.o
+BLINK.O
+value = 0 = 0x0
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> rm "/flash/MSSC.O"
+value = 0 = 0x0
+-> rm "/flash/STARTUP"
+value = 0 = 0x0
+-> rm "/flash/httpd.o"
+value = 0 = 0x0
+-> rm "/flash/wdsmall_run.o"
+value = 0 = 0x0
+-> rm "/flash/BLINK.O"
+value = 0 = 0x0
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> diskFlash
+erasing bank 1: sector 0
+programming data...
+erasing bank 1: sector 1
+programming data...
+erasing bank 1: sector 2
+programming data...
+erasing bank 1: sector 3
+programming data...
+erasing bank 1: sector 4
+programming data...
+erasing bank 1: sector 5
+programming data...
+erasing bank 1: sector 6
+programming data...
+erasing bank 1: sector 7
+programming data...
+erasing bank 1: sector 8
+programming data...
+erasing bank 1: sector 9
+programming data...
+erasing bank 1: sector 15
+programming data...
+flash update complete...
+value = 0 = 0x0
+-> 
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> scq "*idn?"
+AGILENT TECHNOLOGIES,5973N,0,3.02.39
+value = 0 = 0x0
+-> printf("%s\n",sysBspRev())
+1.2/22T
+value = 8 = 0x8
+-> printf("SC3VERSION=%d\n",sc3Version())
+SC3VERSION=0
+value = 13 = 0xd
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> scq "*idn?"
+AGILENT TECHNOLOGIES,5973N,ABC123,5.02.07
+value = 0 = 0x0
+-> printf("%s\n",sysBspRev())
+1.2/26T
+value = 8 = 0x8
+-> printf("SC3VERSION=%d\n",sc3Version())
+SC3VERSION=2
+value = 13 = 0xd
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> ls "/flash/"
+BOOT.ASC
+VXWORKS
+VXWORKS.sym
+FPGA.HEX
+MSSC.O
+LUI.O
+STARTUP
+httpd.o
+wdsmall_run.o
+BLINK.O
+value = 0 = 0x0
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> rm "/flash/MSSC.O"
+value = 0 = 0x0
+-> rm "/flash/LUI.O"
+value = 0 = 0x0
+-> rm "/flash/STARTUP"
+value = 0 = 0x0
+-> rm "/flash/httpd.o"
+value = 0 = 0x0
+-> rm "/flash/wdsmall_run.o"
+value = 0 = 0x0
+-> rm "/flash/BLINK.O"
+value = 0 = 0x0
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> diskFlash2
+diskFlash2: Starting. g_flashType=0x222
+clearCheckSumFlash: 0x02800000  1835008  0
+erasing logical sector  0 (bankAddr=0x02800000, bankSector= 7)
+sectorEraseNew: bank=0x2800000.  Old sector=7.  First New Sector=17 Last New Sector=18
+programming data...
+erasing logical sector  6 (bankAddr=0x02800000, bankSector=13)
+sectorEraseNew: bank=0x2800000.  Old sector=13.  First New Sector=29 Last New Sector=30
+programming data...
+erasing logical sector  7 (bankAddr=0x02800000, bankSector=14)
+sectorEraseNew: bank=0x2800000.  Old sector=14.  First New Sector=31 Last New Sector=32
+programming data...
+erasing logical sector  8 (bankAddr=0x02c00000, bankSector= 0)
+sectorEraseNew: bank=0x2c00000.  Old sector=0.  First New Sector=0 Last New Sector=4
+programming data...
+erasing logical sector  9 (bankAddr=0x02c00000, bankSector= 1)
+sectorEraseNew: bank=0x2c00000.  Old sector=1.  First New Sector=5 Last New Sector=6
+programming data...
+erasing logical sector 10 (bankAddr=0x02c00000, bankSector= 2)
+sectorEraseNew: bank=0x2c00000.  Old sector=2.  First New Sector=7 Last New Sector=8
+programming data...
+erasing logical sector 11 (bankAddr=0x02c00000, bankSector= 3)
+sectorEraseNew: bank=0x2c00000.  Old sector=3.  First New Sector=9 Last New Sector=10
+programming data...
+erasing logical sector 12 (bankAddr=0x02c00000, bankSector= 4)
+sectorEraseNew: bank=0x2c00000.  Old sector=4.  First New Sector=11 Last New Sector=12
+programming data...
+erasing logical sector 13 (bankAddr=0x02c00000, bankSector= 5)
+sectorEraseNew: bank=0x2c00000.  Old sector=5.  First New Sector=13 Last New Sector=14
+programming data...
+erasing logical sector 14 (bankAddr=0x02c00000, bankSector= 6)
+sectorEraseNew: bank=0x2c00000.  Old sector=6.  First New Sector=15 Last New Sector=16
+programming data...
+erasing logical sector 15 (bankAddr=0x02c00000, bankSector= 7)
+sectorEraseNew: bank=0x2c00000.  Old sector=7.  First New Sector=17 Last New Sector=18
+programming data...
+erasing logical sector 16 (bankAddr=0x02c00000, bankSector= 8)
+sectorEraseNew: bank=0x2c00000.  Old sector=8.  First New Sector=19 Last New Sector=20
+programming data...
+flash update complete...
+writeCheckSumFlash: 0x02800000  1835008  305419896
+value = 0 = 0x0
+-> 
+->ÿû
+
+VxWorks login: target
+Password: 
+
+-> scq "*idn?"
+AGILENT TECHNOLOGIES,5973N,0,3.02.39
+value = 0 = 0x0
+-> printf("%s\n",sysBspRev())
+1.2/26T
+value = 8 = 0x8
+-> printf("SC3VERSION=%d\n",sc3Version())
+SC3VERSION=2
+value = 13 = 0xd
+->

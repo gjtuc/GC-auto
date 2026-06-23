@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="EEVFix" PosStyle="TOP" DockRow="2" DockCol="0" Caption="積分イベント" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="シグナル表示" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals" DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="グラフィック ツールバー表示" CmdList="ANN_CloseTask|ANN_InitTask" Group="0" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="ウィンドウを拡大" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="ウィンドウを縮小" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="選択モード" Command="EEV_SetEEVMenuSelection NoSel,1" Group="2" NewGroup="1" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="Sel1" Help="セット 1" Command="EEV_SetEEVMenuSelection Sel1" Group="2" ImageName="Int_BaselineNow20" ImageNameDisabled="Int_BaselineNow20_d"/>
+		<RadioButton Name="Sel2" Help="セット 2" Command="EEV_SetEEVMenuSelection Sel2" Group="2" ImageName="Int_BaselineHold20" ImageNameDisabled="Int_BaselineHold20_d"/>
+		<RadioButton Name="Sel3" Help="セット 3" Command="EEV_SetEEVMenuSelection Sel3" Group="2" ImageName="Int_TangentSkim20" ImageNameDisabled="Int_TangentSkim20_d"/>
+		<RadioButton Name="Sel4" Help="セット 4" Command="EEV_SetEEVMenuSelection Sel4" Group="2" ImageName="Int_SetIntegration20" ImageNameDisabled="Int_SetIntegration20_d"/>
+		<RadioButton Name="Sel5" Help="セット 5" Command="EEV_SetEEVMenuSelection Sel5" Group="2" ImageName="Int_SlopeSensitivity20" ImageNameDisabled="Int_SlopeSensitivity20_d"/>
+		<RadioButton Name="Sel6" Help="セット 6" Command="EEV_SetEEVMenuSelection Sel6" Group="2" ImageName="Int_AreaReject20" ImageNameDisabled="Int_AreaReject20_d"/>
+		<RadioButton Name="Sel7" Help="セット 7" Command="EEV_SetEEVMenuSelection Sel7" Group="2" ImageName="Int_FixedPeakWidth20" ImageNameDisabled="Int_FixedPeakWidth20_d"/>
+		<RadioButton Name="Sel8" Help="セット 8" Command="EEV_SetEEVMenuSelection Sel8" Group="2" ImageName="Int_DetectShoulders20" ImageNameDisabled="Int_DetectShoulders20_d"/>
+		<NonEditCombobox Name="SelectEvent" Help="イベントの選択" NewGroup="0" Enable="1" DefCmdParNumber="1" DefCommand="EEV_OnFloatCombo" Width="150"/>
+		<!-- <PushButton Name="Btn1" Help="Exit and save events to method" Command="EEV_ToolOnControl 4" NewGroup="1" ImageName="IntEvents_Save20" ImageNameDisabled="IntEvents_Save20_d"/>
+		<PushButton Name="Btn2" Help="Select an events table from the method for editing" Command="EEV_ToolOnControl 7" ImageName="IntEvents_SelectTable20" ImageNameDisabled="IntEvents_SelectTable20_d"/>
+		<PushButton Name="Btn3" Help="Copy an events table from the method and replace current table" Command="EEV_ToolOnControl 5" ImageName="IntEvents_CopyTable20" ImageNameDisabled="IntEvents_CopyTable20_d"/>
+		<PushButton Name="Btn4" Help="Add a new line to the events table" Command="EEV_ToolOnControl 8" ImageName="IntEvents_AddRow20" ImageNameDisabled="IntEvents_AddRow20_d"/>
+		<PushButton Name="Btn5" Help="Delete a selected line from the events table" Command="EEV_ToolOnControl 9" ImageName="IntEvents_DeleteRow20" ImageNameDisabled="IntEvents_DeleteRow20_d"/>
+		<PushButton Name="Btn6" Help="Show how signals and events tables relate" Command="EEV_ToolOnControl 6" ImageName="IntEvents_SignalEvent20" ImageNameDisabled="IntEvents_SignalEvent20_d"/>
+		<PushButton Name="Btn7" Help="Cancel integration events editing" Command="EEV_ToolOnControl 3" ImageName="Exit20" ImageNameDisabled="Exit20_d"/>
+		<PushButton Name="Btn8" Help="Get help" Command="EEV_ToolOnControl 10" ImageName="Help20" ImageNameDisabled="Help20_d"/> -->
+	</toolbar>
+</graphical_object>

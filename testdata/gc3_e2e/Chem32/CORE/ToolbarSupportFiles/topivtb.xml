@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 sp2 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="TopIVTB" PosStyle="TOP" Caption='"TopIVTB"' PanelName="Main">
+		<NonEditCombobox Name="IVFile" Help="Select from most previously used Instrument Verification file" NewGroup="1" Enable="1" Table="_Config,1,IVFile" Selection="1" Width="150"/>
+		<PushButton Name="IVResNew" Help="Create a new Instrument Verification" Command="IVResNew" ImageName="OQPV_NewVerification20" ImageNameDisabled="OQPV_NewVerification20_d"/>
+		<PushButton Name="IVResOpen" Help="Open an existing Instrument Verification" Command="IVResOpen" ImageName="OQPV_OpenVerification20" ImageNameDisabled="OQPV_OpenVerification20_d"/>
+		<PushButton Name="IVResSave" Help="Save the current Instrument Verification" Command="IVResSave" ImageName="OQPV_SaveVerification20" ImageNameDisabled="OQPV_SaveVerification20_d"/>
+		<PushButton Name="IVEdit" Help="Edit the Instrument Verification" Command='CpRequest "CPIV","IVEdit"' ImageName="OQPV_EditVerification20" ImageNameDisabled="OQPV_EditVerification20_d"/>
+		<PushButton Name="IVRun" Help="Start the execution of the Instrument Verification" Command='CpRequest "CPIV","IVRun"' ImageName="OQPV_StartVerification20" ImageNameDisabled="OQPV_StartVerification20_d"/>
+		<PushButton Name="IVLogbook" Help="Show/Hide Verification Logbook" NewGroup="1" Command="IVShowLogbook 1" ImageName="OQPV_ToggleLogbook20" ImageNameDisabled="OQPV_ToggleLogbook20_d"/>
+		<PushButton Name="IVCurLogbook" Help="Show/Hide current online Logbook" Command="LBK.LOGBOOK" ImageName="Logbook20" ImageNameDisabled="Logbook20_d"/>
+		<PushButton Name="IVSeqLogbook" Help="Show/Hide Sequence Logbook" Command="LBK.OPENSEQLOGBOOK" ImageName="Sequence_logbook20" ImageNameDisabled="Sequence_logbook20_d"/>
+		<PushButton Name="IVPreview" Help="Display Instrument Verification test parameters and/or test report" NewGroup="1" Command='IVPrint "SCREEN"' ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="IVPrint" Help="Print Instrument Verification test parameters and/or test report" Command='IVPrint "PRINTER"' ImageName="Print20" ImageNameDisabled="Print20_d"/>
+	</toolbar>
+</graphical_object>

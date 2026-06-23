@@ -1,0 +1,84 @@
+C1CF 500.0,100.00,0.0,0,0,0,0,0,2115.0
+IFCF 2,0.10,0.10
+DFCF 2,2
+OVCF 350
+V1CF 0,0.000,0,0.00,0
+V2CF 0,0.000,0,0.00,0
+V3CF 6,0.000,0,0.00,0
+V4CF 6,0.000,0,0.00,0
+A1CW 4,0
+A3CW 0,0,2,0.10
+A4CW 0,0,2,0.10
+A5CW 0,0,2,0.10
+C1CW 500.0,100.00,0.0,0,0,0,0,0,2115.0
+DFCW 2,3,1,0,6894720,6894720,2,2
+DFZW 0,375,0.00
+GCCW 1,1
+IFCW 2,3,1,6894880,2,0.10,0.10
+IFZW 0,375,0.00
+OVCW 0,3,0,350
+OVZW -20,350,400.00
+V1CW 0,0.000,0,0.00,0
+V2CW 0,0.000,0,0.00,0
+V3CW 6,0.000,0,0.00,0
+V4CW 6,0.000,0,0.00,0
+CCCE 0
+GCPO 0.00,50
+OVSP 3.00
+OVTR 50,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00
+OVTZ 0
+IFSP 1,0,689460,500000.0,0.00,0,0.00,20000.0,2.00,0
+IFTR 0,50,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00
+IFTZ 0
+DFNT 0,7000.0,20000.0
+DFNZ 0,0,1
+DFTR 250
+DFTZ 0
+DFTC 0,0
+C1NR 1,1,0,0,689459.62,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00
+IFNZ 1
+GCRD 0
+CCC1 0
+CCIW HP,6850,GC,A.01.12,US00000385,110157,230499,{RUN.M}
+DFMF 0.0,0.0,0.0,0.0,0.0,0.0,0.0,100000.0,100000.0,100000.0,0.0,0.0,0.0,0.0,10000.0,18000.0,12000.0,0.0,0.0,0.0,0.0
+GCPU 0
+IFRC 1805.0,-3.00,5340.0,-4.00,2270.0,-7.00,1805.0,-3.00
+S1CA 0,0,0
+S1CS A11
+S1ZA 0,0
+CCMD 
+CCMC
+CCMI
+S1CD 100.00,CON,CMP
+idx_lbLockKeyboardWhileLoaded=0
+idx_lSamplerPresence=1
+idx_lbIQOriginated=1
+idx_front_inlet_lInlNamePres=0
+idx_front_inlet_lZPres=3
+idx_front_inlet_lCPres=0
+idx_column1_szManufacturer=HP
+idx_column1_szType=RetGap100u
+idx_column1_szDescription=100u Retention Gap for OQ/PV
+idx_column1_TMax=350
+idx_front_detector_lDetNamePres=0
+idx_front_detector_lGasNamePres=0
+idx_front_detector_lElecType=2
+idx_front_detector_lPneuType=2
+idx_front_detector_lOIMType=0
+idx_front_detector_lZPres=3
+idx_front_detector_lCPres=0
+idx_aux1_lZPres=0
+idx_aux1_lCPres=0
+idx_aux1_szLabel=
+idx_aux3_szLabel=
+idx_aux4_szLabel=
+idx_aux5_szLabel=
+idx_signal1_lbSave=1
+idx_signal1_lSave=1
+idx_signal1_tStartSave=0.00
+idx_signal1_tStopSave=0.00
+idx_signal1_y_scale_factor=0.00
+idx_valve1_szLabel=
+idx_valve2_szLabel=
+idx_valve3_szLabel=
+idx_valve4_szLabel=

@@ -1,0 +1,31 @@
+Mode=6CEP
+highpress=Off
+LoadVials=On
+LiftOfs=4
+Stoptime=30.00
+Posttime=Off
+Peakwidth=>0.03
+RawdataVoltage=On
+RawdataCurrent=On
+RawdataPower=Off
+RawdataPressure=Off
+RawdataCassTemp=On
+Voltage=25.00
+Current=100.00
+Power=SysLimit
+LowCurrent=0.00
+CapTemp=30.00
+InletVial=4
+OutletVial=5
+HeightSensing=Off
+SwitchElectric=On
+Polarity=Negative
+Inject=Table,10.00,12.50
+Parallel=0
+ReplenUse=0
+PreconUse=1
+PostconUse=0
+cond pre HIFLUSH -7.5,0.0,3.00,1,2
+cond pre INLET 3
+cond pre WAIT 1.00
+cond inj VOLTAGE -10.0,7.0,InjectVial,OutHomeVial

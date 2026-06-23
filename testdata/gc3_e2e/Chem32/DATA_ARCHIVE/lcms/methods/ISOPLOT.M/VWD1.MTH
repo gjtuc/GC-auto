@@ -1,0 +1,5 @@
+Stoptime=system
+Posttime=off
+Lamda=400
+Responsetime=0.25
+Samplingrate=200

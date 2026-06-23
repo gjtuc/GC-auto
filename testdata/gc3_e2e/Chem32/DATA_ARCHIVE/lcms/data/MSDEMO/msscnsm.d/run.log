@@ -1,0 +1,12 @@
+ 443 41e0 37b0b104  202
+Method       Method started:  line# 4 vial# 53 inj# 1       16:08:52 08/10/99
+  67 41e0 37b0b105    0
+Method       Instrument running sample vial# 53             16:08:53 08/10/99
+   0 1da7 37b0b154  600
+1100 THM   1 Column temperature = 40.0 °C                   16:10:12 08/10/99
+   0 1da9 37b0b154  600
+1100 PMP   1 Pressure = 70.4 bar                            16:10:12 08/10/99
+   0 1da7 37b0b2e0  600
+1100 THM   1 Column temperature = 40.0 °C                   16:16:48 08/10/99
+  70 41de 37b0b2e1    0
+CP Macro     Analyzing rawdata MSSCNSM.D                    16:16:49 08/10/99

@@ -1,0 +1,312 @@
+!============================================================================
+ 
+! LC Instrument specific personalities for the new enhanced integrator
+
+! intpers.mac
+
+! This macro describes the personalities of the new enhanced integrator.
+! The settings that are made here represent the optimized integration 
+! parameters for each detector used with this instrument.
+!============================================================================
+
+
+!############################################################################
+name CopyPersTab
+
+ Parameter FromTable$
+ Parameter ToTable$
+
+! Helper function
+! Do only copy the table if the table does not already exist
+!############################################################################
+local result
+
+ if ObjHdrType(_Config[2],ToTable$)<>4
+  CopyTab _Config[2],FromTable$,_Config[2],ToTable$
+  result = 1
+ else
+  result = 0
+ endif
+ 
+ return result
+ 
+endmacro
+
+
+!############################################################################
+name MakePersonalitiesForEvents
+
+ Parameter FromTable$ default "Event12"
+
+! Copy the default template of the integration event table (event12)
+! and and make instrument specific modifications for each detector
+! Store the modified tables as default tables into _Config[2]
+!############################################################################
+local DetectorClass$, ToTable$, ToTable2$
+
+!_____________________________________________________________
+ 
+! Diode array detector
+ DetectorClass$="DAD"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+   ! Modifications start here...
+   SetTabHdrVal _Config[2],ToTable$,"InitThresh", 5     ! Initial Noise Threshold
+   SetTabHdrVal _Config[2],ToTable$,"InitWidth",  0.05  ! Initial Peak Width
+   SetTabHdrVal _Config[2],ToTable$,"InitReject", 5     ! Initial Area Threshold
+   SetTabHdrVal _Config[2],ToTable$,"InitHeight", 1     ! Initial Height Threshold
+   SetTabHdrVal _Config[2],ToTable$,"ShouldersOn",0     ! Initial Shoulders On (off)
+
+ endif
+!_____________________________________________________________
+
+! Analogue to digital converter
+ DetectorClass$="ADC"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+
+! Fluoresence detector
+ DetectorClass$="FLD"
+ 
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+ 
+! Mass spectroscopic detector
+if _MassSpec>0
+ DetectorClass$="MSD"
+ 
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+    SetTabHdrVal _Config[2],ToTable$,"InitThresh", 1e4
+    SetTabHdrVal _Config[2],ToTable$,"InitWidth",  0.07  ! Initial Peak Width
+    SetTabHdrVal _Config[2],ToTable$,"InitReject", 1000  ! Initial Area Threshold
+    SetTabHdrVal _Config[2],ToTable$,"InitHeight", 100   ! Initial Height Threshold
+
+ endif
+
+! The Total Ion Chromatogram needs a specific table
+ ToTable2$ = ToTable$ + "1TIC"
+ if CopyPersTab(FromTable$,ToTable2$)<>0
+
+! Modifications start here...
+    SetTabHdrVal _Config[2],ToTable2$,"InitThresh", 1e5
+    SetTabHdrVal _Config[2],ToTable2$,"InitWidth",  0.07  ! Initial Peak Width
+    SetTabHdrVal _Config[2],ToTable2$,"InitReject", 10000 ! Initial Area Threshold
+    SetTabHdrVal _Config[2],ToTable2$,"InitHeight", 1000  ! Initial Height Threshold
+ endif
+
+! The MS Spectra need a specific table
+ ToTable2$ = ToTable$ + "1SPC"
+ if CopyPersTab(FromTable$,ToTable2$)<>0
+
+! Modifications start here...
+    SetTabHdrVal _Config[2],ToTable2$,"InitThresh", 1
+    SetTabHdrVal _Config[2],ToTable2$,"InitWidth",  0.25  ! Initial Peak Width
+    SetTabHdrVal _Config[2],ToTable2$,"InitReject", 0     ! Initial Area Threshold
+    SetTabHdrVal _Config[2],ToTable2$,"InitHeight", 5     ! Initial Height Threshold
+    
+    ! This item does not exist in the default table, but was created
+    ! for LCMS to allow selecting relative height instead of absolute.
+    NewTabHdrVal _Config[2],ToTable2$,"RelativeHeight",1,0,3,0,65535
+ endif
+
+endif
+
+!_____________________________________________________________
+ 
+! Variable wavelength detector
+ DetectorClass$="VWD"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+ 
+! Electron capture detector
+ DetectorClass$="ECD"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+
+! Multiple wavelength detector
+ DetectorClass$="MWD"
+
+ ToTable$="Event_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+
+endmacro
+        
+
+!############################################################################
+name MakePersonalitiesForDetectors
+
+ Parameter FromTable$ default "IntDetect"
+
+! Copy the default template of the integration detector table (intdetect)
+! and and make instrument specific modifications for each detector
+! Store the modified tables as constant tables into _Config[2]
+!############################################################################
+local DetectorClass$, ToTable$
+
+!_____________________________________________________________
+ 
+! Diode array detector
+ DetectorClass$="DAD"
+ 
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+ 
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+ 
+! Analogue to digital converter
+ DetectorClass$="ADC"
+ 
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+ 
+! Fluoresence detector
+ DetectorClass$="FLD"
+ 
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+ 
+! Mass spectrometric detector
+if _MassSpec>0
+ DetectorClass$="MSD"
+ 
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+endif
+!_____________________________________________________________
+ 
+! Variable wavelength detector
+ DetectorClass$="VWD"
+
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+ 
+! Electron capture detector
+ DetectorClass$="ECD"
+
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+
+! Multiple wavelength detector
+ DetectorClass$="MWD"
+
+ ToTable$="IntDetect_"+DetectorClass$
+ if CopyPersTab(FromTable$,ToTable$)<>0
+
+! Modifications start here...
+
+ endif
+!_____________________________________________________________
+
+endmacro
+
+
+!############################################################################
+name MakePersonalitiesForMethods
+
+ Parameter FromTable$ default "IntMethodTemp"
+
+! make instrument specific modifications to the template of the
+! integration method table (intmethod)
+!############################################################################
+local ToTable$
+
+if _MassSpec > 0
+! Special IntMth table for Mass Spectra
+ if ObjHdrType(_Config[2],FromTable$)=4
+    ToTable$="IntMth6MSD"
+    if CopyPersTab(FromTable$,ToTable$)<>0
+    ! Modifications start here...
+       SetTabHdrVal _config[2],ToTable$,"PeakTopType",0  ! use biggest
+       SetTabHdrVal _config[2],ToTable$, "DecimalDigits", 1
+    endif
+ endif
+endif
+
+ ToTable$="IntMethod"
+ if ObjHdrType(_Config[2],ToTable$)<>4
+  RenTab _Config[2],FromTable$,ToTable$
+ 
+! Modifications start here...
+
+ endif
+
+
+!_____________________________________________________________
+
+endmacro
+
+
+!############################################################################
+name MakeIntegratorPersonalities
+
+!############################################################################
+
+ MakePersonalitiesForEvents
+ MakePersonalitiesForDetectors
+ MakePersonalitiesForMethods
+ 
+endmacro
+
+
+
+

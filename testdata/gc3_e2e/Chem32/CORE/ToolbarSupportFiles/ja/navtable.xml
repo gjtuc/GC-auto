@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="Navtable" PosStyle="Top" DockRow="0" DockCol="0" Caption="ナビゲーション" PanelName="NavTable">
+		<NonEditCombobox Name="LoadMethodOption" Help="レビュー用メソッドの選択" Enable="1" Selection="1" TextList="" DefCommand="TlbrNavtabSetMethod " DefCmdParNumber="1" Width="150"/>
+		<PushButton Name="LoadFirst" Help="最初を読み込み" Command="NavTab_LoadFirst" ImageName="NavTable_First20" ImageNameDisabled="NavTable_First20_d"/>
+		<PushButton Name="LoadLast" Help="最後を読み込み" Command="NavTab_LoadLast" ImageName="NavTable_Last20" ImageNameDisabled="NavTable_Last20_d"/>
+		<PushButton Name="LoadPrev" Help="前を読み込み" Command="NavTab_LoadPrev" ImageName="NavTable_Prev20" ImageNameDisabled="NavTable_Prev20_d"/>
+		<PushButton Name="LoadNext" Help="次を読み込み" Command="NavTab_LoadNext" ImageName="NavTable_Next20" ImageNameDisabled="NavTable_Next20_d"/>
+		<PushButton Name="AutoStepStart" Help="オートステップ開始" Command="NavTab_AutoStepStart" ImageName="NavTable_Play20" ImageNameDisabled="NavTable_Play20_d"/>
+		<PushButton Name="AutoStepPause" Help="停止" Command="NavTab_AutoStepPause" CpName="Cp2" ImageName="NavTable_Pause20" ImageNameDisabled="NavTable_Pause20_d"/>
+	</toolbar>
+</graphical_object>

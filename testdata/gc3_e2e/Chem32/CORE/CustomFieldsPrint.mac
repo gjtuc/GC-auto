@@ -1,0 +1,307 @@
+! **************************************************************************
+! DoPrintCustomFields
+! **************************************************************************
+Name DoPrintCustomFields
+  Local M$, EOL$, XLocOffset, LefMargin
+  local Name$, HeaderID, TitleID, ToPrint
+  
+  ID_PHX3DSUPPORTFILES_CF_SAMPLETITLE_385                         =  17385
+  ID_PHX3DSUPPORTFILES_CF_SAMPLEVALTITLE_386                      =  17386
+  ID_PHX3DSUPPORTFILES_CF_COMPTITLE_387                           =  17387
+  ID_PHX3DSUPPORTFILES_CF_COMPVALTITLE_388                        =  17388
+  
+  ID_PHX3DSUPPORTFILES_CF_2_389                                   =  17389
+  ID_PHX3DSUPPORTFILES_CF_3_390                                   =  17390
+  ID_PHX3DSUPPORTFILES_CF_4_391                                   =  17391
+  ID_PHX3DSUPPORTFILES_CF_5_392                                   =  17392
+  ID_PHX3DSUPPORTFILES_CF_6_393                                   =  17393
+  ID_PHX3DSUPPORTFILES_CF_NOVALUES_394                            =  17394
+  ID_PHX3DSUPPORTFILES_CF_7_395                                   =  17395
+  ID_PHX3DSUPPORTFILES_CF_8_396                                   =  17396
+  ID_PHX3DSUPPORTFILES_CF_NODEFS_397                              =  17397
+
+  
+  XLocOffset = 2
+  EOL$ = chr$(13) + chr$(10)
+  LeftMargin = XLocOffset
+  M$ = RptStr$(" ", LeftMargin)
+  ToPrint = 1
+  
+  CFMethValsAndDefs2Temp
+  Print "DoPrintCustomFields"
+  
+  Name$ = "CF_CommonDef"
+  !If ObjHdrType(_CF_TMP_SEQ[1], "CF_CommonDef") = 4 Then
+    HeaderID = ID_PHX3DSUPPORTFILES_CF_3_390
+    TitleID = ID_PHX3DSUPPORTFILES_CF_SAMPLETITLE_385
+    print using #5, "/" 
+    CFPrintHeaders TitleID, HeaderID, ToPrint
+    CFPrintDefsTab Name$
+  !EndIf
+  
+  Name$ = "CF_Common"
+  If ObjHdrType(_CF_TMP_SEQ[1], "CF_Common") = 4 Then
+    HeaderID = ID_PHX3DSUPPORTFILES_CF_2_389
+    TitleID = ID_PHX3DSUPPORTFILES_CF_SAMPLEVALTITLE_386
+    CFPrintHeaders TitleID, HeaderID, ToPrint
+    CFPrintSampleTab Name$
+  EndIf
+  
+  Name$ = "CF_CmpdsDef"
+  !If ObjHdrType(_CF_TMP_SEQ[1], "CF_CmpdsDef") = 4 Then
+    HeaderID = ID_PHX3DSUPPORTFILES_CF_3_390
+    TitleID = ID_PHX3DSUPPORTFILES_CF_COMPTITLE_387
+    CFPrintHeaders TitleID, HeaderID, ToPrint
+    CFPrintDefsTab Name$
+  !EndIf
+  
+  Name$ = "CF_Cmpds"
+  If ObjHdrType(_CF_TMP_SEQ[1], "CF_Cmpds") = 4 Then
+    HeaderID = ID_PHX3DSUPPORTFILES_CF_2_389
+    TitleID = ID_PHX3DSUPPORTFILES_CF_COMPVALTITLE_388
+    CFPrintCmpdTab Name$, TitleID, HeaderID, ToPrint
+  endif
+  
+return
+EndMacro
+
+! **************************************************************************
+! CFPrintHeaders
+! **************************************************************************
+
+Name CFPrintHeaders
+parameter TitleID, HeaderID, ToPrint
+Local NLSFileName_phx3dsupport$, Hyphen$, Dashes$
+  
+  NLSFileName_phx3dsupport$ = "phx3dsupport"
+  Dashes$ = "========================================================================"
+  Hyphen$ = "------------------------------------------------------------------------"
+  If ToPrint = 1
+  Print #5, ""
+  Print #5, Dashes$
+  Print #5, Center$(Len(Dashes$), ReadResource$(NLSFileName_phx3dsupport$,TitleID))
+  Print #5, Dashes$
+  EndIf
+  
+  If ToPrint = 2
+  Print #5, ""
+  Print #5, Dashes$
+  Print #5, Center$(Len(Dashes$), ReadResource$(NLSFileName_phx3dsupport$,TitleID))
+  Print #5, Dashes$
+  Return 
+  endif
+
+  Print #5, ""
+  Print #5,ReadResource$(NLSFileName_phx3dsupport$,HeaderID)
+  Print #5,Hyphen$
+
+return
+EndMacro
+
+! **************************************************************************
+! CFPrintSampleTab
+! **************************************************************************
+
+Name CFPrintSampleTab
+parameter Tab$
+local nRows, Row, strlen
+Local Value$, CFName$, NLSFileName_phx3dsupport$, ValueSplit$
+Local ColWd1, ColWd2, index
+Local CF$, DV$, Output$
+
+  Output$ = ""
+  ColWd1 = 30
+  ColWd2 = 30
+  
+  NLSFileName_phx3dsupport$ = "phx3dsupport"
+  
+  nRows = TabHdrVal (_CF_TMP_SEQ[1], Tab$, "NumberOfRows")
+  
+  if nRows = 0 
+  Print Using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CF_NOVALUES_394)
+  Print #5, ""
+  return
+  endif
+
+  Row    = 1
+  
+  while Row <= nRows do
+  
+    CFName$ =  WrapDoubleWidthText$(TabText$(_CF_TMP_SEQ[1], Tab$, Row, "Name") ,ColWd1,"|")
+    Value$  =  WrapDoubleWidthText$(TabText$(_CF_TMP_SEQ[1], Tab$, Row, "Value"),ColWd2,"|")
+    
+    index = 1
+    CF$ = SubString$(cfname$, index)
+    DV$ = SubString$(Value$, index)
+    
+    Repeat
+      Output$ =  SPrintF$(CF$,"%-" + Val$(ColWd1+ 2)+"s") + SPrintF$(DV$,"%-" + Val$(ColWd2)+"s")
+      Print Using #5,"%/", Output$
+      
+      index = index + 1
+      CF$ = SubString$(cfname$, index)
+      DV$ = SubString$(Value$, index)
+    Until (CF$ = "" And DV$ = "")
+    
+
+    Row = Row + 1
+  EndWhile
+
+Print #5, ""
+
+return
+EndMacro
+
+! **************************************************************************
+! CFPrintDefsTab
+! **************************************************************************
+
+Name CFPrintDefsTab
+parameter Tab$
+local nRows, Row
+Local DefaultValue$, CFName$, Type$, Mandatory, NLSFileName_phx3dsupport$, TypeData$, ManVal$
+Local ColWd1,ColWd2,ColWd3,ColWd4
+Local index,CF$,DV$,line$
+  
+  ColWd1 = 30
+  ColWd2 = 8
+  ColWd3 = 5
+  ColWd4 = 25
+  
+  NLSFileName_phx3dsupport$ = "phx3dsupport"
+  
+  If ObjHdrType(_CF_TMP_SEQ[1], Tab$) <> 4 Then
+    Print Using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CF_NODEFS_397)
+    Print #5, ""
+    return
+  endif
+    
+  nRows = TabHdrVal (_CF_TMP_SEQ[1], Tab$, "NumberOfRows")
+  
+  if nRows =0 
+    Print Using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CF_NODEFS_397)
+    Print #5, ""
+    return
+  endif
+
+  Row    = 1
+  while Row <= nRows do
+    
+  CFName$ =        WrapDoubleWidthText$(TabText$(_CF_TMP_SEQ[1], Tab$, Row, "Name")    ,ColWd1,"|")
+  DefaultValue$  = WrapDoubleWidthText$(TabText$(_CF_TMP_SEQ[1], Tab$, Row, "DefValue"),ColWd4,"|")
+  index = 1
+  Type$  = TabText$(_CF_TMP_SEQ[1], Tab$, Row, "Type")
+  Mandatory  = TabVal (_CF_TMP_SEQ[1], Tab$, Row, "Mandatory")
+
+  CF$ = SubString$(CFName$, index)
+  DV$ = SubString$(DefaultValue$, index)
+
+  If Type$ = "Text"
+      TypeData$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CF_6_393)
+  Else
+    If Type$ = "Numeric"
+      TypeData$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CF_7_395)
+    Else
+      TypeData$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CF_8_396)
+    EndIf
+  EndIf
+  
+    
+  If Mandatory = 1
+      ManVal$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CF_4_391)
+  Else
+      ManVal$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CF_5_392)    
+  EndIf
+    
+  line$ = SPrintF$(CF$,"%-" + Val$(ColWd1 + 1)+"s")+SPrintF$(TypeData$, "%-" + Val$(ColWd2 + 1)+"s") \
+          + SPrintF$(ManVal$,"%-" + Val$(ColWd3 + 1)+"s") + SPrintF$(DV$,"%-" + Val$(ColWd4)+"s")
+  Print Using #5, line$ +"/"
+  
+  Repeat
+    index = index + 1
+    CF$ = SubString$(CFName$, index)
+    DV$ = SubString$(DefaultValue$, index)
+    line$ = SPrintF$(CF$,"%-" + Val$(ColWd1 + 1)+"s")+SPrintF$(" ","%-" + Val$(ColWd2 + 1)+"s") \
+            + SPrintF$(" ","%-" + Val$(ColWd3 + 1)+"s") + SPrintF$(DV$,"%-" + Val$(ColWd4)+"s")
+    
+    Print Using #5,line$
+    
+  Until (CF$ = "" And DV$ = "")
+ 
+
+  Row = Row + 1
+EndWhile
+
+Print #5, ""
+ 
+return
+endmacro
+
+
+! **************************************************************************
+! CFPrintDefsTab
+! **************************************************************************
+
+Name CFPrintCmpdTab
+parameter Tab$, TitleID, HeaderID, ToPrint
+local nRows, Row, strlen, NLSFileName_phx3dsupport$, ValueSplit$
+Local Value$, CFName$, CompoundName$, CmpdName$
+Local CF$, DV$, Output$
+Local index, ColWd1, ColWd2
+
+  Output$ = ""
+  ColWd1 = 30
+  ColWd2 = 30
+  NLSFileName_phx3dsupport$ = "phx3dsupport"
+  CmpdName$ = " "
+  
+  nRows = TabHdrVal (_CF_TMP_SEQ[1], Tab$, "NumberOfRows")
+  
+  if nRows = 0 
+  Print Using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CF_NOVALUES_394)
+  Print #5, ""
+  return
+  endif
+
+  ToPrint = 2
+  CFPrintHeaders TitleID, HeaderID, ToPrint
+  Row    = 1
+  while Row <= nRows do
+    
+  CompoundName$ =  TabText$(_CF_TMP_SEQ[1], Tab$, Row, "Compound")
+  CFName$ =  WrapDoubleWidthText$(TabText$(_CF_TMP_SEQ[1], Tab$, Row, "Name") ,ColWd1,"|")
+  Value$  =  WrapDoubleWidthText$(TabText$(_CF_TMP_SEQ[1], Tab$, Row, "Value"),ColWd2,"|")
+  
+  
+  if CompoundName$ <> CmpdName$
+    Print Using #5, "/"
+    Print Using #5, CompoundName$
+    Print Using #5, ":"
+    Print Using #5, "/"
+    CmpdName$ = CompoundName$
+    ToPrint = 0
+    CFPrintHeaders TitleID, HeaderID, ToPrint
+  EndIf
+  index = 1
+  CF$ = SubString$(CFName$, index)
+  DV$ = SubString$(Value$, index)
+  
+  Repeat
+  	Output$ = SPrintF$(CF$,"%-" + Val$(ColWd1 + 2)+"s") + SPrintF$(DV$,"%-" + Val$(ColWd2)+"s")
+    Print Using #5, "%/",Output$
+    
+    index = index + 1
+    CF$ = SubString$(CFName$, index)
+    DV$ = SubString$(Value$, index)
+    
+  Until (CF$ = "" And DV$ = "")
+  
+   
+  Row = Row + 1
+EndWhile
+
+Print #5, ""
+
+ 
+return
+endmacro

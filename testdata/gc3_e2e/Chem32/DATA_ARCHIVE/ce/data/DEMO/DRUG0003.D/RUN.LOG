@@ -1,0 +1,14 @@
+  67 1d59 2bcdcf63
+Method       Method started                                 14:10:59 04/15/93
+  67 1d59 2bcdcf63
+Method       Instrument running sample vial# 5              14:10:59 04/15/93
+  67 1d59 2bcdd166
+Method       Instrument Run completed                       14:19:34 04/15/93
+ 875 1d59 2bcdd167
+Method       Saving Method DEMO.M                           14:19:35 04/15/93
+  70 1d57 2bcdd16a
+CP Macro     Analyzing rawdata DRUG0003.D                   14:19:38 04/15/93
+  70 1d57 2bcdd171
+CP Macro     Saving GLP Data for rawdata DRUG0003.D         14:19:45 04/15/93
+  67 1d59 2bcdd175
+Method       Method completed                               14:19:49 04/15/93

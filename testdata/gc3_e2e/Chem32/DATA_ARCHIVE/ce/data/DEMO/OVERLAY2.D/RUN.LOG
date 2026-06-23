@@ -1,0 +1,14 @@
+ 443 1d59 2d29b986
+Method       Method started: line# 14 vial# 7 inj# 7        10:46:30 01/04/94
+ 820 1d59 2d29b987
+Method       Prerun Macro evaluated                         10:46:31 01/04/94
+  67 1d59 2d29b989
+Method       Instrument running sample vial# 7              10:46:33 01/04/94
+  67 1d59 2d29be64
+Method       Instrument Run completed                       11:07:16 01/04/94
+  70 1d57 2d29be65
+CP Macro     Analyzing rawdata 007-1407.D                   11:07:17 01/04/94
+ 823 1d59 2d29be76
+Method       Postrun Macro evaluated                        11:07:34 01/04/94
+  67 1d59 2d29be77
+Method       Method completed                               11:07:35 01/04/94

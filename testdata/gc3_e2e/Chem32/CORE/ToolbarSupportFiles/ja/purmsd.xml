@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="PURMSD" PosStyle="BOTTOM" Caption="ピーク純度" PanelName="Chem">
+		<PushButton Name="PrevImpPeak" Help="前の '不純な' ピーク選択" Command="PUR_StatusBarFunction &quot;PrevImpure&quot;,&quot;MSD&quot;" NewGroup="1" ImageName="PeakPur_PrevImpurePeak16" ImageNameDisabled="PeakPur_PrevImpurePeak16_d"/>
+		<PushButton Name="PrevPeak" Help="前のピーク選択" Command="PUR_StatusBarFunction &quot;PrevPeak&quot;,&quot;MSD&quot;" ImageName="PeakPur_PrevPeak16" ImageNameDisabled="PeakPur_PrevPeak16_d"/>
+		<Static Name="PeakNumber" Text="--" Help="現在のピーク番号と時間" Width="200" Enable="1"/>
+		<PushButton Name="NextPeak" Help="次のピーク選択" Command="PUR_StatusBarFunction &quot;NextPeak&quot;,&quot;MSD&quot;" ImageName="PeakPur_NextPeak16" ImageNameDisabled="PeakPur_NextPeak16_d"/>
+		<PushButton Name="PrevNextPeak" Help="次の '不純な' ピーク選択" Command="PUR_StatusBarFunction &quot;NextImpure&quot;,&quot;MSD&quot;" ImageName="PeakPur_NextImpurePeak16" ImageNameDisabled="PeakPur_NextImpurePeak16_d"/>
+		<!-- <Static Name="Detector" Text="- no info -" Help="Information on the Peak Purity" Width="200" Enable="1"/> -->
+		<Static Name="PurityInfo" Text="" Help="ピーク純度情報" Width="200" Enable="1"/>
+		<PushButton Name="Print" Help="現在のピーク純度の印刷" Command="PUR_StatusBarFunction &quot;Print&quot;,&quot;MSD&quot;" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="Close" Help="ピーク純度表示を終了します" Command="PUR_StatusBarFunction &quot;Close&quot;, &quot;MSD&quot;" ImageName="Exit20" ImageNameDisabled="Exit20_d"/>
+	</toolbar>
+</graphical_object>

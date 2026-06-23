@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="AnnotT" PosStyle="RIGHT" DockRow="0" DockCol="0" Caption="标注" PanelName="Chem">
+		<PushButton Name="SetDef" Help="编辑标注选项" Command="ANN_EditOptions 1" ImageName="Graph_EditAnnot20" ImageNameDisabled="Graph_EditAnnot20_d"/>
+		<RadioButton Name="New" Help="将标注添加到窗口" Command="ANN_SetAnnotMenuSelection New,1" Group="1" ImageName="Graph_AddAnnot20" ImageNameDisabled="Graph_AddAnnot20_d"/>
+		<RadioButton Name="Line" Help="在窗口中绘制线" Command="ANN_SetAnnotMenuSelection Line,1" Group="1" ImageName="Graph_DrawLine20" ImageNameDisabled="Graph_DrawLine20_d"/>
+		<RadioButton Name="Move" Help="移动 (拖放)/更改 (单击) 标注" Command="ANN_SetAnnotMenuSelection Move,1" Group="1" ImageName="Graph_MoveAnnot20" ImageNameDisabled="Graph_MoveAnnot20_d"/>
+		<RadioButton Name="Delete" Help="从窗口中删除标注" Command="ANN_SetAnnotMenuSelection Delete,1" Group="1" ImageName="Graph_DeleteAnnot20" ImageNameDisabled="Graph_DeleteAnnot20_d"/>
+		<RadioButton Name="NewWMF" Help="将新“EMF”标注添加到窗口" Command="ANN_SetAnnotMenuSelection NewWmf,1" Group="1" ImageName="Graph_AddEMF20" ImageNameDisabled="Graph_AddEMF20_d"/>
+		<PushButton Name="ToggleOverlay" Help="在分离信号和重叠信号之间切换" Command="ANN_ToggleWindowOption &quot;Overlay&quot;,-1" ImageName="Graph_ToggleDisplay20" ImageNameDisabled="Graph_ToggleDisplay20_d"/>
+		<PushButton Name="ToggleFullScale" Help="在全部使用相同量程和各自使用满量程之间切换" Command="ANN_ToggleWindowOption &quot;FullScale&quot;,-1" ImageName="Graph_ToggleScale20" ImageNameDisabled="Graph_ToggleScale20_d"/>
+		<PushButton Name="ToggleNames" Help="在显示化合物名称和不显示化合物名称之间切换" Command="Win_ToggleWindowOption Names,,,38" ImageName="Graph_ToggleCompound20" ImageNameDisabled="Graph_ToggleCompound20_d"/>
+		<PushButton Name="ToggleTimes" Help="在显示保留时间和不显示保留时间之间切换" Command="Win_ToggleWindowOption Times,,,38" ImageName="Graph_ToggleRetentionTime20" ImageNameDisabled="Graph_ToggleRetentionTime20_d"/>
+		<PushButton Name="ToggleBaseline" Help="在显示基线和不显示基线之间切换" Command="Win_ToggleWindowOption Baseline,,,38" ImageName="Graph_ToggleBaseline20" ImageNameDisabled="Graph_ToggleBaseline20_d"/>
+		<PushButton Name="ToggleobjTitles" Help="在显示对象标题和不显示对象标题之间切换" Command="Win_ToggleWindowOption ObjTitles" ImageName="Graph_ToggleTitles20" ImageNameDisabled="Graph_ToggleTitles20_d"/>
+		<PushButton Name="ToggleAxis" Help="在显示轴和不显示轴之间切换" Command="Win_ToggleWindowOption Axis" ImageName="Graph_ToggleAxis20" ImageNameDisabled="Graph_ToggleAxis20_d"/>
+		<PushButton Name="PrintWindow" Help="打印窗口" Command="Win_ToggleWindowOption PrintWindow" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="ClipWindow" Help="将窗口复制到剪贴板" Command="Win_ToggleWindowOption ClipWindow" ImageName="Graph_CopyClipboard20" ImageNameDisabled="Graph_CopyClipboard20_d"/>
+	</toolbar>
+</graphical_object>

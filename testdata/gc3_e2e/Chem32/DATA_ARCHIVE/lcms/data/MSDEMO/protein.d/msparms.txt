@@ -1,0 +1,48 @@
+This data was acquired in Method&Run Control.
+The MSD parameters were saved in the msdiag register file.
+This msparms.txt file was built using the values from the msdiag register.
+Some parameters normally reported under MSData acquisition in Tune 
+may be missing from this msparms.txt file.  You may be able to read these 
+values from Data Analysis.  These items are marked with an asterisk (*).
+ 
+ 
+ 
+File                     :   C:\HPCHEM\1\DATA\PROTEIN0.D
+Operator                 :   mcintyre
+Date acquired            :   Thu Apr 17 19:35:48 1997
+Instrument               :   Appsprite2
+ 
+ 
+Sample information
+----------------------------------
+Sample name              :   myoglobin
+Misc info                :   myoglobin run in FIA mode
+ 
+ 
+MS parameters
+----------------------------------
+Tune File                   :    C:\HPCHEM\1\1946TUNE\atunes.tun
+Skim1                       :    Not Applicable
+Skim2                       :    7.2 V     
+Ion Energy                  :    5.0 V     
+Lens1                       :    2.6 V     
+Lens2                       :    18 V      
+Iris                        :    340 V     
+HED                         :    10000 V   
+Width Gain                  :    -61       
+Width Offset                :    -17       
+Mass Gain                   :    4.70      
+Mass Offset                 :    Variable  
+                                 Mass         :   Value    
+                                 --------------------------
+                                 121.05       :   0        
+                                 622.03       :   0        
+                                 922.01       :   0        
+                                 1521.97      :   0        
+                                 2121.93      :   0        
+                                 --------------------------
+Quad DC                     :    -1.00 V   
+Octopole Peak               :    300 V     
+Octopole Knee               :    307 Da    
+Mass Filter                 :    Gaussian  
+Mass Filter Width           :    0.30 Da   

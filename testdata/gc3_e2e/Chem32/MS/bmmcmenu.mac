@@ -1,0 +1,565 @@
+!*******************************************************************************
+! BMMCMENU.MAC:  Product independent macros for the menu of the
+!                MS Manual Calibrate view
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!            
+!* $Header: /cag/triath1b/partsmac/manmscal/bmmcmenu.mac 1.57 2007-01-08 clove Exp $
+!
+!******************************************************************************
+!* MACROS :     <none>  only direct execution calls.
+!********************************************************
+! Global variables must exist before menu is displayed:
+!            mmcMenuEnable      = 0 for offline
+!                               = 1 for online
+!            mmcMenuEnableFS    = 0 for fast scan
+!                               = 1 for normal scan
+!            MSTuneTraceState   = 1 (default) for tracing off
+!                               = 3 for tracing on
+!            MSManCalOpenF      = 0 for file open for data acq in tune
+!                                 1 (default) no file open yet for data acq in tune 
+!            MSManCalCloseF     = 0 (default) for no file open yet for data acq in tune
+!                                 1 for file open for data acq in tune
+!            MSToggleScanState =  1 (default) normal data
+!                                 3 filtered raw data
+!            MSManShow          = 0 No Atune.Reg exists, disable single polarity
+!                                   Autotunes
+!                                 1 Atune.Reg exists, enable single polarity
+!                                   Autotunes
+!
+!*  Defines Manual MSD Calibration base menus
+!
+! =========================================================================
+! 09/09/99 YD  Removed Printer Setup item from the menu.
+! 06/07/01 PHC Added dynamic ramping items for G1946D with Lens2RF.
+! 06/2002  PHC Added Fast Scan options. Removed "Edit Autotune Spray Chamber
+!              Parameters"item from the menu.
+! 11/29/05 LL  Added Globalization changes.
+! 02/10/06 CPL Updated macro header information
+! 03/16/06 CPL Disable "Check Gain Calibration" in Fast Scan mode.
+! 06/04/19 ueff Ultra Fast Scan labels for menu item for G6140A
+! 07/01/08 CPL Add "Reset Gain Calibration to Defaults" menu item.
+! =========================================================================
+
+
+!*********************************************************************!
+Local lDebug            ! If < 1 then no tracing will be done
+Local lMSDModel$        ! Will hold the MSD model e.g.: G6140A
+local ID_SUPPORTMACFILES__INSTRUMENT_1
+local ID_SUPPORTMACFILES__FILE_125
+local ID_SUPPORTMACFILES_PRINT_MSD_TUNE_147
+local ID_SUPPORTMACFILES_PRINT_A_HARDCO_149
+local ID_SUPPORTMACFILES_RESET_DEFAULT_388
+local ID_SUPPORTMACFILES_E_XIT_150
+local ID_SUPPORTMACFILES_RESET_TUNE_DEFAULT_389
+local ID_SUPPORTMACFILES_EXIT_390
+local ID_SUPPORTMACFILES_TUNE_391
+local ID_SUPPORTMACFILES_O_PTIMIZE_OCTO_205
+local ID_SUPPORTMACFILES_OPTIMIZE_OCTOP_207
+LOCAL ID_SUPPORTMACFILES_MANUAL_TUNE_392
+LOCAL ID_SUPPORTMACFILES_MANUAL_SET_MSD_393
+LOCAL ID_SUPPORTMACFILES_SET_SPRAY_394
+LOCAL ID_SUPPORTMACFILES_EDIT_MSD_SPRAY_395
+LOCAL ID_SUPPORTMACFILES_SELECT_POLARITY_396
+LOCAL ID_SUPPORTMACFILES_EDIT_ION_POLAR_252
+LOCAL ID_SUPPORTMACFILES_SELECT_STATUS_PAR_397
+LOCAL ID_SUPPORTMACFILES_SELECT_MSD_STATUS_387
+LOCAL ID_SUPPORTMACFILES__TROUBLESHOOT_285
+LOCAL ID_SUPPORTMACFILES_TROUBLESHOOT_B_286
+local ID_SUPPORTMACFILES_LOAD_MSTUNE_398
+local ID_SUPPORTMACFILES_SAVE_MSTUNE_399
+local ID_SUPPORTMACFILES_SAVE_MSTUNE_AS_400
+local ID_SUPPORTMACFILES_LOAD_MSTUNE_PAR_401
+local ID_SUPPORTMACFILES_SAVE_MSTUNE_PAR_402
+local ID_SUPPORTMACFILES_SAVE_MSTUNE_PAR_TO_403
+local ID_SUPPORTMACFILES_PRINT_MSTUNE_RPT_404
+local ID_SUPPORTMACFILES_GENERATE_MSTUNE_RPT_405
+local ID_SUPPORTMACFILES_C_HECK_TUNE_154
+local ID_SUPPORTMACFILES__DUAL_POLARITY_160
+local ID_SUPPORTMACFILES__AUTOTUNE_157
+local ID_SUPPORTMACFILES__POSITIVE_POLA_163
+local ID_SUPPORTMACFILES__NEGATIVE_POLA_166
+local ID_SUPPORTMACFILES_CHECK_MSD_PERF_156   
+local ID_SUPPORTMACFILES_TUNE_THE_MSD_A_158
+local ID_SUPPORTMACFILES_PERFORM_A_DUAL_162
+local ID_SUPPORTMACFILES_PERFORM_A_POSI_165
+local ID_SUPPORTMACFILES_PERFORM_A_NEGA_168
+local ID_SUPPORTMACFILES_D_UAL_POLARITY_169
+local ID_SUPPORTMACFILES_PERFORM_A_DUAL_171
+local ID_SUPPORTMACFILES_P_OSITIVE_POLA_172
+local ID_SUPPORTMACFILES_PERFORM_A_POSI_174
+local ID_SUPPORTMACFILES_N_EGATIVE_POLA_175
+local ID_SUPPORTMACFILES_PERFORM_A_NEGA_177
+local ID_SUPPORTMACFILES_CHECK__GAIN_CA_178
+local ID_SUPPORTMACFILES_CHECK_THE_GAIN_179
+local ID_SUPPORTMACFILES_CHECK_CURRENT_181
+local ID_SUPPORTMACFILES_CHECK_THE_GAIN_183
+local ID_SUPPORTMACFILES_CHECK_BOTH_POL_184 
+local ID_SUPPORTMACFILES_CHECK_THE_GAIN_186
+local ID_SUPPORTMACFILES_SET_MASS_PEAK_187
+local ID_SUPPORTMACFILES_SET_PEAK_WIDTH_189
+local ID_SUPPORTMACFILES_A_DJUST_MASS_P_190
+local ID_SUPPORTMACFILES_CALIBRATE_THE_192
+local ID_SUPPORTMACFILES__CALIBRATE_MAS_193
+local ID_SUPPORTMACFILES_USE__FULL_DATA_196
+local ID_SUPPORTMACFILES_USE_C_ONDENSED_199
+local ID_SUPPORTMACFILES_EDIT_RAMP_PAR_406
+local ID_SUPPORTMACFILES_DO_D_YNAMIC_RA_202
+local ID_SUPPORTMACFILES_CALIBRATE_THE_195
+local ID_SUPPORTMACFILES_USE_THE_FULL_D_198
+local ID_SUPPORTMACFILES_USE_THE_CONDEN_201
+local ID_SUPPORTMACFILES_EDIT_MSLEN_RAMP_PAR_407
+local ID_SUPPORTMACFILES_MAXIMIZE_ION_R_204
+local ID_SUPPORTMACFILES__EDIT_ACQUISIT_209
+local ID_SUPPORTMACFILES__ACQUIRE_MS_DA_212
+local ID_SUPPORTMACFILES_EDIT_MSD_ACQUI_211
+local ID_SUPPORTMACFILES_ACQUIRES_MULTI_214
+local ID_SUPPORTMACFILES__OPEN_MS_DATA_216
+local ID_SUPPORTMACFILES_OPENS_A_DATA_F_218
+local ID_SUPPORTMACFILES_DO_SCAN_AND__W_219
+local ID_SUPPORTMACFILES_DO_A_SPECTRUM_221
+local ID_SUPPORTMACFILES_WRITE__LAST_SC_223
+local ID_SUPPORTMACFILES__CLOSE_MS_DATA_226
+local ID_SUPPORTMACFILES_WRITES_LAST_SP_225 
+local ID_SUPPORTMACFILES_DO__SPECTRUM_S_229
+local ID_SUPPORTMACFILES_DO_A_SPECTRUM_231
+local ID_SUPPORTMACFILES_PROFILE__IONS_232
+local ID_SUPPORTMACFILES_REPEAT_P_ROFIL_235
+local ID_SUPPORTMACFILES_DO_A_SINGLE_PR_234
+local ID_SUPPORTMACFILES_DO_REPETITIVE_237
+local ID_SUPPORTMACFILES_READ_MSDATA__T_238
+local ID_SUPPORTMACFILES_EDIT__FILE_PAR_241
+local ID_SUPPORTMACFILES_INSTRUMENT_PAR_240
+local ID_SUPPORTMACFILES_EDIT_USER_SPEC_243
+local ID_SUPPORTMACFILES_TURN__OFF_SPRA_244
+local ID_SUPPORTMACFILES__FLUSH_CALIBRA_247
+local ID_SUPPORTMACFILES_TURNS_OFF_MSD_246
+local ID_SUPPORTMACFILES_FLUSH_THE_CALI_249
+local ID_SUPPORTMACFILES_S_WITCH_STREAM_24
+local ID_SUPPORTMACFILES_SWITCH_LC_STRE_26
+local ID_SUPPORTMACFILES__POSITIVE_254
+local ID_SUPPORTMACFILES_CHANGE_POLARIT_256
+local ID_SUPPORTMACFILES__NEGATIVE_257
+local ID_SUPPORTMACFILES_CHANGE_POLARIT_259
+local ID_SUPPORTMACFILES_SELECT_SCAN__M_260
+local ID_SUPPORTMACFILES_EDIT_SCAN_MODE_261
+local ID_SUPPORTMACFILES__STANDARD_59
+local ID_SUPPORTMACFILES_CHANGE_SCAN_MO_264
+local ID_SUPPORTMACFILES__FAST_265
+local ID_SUPPORTMACFILES_CHANGE_SCAN_MO_267
+local ID_SUPPORTMACFILES_SET__IONIZATIO_268
+local ID_SUPPORTMACFILES_EDIT_SOURCE_IO_270
+local ID_SUPPORTMACFILES_SET__APPI_LAMP_271
+local ID_SUPPORTMACFILES_CONTROL_STATUS_32
+local ID_SUPPORTMACFILES__ON_34
+local ID_SUPPORTMACFILES_TURN_ON_APPI_L_36
+local ID_SUPPORTMACFILES_O_FF_38
+local ID_SUPPORTMACFILES_TURN_OFF_APPI_40
+local ID_SUPPORTMACFILES_SELECT__CALIBR_273
+local ID_SUPPORTMACFILES_SELECTS_THE_CA_274
+local ID_SUPPORTMACFILES__A_276
+local ID_SUPPORTMACFILES_SELECT_CALIBRA_278
+local ID_SUPPORTMACFILES__B_279
+local ID_SUPPORTMACFILES_SELECT_CALIBRA_281
+local ID_SUPPORTMACFILES__NONE_282
+local ID_SUPPORTMACFILES_SELECT_NOT_TO_284
+local ID_SUPPORTMACFILES_SET_MS_FILTER_408
+local ID_SUPPORTMACFILES_EDIT_MS_FILTER_409
+local ID_SUPPORTMACFILES__TRACE_ON_288
+local ID_SUPPORTMACFILES_SEND_ADDITIONA_290
+local ID_SUPPORTMACFILES__VIEW_TRACE_291
+local ID_SUPPORTMACFILES_VIEW_ADDITIONA_293
+local ID_SUPPORTMACFILES__TUNE_153
+local ID_SUPPORTMACFILES__TUNE__AUTOTUN_159
+local ID_SUPPORTMACFILES__TUNE_CHECK__G_180
+local ID_SUPPORTMACFILES__MSDATA_208
+local ID_SUPPORTMACFILES__INSTRUMENT_SE_253
+local ID_SUPPORTMACFILES__INSTRUMENT_SE_262
+local ID_SUPPORTMACFILES__INSTRUMENT_SE_272
+local ID_SUPPORTMACFILES__INSTRUMENT_SE_275
+Local ID_SUPPORTMACFILES__INSTRUMENT__T_287
+Local ID_SUPPORTMACFILES_Dual_Ultra_439 ! "D&ual Polarity - Ultra Fast Scan"
+Local ID_SUPPORTMACFILES_Pos_Ultra_440; ! "P&ositive Polarity - Ultra Fast Scan"
+Local ID_SUPPORTMACFILES_Neg_Ultra_441; ! "N&egative Polarity - Ultra Fast Scan"
+Local ID_SUPPORTMACFILES_Sel_Ultra_442; ! "Ultra &Fast"
+Local ID_SUPPORTMACFILES_Hel_Ultra_443; ! "Change Scan Mode to Ultra Fast Scan"
+Local ID_SUPPORTMACFILES_Hel_DUAL_444;  ! "Perform a dual polarity autotune for Standard and Ultra Fast scan"
+Local ID_SUPPORTMACFILES_Hel_POSI_445;  ! "Perform a positive polarity only autotune for Ultra Fast scan"
+Local ID_SUPPORTMACFILES_Hel_NEGA_446;  ! "Perform a negative polarity only autotune for Ultra Fast scan"
+Local ID_SUPPORTMACFILES_Select_Cal_500
+Local ID_SUPPORTMACFILES_Cal_On_501
+Local ID_SUPPORTMACFILES_Cal_Off_502
+Local ID_SUPPORTMACFILES_Cal_Help_On_503
+Local ID_SUPPORTMACFILES_Cal_Help_Off_504
+Local ID_SUPPORTMACFILES_Reset_Gain_Cal_505
+Local ID_SUPPORTMACFILES_Reset_Gain_Cal_506
+
+ID_SUPPORTMACFILES__INSTRUMENT_1      = 17001
+ID_SUPPORTMACFILES__FILE_125          = 17125
+ID_SUPPORTMACFILES_PRINT_MSD_TUNE_147 = 17147
+ID_SUPPORTMACFILES_PRINT_A_HARDCO_149 = 17149
+ID_SUPPORTMACFILES_RESET_DEFAULT_388  = 17388
+ID_SUPPORTMACFILES_E_XIT_150          = 17150
+ID_SUPPORTMACFILES_RESET_TUNE_DEFAULT_389 = 17389
+ID_SUPPORTMACFILES_EXIT_390           = 17390
+ID_SUPPORTMACFILES_TUNE_391           = 17391
+ID_SUPPORTMACFILES_O_PTIMIZE_OCTO_205 = 17205
+ID_SUPPORTMACFILES_OPTIMIZE_OCTOP_207 = 17207
+ID_SUPPORTMACFILES_MANUAL_TUNE_392    = 17392
+ID_SUPPORTMACFILES_MANUAL_SET_MSD_393 = 17393
+ID_SUPPORTMACFILES_SET_SPRAY_394      = 17394
+ID_SUPPORTMACFILES_EDIT_MSD_SPRAY_395 = 17395
+ID_SUPPORTMACFILES_SELECT_POLARITY_396   = 17396
+ID_SUPPORTMACFILES_EDIT_ION_POLAR_252    = 17252
+ID_SUPPORTMACFILES_SELECT_STATUS_PAR_397 = 17397
+ID_SUPPORTMACFILES_SELECT_MSD_STATUS_387 = 17387
+ID_SUPPORTMACFILES__TROUBLESHOOT_285  = 17285
+ID_SUPPORTMACFILES_TROUBLESHOOT_B_286 = 17286
+ID_SUPPORTMACFILES_LOAD_MSTUNE_398    = 17398
+ID_SUPPORTMACFILES_SAVE_MSTUNE_399    = 17399
+ID_SUPPORTMACFILES_SAVE_MSTUNE_AS_400 = 17400
+ID_SUPPORTMACFILES_LOAD_MSTUNE_PAR_401 = 17401
+ID_SUPPORTMACFILES_SAVE_MSTUNE_PAR_402 = 17402
+ID_SUPPORTMACFILES_SAVE_MSTUNE_PAR_TO_403  = 17403
+ID_SUPPORTMACFILES_PRINT_MSTUNE_RPT_404    = 17404
+ID_SUPPORTMACFILES_GENERATE_MSTUNE_RPT_405 = 17405
+ID_SUPPORTMACFILES_C_HECK_TUNE_154    = 17154
+ID_SUPPORTMACFILES__DUAL_POLARITY_160 = 17160
+ID_SUPPORTMACFILES__AUTOTUNE_157      = 17157
+ID_SUPPORTMACFILES__POSITIVE_POLA_163 = 17163
+ID_SUPPORTMACFILES__NEGATIVE_POLA_166 = 17166
+ID_SUPPORTMACFILES_CHECK_MSD_PERF_156  =17156
+ID_SUPPORTMACFILES_TUNE_THE_MSD_A_158 = 17158
+ID_SUPPORTMACFILES_PERFORM_A_DUAL_162 = 17162
+ID_SUPPORTMACFILES_PERFORM_A_POSI_165 = 17165
+ID_SUPPORTMACFILES_PERFORM_A_NEGA_168 = 17168
+ID_SUPPORTMACFILES_D_UAL_POLARITY_169 = 17169
+ID_SUPPORTMACFILES_PERFORM_A_DUAL_171 = 17171
+ID_SUPPORTMACFILES_P_OSITIVE_POLA_172 = 17172
+ID_SUPPORTMACFILES_PERFORM_A_POSI_174 = 17174
+ID_SUPPORTMACFILES_N_EGATIVE_POLA_175  =17175
+ID_SUPPORTMACFILES_PERFORM_A_NEGA_177 = 17177
+ID_SUPPORTMACFILES_CHECK__GAIN_CA_178 = 17178
+ID_SUPPORTMACFILES_CHECK_THE_GAIN_179 = 17179
+ID_SUPPORTMACFILES_CHECK_CURRENT_181  = 17181
+ID_SUPPORTMACFILES_CHECK_THE_GAIN_183 = 17183
+ID_SUPPORTMACFILES_CHECK_BOTH_POL_184 = 17184
+ID_SUPPORTMACFILES_CHECK_THE_GAIN_186 = 17186
+ID_SUPPORTMACFILES_SET_MASS_PEAK_187  = 17187
+ID_SUPPORTMACFILES_SET_PEAK_WIDTH_189 = 17189
+ID_SUPPORTMACFILES_A_DJUST_MASS_P_190 = 17190
+ID_SUPPORTMACFILES_CALIBRATE_THE_192  = 17192
+ID_SUPPORTMACFILES__CALIBRATE_MAS_193 = 17193
+ID_SUPPORTMACFILES_USE__FULL_DATA_196 = 17196
+ID_SUPPORTMACFILES_USE_C_ONDENSED_199 = 17199
+ID_SUPPORTMACFILES_EDIT_RAMP_PAR_406  = 17406
+ID_SUPPORTMACFILES_DO_D_YNAMIC_RA_202 = 17202
+ID_SUPPORTMACFILES_CALIBRATE_THE_195  = 17195
+ID_SUPPORTMACFILES_USE_THE_FULL_D_198 = 17198
+ID_SUPPORTMACFILES_USE_THE_CONDEN_201 = 17201
+ID_SUPPORTMACFILES_EDIT_MSLEN_RAMP_PAR_407 = 17407
+ID_SUPPORTMACFILES_MAXIMIZE_ION_R_204 = 17204
+ID_SUPPORTMACFILES__EDIT_ACQUISIT_209 = 17209
+ID_SUPPORTMACFILES__ACQUIRE_MS_DA_212 = 17212
+ID_SUPPORTMACFILES_EDIT_MSD_ACQUI_211 = 17211
+ID_SUPPORTMACFILES_ACQUIRES_MULTI_214 = 17214
+ID_SUPPORTMACFILES__OPEN_MS_DATA_216  = 17216
+ID_SUPPORTMACFILES_OPENS_A_DATA_F_218 = 17218
+ID_SUPPORTMACFILES_DO_SCAN_AND__W_219 = 17219
+ID_SUPPORTMACFILES_DO_A_SPECTRUM_221  = 17221
+ID_SUPPORTMACFILES_WRITE__LAST_SC_223 = 17223
+ID_SUPPORTMACFILES__CLOSE_MS_DATA_226 = 17226
+ID_SUPPORTMACFILES_WRITES_LAST_SP_225  =17225
+ID_SUPPORTMACFILES_DO__SPECTRUM_S_229 = 17229
+ID_SUPPORTMACFILES_DO_A_SPECTRUM_231  = 17231
+ID_SUPPORTMACFILES_PROFILE__IONS_232  = 17232
+ID_SUPPORTMACFILES_REPEAT_P_ROFIL_235 = 17235
+ID_SUPPORTMACFILES_DO_A_SINGLE_PR_234 = 17234
+ID_SUPPORTMACFILES_DO_REPETITIVE_237  = 17237
+ID_SUPPORTMACFILES_READ_MSDATA__T_238 = 17238
+ID_SUPPORTMACFILES_EDIT__FILE_PAR_241 = 17241
+ID_SUPPORTMACFILES_INSTRUMENT_PAR_240 = 17240
+ID_SUPPORTMACFILES_EDIT_USER_SPEC_243 = 17243
+ID_SUPPORTMACFILES_TURN__OFF_SPRA_244 = 17244
+ID_SUPPORTMACFILES__FLUSH_CALIBRA_247 = 17247
+ID_SUPPORTMACFILES_TURNS_OFF_MSD_246  = 17246
+ID_SUPPORTMACFILES_FLUSH_THE_CALI_249 = 17249
+ID_SUPPORTMACFILES_S_WITCH_STREAM_24  = 17024
+ID_SUPPORTMACFILES_SWITCH_LC_STRE_26  = 17026
+ID_SUPPORTMACFILES__POSITIVE_254      = 17254
+ID_SUPPORTMACFILES_CHANGE_POLARIT_256 = 17256
+ID_SUPPORTMACFILES__NEGATIVE_257      = 17257
+ID_SUPPORTMACFILES_CHANGE_POLARIT_259 = 17259
+ID_SUPPORTMACFILES_SELECT_SCAN__M_260 = 17260
+ID_SUPPORTMACFILES_EDIT_SCAN_MODE_261 = 17261
+ID_SUPPORTMACFILES__STANDARD_59       = 17059
+ID_SUPPORTMACFILES_CHANGE_SCAN_MO_264 = 17264
+ID_SUPPORTMACFILES__FAST_265          = 17265
+ID_SUPPORTMACFILES_CHANGE_SCAN_MO_267 = 17267
+ID_SUPPORTMACFILES_SET__IONIZATIO_268 = 17268
+ID_SUPPORTMACFILES_EDIT_SOURCE_IO_270 = 17270
+ID_SUPPORTMACFILES_SET__APPI_LAMP_271 = 17271
+ID_SUPPORTMACFILES_CONTROL_STATUS_32  = 17032
+ID_SUPPORTMACFILES__ON_34             = 17034
+ID_SUPPORTMACFILES_TURN_ON_APPI_L_36  = 17036
+ID_SUPPORTMACFILES_O_FF_38            = 17038
+ID_SUPPORTMACFILES_TURN_OFF_APPI_40   = 17040
+ID_SUPPORTMACFILES_SELECT__CALIBR_273 = 17273
+ID_SUPPORTMACFILES_SELECTS_THE_CA_274 = 17274
+ID_SUPPORTMACFILES__A_276             = 17276
+ID_SUPPORTMACFILES_SELECT_CALIBRA_278 = 17278
+ID_SUPPORTMACFILES__B_279             = 17279
+ID_SUPPORTMACFILES_SELECT_CALIBRA_281 = 17281
+ID_SUPPORTMACFILES__NONE_282          = 17282
+ID_SUPPORTMACFILES_SELECT_NOT_TO_284  = 17284
+ID_SUPPORTMACFILES_SET_MS_FILTER_408  = 17408
+ID_SUPPORTMACFILES_EDIT_MS_FILTER_409 = 17409
+ID_SUPPORTMACFILES__TRACE_ON_288      = 17288
+ID_SUPPORTMACFILES_SEND_ADDITIONA_290 = 17290
+ID_SUPPORTMACFILES__VIEW_TRACE_291    = 17291
+ID_SUPPORTMACFILES_VIEW_ADDITIONA_293 = 17293
+ID_SUPPORTMACFILES__TUNE_153          = 17153
+ID_SUPPORTMACFILES__TUNE__AUTOTUN_159 = 17159
+ID_SUPPORTMACFILES__TUNE_CHECK__G_180 = 17180
+ID_SUPPORTMACFILES__MSDATA_208        = 17208
+ID_SUPPORTMACFILES__INSTRUMENT_SE_253 = 17253
+ID_SUPPORTMACFILES__INSTRUMENT_SE_262 = 17262
+ID_SUPPORTMACFILES__INSTRUMENT_SE_272 = 17272
+ID_SUPPORTMACFILES__INSTRUMENT_SE_275 = 17275
+ID_SUPPORTMACFILES__INSTRUMENT__T_287 = 17287
+ID_SUPPORTMACFILES_Dual_Ultra_439     = 17439
+ID_SUPPORTMACFILES_Pos_Ultra_440      = 17440
+ID_SUPPORTMACFILES_Neg_Ultra_441      = 17441
+ID_SUPPORTMACFILES_Sel_Ultra_442      = 17442
+ID_SUPPORTMACFILES_Hel_Ultra_443      = 17443
+ID_SUPPORTMACFILES_Hel_DUAL_444       = 17444
+ID_SUPPORTMACFILES_Hel_POSI_445       = 17445
+ID_SUPPORTMACFILES_Hel_NEGA_446       = 17446
+ID_SUPPORTMACFILES_Select_Cal_500     = 17500
+ID_SUPPORTMACFILES_Cal_On_501         = 17501
+ID_SUPPORTMACFILES_Cal_Off_502        = 17502
+ID_SUPPORTMACFILES_Cal_Help_On_503    = 17503
+ID_SUPPORTMACFILES_Cal_Help_Off_504   = 17504
+ID_SUPPORTMACFILES_Reset_Gain_Cal_505 = 17505
+ID_SUPPORTMACFILES_Reset_Gain_Cal_506 = 17506
+
+lDebug = 0
+! Check for global variables:
+     if check(variable, MS_SQ_SL) = 0 then    ! global variable doesn't exist yet
+       msat_SetModelVars
+     endif
+! Get the instrument model e.g.: 6140A
+    MSAcqInfo
+    lMSDModel$ = ObjHdrText$( MSAcqInfo[1], "InstrumentType")
+    If ( lDebug > 0 ) then
+        Print "bmmcmenu: MS_SQ_SL:", MS_SQ_SL
+        Print "bmmcmenu: MSD_46:",   MSD_46
+        Print "bmmcmenu: MSDMODEL:", lMSDModel$
+    Endif
+!
+! Set the instrument model
+!
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125),,,,,,9001,"msd",1000000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LOAD_MSTUNE_398), "mstn_DoGetTuneFile",, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LOAD_MSTUNE_PAR_401),,9110,"msd",1001000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_MSTUNE_399), "mstn_DoSaveTuneFile tunefilepath$+tunefilename$",, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_MSTUNE_PAR_402),,9003,"msd",1002000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_MSTUNE_AS_400), "mstn_DoSaveTuneFile",, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SAVE_MSTUNE_PAR_TO_403),,9082,"msd",1003000
+
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125),,"SEPARATOR",,,,,,1004000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PRINT_MSTUNE_RPT_404),"mstn_DoGenReport",, ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_GENERATE_MSTUNE_RPT_405),mmcMenuEnable,9005,"msd",1005000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PRINT_MSD_TUNE_147),"mstn_DoDispPrint",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PRINT_A_HARDCO_149),,9006,"msd",1006000
+ ! MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), "&Printer Setup...","Device",,"Configure hardcopy output",,9007,"msd",1007000
+
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125),, "SEPARATOR",,,,,,1008000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_RESET_DEFAULT_388),"MSTN_FreshTune",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_RESET_TUNE_DEFAULT_389),,9008,"msd",1009000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125),, "SEPARATOR",,,,,,1010000
+
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_E_XIT_150), "ClosePhx",,  ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EXIT_390),,9010,"msd",1012000
+
+!
+! Fill out the Menu Structure particulars with menu items:
+! Added Tune menu item
+!
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153),,,,,,9011,"msd",2000000
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_C_HECK_TUNE_154),"msat_CheckTune",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHECK_MSD_PERF_156),mmcMenuEnableFS,9012,"msd",2001000
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__AUTOTUNE_157),"SUBMENU",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TUNE_THE_MSD_A_158),,9013,"msd",2002000
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE__AUTOTUN_159),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__DUAL_POLARITY_160),"msat_Auto",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PERFORM_A_DUAL_162),mmcMenuEnable,9013,"msd",2002100
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE__AUTOTUN_159),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__POSITIVE_POLA_163),"msat_Auto 1",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PERFORM_A_POSI_165),MSMANSHOW,9013,"msd",2002200
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE__AUTOTUN_159),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__NEGATIVE_POLA_166),"msat_Auto 2",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PERFORM_A_NEGA_168),MSMANSHOW,9013,"msd",2002300
+    If MS_SQ_SL = 1 then        ! Auto tuning for Fast and Ultra Fast 
+        If ( instr( lMSDModel$, "6140A" ) > 0 ) then ! Auto tuning for Ultra Fast Scan for SL-HT model
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE__AUTOTUN_159),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_Dual_Ultra_439),"msat_Auto 3",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_Hel_DUAL_444),mmcMenuEnable,9013,"msd",2002400
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE__AUTOTUN_159),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_Pos_Ultra_440),"msat_Auto 4",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_Hel_POSI_445),MSMANSHOW,9013,"msd",2002500
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE__AUTOTUN_159),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_Neg_Ultra_441),"msat_Auto 5",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_Hel_NEGA_446),MSMANSHOW,9013,"msd",2002600
+        Else
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE__AUTOTUN_159),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_D_UAL_POLARITY_169),"msat_Auto 3",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PERFORM_A_DUAL_171),mmcMenuEnable,9013,"msd",2002400
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE__AUTOTUN_159),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_P_OSITIVE_POLA_172),"msat_Auto 4",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PERFORM_A_POSI_174),MSMANSHOW,9013,"msd",2002500
+            MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE__AUTOTUN_159),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_N_EGATIVE_POLA_175),"msat_Auto 5",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PERFORM_A_NEGA_177),MSMANSHOW,9013,"msd",2002600
+        Endif
+    Endif  
+  
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153),, "SEPARATOR",,,,,,2004000
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHECK__GAIN_CA_178),"SUBMENU",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHECK_THE_GAIN_179),,9013,"msd",2005000
+!CPL FastScan Changes Begin
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_CHECK__G_180),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHECK_CURRENT_181),"msat_CheckGainCurve 0,0,1",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHECK_THE_GAIN_183),mmcMenuEnableFS,,"msd",2005100
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_CHECK__G_180),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHECK_BOTH_POL_184),"msat_CheckGainCurve 0,1,1",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHECK_THE_GAIN_186),mmcMenuEnableFS,,"msd",2005200
+!CPL FastScan Changes End
+  !Add menu item for "Reset Gain Calibration to Defaults" CPL 06/01/08
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_Reset_Gain_Cal_505), "ResetEMGain",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_RESET_GAIN_CAL_506),mmcMenuEnableFS,,"msd",2005300
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153),, "SEPARATOR",,,,,,2006000
+  !JZ FastScan Changes Begin 
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_MASS_PEAK_187), "mstn_SetPWidths",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_PEAK_WIDTH_189),mmcMenuEnableFS,9052,"msd",2008000
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_A_DJUST_MASS_P_190), "mstn_PWidths",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CALIBRATE_THE_192),mmcMenuEnableFS,9053,"msd",2009000
+  !JZ FastScan Changes End
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__CALIBRATE_MAS_193), "MSAxis",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CALIBRATE_THE_195),mmcMenuEnable,9054,"msd",2010000
+
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153),, "SEPARATOR",,,,,,2011000
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_USE__FULL_DATA_196),"MSTN_UseFullData",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_USE_THE_FULL_D_198),mstn_fullData,9021,"msd",2012000
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153),ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_USE_C_ONDENSED_199),"MSTN_UseCondensedData",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_USE_THE_CONDEN_201),mstn_CondensedData,9021,"msd",2013000
+   
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153),, "SEPARATOR",,,,,,2014000
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_RAMP_PAR_406),"MSEdRamp",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_MSLEN_RAMP_PAR_407),,9105,"msd",2015000
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DO_D_YNAMIC_RA_202),"MSTN_DoDynRamp",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MAXIMIZE_ION_R_204),,9019,"msd",2016000
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TUNE_153),, "SEPARATOR",,,,,,2017000
+   
+  if MSD_46 = 1 then
+    MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TUNE_391), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_O_PTIMIZE_OCTO_205),"msat_Octopole",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_OPTIMIZE_OCTOP_207),mmcMenuEnableFS,9023,"msd",2018000
+  endif
+  MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TUNE_391), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MANUAL_TUNE_392),"MSTN_EdParms",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_MANUAL_SET_MSD_393),,9022,"msd",2019000
+
+!
+!MSData formerly ACQUISITION
+!
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208), ,,,,,9031,"msd",3000000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__EDIT_ACQUISIT_209),"MSEdDisp",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_MSD_ACQUI_211),,9101,"msd",3001000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__ACQUIRE_MS_DA_212),"mstn_Acquire",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_ACQUIRES_MULTI_214),"MSManCalOpenF/mmcMenuEnable",9107,"msd",3002000
+
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208),, "SEPARATOR",,,,,,3003000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__OPEN_MS_DATA_216),"mstn_OpenFile 0",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_OPENS_A_DATA_F_218),MSManCalOpenF,9112,"msd",3004000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DO_SCAN_AND__W_219), "MSTN_DoScanWrite",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DO_A_SPECTRUM_221),"MSManCalCloseF/mmcMenuEnable",9034,"msd",3005000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_WRITE__LAST_SC_223),"mstn_DoMSWrite MSDATAFILE$",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_WRITES_LAST_SP_225),MSManCalCloseF,9035,"msd",3006000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__CLOSE_MS_DATA_226),"MSDATAFILE$=mstn_CloseAcq$(MSDATAFILE$)",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__CLOSE_MS_DATA_226),MSManCalCloseF,9036,"msd",3007000
+
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208),, "SEPARATOR",,,,,,3008000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DO__SPECTRUM_S_229), "MSScan",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DO_A_SPECTRUM_231),mmcMenuEnable,9037,"msd",3009000
+
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208),, "SEPARATOR",,,,,,3012000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_PROFILE__IONS_232), "MSProfile",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DO_A_SINGLE_PR_234),mmcMenuEnable,9039,"msd",3013000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208),ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_REPEAT_P_ROFIL_235),"MSProfile 1",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_DO_REPETITIVE_237),mmcMenuEnable,9040,"msd",3014000
+
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208),, "SEPARATOR",,,,,,3015000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_READ_MSDATA__T_238), "mstn_EsShowMSText",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_INSTRUMENT_PAR_240),,9041,"msd",3016000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__MSDATA_208),ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_EDIT__FILE_PAR_241),"MSEditFileInfo 0",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_USER_SPEC_243),MSManCalCloseF,9112,"msd",3017000
+
+
+!
+! fill out the menu structure particulars with the menu items: ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1)
+!
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),,,,,,9061,"msd",4000000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TURN__OFF_SPRA_244),"MSTN_TurnOff",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TURNS_OFF_MSD_246),mmcMenuEnable,9063,"msd",4001000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FLUSH_CALIBRA_247),"MSCDSFlush",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_FLUSH_THE_CALI_249),mmcMenuEnable,9111,"msd",4002000
+   if MSCheckValve() > 0 then
+     MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_S_WITCH_STREAM_24), "MSStreamSelect",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SWITCH_LC_STRE_26),mmcMenuEnable,1600,"msd",4003000
+   endif
+
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),, "SEPARATOR",,,,,,4004000   
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_SPRAY_394), "MSEdZone",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_MSD_SPRAY_395),mmcMenuEnable,9104,"msd",4005000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_POLARITY_396),"SUBMENU",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_ION_POLAR_252),,9014,"msd",4006000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_253),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__POSITIVE_254),"MSTN_ChangePolarity 0",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHANGE_POLARIT_256),mstn_PolPos,9014,"msd",4006100
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_253),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__NEGATIVE_257),"MSTN_ChangePolarity 1",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHANGE_POLARIT_259),mstn_PolNeg,9014,"msd",4006200
+    ! Selection of scan modus for SL models (and HT models)
+    If MS_SQ_SL = 1 then
+        If instr( lMSDModel$, "6140A" ) > 0 then ! Ultra fast scan for SL-HT model
+	    MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_SCAN__M_260),"SUBMENU",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_SCAN_MODE_261),,9016,"msd",4011000
+	    MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_262),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__STANDARD_59),"MSTN_ChangeScanMode 0",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHANGE_SCAN_MO_264),mstn_ScanStd,9016,"msd",4011100
+	    MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_262),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_Sel_Ultra_442),"MSTN_ChangeScanMode 1",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_Hel_Ultra_443),mstn_ScanFast,9016,"msd",4011200
+        Else                                 ! Fast scan for SL model
+	    MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_SCAN__M_260),"SUBMENU",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_SCAN_MODE_261),,9016,"msd",4011000
+	    MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_262),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__STANDARD_59),"MSTN_ChangeScanMode 0",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHANGE_SCAN_MO_264),mstn_ScanStd,9016,"msd",4011100
+	    MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_262),\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FAST_265),"MSTN_ChangeScanMode 1",,\
+                    ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CHANGE_SCAN_MO_267),mstn_ScanFast,9016,"msd",4011200
+        Endif
+    Endif
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_SET__IONIZATIO_268),"MSTN_DoMode",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_SOURCE_IO_270),,9102,"msd",4007000
+   
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET__APPI_LAMP_271),"SUBMENU",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CONTROL_STATUS_32),,,,4008000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_272),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__ON_34),"MSAPPIUVLampOn",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TURN_ON_APPI_L_36),"_APPILAMPON",,,4008100
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_272),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_O_FF_38),"MSAPPIUVLampOff",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TURN_OFF_APPI_40),"_APPILAMPOFF",,,4008200
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT__CALIBR_273), "SUBMENU",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECTS_THE_CA_274),,9015,"msd",4009000
+    ! ==========================
+    ! Lassen/Shasta split
+    ! ==========================
+    !If ( instr( lMSDModel$, "6140A" ) < 1 ) then  ! Branch for Shasta
+    macro _autopath$+ "..\MS\MSTNUtil.mac" 
+    If ( pre6100() > 0 ) then  ! Branch for Shasta
+        MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_275), \
+                ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__A_276),"MSTN_Calibrant 2",,\
+                ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_CALIBRA_278),mstn_CalA,9015,"msd",4009100
+        MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_275), \
+                ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__B_279),"MSTN_Calibrant 3",,\
+                ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_CALIBRA_281),mstn_CalB,9015,"msd",4009200
+        MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_SE_275),\
+                ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__NONE_282),"MSTN_Calibrant 1",,\
+                ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_NOT_TO_284),mstn_CalN,9015,"msd",4009300
+    Else                                        ! Branch for Lassen
+        ! Instrument --> Select Calibrant --> On
+        MenuAdd ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_Select_Cal_500),\
+                ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_Cal_On_501),"MSTN_Calibrant 2",,\
+                ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_Cal_Help_On_503),mstn_CalA,9015,"msd",4009100
+        ! Instrument --> Select Calibrant --> Off
+        MenuAdd ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_Select_Cal_500),\
+                ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_Cal_Off_502),"MSTN_Calibrant 1",,\
+                ReadResource$("supportmacfiles", ID_SUPPORTMACFILES_Cal_Help_Off_504),mstn_CalN,9015,"msd",4009300
+    Endif
+    ! ==========================
+    ! End of Lassen/Shasta split
+    ! ==========================
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SET_MS_FILTER_408),"MSFilterMass",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_EDIT_MS_FILTER_409),,9103,"msd",4010000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1),, "SEPARATOR",,,,,,4020000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_STATUS_PAR_397),"print msmethodedit(10)",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SELECT_MSD_STATUS_387),,,,4020500
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT_1), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TROUBLESHOOT_285), "SUBMENU",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_TROUBLESHOOT_B_286),,9020,"msd",4021000
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT__T_287), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__TRACE_ON_288),"mstn_DoTrace",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SEND_ADDITIONA_290),MSTuneTraceState,9020,"msd",4021100
+   MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__INSTRUMENT__T_287), ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__VIEW_TRACE_291), "mstn_ViewTrace",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_VIEW_ADDITIONA_293),,9020,"msd",4021200
+! For rebuild of menu
+! DelTab NLSMS[2],baseMMCMenu
+! SaveObj NLSMS, _automspath$ + "language\enums.reg", new
+! Close ChemStation, and restart again. Now, your new menu should be there.
+

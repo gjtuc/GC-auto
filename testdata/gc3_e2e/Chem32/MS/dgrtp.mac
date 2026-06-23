@@ -1,0 +1,183 @@
+!******************************************************************************
+!*
+!* FILE:  dgrtp.mc
+!*
+!* DESCRIPTION:  MSD diagnosis real time plot and dynamic tune plot
+!*
+!* $Header: /cag/triath1b/partsmac/diag/dgrtp.mc 1.12 1997-04-02 13:00:19-08 hmgr Exp $
+!******************************************************************************
+!*
+!* MACROS : 
+!*           dgMsDynamicRTP
+!*           dgMsPrepareRTP
+!*  	     dgMsSaveStatus
+!*  	     dgMsRestoreStatus
+
+
+
+!############################################################################
+NAME dgMsDynamicRTP
+  PARAMETER Parm$ 
+! 
+! invokes the dynamic plot of MSD tune for 
+!  Fragmentor, QuadDc, WidthOffset, MassOffset
+!############################################################################
+local ret
+
+  if dgMsCheckTuneMode() <> 1 then
+    ret=alert("This Dynamic Plot is not available!"+ CHR$(13)+ \
+              "The ionization mode of the MSD tune file "+_DiagTuneFile$+ CHR$(13)+ \
+              "doesn't match the installed spray chamber source.", 3, NlsMsDiag$("MsdDiag"))
+  else
+    ON ERROR ret=alert("This parameter is not enabled for dynamic ramping" +CHR$(13)+ \ 
+                       "in tune file "+_DiagTuneFile$+".", 3, NlsMsDiag$("MsdDiag"))
+   
+    MsDynamic Parm$, PLOT
+  endif
+
+ENDMACRO
+
+!############################################################################
+NAME dgMsPrepareRTP
+  PARAMETER ModuleNAME$ DEFAULT "MSD"
+  PARAMETER Extention$  DEFAULT "ZoneHighVac"
+! return -1 if an error occured and no RTP window could be prepared
+!         0 otherwise 
+!############################################################################
+LOCAL macro$, Type$, nGlobalId, nRet, itemnum, row, maxrow, Pol, IonMode$, err
+
+  ON ERROR Pol=0
+  MsParm Polarity, Pol
+
+  ON ERROR IonMode$="APCI"
+  MsGetMode IonMode$
+
+  Type$=Extention$[1:4] 
+  nGlobalId= MsGetParmID(Type$, IonMode$, Pol, Extention$[5:len(Extention$)] )
+
+  print nGlobalId, "= MsGetParmID(", Type$,",", IonMode$,",", Pol,",", Extention$[5:len(Extention$)] ,")"
+
+  ! check if ID exists
+  if nGlobalId < 0  then
+    err=alert("This Real Time Plot is not available!"+ CHR$(13)+ \
+              "The ionization mode of the MSD tune file "+_DiagTuneFile$+ CHR$(13)+ \
+              "doesn't match the installed spray chamber source.", 3, NlsMsDiag$("MsdDiag"))
+    return -1
+  endif
+
+  ON ERROR return -1
+
+  !save msd status box to restore for other views and mark MSD as started
+  dgMsSaveStatus
+
+  ON ERROR
+  ! add item to status box
+  !print "Before MsAppendStatus(",Type$,",", nGlobalId,")"
+  itemnum=MsAppendStatus(Type$, nGlobalId)
+  
+  IF itemnum=-1 THEN
+    MsDeleteStatus 5
+    itemnum=MsAppendStatus(Type$, nGlobalId)
+    IF itemnum<0 or itemnum>5 THEN
+      RETURN 0
+    ENDIF
+  ENDIF
+
+
+  ! prepare table from template
+  IF ObjHdrType(DiagGUITemplate[1], "RTPSignalsMSD")<>99 THEN
+    DelTab DiagGUITemplate[1], "RTPSignalsMSD"
+  ENDIF
+  CopyTab DiagGUITemplate[1], "MsRTPTemplate", DiagGUITemplate[1], "RTPSignalsMSD"
+  SetTabHdrText DiagGUITemplate[1], "RTPSignalsMSD", DiagRTPUndoMac, ""
+  SetTabHdrText DiagGUITemplate[1], "RTPSignalsMSD", DiagRTPPreMac, "dgMsPrepareRTP"
+  SetTabHdrText DiagGUITemplate[1], "RTPSignalsMSD", DiagRTPWinTitle, "rtpWinTitle"
+
+  ! copy table line of RTP item to row one
+  ON ERROR print "row not defined in template"
+  row = RowByText(DiagGUITemplate[1], "RTPSignalsMSD",,"RtpId","=", Extention$)
+  ! get RTP signal ID to select the correct entry
+  itemnum=MsGetRtpId(Type$, nGlobalId)
+
+  IF row < 1 OR itemnum=-1 THEN
+    row=alert("RTP paramter not available for "+Extention$,2)
+    return -1
+  ELSE
+    CopyTabRow DiagGUITemplate[1], "RTPSignalsMSD",row,1
+
+    ! set item number in RTP table and delete all unused table rows
+    SetTabVal DiagGUITemplate[1], "RTPSignalsMSD",1,"SignalId", itemnum
+    maxRow=TabHdrVal(DiagGUITemplate, "RTPSignalsMSD", NumberOfRows)
+    DelTabRow DiagGUITemplate[1], "RTPSignalsMSD", 2:maxRow
+    DelTabCol DiagGUITemplate[1], "RTPSignalsMSD", "RtpId"
+    return 0
+  ENDIF															   
+
+ENDMACRO
+
+!############################################################################
+NAME dgMsSaveStatus
+!
+!############################################################################
+LOCAL item, Type$, nGlobalId, NAME$, Unit$, maxItem
+ 
+  ! check IF this is the first invokation of the RTP in diagnosis
+  IF ObjHdrType(DiagGUITemplate, MsdRTPStarted) <> 99 THEN
+    RETURN
+  ENDIF
+
+  IF ObjHdrType(DiagGUITemplate, MsdStatus) = 4 THEN
+    DelTab DiagGUITemplate, MsdStatus
+  ENDIF
+  NewTab DiagGUITemplate, MsdStatus
+  NewColText DiagGUITemplate, MsdStatus, Type, "ZONE"
+  NewColVal  DiagGUITemplate, MsdStatus, GlobalId, 0
+
+  maxItem=MsNumStatus()-1
+  for item=0 to maxItem
+    MsGetStatus item, Type$, nGlobalId, NAME$, Unit$
+    InsTabRow  DiagGUITemplate, MsdStatus
+    SetTabText DiagGUITemplate, MsdStatus, item+1, Type, Type$
+    SetTabVal  DiagGUITemplate, MsdStatus, item+1, GlobalId, nGlobalId
+  NEXT item
+
+  ! mark RTP for MSD as started
+  SetObjHdrVal  DiagGUITemplate, MsdRTPStarted, 1
+  IF ObjHdrType(DiagGUITemplate, DiagRTPStopMac) = 99 THEN
+    SetObjHdrText DiagGUITemplate, DiagRTPStopMac, "dgMsRestoreStatus;"
+  ELSE 
+    macro$=ObjHdrText$(DiagGUITemplate, DiagRTPStopMac) + ";dgMsRestoreStatus;"
+    SetObjHdrText DiagGUITemplate, DiagRTPStopMac, macro$
+  ENDIF
+
+ENDMACRO
+
+!############################################################################
+NAME dgMsRestoreStatus
+!
+!############################################################################
+LOCAL row, maxRow, Type$, nGlobalId, NAME$, Unit$, item, maxItem, err
+
+  ON ERROR err=1
+
+  ! check IF this is the first invokation of the RTP in diagnosis
+  IF ObjHdrType(DiagGUITemplate, MsdRTPStarted) <> 99 THEN
+    ! delete current entries
+    maxItem=MsNumStatus()-1
+    for item=0 to maxItem
+      MsDeleteStatus 0
+    NEXT item
+    
+    ! added stored entries to status box
+    maxRow=TabHdrVal(DiagGUITemplate, MsdStatus, NumberOfRows);
+    for row=1 to maxRow
+      Type$ = TabText$(DiagGUITemplate, MsdStatus, row, Type)
+      nGlobalId = TabVal(DiagGUITemplate, MsdStatus, row, GlobalId)
+      item=MsAppendStatus(Type$, nGlobalId)
+    NEXT row      
+    
+    ! delete flag and stored table
+    delTab DiagGUITemplate, MsdStatus
+    DelObjHdr  DiagGUITemplate, MsdRTPStarted
+  ENDIF
+ENDMACRO

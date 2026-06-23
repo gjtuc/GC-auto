@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="CeCalibT" PosStyle="TOP"  DockRow="2" DockCol="0" Caption="Calibration Cursor Toolbar" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="Signal(s) Displayed" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals " DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="Display the Graphics Toolbar" CmdList="ANN_CloseTask|ANN_InitTask" Group="0" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="Zoom in on Window" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="Zoom out active Window" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="Select a peak from Electropherogram and highlight it in the calibration table" Command='MTC_SetCalibMenuSelection "NoSel",1' Group="2" NewGroup="1" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="DeletePeak" Help="Select calibrated peak(s) from Electropherogram and delete them from calibration table" Command='MTC_SetCalibMenuSelection "DeletePeak",1' Group="2" ImageName="Int_RemovePeak20" ImageNameDisabled="Int_RemovePeak20_d"/>
+		<RadioButton Name="AddPeak" Help="Select peak from Electropherogram and add to calibration table" Command='MTC_SetCalibMenuSelection "AddPeak",1' Group="2" ImageName="Calib_AddPeak20" ImageNameDisabled="Calib_AddPeak20_d"/>
+	</toolbar>
+</graphical_object>

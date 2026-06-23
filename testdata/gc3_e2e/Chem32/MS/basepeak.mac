@@ -1,0 +1,50 @@
+! This macro is a prototype for a Base Peak command.
+! For each scan, if finds the maximum abundance and
+! creates a chromatogram with that abundance.
+name basepeak
+   local numcols,i,none
+   i = regsize(chromreg)
+   if i < 0 then
+	print "You must have a TIC or EIC in chromreg[1]"
+	return
+   endif
+   if ObjHdrText$(chromreg[1],Detector) <> "TIC1" AND ObjHdrText$(chromreg[1],Detector) <> "EIC1" then
+	print "You must have a TIC or EIC in chromreg[1]"
+	return
+   endif
+   if i>1 then
+	delobj chromreg[2:i]
+   endif
+   copyobj chromreg[1],chromreg
+   copyobj chromreg[1],chromreg
+   setdataval chromreg[3],1,slope,0.05
+   numcols = datacols(chromreg[1])
+   winupdate off
+   delreg specreg
+   newobj specreg,1,1,1
+   for i=1 to numcols
+	if regsize(specreg) > 1 then
+	print "Regsize > 1 at i=",i
+	delobj specreg[1]
+	endif
+	on error none=1
+	none=0
+	LoadMSSpectrum specreg,data(chromreg[1],0,i):data(chromreg[1],0,i)
+	getdataminmax specreg[2],1
+	delobj specreg[1]
+	on error
+	if none=1 then
+		setdata chromreg[2],1,i,0
+		setdata chromreg[3],1,i,0
+	else
+	       setdata chromreg[2],1,i,OBJ_MAX
+	       setdata chromreg[3],1,i,OBJ_X_MAX
+	endif
+   next i
+   SetObjHdrText chromreg[2],Title,"MS EIC"
+   SetObjHdrText chromreg[2],SignalDesc,"EIC1 A, Base Peak"
+   SetObjHdrText chromreg[2],Detector,"EIC1"
+   SetObjHdrText chromreg[2],SignalId,"A"
+   integrateobj chromreg
+winupdate on
+endmacro

@@ -1,0 +1,182 @@
+<?xml version="1.0"?>
+<ModuleRegistration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="file://RCNetRegistrationScheme.xsd">
+  <Instruments>
+    <Instrument UniqueInstID="Agilent.GC.7890System">
+      <Module UniqueModuleID="GC7890" ConfigurationMode="eConventional">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.GCController</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCMethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCProcessIF</Class>
+          </ProcessIF>
+          <StatusUI>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCStatusUI</Class>
+          </StatusUI>
+          <AutosamplerTrayUI>
+            <Assembly>AgGC7890AlsTrayUI.dll</Assembly>
+            <Class>Agilent.Analytical.Als.SamplingDiagram.AgGC7890AlsUI</Class>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly>AgGC7890AlsME.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Als.RCPretreatmentEditor</Class>
+          </PretreatmentUI>
+          <GenericIF>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCGenericIF</Class>
+          </GenericIF>
+          <SoftConfigUI>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>GC7890</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>Agilent 7890 GC</NLSFullModuleName>
+        <ModuleType>eIntegratedGC</ModuleType>
+        <MethodMigration>
+          <GCIProductID>GC7890</GCIProductID>
+          <UseFixedMethodName>true</UseFixedMethodName>
+          <FixedMethodName>GC7890_1.RapidMethod</FixedMethodName>
+        </MethodMigration>
+        <ModuleToken>GC</ModuleToken>
+        <ChromFileType>e179_GC7890A</ChromFileType>
+        <InjectorMapping>
+          <Injector ID="GC_FRONT">
+            <FixedInjectorPort>eFirstPort</FixedInjectorPort>
+          </Injector>
+          <Injector ID="GC_BACK">
+            <FixedInjectorPort>eSecondPort</FixedInjectorPort>
+          </Injector>
+        </InjectorMapping>
+        <GenericItemMapping>
+          <GenericItem ID="InstrumentDiagram">
+            <RootMenu>eView</RootMenu>
+            <OrderID>90014000</OrderID>
+          </GenericItem>
+          <GenericItem ID="ColCompRun">
+            <OrderID>4107100</OrderID>
+            <ViewMgrWndNumber>75</ViewMgrWndNumber>
+          </GenericItem>
+        </GenericItemMapping>
+        <WantUploadSettingsSupport>true</WantUploadSettingsSupport>
+        <Customization>
+          <TrayUI ShowControlPanel="true" BackColor="White"/>
+          <MethodResolution ShowInconsistencyReport="false" CancelAction="eAcceptUnresolvedSettings"/>
+          <MethodUI ShowUploadMethodButton="true"/>
+          <Reporting/>
+		  <PretreatUI AllowImportExport="true" AllowPretreatAvoidance="true" AllowPrintPretreatment="true"/>
+        </Customization>
+      </Module>
+      <NLSInstrumentName>Agilent 7890 GC システム</NLSInstrumentName>
+      <AppFilter>
+        <GC>true</GC>
+        <InstTypeFilter>78GC</InstTypeFilter>
+      </AppFilter>
+    </Instrument>
+    <Instrument UniqueInstID="Agilent.GC.7820System">
+      <Module UniqueModuleID="GC7820" ConfigurationMode="eConventional">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.GCController</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCMethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCProcessIF</Class>
+          </ProcessIF>
+          <StatusUI>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCStatusUI</Class>
+          </StatusUI>
+          <AutosamplerTrayUI>
+            <Assembly>AgGC7890AlsTrayUI.dll</Assembly>
+            <Class>Agilent.Analytical.Als.SamplingDiagram.AgGC7890AlsUI</Class>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly>AgGC7890AlsME.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Als.RCPretreatmentEditor</Class>
+          </PretreatmentUI>
+          <GenericIF>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCGenericIF</Class>
+          </GenericIF>
+          <SoftConfigUI>
+            <Assembly>AgGC7890Drv.dll</Assembly>
+            <Class>Agilent.Analytical.GC7890.Driver.RCConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>GC7820</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>Agilent 7820 GC</NLSFullModuleName>
+        <ModuleType>eIntegratedGC</ModuleType>
+        <MethodMigration>
+          <GCIProductID>GC7890</GCIProductID>
+          <UseFixedMethodName>true</UseFixedMethodName>
+          <FixedMethodName>GC7890_1.RapidMethod</FixedMethodName>
+        </MethodMigration>
+        <ModuleToken>GC</ModuleToken>
+        <ChromFileType>e179_GC7890A</ChromFileType>
+        <InjectorMapping>
+          <Injector ID="GC_FRONT">
+            <FixedInjectorPort>eFirstPort</FixedInjectorPort>
+          </Injector>
+          <Injector ID="GC_BACK">
+            <FixedInjectorPort>eSecondPort</FixedInjectorPort>
+          </Injector>
+        </InjectorMapping>
+        <GenericItemMapping>
+          <GenericItem ID="InstrumentDiagram">
+            <RootMenu>eView</RootMenu>
+            <OrderID>90014000</OrderID>
+          </GenericItem>
+          <GenericItem ID="ColCompRun">
+            <OrderID>4107100</OrderID>
+            <ViewMgrWndNumber>75</ViewMgrWndNumber>
+          </GenericItem>
+        </GenericItemMapping>
+        <WantUploadSettingsSupport>true</WantUploadSettingsSupport>
+        <Customization>
+          <TrayUI ShowControlPanel="true" BackColor="White"/>
+          <MethodResolution ShowInconsistencyReport="false" CancelAction="eAcceptUnresolvedSettings"/>
+          <MethodUI ShowUploadMethodButton="true"/>
+          <Reporting/>
+		  <PretreatUI AllowImportExport="true" AllowPretreatAvoidance="true" AllowPrintPretreatment="true"/>
+        </Customization>
+      </Module>
+      <NLSInstrumentName>Agilent 7820 GC システム</NLSInstrumentName>
+      <AppFilter>
+        <GC>true</GC>
+        <InstTypeFilter>7820GC</InstTypeFilter>
+      </AppFilter>
+    </Instrument>
+  </Instruments>
+  <MergeOrderID>1</MergeOrderID>
+</ModuleRegistration>

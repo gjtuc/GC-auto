@@ -1,0 +1,401 @@
+!***************************************************************************
+!*
+!*
+!* FILE: DGSIGNAL.MAC        
+!*
+!* DESCRIPTION: Macro to exercise the Sprite log amp's self test circuitry. 
+!*              This should generate a triangular wave in a capture window,
+!*              with a minimum at 2200-2700 counts and a max at 22000-27000
+!*              counts.                 
+!*
+!* MACROS:   dgMSSigTest$      Main macro
+!*           dgMSSigEval$
+!*           dgMSSigTestCleanup
+!*
+ dgSignalVer$ = "$Header: /cag/triath1b/partsmac/diag/dgsignal.mac 1.21 2003-06-23 15:39:18-07 julie_zhao Exp $"
+ verIx = instr(dgSignalVer$, ".mac") + 5
+ dgSignalVer$ =  dgSignalVer$[verIx:VerIx + instr(dgSignalVer$[VerIx:len(dgSignalVer$)]," ") - 1] 
+ remove verIx
+!*
+!************************************************************************
+
+name dgMSSigTest$
+!
+! 04/21/03 JZ  Setup Abort Handler for Signal Test in _ABORT$ string.
+!************************************************************************
+local nPts		!*** # OF PTS TO CAPTURE ***!
+local AmpId$	!*** LOG AMP INFORMATION ***!
+local PrintMac$, IonPolarity
+
+  if _offline = 1 then
+    return NlsMsDiag$("Failed")
+  endif
+
+  if Check( VARIABLE, EnableViewSwitch) = 1 then
+    if EnableViewSwitch = 0 then
+      return " "
+    endif
+  endif
+
+  ! JZ Setup Abort routine
+  if (check(Variable, _abort$) = 0) then
+     _abort$ = ""
+   endif
+  _abort$ = "dgMSSigTestCleanup;"+_abort$
+
+  ! if dgMsCheckTuneMode() <> 1 then
+  !   return NlsMsDiag$("Failed: wrong mode")
+  ! endif
+  
+  IonPolarity = dgMsCheckTunePol()       ! Will switch to Standard scan mode if in Fast mode
+
+  DelReg RESULT_REG
+   
+  nPts = 2000       
+  NewObj RESULT_REG, 1, 1, nPts   
+
+!SET TEST INFORMATION 
+  dgMsTestInfo "SigChart", \
+                "dgMsDisplayTest SigChart, SigRes, SigReport", \
+                "040797",  "RESULT_REG[1]"
+
+!GET LOG AMP ID STRING 
+  if _offline = 0 then
+    ampID$=dgMsQuery$(":config:abund:amp?") 
+    SetObjHdrText  RESULT_REG[1], "LogAmpID", ampID$
+  endif
+
+  result$=dgMSSigEval$()
+
+!CLEAN UP ALSO CALLED BY ABORT THROUGH TEST PANEL 
+  dgMSSigTestCleanup
+
+  PrintMac$="dgMsPrintTest SigReport, SigResults, SigChart, , 32, 1, ""%-25s"", ""%+25s"", ""%+14s"",""%+8s"""
+  return dgMsGetTestResults$( "SigChart", "SigRes", PrintMac$)
+
+endmacro !dgMSSigTest$
+
+
+
+!************************************************************************
+
+name dgMSSigEval$
+
+!************************************************************************
+local per, nPts, MaxPeriod, sigPeriod, result$
+local IndexMin, IndexMax, IndexPer, nCycles
+local testrow, oldPer$, oldLogDataState
+local index, xMin, xMax, hiX, fail, i
+local AnnotIndex, value$, Param  
+ 
+  per = 1e-4           !CAPTURE PERIOD (SECONDS) 
+  nPts = DataCols(RESULT_REG[1])
+  maxPeriod = 0.032
+  sigPeriod = maxPeriod    !TIME WINDOW FOR FIRST CYCLE 
+
+  MaxSpeclow = 20000
+  MaxSpecHigh= 30000   !MAX ABUNDANCES CTS 
+
+  MinSpeclow =  1800
+  MinSpecHigh=  4200   !MIN ABUNDANCES CTS 
+
+  RSDSpec = 2          !ALLOW 2% RSD 
+  nCycles = ceil((nPts * per)/0.025)
+  result$ = ""
+
+!REGISTER INDICES 
+  Signal   = 1
+  IndexMin = 2
+  indexMax = 3
+  indexPer = 4
+   
+  SetDataVal RESULT_REG, 0, Start, 0
+  SetDataVal RESULT_REG, 0, Step, per
+  NewObj RESULT_REG, 1, 1, nCycles ! minima
+  NewObj RESULT_REG, 1, 1, nCycles ! maxima
+  NewObj RESULT_REG, 1, 1, nCycles ! period
+
+!GENERATE TestResultTable
+  if ObjHdrType(RESULT_REG[1], TestResultTab) = 99 then
+    NewTab RESULT_REG[1], TestResultTab
+    NewColText RESULT_REG[1], TestResultTab, "Text", ""
+    NewColText RESULT_REG[1], TestResultTab, "Range", ""
+    NewColText RESULT_REG[1], TestResultTab, "Value", ""
+    NewColText RESULT_REG[1], TestResultTab, "Result", NlsMsDiag$("Passed")
+  else
+    DelTabRow RESULT_REG[1], TestResultTab, -1
+  endif
+  testrow=0
+
+  MsGDisplay 0
+  MSLogData oldLogDataState, 1
+  SetObjHdrVal RESULT_REG, "LogDataState", oldLogDataState
+
+  ON ERROR goto ERRORTRAP
+
+!ACQUISITION OF TEST SIGNAL 
+  if _offline = 0 then
+    MSON
+    MSOff
+    
+    !SAVE AND SET CAPTURE PERIOD 
+     oldPer$=dgMsQuery$(":cap:per?")
+     dgMsWrite ":cap:per " + val$(per), 1
+     NewObjHdrText RESULT_REG, "OldCapPer", oldPer$
+
+    !TURN TRIANGULAR TEST SIGNAL ON 
+     dgMsWrite ":msc:parm sgtst,1", 1
+      
+    !ACQUIRE DATA 
+     MSCapture MsInstrParm("MinMass"), nPts
+     if RegSize(MSTuneData) >= 9 then
+       CopyDataRow MSTuneData[9], 1,, RESULT_REG[1], 1
+     else
+       SetObjHdrVal RESULT_REG[1], "NoDraw", 1
+       InsTabRow    RESULT_REG[1], "TestResultTab"
+       SetTabText   RESULT_REG[1], "TestResultTab",1, \
+                                    "Text", "Signal availability check"
+       SetTabText   RESULT_REG[1], "TestResultTab",1, \
+                                    "Range", " "
+       SetTabText   RESULT_REG[1], "TestResultTab",1, \
+                                    "Value", " "
+       SetTabText   RESULT_REG[1], "TestResultTab",1, \
+                                    "Result", NlsMsDiag$("Failed")
+       return  NlsMsDiag$("Failed")
+     endif !*** if RegSize(MSTuneData) >= 9 ***!
+
+  endif ! ***if _offline = 0 ***!
+     
+!FIND MINIMA, MAXIMA AND PERIOD OD TEST SIGNAL 
+  index = 1
+  xMin = 0 
+  XMax = sigPeriod
+  hiX = Data(RESULT_REG[1], 0, DataCols(RESULT_REG[1]))
+  while (index <=  nCycles) and (xMin < hiX) and (xMax <= hiX)
+      GetDataMinMax RESULT_REG[1], 1, xMin:xMax
+      SetData RESULT_REG[indexMin], 0, index, OBJ_X_MIN
+      SetData RESULT_REG[indexMin], 1, index, OBJ_MIN
+      SetData RESULT_REG[indexMax], 0, index, OBJ_X_MAX
+      SetData RESULT_REG[indexMax], 1, index, OBJ_MAX
+      SetData RESULT_REG[indexPer], 0, index, OBJ_X_MAX
+      SetData RESULT_REG[indexPer], 1, index, sigPeriod
+      if (Data(RESULT_REG[1], 0, nCycles) > xMax) then
+        index=nCycles
+      endif
+      sigPeriod = (min(abs(2*(OBJ_X_MAX-OBJ_X_MIN)), MaxPeriod))
+      xMin = xMin + sigPeriod
+      xMax = xMin + sigPeriod
+      index = index + 1
+  endwhile 
+
+  Fail = 0 
+   
+! 1.-3. Rel. Std. Dev.
+!---------------------
+!GET MEAN AND RSD FOR TRIANGULAR WAVE 
+   
+  nCycles = DataCols(RESULT_REG[IndexMin]) - 3
+  NewObj RegressReg, 1, 1, nCycles
+  for i = 2 to 4                  
+    CopyDataRow RESULT_REG[i], 0, 2:nCycles+1, RegressReg[1], 0, 1
+    CopyDataRow RESULT_REG[i], 1, 2:nCycles+1, RegressReg[1], 1, 1
+    RegressObj RegressReg[1], 1,,,,0 
+    delObj RESULT_REG[i]
+    CopyObj RegressReg[1], RESULT_REG[i]
+     
+    !SAVE CURRENT REGRESS TO RESULT REGISTER 
+     SetObjHdrVal RESULT_REG[1], "RelStdDevK1"+"_"+Val$(i), \
+                  TabHdrVal(RESULT_REG[i], Regress, "RelStdDevK1")
+
+    !PREPARE TEST RESULT LINE FOR TRIAGULAR WAVE CHECK      
+      InsTabRow  RESULT_REG[1], "TestResultTab"
+      testrow=TabHdrval(RESULT_REG[1], "TestResultTab", "NumberOfRows")
+     
+    !LABELING IS OUTSIDE OF THE LOOP    
+      SetTabText RESULT_REG[1], "TestResultTab", testrow, "Text", "RelStdDevK1"
+      SetTabText RESULT_REG[1], "TestResultTab", testrow, "Range", Sprintf$(RSDSpec, "< %.1f")
+      Value$ = Sprintf$( TabHdrVal(RESULT_REG[i], Regress, "RelStdDevK1"), "%.1f") 
+      SetTabText RESULT_REG[1], "TestResultTab", testrow, "Value", value$
+
+    !EVALUATE REGRESS 
+      if TabHdrVal(RESULT_REG[i], Regress, "RelStdDevK1") < RSDSpec then
+        SetTabText RESULT_REG[1], "TestResultTab", testrow, "Result", NlsMsDiag$("Passed")
+      else
+        fail = 1
+        SetTabText RESULT_REG[1], "TestResultTab", testrow, "Result", NlsMsDiag$("Failed")
+     endif
+
+  next i !***  for i = 2 to 4 ***!
+  delobj RegressReg
+
+  !LABELING OF THE TESTS ROWS OF THE STANDARD DERIVATION
+   testrow=testrow-2
+   SetTabText RESULT_REG[1], "TestResultTab", testrow, "Text", "Minima rel. Std. Dev."
+   testrow=testrow+1
+   SetTabText RESULT_REG[1], "TestResultTab", testrow, "Text", "Maxima rel. Std. Dev."
+   testrow=testrow+1
+   SetTabText RESULT_REG[1], "TestResultTab", testrow, "Text", "Period rel. Std. Dev."
+
+
+!CHECK TRIANGULAR SIGNAL WINDOW 
+! 4.MINIMA CURVES 
+!-----------------
+  
+  SetObjHdrText RESULT_REG[Signal], "Title", "MS Signal Test"
+  SetObjHdrText RESULT_REG[Signal], "Title", "Minima"
+  AnnotIndex = NewTextAnn(RESULT_REG[IndexMin], "Minima",,,,1)
+  Param = TabHdrVal(RESULT_REG[indexMin], Regress, "K1")
+  SetObjHdrVal RESULT_REG[1], "MeanMinima", Param
+  SetObjHdrVal RESULT_REG[1], "RSDMinima", \
+                TabHdrVal(RESULT_REG[indexMin], Regress, "RelStdDevK1")
+  
+  !SET RESULT TABLE  
+   InsTabRow  RESULT_REG[1], "TestResultTab"
+   testrow=testrow+1
+   SetTabText RESULT_REG[1], "TestResultTab", testrow, "Text", "Mean Minima"
+   ! SetTabText RESULT_REG[1], "TestResultTab", testrow, "Range","< "+Val$(MinSpeclow)+"cts ; "+Val$(MinSpecHigh)+"cts >"
+   SetTabText RESULT_REG[1], "TestResultTab", testrow, "Range","> "+Val$(MinSpeclow)+" cts and < "+Val$(MinSpecHigh)+" cts"
+   SetTabText RESULT_REG[1], "TestResultTab", testrow, "Value",  SPrintF$(Param, "%1.1f cts")
+   
+  !EVALUATE THEN MINIMA WINDOW 
+   if (Param > MinSpecLow) AND (Param < MinSpecHigh) then 
+     SetTabText RESULT_REG[1], "TestResultTab", testrow, "Result", NlsMsDiag$("Passed")
+   else
+     fail = 1 
+     SetObjHdrText RESULT_REG[indexMin], "TestRes",  NlsMsDiag$("Failed")
+     SetTabText RESULT_REG[1], "TestResultTab", testrow, "Result",  NlsMsDiag$("Failed")
+   endif
+   
+! 5. MAXIMA CURVES 
+!-----------------
+  
+  SetObjHdrText RESULT_REG[Signal], "Title", "Maxima"
+  AnnotIndex = NewTextAnn(RESULT_REG[indexMax], "Maxima",,,,1)
+  Param = TabHdrVal(RESULT_REG[indexMax], Regress, "K1")
+  SetObjHdrVal RESULT_REG[1], "MeanMaxima", Param
+  SetObjHdrVal RESULT_REG[1], "RSDMaxima", \
+                TabHdrVal(RESULT_REG[indexMax], Regress, "RelStdDevK1")
+  
+  !SET RESULT TABLE   
+   testrow=testrow+1
+   InsTabRow  RESULT_REG[1], "TestResultTab"                  
+   SetTabText RESULT_REG[1], "TestResultTab", testrow, "Text", "Mean Maxima"
+   ! SetTabText RESULT_REG[1], "TestResultTab", testrow, "Range","< "+Val$(MaxSpecLow)+"cts ; "+Val$(MaxSpecHigh)+"cts >"
+   SetTabText RESULT_REG[1], "TestResultTab", testrow, "Range","> "+Val$(MaxSpecLow)+" cts and < "+Val$(MaxSpecHigh)+" cts"
+   SetTabText RESULT_REG[1], "TestResultTab", testrow, "Value",  SPrintF$(Param, "%1.1f cts")
+   
+  if (Param > MaxSpecLow) AND   \
+    (Param < MaxSpecHigh) then 
+    SetTabText RESULT_REG[1], "TestResultTab", testrow, "Result", NlsMsDiag$("Passed")
+  else
+    print "Check Maxima: fail at index=", MaxSpec
+    fail = 1 
+    SetObjHdrText RESULT_REG[indexMax], "TestRes",  NlsMsDiag$("Failed")
+    SetTabText RESULT_REG[1], "TestResultTab", testrow, "Result",  NlsMsDiag$("Failed")
+  endif
+
+  SetObjHdrText RESULT_REG[Signal], "Title", "Period"
+  AnnotIndex = NewTextAnn(RESULT_REG[indexPer], "Period",,,,1)
+  SetObjHdrVal RESULT_REG[1], "MeanPeriod", \
+                TabHdrVal(RESULT_REG[indexPer], Regress, "K1")
+  SetObjHdrVal RESULT_REG[1], "RSDPeriod", \
+                TabHdrVal(RESULT_REG[indexPer], Regress, "RelStdDevK1")
+
+  !CONCLUDE OVERALL TEST RESULT 
+   if fail = 1 then 
+     result$ =  NlsMsDiag$("Failed") 
+     SetObjHdrText RESULT_REG[1], "TestRes",  NlsMsDiag$("Failed")
+   else 
+     result$ = NlsMsDiag$("Passed")
+   endif
+
+  !SET TITLE IN TRIANGULAR DISPLAY 
+    AnnotIndex = NewTextAnn(RESULT_REG[1], "MS Signal Test " + result$ + \
+      SprintF$(ObjHdrVal(RESULT_REG[1], "MeanMinima"), ".  Min: %2.0f") + \
+      SprintF$(ObjHdrVal(RESULT_REG[1], "MeanMaxima"), "; Max: %2.0f") +   \
+      SprintF$(ObjHdrVal(RESULT_REG[1], "MeanPeriod"), "; Period: %3.4f")\
+      ,,,,1)
+ 
+  !CLEAN ADDITIONAL REGRESS OBJECTS TO PREPARE FOR DISPLAY TRIANGULAR SIGNAL 
+    DelObj RESULT_REG [ 2 : RegSize(RESULT_REG) ]
+    return result$
+
+ERRORTRAP:  
+  ON ERROR
+  dgMsPrintError    
+  if RegSize(RESULT_REG)>0 then
+    SetTabText    RESULT_REG[1], TestResultTab, testrow, Result, "Error"
+    SetObjHdrVal  RESULT_REG[1], "NoDraw", testrow
+    SetObjHdrText RESULT_REG[1], "ErrMsg", _ErrMsg$
+    SetObjHdrText RESULT_REG[1], "ErrMacro", _ErrMacro$
+  endif
+     
+  Generate Error 55555,  "MSD Test ("+_ErrMacro$+"):"+_ErrMsg$
+  return "Error"
+    
+endmacro !dgMSSigEval$
+
+
+
+!************************************************************************!
+
+name dgMSSigTestCleanup
+!
+! 04/21/03 JZ  Remove signal test abort handler from _ABORT$ string.
+!************************************************************************!
+! global variable: dgOrigPol
+local err
+Local AbortCmd$
+Local Pos, LenAbort, LenCmd
+
+  On Error err=1
+
+  DelReg RegressReg
+
+!TURN TEST SIGNAL OFF 
+  if _offline <> 1 then
+    dgMsWrite ":msc:parm sgtst,0", 1
+    if regsize(RESULT_REG) >0 then
+      if ObjHdrType(RESULT_REG[1], "OldCapPer") <> 99 then
+        dgMsWrite ":cap:per " + ObjHdrText$(RESULT_REG[1], "OldCapPer"), 1
+      endif
+    endif
+  endif !*** if _offline <> 1***!
+
+  if regsize(RESULT_REG) >0 then
+    if ObjHdrType(RESULT_REG[1], "LogDataState") <> 99 then
+      MSLogData , ObjHdrVal(RESULT_REG[1], "LogDataState")
+    endif
+  endif
+  
+  ! Restore original scan mode, if necessary
+  if (dgOrigPol = 2) or (dgOrigPol = 3) then    ! Test started in Fast scan mode
+    MSParm IonPolarity,,dgOrigPol
+  endif
+   
+  MsGDisplay 1
+
+  ! JZ DELETE CLEAN UP MACRO FROM _ABORT$ STRING
+  AbortCmd$="dgMSSigTestCleanup;"
+  Pos=InStr(_abort$,Abortcmd$)
+  IF Pos>0 THEN
+    LenAbort=Len(_abort$)
+    LenCmd=Len(AbortCmd$)
+    if Pos=1 THEN
+      _abort$= _abort$[Pos+LenCmd:LenAbort]
+    else
+      if (Pos+LenCmd)<LenAbort
+        _abort$= _abort$[1:Pos-1] + _abort$[Pos+LenCmd:LenAbort]
+      else
+        _abort$= _abort$[1:Pos-1]
+      endif
+    endif
+  ENDIF
+
+endmacro !dgMSSigTestCleanup
+
+!****************************************************************************
+
+print "dgsignal.mac v. " + dgSignalVer$ + " loaded."
+
+!********* end of file ******************************************************

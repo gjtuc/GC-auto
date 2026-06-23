@@ -1,0 +1,2297 @@
+! $Header: /PHX3D/parts/specmacs/idbylib.mac 4.3 2001-06-28 17:51:02-04 nnejanthi Exp $
+!
+! Generic routines for library search.
+! Last altered by RZ 6-Aug-93
+
+!*****************************************************************************
+!=============================================================================
+Name preparePeakSpectrum
+!-----------------------------------------------------------------------------
+
+! Prepares spectrum of peak
+
+  parameter compNum, peakNum ! compound and peak number
+  parameter sigDesc$ ! signal description
+
+  local value
+  local keepDoDiff, keepDoRatio, keepDoSig
+Local retTime
+  
+Local ID_PHX3DSUPPORTFILES___TAKE_PEAK_WI_241
+  
+  ID_PHX3DSUPPORTFILES___TAKE_PEAK_WI_241            =  17241  
+!.............................................................................
+
+  ! Check whether peak belongs to a DAD or a FLD signal
+  if not ((inStr(sigDesc$, "DAD") = 1) or (inStr(sigDesc$, "FLD") = 1)) then
+    return 0 ! otherwise don't load spectrum
+  endif
+ 
+ retTime = tabVal(chromRes[1], "peak", peakNum, "measRetTime")
+  if doPurityCheck = yes then
+   on error goto getSpecLabel
+   if tabVal(chromRes[1], "compound", compNum, "purity") < 0  then ! no check done yet
+     keepDoDiff =  PUR_doDiffResult; keepDoRatio = PUR_doRatioSig; keepDoSig = PUR_doSignals
+     PUR_doDiffResult = 0; PUR_doRatioSig = 0;
+     if PUR_doMatchCurve = 0 then; PUR_doSignals = 0; endif
+     value = getAutoPeakPurData(ALS_peakNum)
+     PUR_doDiffResult = keepDoDiff; PUR_doRatioSig = keepDoRatio; PUR_doSignals = keepDoSig
+     setTabVal chromRes[1], "compound", compNum, "purity", PUR_purityMatch
+     result$ = purity$(PUR_purityMatch, PUR_purityThreshold)
+     setTabText chromRes[1], "compound", compNum, "purResult", result$
+     if result$ = "x" then; deconvCompound compNum, retTime; endif
+   endif
+ endif
+
+ getSpecLabel:
+   on error
+     if rz_doTrace = yes then; retTime$ = val$(retTime)+"     "
+       print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___TAKE_PEAK_WI_241), retTime$[1:5]; endif
+
+   if tabText$(chromRes[1], "compound", compNum, "purResult") = "" then ! pure peak
+     value = getPeakApexSpectrum(retTime, 0, SPC_DoRefSpec, SPC_DoRefSpecType, \ 
+                                 SPC_SpecRefTime1, SPC_SpecRefTime2, "SPC_")
+    return value
+
+   else ! impure peak
+     delReg(specReg)
+     if tabText$(chromRes[1], "compound", compNum, "purResult") = "u" then ! upslope part
+       return getPeakSpectra(retTime, 1, 0, SPC_DoRefSpec, SPC_DoRefSpecType, \ 
+                             SPC_SpecRefTime1, SPC_SpecRefTime2, "SPC_", 0)
+
+     else ! downSlope part
+       value = getPeakSpectra(retTime, 1, 0, SPC_DoRefSpec, SPC_DoRefSpecType, \ 
+                              SPC_SpecRefTime1, SPC_SpecRefTime2, "SPC_", 0)
+       noOfSpectra = regSize(specReg)
+       if noOfSpectra > 1 then; delObj specReg[1:noOfSpectra-1]; endif
+       return value
+     endif
+   endif
+
+endMacro ! preparePeakSpectrum
+
+
+!=============================================================================
+Name deconvCompound
+!-----------------------------------------------------------------------------
+
+! "Deconvolutes" compound.
+! In case of an impure peak the compound entry in the compound table is doubled
+
+  parameter compNum   ! compound number of actual compound
+  parameter retTime
+
+  local num                 ! number of doubled compound
+  local FirstPeak           ! peak number of first peak of actual compound
+  local PeakNum             ! number of actual peak of actual compound
+  local PrevPeak            ! number of previously doubled peak
+  local NextPeak            ! number of doubled peak
+Local retTime$
+  
+Local ID_PHX3DSUPPORTFILES_PEAK_242
+Local ID_PHX3DSUPPORTFILES__WITH_RET__TIM_243
+Local ID_PHX3DSUPPORTFILES__EXCEEDS_PURIT_244
+Local ID_PHX3DSUPPORTFILES___PEAK_WITH_RE_245
+Local ID_PHX3DSUPPORTFILES__EXCEEDS_THRES_246
+        
+  ID_PHX3DSUPPORTFILES_PEAK_242                      =  17242  
+  ID_PHX3DSUPPORTFILES__WITH_RET__TIM_243            =  17243  
+  ID_PHX3DSUPPORTFILES__EXCEEDS_PURIT_244            =  17244  
+  ID_PHX3DSUPPORTFILES___PEAK_WITH_RE_245            =  17245  
+  ID_PHX3DSUPPORTFILES__EXCEEDS_THRES_246            =  17246  
+!.............................................................................
+
+  retTime$ = val$(retTime)+"     "
+  print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_PEAK_242), ALS_peakNum, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__WITH_RET__TIM_243), retTime$[1:5], ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__EXCEEDS_PURIT_244), trunc(PUR_purityMatch), ")."
+  if rz_doTrace = yes then
+    print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___PEAK_WITH_RE_245), retTime$[1:5], ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__EXCEEDS_THRES_246), \
+                    trunc(PUR_purityMatch*100)/100, ")."; endif
+
+  ! double the compound, at first without any peaks:
+  Num = CompNum + 1
+  InsTabRow ChromRes[1], "Compound", Num:Num
+  updateCompound compNum, num
+  ALS_noOfCompounds = ALS_noOfCompounds + 1
+
+  ! double the peaks of the compound, and link them to the doubled compound:
+  PeakNum = TabVal (ChromRes[1], "Compound", CompNum, "FirstPeak")
+  PrevPeak = -1
+  repeat
+     NextPeak = PeakNum + 1
+     InsTabRow ChromRes[1], "Peak", NextPeak:NextPeak
+     updatePeak peakNum, nextPeak
+     SetTabVal ChromRes[1], "Peak", NextPeak, "Compound", Num
+     ! set up links such that the newly created peak is the last in the lasso:
+     if PrevPeak > 0 then
+       if PrevPeak > PeakNum then
+         ! increment PrevPeak because the index of the previous peak of the
+         ! doubled compound has been incremented with the preceding InsTabRow:
+         PrevPeak = PrevPeak + 1
+       endif
+       SetTabVal ChromRes[1], "Peak", PrevPeak, "NextPeakComp", NextPeak
+     else
+       SetTabVal ChromRes[1], "Compound", Num, "FirstPeak", NextPeak
+     endif
+     SetTabVal ChromRes[1], "Peak", NextPeak, "NextPeakComp", \
+               TabVal (ChromRes[1], "Compound", Num, "FirstPeak")
+     PrevPeak = NextPeak
+     peakNum = tabVal(chromRes[1], "peak", peakNum, "nextPeakComp")
+  until PeakNum = TabVal (ChromRes[1], "Compound", CompNum, "FirstPeak")
+
+  return
+
+endMacro ! deconvCompound
+
+!=============================================================================
+Name updatePeak
+!-----------------------------------------------------------------------------
+
+! Updates entries of doubled peak
+
+  parameter upslopeNum, downslopeNum
+
+  local peakNum
+!.............................................................................
+
+  setTabVal chromRes[1], "peak", downslopeNum, "measRetTime", \
+       tabVal(chromRes[1], "peak", upslopeNum, "measRetTime")
+  setTabVal chromRes[1], "peak", downslopeNum, "area", \
+       tabVal(chromRes[1], "peak", upslopeNum, "area")
+  setTabVal chromRes[1], "peak", downslopeNum, "height", \
+       tabVal(chromRes[1], "peak", upslopeNum, "height")
+  setTabVal chromRes[1], "peak", downslopeNum, "width", \
+       tabVal(chromRes[1], "peak", upslopeNum, "width")
+  setTabVal chromRes[1], "peak", downslopeNum, "symmetry", \
+       tabVal(chromRes[1], "peak", upslopeNum, "symmetry")
+  setTabText chromRes[1], "peak", downslopeNum, "intPeakType", \
+       tabText$(chromRes[1], "peak", upslopeNum, "intPeakType")
+  setTabVal chromRes[1], "peak", downslopeNum, "signal", \
+       tabVal(chromRes[1], "peak", upslopeNum, "signal")
+  peakNum = tabVal(chromRes[1], "peak", upslopeNum, "nextPeakSignal")
+  setTabVal chromRes[1], "peak", upslopeNum, "nextPeakSignal", downslopeNum
+  setTabVal chromRes[1], "peak", downslopeNum, "nextPeakSignal", peakNum
+  return
+
+endMacro ! updatePeak
+
+
+!=============================================================================
+Name updateCompound
+!-----------------------------------------------------------------------------
+
+! Updates entries of doubled compound
+
+  parameter upSlopeNum, downSlopeNum
+
+  local compNum
+!.............................................................................
+
+  setTabVal chromRes[1], "compound", downSlopeNum, "compGroup", \
+       tabVal(chromRes[1], "compound", upSlopeNum, "compGroup")
+  compNum = tabVal(chromRes[1], "compound", upSlopeNum, "nextCompGroup")
+  setTabVal chromRes[1], "compound", upSlopeNum, "nextcompGroup", downSlopeNum
+  setTabVal chromRes[1], "compound", downSlopeNum, "nextCompGroup", compNum
+  setTabText chromRes[1], "compound", upSlopeNum, "purResult", "u"
+  setTabText chromRes[1], "compound", downSlopeNum, "purResult", "d"
+  setTabVal chromRes[1], "compound", downSlopeNum, "purity", PUR_purityMatch
+
+endMacro ! updateCompound
+
+
+!=============================================================================
+Name automaticIdentify
+!-----------------------------------------------------------------------------
+
+! Loops trough all compounds and compares the peak spectra
+! with the library spectra of each library.
+
+  local sigNum, sigDesc$
+  local retTime, peakNum        ! retention time of compound's main peak
+  local i, j, l        ! indices
+  local refSpec, refSpecType ! reference spectrum
+  local value, firstTime
+Local libObjNum
+  
+Local ID_PHX3DSUPPORTFILES_COMPOUND_247
+Local ID_PHX3DSUPPORTFILES___RET_TIME_248
+Local ID_PHX3DSUPPORTFILES__PEAK_249
+Local ID_PHX3DSUPPORTFILES_CHECK_COMPOUND_250
+Local ID_PHX3DSUPPORTFILES___WITH_RET__TI_251
+  
+  
+  ID_PHX3DSUPPORTFILES_COMPOUND_247                  =  17247  
+  ID_PHX3DSUPPORTFILES___RET_TIME_248                =  17248  
+  ID_PHX3DSUPPORTFILES__PEAK_249                     =  17249  
+  ID_PHX3DSUPPORTFILES_CHECK_COMPOUND_250            =  17250  
+  ID_PHX3DSUPPORTFILES___WITH_RET__TI_251            =  17251  
+!...........................................................................
+
+
+  if regSize(specDummyReg) > 0 then; delObj specDummyReg; endif
+    newObj specDummyReg, 5, 1, 1
+
+  firstTime =yes
+
+  for i = 1 to ALS_noOfCompounds
+
+!   loop through all compounds given in the compound table
+
+    retTime = tabVal(chromRes[1], "compound", i, "firstPeak~measRetTime")
+    if (retTime >= startSearch) and (retTime <= endSearch) then
+      peakNum = tabVal(chromRes[1], "compound", i, "firstPeak")
+      sigNum = tabVal(chromRes[1], "peak", peakNum, "signal")
+      sigDesc$ = tabText$(chromRes[1], "signal", sigNum, "desc")
+      SPC_chromObjNum = getObjNum(sigDesc$)
+      ALS_peakNum = timeToPeak(retTime, 0)
+
+      if ALS_peakNum > 0 then
+        retTime$ = val$(retTime)+"     "
+        print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_COMPOUND_247), i, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___RET_TIME_248), retTime$[1:5], ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__PEAK_249), ALS_peakNum
+        if rz_doTrace = yes then; print #6, ""
+          print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_CHECK_COMPOUND_250), i, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___WITH_RET__TI_251), retTime$[1:5], ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__PEAK_249), ALS_peakNum
+       endif
+
+       value = preparePeakSpectrum(i, peakNum, sigDesc$)
+        if value > 0 then ! peak spectrum found
+          ok = 0; l = 0; delTab workReg, searchResult
+          repeat; l = l + 1 ! loop through libraries
+            if ALS_noOfLibraries = 1 then
+              if firstTime = yes then
+                delReg specLibReg; evaluate "moveObj lib" + val$(l) + "Reg[1:0], specLibReg" 
+                libObjNum = libInfoObject()
+                delTab workReg[1], "libSearchTemp"
+                copyTab specLibReg[libObjNum], "libSearchTemp", workReg[1], "libSearchTemp"
+                setTabHdrVal workReg[1], "libSearchTemp", "compare_spec", 1
+                firstTime = no
+              endif
+            else
+              delReg specLibReg; evaluate "moveObj lib" + val$(l) + "Reg[1:0], specLibReg" 
+              libObjNum = libInfoObject()
+              delTab workReg[1], "libSearchTemp"
+              copyTab specLibReg[libObjNum], "libSearchTemp", workReg[1], "libSearchTemp"
+              setTabHdrVal workReg[1], "libSearchTemp", "compare_spec", 1
+            endif
+            value = libSearch(specReg[1],,,,, workReg[1], 5)
+            if ALS_noOfLibraries > 1 then
+              evaluate "moveObj specLibReg[1:0], lib" + val$(l) + "Reg"; endif
+            if value > 0 then; ok = 1
+              insertResults l; endif
+          until l = ALS_noOfLibraries
+
+          if ok = 1 then; addToProposals i, l, retTime; endif
+
+        endif ! peak spectrum found
+      endif ! valid peak
+    endif ! within search window
+  next i ! compound   
+
+return
+
+endMacro ! automaticIdentify
+
+
+!=============================================================================
+Name targetCompoundAnalysis
+!-----------------------------------------------------------------------------
+
+! Searches in the chromatogram within a given time window for compound
+! with given spectrum and compound name
+
+  parameter libraryNum
+  parameter libEntryNum
+  parameter retTimeCal
+
+  local compName$                            ! compound name from library
+  local retTimeLib, retTimeLow, retTimeHigh  ! its retention time and window
+  local retTimeWinLow, retTimeWinHigh        ! absolute retention time window
+  local compNumLow, compNumHigh              ! range of compounds
+  local compNum                              ! compound loop index
+  local peakNum, sigNum, sigDesc$
+  local value, row
+  local retTime, retTimeWin
+Local keepNoOfCompounds
+  
+Local ID_PHX3DSUPPORTFILES_CHECK_COMPOUND_250
+Local ID_PHX3DSUPPORTFILES_LOOK_FOR_LIBRA_252
+Local ID_PHX3DSUPPORTFILES_CHECK_LIBRARY_253
+Local ID_PHX3DSUPPORTFILES_RETENTION_TIME_254
+Local ID_PHX3DSUPPORTFILES__COMPOUND_255
+Local ID_PHX3DSUPPORTFILES_RETENTION_TIME_256
+        
+  ID_PHX3DSUPPORTFILES_CHECK_COMPOUND_250            =  17250  
+  ID_PHX3DSUPPORTFILES_LOOK_FOR_LIBRA_252            =  17252  
+  ID_PHX3DSUPPORTFILES_CHECK_LIBRARY_253             =  17253  
+  ID_PHX3DSUPPORTFILES_RETENTION_TIME_254            =  17254  
+  ID_PHX3DSUPPORTFILES__COMPOUND_255                 =  17255  
+  ID_PHX3DSUPPORTFILES_RETENTION_TIME_256            =  17256  
+!.............................................................................
+
+  libObjNum = libInfoObject()
+  compName$ = tabHdrText$(specLibReg[libEntryNum], "specLibInfo", "name")
+  retTimeLib = tabHdrVal(specLibReg[libEntryNum], "specLibInfo", "time_min")
+  if retTimeCal > 0 then; retTimeWin = retTimeCal; else; retTimeWin = retTimeLib; endif
+  print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_LOOK_FOR_LIBRA_252), libEntryNum, ":", compName$, "(", retTimeWin, "min)"
+  if rz_doTrace = yes then; print #6, ""
+    print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_CHECK_LIBRARY_253), libEntryNum, ":", compName$, "(", retTimeWin, "min)"
+  endif
+
+  retTimeWinLow = tabHdrVal(workReg[1], "libSearchTemp", "timeR_left")
+  if retTimeWinLow > 0 then
+    retTimeLow = retTimeWin - retTimeWin*retTimeWinLow/100
+  else; retTimeLow = startSearch; endif
+  retTimeWinHigh = tabHdrVal(workReg[1], "libSearchTemp", "timeR_right")
+  if retTimeWinHigh > 0 then
+    retTimeHigh = retTimeWin + retTimeWin*retTimeWinHigh/100
+  else; retTimeHigh = endSearch; endif
+
+  compNumLow = rowByVal(chromRes, "compound",, "firstPeak~measRetTime", ">=", retTimeLow)
+  if compNumLow > 0 then
+    if compNumLow < ALS_noOfCompounds then
+      compNumHigh = rowByVal(chromRes, "compound", compNumLow:ALS_noOfCompounds, "firstPeak~measRetTime", ">=", retTimeHigh) - 1
+      if compNumHigh <= 0 then; compNumHigh = ALS_noOfCompounds
+      else
+        if compNumHigh < compNumLow then
+          compNumHigh = compNumLow; endif; endif
+    else; compNumHigh = compNumLow; endif
+    if rz_doTrace = yes then; print #6, ""
+      print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_RETENTION_TIME_254), retTimeLow, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__COMPOUND_255), compNumLow
+      print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_RETENTION_TIME_256), retTimehigh, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__COMPOUND_255), compNumHigh
+    endif
+    for compNum = compNumLow to compNumHigh
+ 
+!   loop through all compounds within this time window
+ 
+      retTime = tabVal(chromRes, "compound", compNum, "firstPeak~measRetTime")        
+      if (retTime > 0) and (retTime >= startSearch) and (retTime <= endSearch) \
+                            and (retTime >= retTimeLow) and (retTime <= retTimeHigh) then
+        if rz_doTrace = yes then; print #6, ""
+          print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_CHECK_COMPOUND_250), compNum; endif
+        keepNoOfCompounds = ALS_noOfCompounds
+        peakNum = tabVal(chromRes[1], "compound", compNum, "firstPeak")
+        sigNum = tabVal(chromRes[1], "peak", peakNum, "signal")
+        sigDesc$ = tabText$(chromRes[1], "signal", sigNum, "desc")
+        SPC_chromObjNum = getObjNum(sigDesc$)
+        ALS_peakNum = timeToPeak(retTime, 0)
+        if ALS_peakNum > 0 then
+          value = preparePeakSpectrum(compNum, peakNum, sigDesc$)
+          compNumHigh = compNumHigh + ALS_noOfCompounds - keepNoOfCompounds
+          if value > 0 then ! peak spectrum found
+            compareObj specReg[1], specLibReg[libEntryNum]
+!             if match > 0 then
+             if match >= LIB_threshold then
+              setAsProposal compName$, match, retTimeLib, libraryNum, compNum
+            endif
+          endif ! value > 0
+        endif ! ALS_peakNum > 0
+      endif
+    next compNum ! of time window
+  endif ! compNumLow > 0
+  return
+
+endMacro ! targetCompoundAnalysis
+
+
+!=============================================================================
+Name targetCompCalAnalysis
+!-----------------------------------------------------------------------------
+
+! Loop through calibration table and tries to find their compounds 
+! in the chromatogram
+
+  local retTime        ! retention time of compound's main peak
+  local retTimeCal
+  local i, j, l        ! indices
+  local mainPeak       ! of current compound
+  local peakWidth      ! of current peak
+  local sigNum, objNum ! signal number and its corresponding object
+  local compNum        ! number of actual compound
+  local retTimeLib     ! retention time as stored in library
+  local peakNumLow, peakNumHigh ! defining the search window
+Local libObjNum
+  
+Local ID_PHX3DSUPPORTFILES_TAKE_CALIBRATE_257
+Local ID_PHX3DSUPPORTFILES_TAKE_CALIBRATE_258
+Local ID_PHX3DSUPPORTFILES__AT_259
+Local ID_PHX3DSUPPORTFILES__MIN_260
+      
+  ID_PHX3DSUPPORTFILES_TAKE_CALIBRATE_257            =  17257
+  ID_PHX3DSUPPORTFILES_TAKE_CALIBRATE_258            =  17258  
+  ID_PHX3DSUPPORTFILES__AT_259                       =  17259  
+  ID_PHX3DSUPPORTFILES__MIN_260                      =  17260  
+!.............................................................................
+
+
+  if regSize(specDummyReg) > 0 then; delObj specDummyReg; endif
+  newObj specDummyReg, 5, 1, 1
+  ALS_noOfCompounds = tabHdrVal(chromRes, "compound", "numberOfRows")
+  noOfCalCompounds = tabHdrVal(_DAMethod, "compound", "numberOfRows")
+
+  for l = 1 to ALS_noOfLibraries
+ 
+!   loop through all spectral libraries
+
+    delReg specLibReg; evaluate "moveObj lib" + val$(l) + "Reg[1:0], specLibReg" 
+    libObjNum = libInfoObject()
+    delTab workReg[1], "libSearchTemp"
+    copyTab specLibReg[libObjNum], "libSearchTemp", workReg[1], "libSearchTemp"
+    if rz_doTrace = yes then
+     print #6, rptStr$("=", 75); print #6, "Searching in", l, "library."
+     print #6, rptStr$("=", 75); endif
+   setTabHdrVal workReg[1], "libSearchTemp", "search_logic", 1
+   setTabHdrVal workReg[1], "libSearchTemp", "case_sensitive", 0
+   setTabHdrVal workReg[1], "libSearchTemp", "whole_word", 1
+
+   for i = 1 to noOfCalCompounds
+
+!     loop through all compounds given in the calibration table
+
+      compName$ = tabText$(_DAMethod, "compound", i, "name")
+      if rz_doTrace = yes then; print #6, ""
+        print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_TAKE_CALIBRATE_257), i, compName$; endif
+
+!     search this compound in the current spectrum library
+
+      setTabText workReg[1], "libSearchTemp", 1, "search_string", compName$
+      setTabHdrVal workReg[1], "libSearchTemp", "compare_spec", 0
+      retTimeCal = tabVal(_DAMethod, "compound", i, "firstPeak~expRetTime")
+      setObjHdrVal specDummyReg, "time", retTimeCal        
+      print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_TAKE_CALIBRATE_258), compName$, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__AT_259), retTimeCal, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__MIN_260)
+      value = libSearch(specDummyReg,0,0,,, workReg[1], 1)
+      if value > 0 then ! compound exists in current library
+        setTabHdrVal workReg[1], "libSearchTemp", "compare_spec", 1
+        targetCompoundAnalysis l, tabVal(specDummyReg[1], "libSearchResult", 1, "entry"), retTimeCal
+
+      endif ! value > 0
+    next i ! of calCompound
+
+  next l ! library file
+  return
+
+endMacro ! targetCompCalAnalysis
+
+
+!=============================================================================
+Name targetCompLibAnalysis
+!-----------------------------------------------------------------------------
+
+! Loops trough all entries in the calibration table and search the
+! corresponding compounds in the spectral libraries. 
+! Then look for this compound in the chromatogram.
+
+
+  local l                       ! loop index through libraries
+  local i, noOfSpectra   ! loop index through spectra
+  local libObjNum
+!.............................................................................
+
+  if regSize(specDummyReg) > 0 then; delObj specDummyReg; endif
+  newObj specDummyReg, 5, 1, 1
+  ALS_noOfCompounds = tabHdrVal(chromRes, "compound", "numberOfRows")
+
+  for l = 1 to ALS_noOfLibraries
+ 
+!   loop through all spectral libraries
+
+    delReg specLibReg; evaluate "moveObj lib" + val$(l) + "Reg[1:0], specLibReg" 
+    libObjNum = libInfoObject()
+    delTab workReg[1], "libSearchTemp"
+    copyTab specLibReg[libObjNum], "libSearchTemp", workReg[1], "libSearchTemp"
+    if rz_doTrace = yes then
+      print #6, rptStr$("=", 75); print #6, "Searching in ", l, "library."
+      print #6, rptStr$("=", 75); endif
+
+    noOfSpectra = regSize(specLibReg) - 1 ! last obj contains search template
+    for i = 1 to noOfSpectra
+
+!     loop through all spectra in the library
+
+      targetCompoundAnalysis l, i
+    next i ! of spectrum in library
+ 
+  next l ! library file
+  return
+
+endMacro ! targetCompLibAnalysis
+
+
+
+!=============================================================================
+Name purity$
+!-----------------------------------------------------------------------------
+
+! Gets the marker according to the result of the purity check.
+
+  parameter purity       ! actual purity
+  parameter purityThresh ! actual purity threshhold
+
+!  return parameter: marker for purity check results
+
+!..............................................................................
+
+  if (purity > 0) and (purity < purityThresh) then; return "x"
+  else; return ""; endif
+
+endMacro ! purity$
+
+!=============================================================================
+Name identified$
+!-----------------------------------------------------------------------------
+
+! Gets the marker according to the result of the identification.
+
+  parameter match       ! actual match
+  parameter matchThresh ! actual match threshhold
+
+!  return parameter: marker for identification results
+
+!..............................................................................
+
+  if match >= matchThresh then; return ""
+  else; return "x"; endif
+
+endMacro ! identified$
+
+ !=============================================================================
+Name calTimeOfProposal
+!-----------------------------------------------------------------------------
+
+  parameter signalDesc$, name$
+  local duplicate, keepCalNum, calNum
+  local noOfCalCompounds
+!..............................................................................
+
+  on error return -1
+  noOfCalCompounds = tabHdrVal(_DAMethod, "compound", "numberOfRows")
+  repeat
+    calNum = rowByText(_DAMethod, "compound",calNum+1:-1, "name", "i=", strTrim$(name$))
+    if calNum > 0 then
+      calSignalDesc$ =  tabText$(_DAMethod,  "compound", calNum, "firstPeak~signal~desc")
+      if rz_debug > 0 then
+        print calNum, calSignalDesc$, signalDesc$; endif
+      if calSignalDesc$ = signalDesc$ then
+        if keepCalNum = 0 then; keepCalNum = calNum; else; duplicate = 1; endif
+      endif
+    endif
+  until (calNum <= 0) or (calNum = noOfCalCompounds) or (duplicate = 1)
+  if keepCalNum > 0 then
+    return tabVal(_DAMethod,  "compound", keepCalNum, "firstPeak~expRetTime")
+  else; return -1; endif
+
+endMacro ! calTimeOfProposal
+
+
+!=============================================================================
+Name sortLibSearchProposalsByCalTime
+!-----------------------------------------------------------------------------
+
+  parameter signalDesc$, retTime
+  local i, j, keep_i
+  local noOfProposals
+  local stopLoop
+Local calRetTime, timeDiff, minTimeDiff
+  
+Local ID_PHX3DSUPPORTFILES_PROPOSAL_261
+Local ID_PHX3DSUPPORTFILES___CAL_TIME_262
+Local ID_PHX3DSUPPORTFILES_MAKE_PROPOSAL_263
+      
+  ID_PHX3DSUPPORTFILES_PROPOSAL_261                  =  17261  
+  ID_PHX3DSUPPORTFILES___CAL_TIME_262                =  17262  
+  ID_PHX3DSUPPORTFILES_MAKE_PROPOSAL_263             =  17263  
+  
+!..............................................................................
+ 
+  noOfProposals = tabHdrVal(workReg[1], "SearchResult", "numberOfRows")
+  if noOfProposals < 1
+    RETURN
+  endif
+  j = 1
+  repeat
+    i        = j
+    stopLoop = 0
+    keep_i   = 0
+
+    ! minTimeDiff = 9999
+    ! initialize
+    calRetTime = calTimeOfProposal(signalDesc$,tabText$(workReg[1],"SearchResult",i,"name"))
+    if calRetTime > 0 then
+      minTimeDiff = abs(calRetTime - retTime) 
+    else
+      minTimeDiff = 9999
+    endif
+
+    repeat; i = i + 1
+      if i > noOfProposals then; stopLoop = 1
+      else
+        if tabVal(workReg[1], "SearchResult", i, "match") < LIB_threshold then
+          stopLoop = 1
+        else
+          calRetTime = calTimeOfProposal(signalDesc$, \
+                         tabText$(workReg[1], "SearchResult", i, "name"))
+          if rz_debug > 0 then
+            print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_PROPOSAL_261), i, tabText$(workReg[1], "SearchResult", i, "name"), \
+                   ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___CAL_TIME_262), calRetTime; endif
+          if calRetTime > 0 then
+            timeDiff = abs(calRetTime - retTime) 
+            if timeDiff < minTimeDiff then; keep_i = i
+              minTimeDiff = timeDiff; endif; endif
+        endif  
+      endif
+    until stopLoop = 1
+    if keep_i > 0 then
+      if rz_debug > 0 then
+        print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_MAKE_PROPOSAL_263), j, tabText$(workReg[1], "SearchResult", keep_i, "name"); endif
+      insTabRow workReg[1], "SearchResult", j:j
+      copyTabRow workReg[1], "SearchResult", keep_i+1, j
+      delTabRow workReg[1], "SearchResult", keep_i + 1
+    endif
+    j = j + 1; stopLoop = 0
+    if j > noOfProposals then; stopLoop = 1
+    else
+      if tabVal(workReg[1], "SearchResult", j, "match") < LIB_threshold then
+        stopLoop = 1; endif
+   endif
+  until stopLoop = 1
+  return
+
+endMacro ! sortLibSearchProposalsByCalTime
+
+
+!=============================================================================
+Name insertResults
+!-----------------------------------------------------------------------------
+
+! Insert library search results of the next spectral library search into the first result table
+
+  parameter libNum
+
+  local noOfProposals       ! number of proposals of this library search
+  local i, match
+!.............................................................................
+
+  if libNum = 1 then
+    delTab workReg[1], "SearchResult"
+    ! do not copy table is write protected !! copyTab specReg[1], "libSearchResult", workReg[1], "SearchResult"
+    !                                         newColVal workReg[1], "SearchResult", "libNum", libNum
+
+    ! make none write protected table
+    makeResultsTable
+
+  endif
+
+  ! insert new proposals into current proposals sorted by match factor
+  noOfProposals = tabHdrVal(specReg[1], "libSearchResult", "numberOfRows")
+  for i = 1 to noOfProposals
+    match = tabVal(specReg[1], "libSearchResult", i, "match")
+    row = rowByVal(workReg[1], "SearchResult",, "match", "<", match)
+    if row <= 0 then
+      row = tabHdrVal(workReg[1], "SearchResult", "numberOfRows") + 1; endif
+    insTabRow workReg, "SearchResult", row:row
+    setTabText workReg[1], "SearchResult", row, "name", tabText$(specReg[1], "libSearchResult", i, "name")
+    setTabVal workReg[1], "SearchResult", row, "match", tabVal(specReg[1], "libSearchResult", i, "match")
+    setTabVal workReg[1], "SearchResult", row, "time_min", tabVal(specReg[1], "libSearchResult", i, "time_min")
+    setTabVal workReg[1], "SearchResult", row, "libNum", libNum
+  next i
+
+  return
+
+endMacro ! insertResults
+
+
+!=============================================================================
+Name makeResultsTable
+!-----------------------------------------------------------------------------
+
+! Make tables for library results if more then one library was used
+!.............................................................................
+
+    delTab workReg[1], "SearchResult"; newTab workReg[1], "SearchResult"
+    newColText workReg[1], "SearchResult", "name", ""
+    newColVal workReg[1], "SearchResult", "match", -1
+    newColVal workReg[1], "SearchResult", "time_min", -1
+    newColVal workReg[1], "SearchResult", "libNum", -1
+    return
+
+endMacro ! makeResultsTable
+
+
+!=============================================================================
+Name makeProposalTable
+!-----------------------------------------------------------------------------
+
+! Make tables for proposals
+!.............................................................................
+
+    delTab workReg[1], "proposals"; newTab workReg[1], "proposals"
+    noOfAllProposals = 0
+    newColVal workReg[1], "proposals", "objNum", -1
+    newColVal workReg[1], "proposals", "peakNum", -1
+    newColVal workReg[1], "proposals", "num", -1
+    newColVal workReg[1], "proposals", "match", -1
+    newColText workReg[1], "proposals", "name", ""
+    newColVal workReg[1], "proposals", "num2", -1
+    newColText workReg[1], "proposals", "name2", ""
+    newColText workReg[1], "proposals", "keepName", ""
+    newColVal workReg[1], "proposals", "keepNum", -1
+    ALS_firstAddToProposals = 0
+    return
+
+endMacro ! makeProposalTable
+
+
+!=============================================================================
+Name makeProposalEntries
+!-----------------------------------------------------------------------------
+
+! Make entries for proposal table
+
+  parameter p$, m$, t$, l$ ! identifier of columns in proposal list
+                                     ! proposal, match, time and library number
+!.............................................................................
+
+   newColText workReg[1], "proposals", p$, ""
+   newColVal workReg[1], "proposals", m$, -1
+   newColVal workReg[1], "proposals", t$, -1
+   newColVal workReg[1], "proposals", l$, -1
+   return
+
+endMacro ! makeProposalEntries
+
+!=============================================================================
+Name addToProposals
+!-----------------------------------------------------------------------------
+
+! Add current proposals to list of all proposals
+
+  parameter compoundNum
+  parameter libNum default 1
+  parameter retTime
+
+  local noOfProposals       ! number of proposals of this library search
+  local i
+  local p$, m$, t$, l$          ! proposal and match identifier for a proposal
+Local name$, match, time, retTime$
+  
+Local ID_PHX3DSUPPORTFILES_COMPOUND_247
+Local ID_PHX3DSUPPORTFILES___RET_TIME_248
+Local ID_PHX3DSUPPORTFILES_____PROPOSAL_264
+  
+  
+  ID_PHX3DSUPPORTFILES_COMPOUND_247                  =  17247  
+  ID_PHX3DSUPPORTFILES___RET_TIME_248                =  17248  
+  ID_PHX3DSUPPORTFILES_____PROPOSAL_264              =  17264  
+!.............................................................................
+
+  if ALS_firstAddToProposals = yes then ! prepare proposal tables
+     makeProposalTable; endif
+
+  if objHdrType(specReg[1], "libSearchResult") = 4 then ! proposals exist
+    n = tabHdrVal(workReg[1], "proposals", "numberOfRows") + 1
+    if compoundNum >= n then
+      insTabRow workReg[1], "proposals", n:compoundNum; endif
+    setTabVal workReg[1], "proposals", compoundNum, "objNum", SPC_chromObjNum
+    setTabVal workReg[1], "proposals", compoundNum, "peakNum", ALS_peakNum
+!    if tabHdrType(_DAMethod, "autoID", "useCalTime") <> 99 then
+!      if tabHdrVal(_DAMethod, "autoID", "useCalTime") = 1 then
+        sortLibSearchProposalsByCalTime \
+                         objHdrText$(chromReg[SPC_chromObjNum], "signalDesc"), retTime ! ; endif; endif
+    noOfProposals = tabHdrVal(workReg[1], "SearchResult", "numberOfRows")
+    for i = 1 to noOfProposals
+      p$ = "p" + val$(i); m$ = "m" + val$(i); t$ = "t" + val$(i); l$ = "l" + val$(i)  ! identifier for an entry in the proposal list
+      if tabColType(workReg[1], "proposals", p$) = 99 then ! entry has to be created
+        makeProposalEntries p$, m$, t$, l$; endif
+      name$ = tabText$(workReg[1], "SearchResult", i, "name")
+      match = tabVal(workReg[1], "SearchResult", i, "match")
+      libTime = tabVal(workReg[1], "SearchResult", i, "time_min")
+      if rz_doTrace = yes then
+        print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_____PROPOSAL_264), i, ":", name$, "(", trunc(match*100)/100, ")  Lib.Rt. =", \
+                     trunc(libTime*1000)/1000, "min."; endif
+      setTabVal workReg[1], "proposals", compoundNum, t$, libTime
+      setTabVal workReg[1], "proposals", compoundNum, l$, tabVal(workReg[1], "SearchResult", i, "libNum")
+      setTabText workReg[1], "proposals", compoundNum, p$, name$
+      setTabVal workReg[1], "proposals", compoundNum, m$, match
+      if i = 1 then ! prepare first proposal
+         retTime$ = val$(retTime)+"     "
+         print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_COMPOUND_247), compoundNum, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___RET_TIME_248), retTime$[1:5], ": ", name$, " (", trunc(match), ")"
+         setTabText workReg[1], "proposals", compoundNum, "name", name$
+         setTabVal workReg[1], "proposals", compoundNum, "match", match
+         setTabVal workReg[1], "proposals", compoundNum, "num", 1
+     endif
+      if i = 2 then ! prepare next proposal list
+        setTabText workReg[1], "proposals", compoundNum, "name2", name$
+        setTabVal workReg[1], "proposals", compoundNum, "num2", 2
+      endif
+    next i   
+  endif ! proposals exit
+  return
+
+endMacro ! addToProposals
+
+
+!=============================================================================
+Name setAsProposal
+!-----------------------------------------------------------------------------
+
+! Set as proposal
+
+  parameter name$, match
+  parameter time, libNum
+  parameter compoundNum
+
+  local num
+Local savedMatch, savedName$
+  
+Local ID_PHX3DSUPPORTFILES___WAS_ALREADY_265
+Local ID_PHX3DSUPPORTFILES____________TAK_266
+Local ID_PHX3DSUPPORTFILES__AS_SECOND_PRO_268
+   
+  ID_PHX3DSUPPORTFILES___WAS_ALREADY_265             =  17265  
+  ID_PHX3DSUPPORTFILES____________TAK_266            =  17266  
+  ID_PHX3DSUPPORTFILES__AS_SECOND_PRO_268            =  17268  
+!.............................................................................
+
+  if ALS_firstAddToProposals = yes then ! prepare proposal tables
+     makeProposalTable
+     makeProposalEntries "p1", "m1", "t1", "l1"
+     makeProposalEntries "p2", "m2", "t2", "l2"
+  endif
+
+  n = tabHdrVal(workReg[1], "proposals", "numberOfRows") + 1
+  if compoundNum >= n then
+    insTabRow workReg[1], "proposals", n:compoundNum; endif
+  setTabVal workReg[1], "proposals", compoundNum, "objNum", SPC_chromObjNum
+  setTabVal workReg[1], "proposals", compoundNum, "peakNum", ALS_peakNum
+
+  if rz_doTrace = yes then
+     print #6, "    ", name$, " (", trunc(match*100)/100, ") found for compound# ", compoundNum; endif
+  num = tabVal(workReg[1], "proposals", compoundNum, "num")
+  if num < 0  then ! a first proposal has not exist yet
+    setTabText workReg[1], "proposals", compoundNum, "name", name$
+    setTabVal workReg[1], "proposals", compoundNum, "match", match
+    setTabText workReg[1], "proposals", compoundNum, "p1", name$
+    setTabVal workReg[1], "proposals", compoundNum, "m1", match
+    setTabVal workReg[1], "proposals", compoundNum, "t1", time
+    setTabVal workReg[1], "proposals", compoundNum, "l1", libNum
+    setTabVal workReg[1], "proposals", compoundNum, "num", 1
+
+  else ! a proposal already exists
+
+     savedMatch = tabVal(workReg[1], "proposals", compoundNum, "match")
+     savedName$ = tabText$(workReg[1], "proposals", compoundNum, "name")
+
+     if rz_doTrace = yes then
+       print #6, "    ", savedName$, " (", trunc(savedMatch*100)/100, \
+                                                   ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___WAS_ALREADY_265); endif
+     if match > savedMatch then ! take new proposal as first one
+
+      ! first save original proposal as a second proposal 
+      
+       if rz_doTrace = yes then
+          print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____________TAK_266), savedName$, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__AS_SECOND_PRO_268); endif
+       setTabText workReg[1], "proposals", compoundNum, "name2", savedName$
+       setTabText workReg[1], "proposals", compoundNum, "p2", savedName$
+       setTabVal workReg[1], "proposals", compoundNum, "num2", 2
+       setTabVal workReg[1], "proposals", compoundNum, "m2", \
+                         tabVal(workReg[1], "proposals", compoundNum, "m1")
+       setTabVal workReg[1], "proposals", compoundNum, "t2", \
+                         tabVal(workReg[1], "proposals", compoundNum, "t1")
+       setTabVal workReg[1], "proposals", compoundNum, "l2", \
+                         tabVal(workReg[1], "proposals", compoundNum, "l1")
+
+      ! now save new proposal
+
+       setTabText workReg[1], "proposals", compoundNum, "name", name$
+       setTabText workReg[1], "proposals", compoundNum, "p1", name$
+       setTabVal workReg[1], "proposals", compoundNum, "match", match
+       setTabVal workReg[1], "proposals", compoundNum, "m1", match
+       setTabVal workReg[1], "proposals", compoundNum, "t1", time
+       setTabVal workReg[1], "proposals", compoundNum, "l1", libNum
+       setTabVal workReg[1], "proposals", compoundNum, "num", 1
+
+    else ! try to use it at second proposal
+       savedMatch = tabVal(workReg[1], "proposals", compoundNum, "m2")
+       if match > savedMatch then ! use it as second proposal
+         if rz_doTrace = yes then
+           print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____________TAK_266), name$, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__AS_SECOND_PRO_268); endif
+         setTabText workReg[1], "proposals", compoundNum, "name2", name$
+         setTabVal workReg[1], "proposals", compoundNum, "num2", 2
+         setTabText workReg[1], "proposals", compoundNum, "p2", name$
+         setTabVal workReg[1], "proposals", compoundNum, "m2", match
+         setTabVal workReg[1], "proposals", compoundNum, "t2", time
+         setTabVal workReg[1], "proposals", compoundNum, "l2", libNum
+       endif
+    endif
+  endif
+  return
+
+endMacro ! setAsProposal
+
+
+
+!=============================================================================
+Name optimizeProposals
+!-----------------------------------------------------------------------------
+
+! Optimizes all proposals to get the final proposals list.
+! The following proposals of each compound will be used to get unique proposals for each compound
+
+  local name$, match
+  local n, row, libNumN, libNumRow
+  local unhide
+  local noOfResults
+Local msg$, msgOriginal$
+  
+Local ID_PHX3DSUPPORTFILES_CHECK_COMPOUND_250
+Local ID_PHX3DSUPPORTFILES_OPTIMIZE_PROPO_269
+Local ID_PHX3DSUPPORTFILES_COMPOUNDS_270 
+Local ID_PHX3DSUPPORTFILES_NOW_OPTIMIZE_I_271
+Local ID_PHX3DSUPPORTFILES_CHECK_272
+Local ID_PHX3DSUPPORTFILES___REPLACE_AND_273
+        
+  ID_PHX3DSUPPORTFILES_CHECK_COMPOUND_250            =  17250  
+  ID_PHX3DSUPPORTFILES_OPTIMIZE_PROPO_269            =  17269  
+  ID_PHX3DSUPPORTFILES_COMPOUNDS_270                 =  17270  
+  ID_PHX3DSUPPORTFILES_NOW_OPTIMIZE_I_271            =  17271  
+  ID_PHX3DSUPPORTFILES_CHECK_272                     =  17272  
+  ID_PHX3DSUPPORTFILES___REPLACE_AND_273             =  17273  
+!.............................................................................
+
+  noOfResults = tabHdrVal(workReg[1], "proposals", "numberOfRows")
+  if rz_doTrace = yes then; print #6
+    print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_OPTIMIZE_PROPO_269), noOResults, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_COMPOUNDS_270)
+    print #6, "============================"; print #6; endif
+  msgOriginal$ =  ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NOW_OPTIMIZE_I_271); print msgOriginal$
+  n = 0; msg$ = msgOriginal$ ! take fist compound
+  while n < noOfResults
+     if (mod(n,10)=0)
+       if len(msg$) > 120 then; msg$ = msgOriginal$; else; msg$ = msg$ + "."; endif
+       print msg$
+     endif
+     repeat; n = n + 1 ! goto next compound
+       if n <= noOfResults then
+         name$ = tabText$(workReg[1], "proposals", n, "name") ! take first proposal of next compound
+       endif
+     until (name$ <> "") or (n > noOfResults)
+
+     if n <= noOfResults then
+       if rz_debug > 0 then; print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_CHECK_COMPOUND_250), n, ":", name$; endif
+       if rz_doTrace = yes then; print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_CHECK_272), n, name$; endif
+       setTabText workReg[1], "proposals", n, "name", "@$&" + name$ ! hide this name
+       row = rowByText(workReg[1], "proposals",, "name", "=", name$) 
+       setTabText workReg[1], "proposals", n, "name", name$ ! unhide this name
+       if row > 0 then! proposal was found at another compound
+          if rz_debug > 0 then; print name$, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___REPLACE_AND_273); endif
+          matchOfN = tabVal(workReg[1], "proposals", n, "match")
+          matchOfRow = tabVal(workReg[1], "proposals", row, "match")
+!          if tabHdrType(_DAMethod, "autoID", "useCalTime") <> 99 then
+!            if tabHdrVal(_DAMethod, "autoID", "useCalTime") = 1 then
+
+!             Take next proposal upon lowest time difference to retention time in calibration table
+
+              If (matchOfN >= LIB_threshold) And (matchOfRow >= LIB_threshold) Then
+                libNumN = TabVal(workReg[1], "proposals", n,"l"+Val$(TabVal(workReg[1], "proposals", n, "num")))
+               if libNumN > 0 then
+                calTimeOfN = calTimeOfProposal(objHdrText$(chromReg[libNumN], "signalDesc"), name$)
+                If calTimeOfN > 0 Then
+                  libNumRow = TabVal(workReg[1], "proposals", n,"l"+Val$(TabVal(workReg[1], "proposals", row, "num")))
+                 if libNumRow > 0 then
+                  calTimeOfRow =  calTimeOfProposal(objHdrText$(chromReg[libNumRow], "signalDesc"), name$)
+                  if calTimeOfRow > 0 then
+                    timeDiffOfN =  abs(tabVal(chromRes, "compound", n, "firstPeak~measRetTime")-calTimeOfN)
+                    timeDiffOfRow =  abs(tabVal(chromRes, "compound", row, "firstPeak~measRetTime")-calTimeOfN)
+                    if timeDiffOfN < timeDiffOfRow then; getNextProposal row
+                    else; getNextProposal n; endif
+                    goto startFromBeginning
+                   endif ! calTimeOFRow
+                 EndIf ! calTimeOfN
+                EndIf ! libNumRow
+             EndIf ! libNumN
+            endif ! matchOfN
+ !         endif
+ !        endif
+checkOnlyMatchFactors:
+          if matchOfN > matchOfRow then; getNextProposal row
+          else; getNextProposal n; endif
+startFromBeginning:
+          n = 0
+       endif ! row > 0
+     endif ! n <= noOfResults
+  endWhile
+  for n = 1 to noOfResults
+    name$ =  tabText$(workReg[1], "proposals", n, "name")
+    if name$ = "" then ! no name was found for this compound
+      setTabText workReg[1], "proposals", n, "name", "?? " + \
+                       tabText$(workReg[1], "proposals", n, "keepName")
+      setTabVal workReg[1], "proposals", n, "num", \
+                       tabVal(workReg[1], "proposals", n, "keepNum")
+    endif
+  next n   
+  return
+
+endMacro ! optimizeProposal
+
+
+!=============================================================================
+Name takeProposal
+!-----------------------------------------------------------------------------
+
+! Get next proposal from nextProposal list and update nextProposal list
+
+  parameter compoundNum
+  parameter proposalNum
+
+  local name$, match
+Local p$, m$
+  
+Local ID_PHX3DSUPPORTFILES___REPLACE_IT_W_274
+Local ID_PHX3DSUPPORTFILES__WITH_MATCH_276
+    
+  ID_PHX3DSUPPORTFILES___REPLACE_IT_W_274            =  17274  
+  ID_PHX3DSUPPORTFILES__WITH_MATCH_276               =  17276  
+!.............................................................................
+
+! save first proposal as the second proposal
+
+  setTabText workReg[1], "proposals", compoundNum, "name2", \
+       tabText$(workReg[1], "proposals", compoundNum, "name")
+  setTabVal workReg[1], "proposals", compoundNum, "num2", proposalNum-1
+
+! now take next proposal and make it the first one
+
+  p$ = "p" + val$(proposalNum); m$ = "m" + val$(proposalNum)
+  if tabColType(workReg[1], "proposals", p$) <> 99 then
+    name$ = tabText$(workReg[1], "proposals", compoundNum, p$)
+    match = tabVal(workReg[1], "proposals", compoundNum, m$)
+    if rz_doTrace = yes then
+      print #6, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___REPLACE_IT_W_274), compoundNum, " : ", name$, \
+                    ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__WITH_MATCH_276), trunc(match*100)/100; endif
+    setTabText workReg[1], "proposals", compoundNum, "name", name$
+    setTabVal workReg[1], "proposals", compoundNum, "match", match
+    setTabVal workReg[1], "proposals", compoundNum, "num", proposalNum
+  else
+    setTabText workReg[1], "proposals", compoundNum, "name", ""
+    setTabVal workReg[1], "proposals", compoundNum, "match", -1
+    setTabVal workReg[1], "proposals", compoundNum, "num", -1
+  endif
+  return
+
+endMacro ! takeProposal
+
+    
+
+!=============================================================================
+Name getNextProposal
+!-----------------------------------------------------------------------------
+
+! Get next proposal from nextProposal list and update nextProposal list
+
+  parameter compoundNum
+
+  local name$, match, time
+  local num, row, keepNum
+  local p$, m$, t$
+!.............................................................................
+
+  name$ = tabText$(workReg[1], "proposals", compoundNum, "name")
+  num = tabVal(workReg[1], "proposals", compoundNum, "num")
+  if num = 1 then ! keep this proposal to try it again later on
+    setTabText workReg[1], "proposals", compoundNum, "keepName", name$
+    setTabVal workReg[1], "proposals", compoundNum, "keepNum", num
+    takeProposal compoundNum, num + 1 ! take next proposal
+  else
+
+!    Try first whether the kept proposal can be used again
+     
+     keepNum = tabVal(workReg[1], "proposals", compoundNum, "keepNum")
+     if keepNum > 0 then
+       name$ = tabText$(workReg[1], "proposals", compoundNum, "keepName")
+       row = rowByText(workReg[1], "proposals",, "name", "=", name$) 
+       if row <= 0 then 
+
+!         kept proposal can be taken again
+
+         setTabText workReg[1], "proposals", compoundNum, "name", name$
+         setTabVal workReg[1], "proposals", compoundNum, "match", \
+              tabVal(workReg[1], "proposals", compoundNum, "m"+val$(keepNum))
+         setTabVal workReg[1], "proposals", compoundNum, "num", keepNum
+         setTabText workReg[1], "proposals", compoundNum, "keepName", ""
+         setTabVal workReg[1], "proposals", compoundNum, "keepNum", -1
+
+      else  ! take next proposal
+ 
+         takeProposal compoundNum, num + 1
+
+      endif ! row <= 0
+  
+    else ! no proposal kept, so take next proposal
+
+        takeProposal compoundNum, num + 1
+    endif
+  endif
+  return
+
+endMacro ! nextProposal
+
+    
+!=============================================================================
+Name insert2peak
+!-----------------------------------------------------------------------------
+
+  parameter firstpeak, k
+
+   InsTabRow ChromRes[1], "Peak", firstPeak
+   copyTabRow ChromRes, "Peak", tabVal(ChromRes[1], "compound", k-1, "firstPeak"), firstPeak
+   SetTabVal ChromRes[1], "Peak", firstPeak, "Compound", k
+   SetTabVal ChromRes[1], "Peak", firstPeak, "Signal", \
+         tabVal(ChromRes[1], "compound", k-1, "firstPeak~signal")
+   SetTabVal ChromRes[1], "Peak", firstPeak, "nextPeakSignal", \
+	   tabVal(ChromRes[1], "compound", k-1, "firstPeak~nextPeakSignal")
+   SetTabVal ChromRes[1], "Peak", \
+      tabVal(ChromRes[1], "compound", k-1, "firstPeak"), "nextPeakSignal",firstpeak
+   SetTabVal ChromRes[1], "Peak", firstPeak, "NextPeakComp", firstPeak
+   SetTabVal  ChromRes[1], "Compound", k, "FirstPeak", firstPeak
+   return
+
+endMacro ! insert2peak
+
+
+!=============================================================================
+Name removeDoubleCompound
+!-----------------------------------------------------------------------------
+
+  parameter k
+
+  if k > 0 then
+     while TabVal (ChromRes[1], "Compound", k, "FirstPeak") > 0
+       delTabRow chromRes[1], "Peak", TabVal (ChromRes[1], "Compound", k, "FirstPeak")
+     endWhile
+     delTabRow chromRes, compound, k; k = k - 1
+     ALS_noOfCompounds = ALS_noOfCompounds - 1
+  endif
+  return
+
+endMacro ! removeDoubleCompound
+  
+!=============================================================================
+Name addToCompounds
+!-----------------------------------------------------------------------------
+
+! Add proposals to results list
+
+  local i, j, noOfResults                    ! index for looping through the list of proposals
+  local takeThisCompound
+  local k, noOfCompounds
+  local m$, t$, l$                             ! identifiers for match, time and library number in column
+  local num, match, match2             ! number of proposal in proposal list
+  local objNum, retTime                   ! object number in chromReg and the compounds retention time there
+  local peakNum, startTime, endTime ! of peak given in integration results
+  local name$                                ! name of identified compound
+  local idResult$                             ! result of identification
+  local peakHeight, absHeight        ! to get the absolute height of a peak
+  local prevName$, prevTime, annotTime
+Local charSize                             ! for annotation of compound in chromReg
+  
+Local ID_PHX3DSUPPORTFILES_ASSIGN_NAMES_T_277
+  
+  ID_PHX3DSUPPORTFILES_ASSIGN_NAMES_T_277            =  17277  
+                                                      charSize = 8
+!.............................................................................
+  
+  print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_ASSIGN_NAMES_T_277)
+  noOfObjects = regSize(chromReg); prevTime = 0; prevName$ = ""; absName$ = ""
+  for i = 1 to noOfObjects
+    if objHdrVal(chromReg[i], "objClass") = 4 then; delAnn chromReg[i],, 4; endif
+  next i
+  i = 0; k = 0; noOfResults = tabHdrVal(workReg[1], "proposals", "numberOfRows")
+  repeat; i = i + 1; k = k + 1
+    takeThisCompound = 1
+    num = tabVal(workReg[1],  "proposals", i, "num")
+    if num > 0 then ! a valid proposal is available
+      name$ = tabText$(workReg[1], "proposals", i, "name"); absName$ = name$
+      if (inStr(absName$, "?? ") > 0) and (len(absName$) >= 4) then
+        absName$ = absName$[4:len(absName$)]; endif
+      objNum = tabVal(workReg[1],  "proposals", i, "objNum")
+      peakNum = tabVal(workReg[1],  "proposals", i, "peakNum")
+      retTime = tabVal(chromReg[objNum],  "intResults", peakNum, "retTime")
+
+      if retTime = prevTime then ! peak was identified at upslope and downslope
+        if (absName$ = prevName$) then ! but same identification
+            if inStr(name$, "?? ") > 0 then ! bad proposal anyway
+              removeDoubleCompound k; k = k - 1; takeThisCompound = 0
+            else; removeDoubleCompound k-1; k = k - 1; endif
+        else
+           if inStr(name$, "??") > 0 then ! bad proposal anyway
+             takeThisCompound = 0
+             removeDoubleCompound k; k = k - 1; endif
+        endif
+      endif ! retTime = prevTime
+      prevName$ = absName$; prevTime = retTime
+
+      if takeThisCompound = 1 then ! add this proposal to compound table
+        setTabText chromRes[1], "compound", k, "name", name$
+        t$ = "t" + val$(num); l$ = "l" + val$(num)
+        setTabVal chromRes[1], "compound", k, "libraryNum", tabVal(workReg[1],  "proposals", i, l$)
+        match = tabVal(workReg[1], "proposals", i, "match")
+        setTabVal chromRes[1], "compound", k, "match", match
+        idResult$ = identified$(match, LIB_threshold)
+        setTabText chromRes[1], "compound", k, "IDResult", idResult$
+        setTabVal chromRes[1], "compound", k, "retTimeLib", tabVal(workReg[1],  "proposals", i, t$)
+        num = tabVal(workReg[1],  "proposals", i, "keepNum")
+
+!       annotate it in chromReg
+
+        on error goto secondProposal
+        annotTime = retTime
+        startTime = tabVal(chromReg[objNum],  "intResults", peakNum, "timeStart")
+        endTime = tabVal(chromReg[objNum],  "intResults", peakNum, "timeEnd")
+        peakHeight = tabVal(chromReg[objNum],  "intResults", peakNum, "height")
+        absHeight = tabVal(chromReg[objNum],  "intResults", peakNum, "baseline")+peakHeight
+        if tabText$(chromRes[1], "compound", k, "purResult") = "u" then ! compound was identified at upslope
+          annotTime = startTime + 2*(retTime - startTime)/3
+        else ! compound was identified at downslope
+          if tabText$(chromRes[1], "compound", k, "purResult") = "d" then
+            annotTime = endTime - 2*(endTime - retTime)/3; endif; endif
+        if name$ <> "" then
+          if inStr(name$, "??") = 0 then
+            if match >= LIB_threshold then
+               j = newTextAnn(chromReg[objNum], " "+name$, annotTime, absHeight,, 4,8,, 90, 3, 2, "Arial")
+            else
+               j = newTextAnn(chromReg[objNum], " ? "+name$, annotTime, absHeight,, 4,8,, 90, 3, 2, "Arial")
+           endif
+        endif
+      endif
+
+!       take second proposal
+secondProposal:
+        on error
+        if num > 0 then ! take kept proposal as second proposal
+          m$ = "m" + val$(num); t$ = "t" + val$(num); l$ = "l" + val$(num)
+          match2 = tabVal(workReg[1],  "proposals", i, m$)
+          name2$ = tabText$(workReg[1], "proposals", i, "keepName")
+          setTabText chromRes[1], "compound", k, "name2", "? "+ name2$
+          setTabVal chromRes[1], "compound", k, "match2", match2
+          setTabVal chromRes[1], "compound", k, "retTimeLib2", tabVal(workReg[1],  "proposals", i, t$)
+          setTabVal chromRes[1], "compound", k, "libraryNum2", tabVal(workReg[1],  "proposals", i, l$)
+          if (match2 > LIB_threshold) and (inStr(name2$, "?") = 0) and (inStr(name$, "?") = 0) then
+  
+!           insert second proposal for this peak
+            if name2$ <> name$ then
+              k = k + 1; insTabRow chromRes[1], "compound", k:k
+              ALS_noOfCompounds = ALS_noOfCompounds + 1
+              setTabText chromRes[1], "compound", k, "name", "? "+name2$
+              prevName$ = "? " + name$
+              setTabVal chromRes[1], "compound", k, "libraryNum", tabVal(workReg[1],  "proposals", i, l$)
+              setTabVal chromRes[1], "compound", k, "match", tabVal(workReg[1],  "proposals", i, m$)
+              setTabVal chromRes[1], "compound", k, "retTimeLib", tabVal(workReg[1],  "proposals", i, t$)
+              insert2peak tabVal(chromRes[1], "compound", k-1, "firstPeak"), k
+            endif
+          endif
+        else
+          num = tabVal(workReg[1],  "proposals", i, "num2")
+          if num > 0 then ! take normal second proposal
+            m$ = "m" + val$(num); t$ = "t" + val$(num); l$ = "l" + val$(num)
+            match2 = tabVal(workReg[1],  "proposals", i, m$)
+            name2$ = tabText$(workReg[1], "proposals", i, "name2")
+            setTabText chromRes[1], "compound", k, "name2", "? "+name2$
+            setTabVal chromRes[1], "compound", k, "match2", match2
+            setTabVal chromRes[1], "compound", k, "retTimeLib2", tabVal(workReg[1],  "proposals", i, t$)
+            setTabVal chromRes[1], "compound", k, "libraryNum2", tabVal(workReg[1],  "proposals", i, l$)
+            if (match2 > LIB_threshold) and (inStr(name2$, "?") = 0) and (inStr(name$, "?") = 0) then
+
+!             insert second proposal for this peak
+              if name2$ <> name$ then
+                k = k + 1; insTabRow chromRes[1], "compound", k:k
+                ALS_noOfCompounds = ALS_noOfCompounds + 1
+               setTabText chromRes[1], "compound", k, "name", "? "+name2$
+               prevName$ = "? " + name$
+               setTabVal chromRes[1], "compound", k, "libraryNum", tabVal(workReg[1],  "proposals", i, l$)
+               setTabVal chromRes[1], "compound", k, "match", tabVal(workReg[1],  "proposals", i, m$)
+               setTabVal chromRes[1], "compound", k, "retTimeLib", tabVal(workReg[1],  "proposals", i, t$)
+               insert2peak tabVal(chromRes[1], "compound", k-1, "firstPeak"), k
+             endif
+           endif 
+         endif
+        endif
+      endif
+    endif
+  until (k >= ALS_noOfCompounds) or (i >= noOfResults)
+
+  if rowByText(chromRes, "compound",, "purResult", "=", "u") > 0 then
+    name$ = "u: compound identified at upslope. Purity factor exceeds threshold."
+    if tabHdrType(chromRes, "compound", "upslopeNote") = 99 then
+      newTabHdrText chromRes, "compound", "upslopeNote", name$
+    else; setTabHdrText chromRes, "compound", "upslopeNote", name$; endif
+  endif
+  if rowByText(chromRes, "compound",, "purResult", "=", "d") > 0 then
+    name$ = "d: compound identified at downslope. Purity factor exceeds threshold."
+    if tabHdrType(chromRes, "compound", "downslopeNote") = 99 then
+      newTabHdrText chromRes, "compound", "downslopeNote", name$
+    else; setTabHdrText chromRes, "compound", "downslopeNote", name$; endif
+  endif
+  if (rowByText(chromRes, "compound",, "IDResult", "=", "x") > 0) \
+  or (rowByText(chromRes, "compound",, "purResult", "=", "x") > 0) then
+    name$ = "x: the value is below the defined threshold."
+    if tabHdrType(chromRes, "compound", "threshNote") = 99 then
+      newTabHdrText chromRes, "compound", "thresholdNote", name$
+    else; setTabHdrText chromRes, "compound", "thresholdNote", name$; endif
+  endif
+  if rowByText(chromRes, "compound",, "name", "in", "? ") > 0 then
+    name$ = "?: this is a second proposal for the compound in the line above."
+    if tabHdrType(chromRes, "compound", "proposal2Note") = 99 then
+      newTabHdrText chromRes, "compound", "proposal2Note", name$
+    else; setTabHdrText chromRes, "compound", "proposal2Note", name$; endif
+  endif
+  if rowByText(chromRes, "compound",, "name", "in", "?? ") > 0 then
+    name$ = "??: means a name also used in a better library match for another compound."
+    if tabHdrType(chromRes, "compound", "doubleNameNote") = 99 then
+      newTabHdrText chromRes, "compound", "doubleNameNote", name$
+    else; setTabHdrText chromRes, "compound", "doubleNameNote", name$; endif
+  endif
+  return
+
+endMacro ! addToCompounds
+
+ 
+!=============================================================================
+Name loadLibraryFile
+!-----------------------------------------------------------------------------
+
+! Loads a library and prepares some variables and registers
+
+  parameter libNum, libFile$
+
+! return parameter: 1 if load was successful otherwise 0
+
+  local i, l
+  local libObjNum
+!.............................................................................
+
+    on error return 0
+    delReg specLibReg
+    if loadLibrary(libFile$, 1, 10,0) = 0 then ! ok
+      _LibPath$ = LIB_dataPath$
+      _LibFile$ = LIB_dataFile$
+      showTitle
+      libObjNum = libInfoObject()
+      delTab _config[1], "libSearchTab"+val$(libNum)
+      copyTab specLibReg[libObjNum], "libSearchTemp", _config[1],  "libSearchTab"+val$(libNum)
+      updateFourFileMenu "SpecLibFile", LIB_dataPath$, LIB_dataFile$
+      insTabRow chromRes[1], "autoIDParms"
+      setTabText chromRes[1], "autoIDParms", libNum, "libraryName", libFile$
+      setTabText chromRes[1], "autoIDParms", libNum, "libModDateTime", \
+                       tabHdrText$(specLibReg[libObjNum], "libHeader", "fileChanged")
+      setTabVal chromRes[1], "autoIDParms", libNum, "libThreshold", lib_threshold
+      if (PUR_doMatchCurve * PUR_doThresCurves) > 0 then
+        setTabVal chromRes[1], "autoIDParms", libNum, "purThreshold", -2
+      else
+        setTabVal chromRes[1], "autoIDParms", libNum, "purThreshold", pur_threshold
+      endif
+      setTabVal chromRes[1], "autoIDParms", libNum, "absThreshold", \
+                      tabHdrVal(specLibReg[libObjNum], "libSearchTemp", "abs_thres")
+      setTabVal chromRes[1], "autoIDParms", libNum, "leftWindow", \
+                      tabHdrVal(specLibReg[libObjNum], "libSearchTemp", "timeR_left")
+      setTabVal chromRes[1], "autoIDParms", libNum, "rightWindow", \
+                       tabHdrVal(specLibReg[libObjNum], "libSearchTemp", "timeR_right")
+      setTabVal chromRes[1], "autoIDParms", libNum, "waveShift", \
+                       tabHdrVal(specLibReg[libObjNum], "libSearchTemp", "wave_shift")
+      return 1
+   else; return 0
+   endif
+
+endMacro ! loadLibraryFile
+
+
+!=============================================================================
+Name prepareLibraries
+!-----------------------------------------------------------------------------
+
+! Prepares array of library names
+
+  local i, check, libName$
+  local maxLibNum, oldMethod
+!.............................................................................
+
+  ALS_noOfLibraries = 0; oldMethod = 0
+  maxLibNum = tabHdrVal(_DAMethod, "autoID", "numberOfRows")
+  if maxLibNum <= 0 then ! still an old method
+    if tabHdrType(_DAMethod, "autoID", "library1") <> 99 then
+      maxLibNum = 4; oldMethod = 1
+    endif
+  endif
+  for i = 1 to maxLibNum
+    if oldMethod = 1 then
+      evaluate "check = tabHdrVal(_DAMethod, ""autoID"", ""library"+val$(i)+""")"
+    else
+      check = tabVal(_DAMethod, "autoID", i, "library")
+    endif
+    if check = yes then
+      if oldMethod = 1 then
+        evaluate "libName$ = tabHdrText$(_DAMethod, ""autoID"", ""libFile"+val$(i)+""")"
+      else
+        libName$ = tabText$(_DAMethod, "autoID", i, "libFile")
+      endif
+      if len(libName$) > 0 then
+        if FileStat(MODE, libName$) = -1 then
+          index = 1
+          repeat
+            s$ = substring$(libName$,index,,"\")
+            index = index + 1
+          until substring$(libName$,index,,"\") = ""
+          if FileStat(MODE, _Libpath$+s$) <> -1 then
+            libName$ = _Libpath$+s$
+          else
+            if FileStat(MODE, _AUTOPATH$[1:len(_AUTOPATH$)-5]+"SPECLIBS\"+s$) <> -1 then
+              libName$ = _AUTOPATH$[1:len(_AUTOPATH$)-5]+"SPECLIBS\"+s$
+            endif
+          endif
+        endif
+
+        if loadLibraryFile(ALS_noOfLibraries+1,libName$) > 0 then ! ok
+          if rz_doTrace = yes then; print #6, ALS_noOfLibraries, libName$; endif
+          ALS_noOfLibraries = ALS_noOfLibraries + 1
+          evaluate "delReg lib" + val$(ALS_noOfLibraries) + "Reg"
+          evaluate "moveObj specLibReg[1:0], lib" + val$(ALS_noOfLibraries) + "Reg"
+        endif
+      endif
+    endif
+  next i
+  return
+
+endMacro ! prepareLibraries
+
+
+!=============================================================================
+Name prepareCompoundHeader
+!-----------------------------------------------------------------------------
+
+! Prepares additional header for compounds
+
+!.............................................................................
+
+    delTab chromRes[1], "autoIDparms"
+    newTab chromRes[1], "autoIDParms"
+    newTabHdrText chromRes[1], "autoIDParms", "modus", ""
+    newTabHdrVal chromRes[1], "autoIDParms", "doPurity", doPurityCheck
+    newColText chromRes[1], "autoIDParms", "libraryName", ""
+    newColVal chromRes[1], "autoIDParms", "libThreshold", undefined
+    newColVal chromRes[1], "autoIDParms", "purThreshold", undefined
+    newColVal chromRes[1], "autoIDParms", "absThreshold", undefined
+    newColVal chromRes[1], "autoIDParms", "leftWindow", undefined
+    newColVal chromRes[1], "autoIDParms", "rightWindow", undefined
+    newColVal chromRes[1], "autoIDParms", "waveShift", undefined
+    newColText chromRes[1], "autoIDParms", "libModDateTime", ""
+  return
+
+endMacro ! prepareCompoundHeader
+
+!=============================================================================
+Name prepareCompoundColumns
+!-----------------------------------------------------------------------------
+
+! Prepares additional columns of compound table
+
+!.............................................................................
+
+  if tabColType(chromRes[1], "compound", "match") = 99 then
+    newColVal chromRes[1], "compound", "libraryNum", undefined
+    newColVal chromRes[1], "compound", "match", undefined
+    newColVal chromRes[1], "compound", "purity", undefined
+    newColText chromRes[1], "compound", "idResult", ""
+    newColText chromRes[1], "compound", "purResult", ""
+    newColVal chromRes[1], "compound", "retTimeLib", undefined
+    newColVal chromRes[1], "compound", "identified", undefined
+    newColText chromRes[1], "compound", "name2", ""
+    newColVal chromRes[1], "compound", "match2", undefined
+    newColVal chromRes[1], "compound", "retTimeLib2", undefined
+    newColVal chromRes[1], "compound", "libraryNum2", undefined
+  endif
+  return
+
+endMacro ! prepareCompoundColumns
+
+
+!=============================================================================
+Name makeISTDlink
+!-----------------------------------------------------------------------------
+
+! Make link between ISTD's in results according to _DAMethod
+
+  local noOfsetISTDs, setISTDnum
+  local noOfISTDs, ISTDTab$ 
+  local compLink, setCompLink
+  local firstsetCompLink
+  local firstDependent, prevLink
+!.............................................................................
+
+  noOfsetISTDs = tabHdrVal(_DAMethod, "ISTD", "numberOfRows")
+  for setISTDnum = 1 to noOfsetISTDs
+    insTabRow chromRes, "ISTD" ! new entry in results
+    noOfISTDs = noOfISTDs+1
+    setTabVal chromRes, "ISTD", noOfISTDs, "amount", tabVal(_DAMethod, "ISTD", setISTDnum, "amount")
+    setCompLink = tabVal(_DAMethod, "ISTD", setISTDnum, "compound")
+    if (setCompLink < 1)
+      ISTDTab$ = "CompGroup"
+      setCompLink = tabVal(_DAMethod, "ISTD", setISTDnum, "CompGroup")
+    else
+      ISTDTab$ = "Compound"
+    endif
+
+    compLink = rowByVal(chromRes, ISTDTab$,, "cal"+ISTDTab$, "=", setCompLink)
+    if compLink > 0 then
+      setTabVal chromRes, ISTDTab$, compLink, "nextISTD", compLink
+      if (ISTDTab$ = "Compound")
+        setTabVal chromRes, ISTDTab$, compLink, "isISTD", 1
+      endif
+      setTabVal chromRes, ISTDTab$, compLink,  "ISTD",    noOfISTDs
+      setTabVal chromRes, "ISTD",   noOfISTDs, ISTDTab$,  compLink
+      setTabVal chromRes, "ISTD",   noOfISTDs, "calISTD", setISTDnum
+      setTabText chromRes,"ISTD",   noOfISTDs, "shortName", \
+                       tabText$(_DAMethod, "ISTD", setISTDnum, "shortName")
+    endif
+    setCompLink = tabVal(_DAMethod, "ISTD", setISTDnum, "firstDependent")
+    if SetCompLink > 0 then
+      ! link the dependents in ChromRes:
+      PrevLink = -1
+      FirstSetCompLink = SetCompLink
+      repeat
+        CompLink = RowByVal (ChromRes[1], "Compound",, \
+                             "CalCompound", "=", SetCompLink)
+        if CompLink > 0 then
+          SetTabVal ChromRes[1], "Compound", CompLink, "ISTD", NoOfISTDs
+          if PrevLink = -1 then
+            ! set the link from ISTD to its first dependent in ChromRes:
+            FirstDependent = CompLink
+            SetTabVal ChromRes[1], "ISTD", NoOfISTDs, "FirstDependent", CompLink
+          else
+            ! set the link from the previous dependent to this one in ChromRes:
+            SetTabVal ChromRes[1], "Compound", PrevLink, "NextISTD", CompLink
+          endif
+          ! set the link from this dependent to the first one in ChromRes:
+          SetTabVal ChromRes[1], "Compound", CompLink, "NextISTD",FirstDependent
+          PrevLink = CompLink
+        endif
+        SetCompLink = TabVal (_DAMethod[1], "Compound", SetCompLink, "NextISTD")
+      until SetCompLink = FirstSetCompLink
+    endif
+  next setISTDnum
+  return
+
+endMacro ! makeISTDlink
+
+
+!=============================================================================
+Name MakeCalPeakLink
+!-----------------------------------------------------------------------------
+
+! Make link from ChromRes[1],Peak to _DAMethod[1],Peak
+
+  parameter Compound        ! index into ChromRes[1],Compound
+  parameter CalCompound     ! index into _DAMethod[1],Compound
+
+  local FirstPeak, PeakComp, SignalDesc$
+  local FirstCalPeak, CalPeakComp
+!.............................................................................
+  FirstPeak = TabVal (ChromRes[1], "Compound", Compound, "FirstPeak")
+  FirstCalPeak = TabVal (_DAMethod[1], "Compound", CalCompound, "FirstPeak")
+  PeakComp = FirstPeak
+  repeat
+    SignalDesc$ = TabText$ (ChromRes[1], "Peak", PeakComp, "Signal~Desc")
+    ! search peak in _DAMethod[1],Peak with same SignalDesc$:
+    CalPeakComp = FirstCalPeak
+    repeat
+      if SignalDesc$ = TabText$ (_DAMethod[1], "Peak", CalPeakComp, "Signal~Desc") then
+        ! Make link from ChromRes[1],Peak to _DAMethod[1],Peak:
+        SetTabVal ChromRes[1],  "Peak", PeakComp, "CalPeak", CalPeakComp
+        ! Copy other info from _DAMethod[1],Peak to ChromRes[1],Peak:
+        SetTabVal ChromRes[1],  "Peak", PeakComp,    "ExpRetTime", \
+           TabVal(_DAMethod[1], "Peak", CalPeakComp, "ExpRetTime")
+        SetTabVal ChromRes[1],  "Peak", PeakComp,    "CalPeakType", \
+           TabVal(_DAMethod[1], "Peak", CalPeakComp, "CalPeakType")
+        SetTabVal ChromRes[1],  "Peak", PeakComp,    "CalcBase", \
+           TabVal(_DAMethod[1], "Peak", CalPeakComp, "CalcBase")
+        CalPeakComp = FirstCalPeak
+      else
+        CalPeakComp = TabVal (_DAMethod[1], "Peak", CalPeakComp, "NextPeakComp")
+      endif
+    until CalPeakComp = FirstCalPeak
+    PeakComp = TabVal (ChromRes[1], "Peak", PeakComp, "NextPeakComp")
+  until PeakComp = FirstPeak
+  return
+endMacro ! MakeCalPeakLink
+
+
+!=============================================================================
+Name signalDescOfMainPeak$
+!-----------------------------------------------------------------------------
+
+! Returns signal description of main peak in chromRes.
+! Tries to switch to another main peak if signal description in chromRes doesn't fit
+! to signal description in _DAMethod
+
+  parameter compNum, calCompNum, calSignalDesc$
+  local signalDesc$
+  local firstPeak, peakNum, found
+!.............................................................................
+
+  firstPeak = tabVal(chromRes[1], "compound", compNum, "firstPeak")
+  peakNum = firstPeak; found = 0
+  repeat
+
+     ! search for a peak belonging to a DAD or FLD signal
+     signalDesc$ = tabText$(chromRes, "peak", peakNum, "signal~desc")
+     if ((inStr(signalDesc$, "DAD") > 0) or (inStr(signalDesc$, "FLD") > 0))\
+     and (signalDesc$ = calSignalDesc$) then
+       found = 1
+     else
+       peakNum = tabVal(chromRes, "peak", peakNum, "nextPeakComp")
+     endif
+
+   until (found = 1) or (peakNum = firstPeak)
+
+   if (found = 1) and (peakNum <> firstPeak) then
+     switchMainPeakLink compNum, firstPeak, peakNum; endif
+   return signalDesc$
+
+endMacro ! signalDescOfMainPeak$
+
+!=============================================================================
+Name switchMainPeakLink
+!-----------------------------------------------------------------------------
+
+! Switches link of main peak in compound table to given new main peak.
+
+  parameter compNum, firstPeak, newMainPeak
+  local calPeakType
+!.............................................................................
+
+  setTabVal chromRes, "compound", compNum, "firstPeak", newMainPeak
+  calPeakType = tabVal(chromRes[1], "peak", firstPeak, "calPeakType")
+  setTabVal chromRes[1], "peak", firstPeak, "calPeakType", tabVal(chromRes[1], "peak", newMainPeak, "calPeakType")
+  setTabVal chromRes[1], "peak", newMainPeak, "calPeakType", calPeakType
+  return
+
+endMacro ! switchMainPeakLink
+
+
+!=============================================================================
+Name makeCalTableLink
+!-----------------------------------------------------------------------------
+
+! Make link from chromRes register to calibration table in _DAMethod
+
+  local noOfCompounds, noOfCalCompounds
+  local name$          ! of compound
+  local errorRow, pos
+  local calNum         ! row number in compound cal. table
+  local calRef         ! row number in peak cal. table
+  local calcType
+  local duplicate, keepCalNum
+  local signalDesc$, calSignalDesc$
+  local DADsignal
+!.............................................................................
+
+  noOfCalCompounds = tabHdrVal(_DAMethod, "compound", "numberOfRows")
+  if noOfCalCompounds <= 0 then; return; endif
+
+  calcType = tabHdrVal(chromRes[1], "quantParm", "calcType")
+  for i = 1 to ALS_noOfCompounds
+    setTabVal chromRes[1], "compound", i, "identified", 0
+    setTabText chromRes[1], "compound", i, "IDresult", \
+              identified$(tabVal(chromRes[1], "compound", i, "match"), LIB_threshold)
+    name$ = tabText$(chromRes[1], "compound", i, "name")
+    if (name$ <> "") and (inStr(name$, "?? ")  = 0) then ! compound has a valid name
+      if (inStr(name$, "? ") > 0) and (len(name$) >= 3) then
+        setTabVal chromRes[1], "compound", i, "identified", 2
+        name$ = name$[3:len(name$)]; endif
+      duplicate = 0; keepCalNum = 0; calNum = 0
+      repeat
+        pos = InStr(name$, "@")
+        if pos > 0 then; pos = pos -1; else; pos = len(name$); endIf
+        calNum = rowByText(_DAMethod, "compound",calNum+1:-1, "name", "i=", strTrim$(name$[1:pos]))
+        if calNum > 0 then
+          calSignalDesc$ = tabText$(_DAMethod,  "compound", calNum, "firstPeak~signal~desc")
+          if calSignalDesc$ = signalDescOfMainPeak$(i, calNum, calSignalDesc$) then
+            if keepCalNum = 0 then; keepCalNum = calNum; else; duplicate = 1; endif
+          endif
+        endif
+      until (calNum <= 0) or (calNum = noOfCalCompounds) or (duplicate = 1)
+          
+      !  if (calcType > 0) and (keepCalNum > 0) then ! compound was calibrated
+      if (calcType >= 0) and (keepCalNum > 0) then ! compound was calibrated
+        setTabVal chromRes[1], "compound", i, "calCompound", keepcalNum
+        MakeCalPeakLink i, keepCalNum
+        SetTabVal ChromRes[1],  "Compound", i,      "AmtLimitLow", \
+           TabVal(_DAMethod[1], "Compound", keepCalNum, "AmtLimitLow")
+        SetTabVal ChromRes[1],  "Compound", i,      "AmtLimitHigh", \
+           TabVal(_DAMethod[1], "Compound", keepCalNum, "AmtLimitHigh")
+        if i > 1 then
+          if (tabVal(chromRes, "Compound", i, "identified") = 2) \
+          and (tabVal(chromRes, "Compound", i-1, "calCompound") = 0) then
+            setTabVal chromRes[1], "compound", i, "identified", -2; endif; endif
+      else
+        if tabVal(chromRes, "Compound", i, "identified") = 2 then
+         setTabVal chromRes[1], "compound", i, "identified", -2; endif
+        if i > 1 then
+          if (tabVal(chromRes, "Compound", i, "identified") = -2) \
+          and (tabVal(chromRes, "Compound", i-1, "calCompound") = 1) then
+           setTabVal chromRes[1], "compound", i, "identified", 2; endif; endif
+      endif ! keepCalNum > 0
+
+      if duplicate = 1 then ! make entry in error report table
+        insTabRow chromRes, errorReport
+        errorRow = tabHdrVal(chromRes, "errorReport", "numberOfRows")
+        setTabText chromRes, "errorReport", errorRow, "comment", "Duplicate compound name on same signal"
+        setTabVal chromRes, "errorReport", errorRow, "errorStatus", 1 ! warning
+        setTabVal chromRes, "errorReport", errorRow, "errorLine", keepCalNum
+        setTabText chromRes, "errorReport", errorRow, "tabName", "compound"
+      endif
+    endif ! name$ <> ""
+  next i
+
+  return
+
+endMacro ! makeCalTableLink
+
+
+!=============================================================================
+Name switchFirstPeakLinksToDAD
+!-----------------------------------------------------------------------------
+
+! Switches links of first peak in compound table to first peak of an DAD signal
+! This guarantees to find all compounds given through a DAD signal
+
+  local i
+  local firstPeak, peakNum, prevPeakNum, sigNum, sigDesc$
+  local DADsignal
+!.............................................................................
+
+  for i = 1 to ALS_noOfCompounds
+    firstPeak = tabVal(chromRes[1], "compound", i, "firstPeak")
+    sigNum = tabVal(chromRes[1], "peak", firstPeak, "signal")
+    sigDesc$ = tabText$(chromRes[1], "signal", sigNum, "desc")
+    DADsignal = inStr(sigDesc$, "DAD"); prevPeakNum = firstPeak
+    peakNum = tabVal(chromRes[1], "peak", firstPeak, "nextPeakComp")
+    while (DADsignal = 0) and (peakNum <> firstPeak)
+      sigNum = tabVal(chromRes[1], "peak", peakNum, "signal")
+      sigDesc$ = tabText$(chromRes[1], "signal", sigNum, "desc")
+      DADsignal = inStr(sigDesc$, "DAD")
+      if DADsignal = 1 then; switchMainPeakLink i, firstPeak, peakNum
+      else; peakNum = tabVal(chromRes[1], "peak", peakNum, "nextPeakComp"); endif
+    endWhile
+  next i
+  return
+
+endMacro ! switchFirstPeakLinksToDAD
+
+
+!=============================================================================
+Name idByLib
+!-----------------------------------------------------------------------------
+
+! Identify by library search
+
+Local header$, l, a, keepObj, value
+  
+Local ID_PHX3DSUPPORTFILES_NO_LIBRARY_SPE_278
+Local ID_PHX3DSUPPORTFILES_AUTOMATIC_LIBR_279
+Local ID_PHX3DSUPPORTFILES_AUTOMATIC_LIBR_280
+Local ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_281
+Local ID_PHX3DSUPPORTFILES____TARGET_COMP_282
+Local ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_283
+Local ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_284
+Local ID_PHX3DSUPPORTFILES____TARGET_COMP_285
+Local ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_286
+Local ID_PHX3DSUPPORTFILES_NOSPECLIBSPD_400
+  
+    
+  ID_PHX3DSUPPORTFILES_NO_LIBRARY_SPE_278            =  17278  
+  ID_PHX3DSUPPORTFILES_AUTOMATIC_LIBR_279            =  17279  
+  ID_PHX3DSUPPORTFILES_AUTOMATIC_LIBR_280            =  17280  
+  ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_281            =  17281  
+  ID_PHX3DSUPPORTFILES____TARGET_COMP_282            =  17282  
+  ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_283            =  17283  
+  ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_284            =  17284  
+  ID_PHX3DSUPPORTFILES____TARGET_COMP_285            =  17285  
+  ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_286            =  17286  
+  ID_PHX3DSUPPORTFILES_NOSPECLIBSPD_400              =  17400
+  
+!.............................................................................
+
+  undefined = -1
+  doPurityCheck = tabHdrVal(_DAMethod, "autoID", "doPurity")
+  prepareCompoundHeader; prepareCompoundColumns
+  startSearch = tabHdrVal(_DAMethod, "autoID", "fromSearchTime")
+  endSearch = tabHdrVal(_DAMethod, "autoID", "toSearchTime")
+  searchMode = tabHdrVal(_DAMethod, "autoID", "searchMode")
+  seeIfSpecLibLoaded; yes = 1; ALS_firstAddToProposals = 1
+  if doPurityCheck = yes then; seeIfPurityLoaded
+    ClearObj "specnoisereg"
+    PUR_PurityThreshold = -1
+    if checkMethodPeakPurParams(0) = 1 then; return; endif; endif
+  if check(variable, RZ_doTrace) = 0 then; RZ_doTrace = 0; endif
+  delReg workReg; newObj workReg[1], 1, 0, 0
+
+  value = closeloadedlibrary()
+
+  if rz_doTrace = yes then
+    if devNum() = 6 then; close #6; endif
+    header$ = DAdataFile$; l = len(header$)
+    open _tempPath$+"libtrace.txt" for output as #6; setMargin 0,2,2; 
+    beginJob ,,, yMax()-1; endif
+
+  prepareLibraries
+  if ALS_noOfLibraries = 0 then
+    print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_LIBRARY_SPE_278)
+    !setTabHdrText chromRes[1], "autoIDParms", "modus", "    > > No spectral library(s) specified < <"
+    setTabHdrText chromRes[1], "autoIDParms", "modus", ReadResource$("Phx3dSupport", ID_PHX3DSUPPORTFILES_NOSPECLIBSPD_400)
+    addMissingCalTableRecords
+    RETURN
+  endif
+
+  ALS_noOfCompounds = tabHdrVal(chromRes[1], "compound", "numberOfRows")
+  switchFirstPeakLinksToDAD          ! uncommented, 062801 NN, #63
+  keepObj = SPC_chromObjNum
+  if searchMode = 1 then
+    print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_AUTOMATIC_LIBR_279)
+    setTabHdrText chromRes[1], "autoIDParms", "modus", "   Automatic library search"
+    if rz_doTrace= yes then
+      header$ = ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_AUTOMATIC_LIBR_280) + rptStr$(" ", xMax()-l-24) + header$
+      setHeader header$; endif
+    automaticIdentify
+  else
+    if searchMode = 2 then
+      print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_281)
+      setTabHdrText chromRes[1], "autoIDParms", "modus", \
+         ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____TARGET_COMP_282)
+      if rz_doTrace = yes then
+        header$ = ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_283) + rptStr$(" ", xMax()-l-48) + header$
+        setHeader header$; endif
+     targetCompCalAnalysis
+    else
+      if searchMode = 3 then
+        print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_284)
+        setTabHdrText chromRes[1], "autoIDParms", "modus", \
+           ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES____TARGET_COMP_285)
+         if rz_doTrace = yes then
+          header$ = ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_TARGET_COMPOUN_286) + rptStr$(" ", xMax()-l-47) + header$
+          setHeader header$; endif
+       targetCompLibAnalysis
+      endif
+    endif
+  endif
+
+  if objHdrType(workReg[1], "proposals")  = 4 then ! proposals exist
+    optimizeProposals ! and get rid of double entries
+    winUpdate off
+    addToCompounds
+    winUpdate on
+    makeCalTableLink
+  endif
+  SPC_chromObjNum = keepObj
+  if rz_doTrace = yes then; endJob; close #6; endif
+  REP_reportType = 0
+  if rz_debug = 0 then; delReg workReg; endif
+
+  addMissingCalTableRecords
+
+  ! close loaded library
+  l = closeloadedlibrary()
+
+  return
+
+endMacro ! idByLib
+
+!=============================================================================
+Name addMissingCalTableRecords
+!-----------------------------------------------------------------------------
+
+! adds calibrated but not found records to chromres
+
+  local NOfCalComps,NOfResComps,NOfCompGroups,NOfCtrlSmplLimits
+  local NOfCalSigs,NOfResSigs,resSigNum,i,CtrlLimit
+  local resCompNum, calCompNum, prevResCompNum
+  local firstPeak, peakNum, prevPeakNum, sigNum, sigDesc$
+!.............................................................................
+
+  SetTabVal ChromRes,"Compound",,"NextCompGroup",-1
+
+  ! add missing calibrated signals to Chromres
+  !-------------------------------------------
+  NOfCalSigs  = TabHdrVal(_damethod[1],"Signal","NumberOfRows")
+  NOfResSigs  = TabHdrVal(ChromRes[1],"Signal","NumberOfRows")
+  for i=1 to NOfCalSigs
+    sigDesc$  = TabText$(_damethod[1],"Signal",i,"Desc")
+    resSigNum = RowByText(ChromRes[1],"Signal",,"Desc","=",sigDesc$)
+    if (resSigNum < 1)
+      NOfResSigs = NOfResSigs+1
+      resSigNum  = NOfResSigs
+      InsTabRow  ChromRes[1],"Signal",NOfResSigs
+      SetTabText ChromRes[1],"Signal",NOfResSigs,"Desc",sigDesc$
+      SetTabVal  ChromRes[1],"Signal",NOfResSigs,"Start",\
+         TabVal( _damethod[1],"Signal",i,"Start")
+      SetTabVal  ChromRes[1],"Signal",NOfResSigs,"End",\
+         TabVal( _damethod[1],"Signal",i,"End")
+      SetTabVal  ChromRes[1],"Signal",NOfResSigs,"Delay",\
+         TabVal( _damethod[1],"Signal",i,"Delay")
+    endif
+    SetTabVal  ChromRes[1],"Signal",resSigNum,"CalSignal",i
+  next i
+
+  ! add missing compound groups to Chromres
+  !----------------------------------------
+  NOfCompGroups = TabHdrVal(_damethod[1],"CompGroup","NumberOfRows")
+  if (NOfCompGroups > 0)
+    InsTabRow ChromRes[1],"CompGroup",1:NOfCompGroups
+  endif
+
+  ! add missing control sample limits to Chromres
+  !----------------------------------------------
+  NOfCtrlSmplLimits = TabHdrVal(_damethod[1],"ControlLimits","NumberOfRows")
+  if (NOfCtrlSmplLimits > 0)
+    InsTabRow ChromRes[1],"ControlLimits",1:NOfCtrlSmplLimits
+  endif
+
+  ! add missing calibrated compounds & peaks to Chromres
+  !-----------------------------------------------------
+  NOfCalComps    = TabHdrVal(_damethod[1],"Compound","NumberOfRows")
+  NOfResComps    = TabHdrVal(ChromRes[1],"Compound","NumberOfRows")
+  prevResCompNum = 0
+
+  for i=1 to NOfCalComps
+    resCompNum = RowByVal(ChromRes[1],"Compound",,"CalCompound","=",i)
+    if (resCompNum > 0)
+      ! calibrated compound is in results, check calibrated peaks
+      !----------------------------------------------------------
+      calCompNum = TabVal(ChromRes[1],"Compound",resCompNum,"CalCompound")
+      firstPeak  = TabVal(_damethod[1],"Compound",calCompNum,"FirstPeak")
+      peakNum    = firstPeak
+      
+      repeat 
+        if (RowByVal(ChromRes[1],"Peak",,"CalPeak","=",peakNum) < 1)
+          addCalPeakToResComp resCompNum,calCompNum,peakNum
+        endif
+        peakNum = TabVal(_damethod[1],"Peak",peakNum,"NextPeakComp")
+      until (peakNum = firstPeak)
+    else
+      ! calibrated compound is not in results, add it
+      !----------------------------------------------
+      prevResCompNum = addCalCompToRes(i,prevResCompNum,NOfResComps)
+      resCompNum     = prevResCompNum
+      NOfResComps    = NOfResComps+1
+    endif
+
+    SetTabVal ChromRes[1],"Compound",resCompNum,"CompGroup",\
+                          TabVal(_damethod[1],"Compound",i,"CompGroup")
+
+    ! copy control sample limits
+    !---------------------------
+    CtrlLimit = TabVal(_damethod[1],"Compound",i,"ControlLimits")
+    SetTabVal  ChromRes[1],"Compound",resCompNum,"ControlLimits",CtrlLimit
+    if (CtrlLimit > 0)
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CalCtrlLimits",CtrlLimit
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"Compound",resCompNum
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CLowArea",       \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CLowArea")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CHighArea",      \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CHighArea")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CLowKPrime",     \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CLowKPrime")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CHighKPrime",    \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CHighKPrime")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CLowHeight",     \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CLowHeight")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CHighHeight",    \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CHighHeight")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CLowAmount",     \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CLowAmount")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CHighAmount",    \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CHighAmount")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CLowPlates",     \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CLowPlates")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CHighPlates",    \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CHighPlates")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CLowSymmetry",   \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CLowSymmetry")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CHighSymmetry",  \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CHighSymmetry")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CLowResolution", \
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CLowResolution")
+      SetTabVal  ChromRes[1],"ControlLimits",CtrlLimit,"CHighResolution",\
+         TabVal(_damethod[1],"ControlLimits",CtrlLimit,"CHighResolution")
+    endif
+  next i
+
+  makeCompGroupLink NOfCompGroups
+  makeISTDlink
+
+  ! Make link for unknowns from ChromRes[1],QuantParm to ChromRes[1],Compound
+  !--------------------------------------------------------------------------
+  if TabHdrVal (ChromRes[1], "QuantParm", "UnkCompCalc") = 2 then
+    if TabHdrVal (_DAMethod[1], "QuantParm", "UnkComp") > 0 then
+      SetTabHdrVal ChromRes[1], "QuantParm", "UnkComp", \
+                 RowByVal (ChromRes[1], "Compound",, "CalCompound", "=", \
+                           TabHdrVal (_DAMethod[1], "QuantParm", "UnkComp"))
+    endif
+  endif
+
+endMacro ! addMissingCalTableRecords
+
+!=============================================================================
+Name makeCompGroupLink
+!-----------------------------------------------------------------------------
+
+! links compounds and compound groups and initializes the groups
+
+parameter NOfCompGroups 
+
+local i,k,l,NOfComp,FirstComp
+!.............................................................................
+
+  for i=1 to NOfCompGroups 
+    SetTabVal  ChromRes[1],"CompGroup",i,"CalCompGroup",i
+    SetTabText ChromRes[1],"CompGroup",i,"ShortName",\
+       TabText$(_damethod[1],"CompGroup",i,"ShortName")
+    SetTabText ChromRes[1],"CompGroup",i,"Name",\
+       TabText$(_damethod[1],"CompGroup",i,"Name")
+    SetTabVal ChromRes[1],"CompGroup",i,"CalMethod",\
+       TabVal(_damethod[1],"CompGroup",i,"CalMethod")
+    k = TabVal(ChromRes[1],"CompGroup",i,"ISTD")
+    if (k > 0)
+      SetTabVal ChromRes[1],"CompGroup",i,"ISTD",k
+      SetTabVal ChromRes[1],"CompGroup",i,"NextISTD",i
+    endif
+
+    NOfComp = TabHdrVal(ChromRes[1],"Compound","NumberOfRows")
+    FirstComp = RowByVal(ChromRes[1],"Compound",,"CompGroup","=",i)
+    SetTabVal  ChromRes[1],"CompGroup",i,"FirstComp",FirstComp
+    k = FirstComp
+    while (k>0)
+      if (k<NOfComp)
+        l = RowByVal(ChromRes[1],"Compound",k+1:-1,"CompGroup","=",i)
+        if (l > 0)
+          SetTabVal ChromRes[1],"Compound",k,"NextCompGroup",l
+          k=l
+        else
+          SetTabVal ChromRes[1],"Compound",k,"NextCompGroup",FirstComp
+          k = -1
+        endif
+      else
+        SetTabVal ChromRes[1],"Compound",k,"NextCompGroup",FirstComp
+        k = -1
+      endif
+    endwhile
+  next i
+endMacro ! makeCompGroupLink
+
+!=============================================================================
+Name addCalPeakToResComp
+!-----------------------------------------------------------------------------
+
+! adds a not found calibrated peak to a found calibrated compound in ChromRes
+
+  parameter resCompNum, calCompNum, calPeakNum
+
+  local i,k,n,ExpRetTime,RetTime,Inserted,FirstPeak,calsigNum
+!.............................................................................
+
+  ExpRetTime = TabVal(_damethod[1],"Peak",calPeakNum,"ExpRetTime")
+
+  ! insert peak
+  !------------
+  FirstPeak = TabVal(ChromRes[1],"Compound",resCompNum, "FirstPeak")
+  i         = TabVal(ChromRes[1],"Peak",FirstPeak, "NextPeakComp")
+  if (i = FirstPeak)
+    ! compound has only main peak
+    !----------------------------
+    if (ExpRetTime >= TabVal(ChromRes[1],"Peak",FirstPeak,"MeasRetTime"))
+      k = FirstPeak+1
+    else
+      k = FirstPeak
+      i = i+1
+    endif
+    InsTabRow ChromRes[1],"Peak",k
+    SetTabVal ChromRes[1],"Peak",k,"NextPeakComp",i
+    SetTabVal ChromRes[1],"Peak",i,"NextPeakComp",k
+  else
+    ! compound has other than main peak
+    !----------------------------------
+    k = FirstPeak
+    n = k	
+    repeat
+      RetTime = TabVal(ChromRes[1],"Peak",i,"MeasRetTime")
+      if (RetTime = 0)
+        RetTime = TabVal(ChromRes[1],"Peak",i,"ExpRetTime")
+      endif
+      if (RetTime >= ExpRetTime)
+        InsTabRow ChromRes[1],"Peak",i
+        SetTabVal ChromRes[1],"Peak",i,"NextPeakComp",i+1
+        if (k>i)
+          k=k+1
+        endif
+        SetTabVal ChromRes[1],"Peak",k,"NextPeakComp",i
+        k=i
+        Inserted = 1
+      else
+        k = i
+        i = TabVal(ChromRes[1],"Peak",i, "NextPeakComp")
+        if (i=FirstPeak)
+          if (FirstPeak>k)
+            FirstPeak = FirstPeak+1
+          endif
+          k = k+1
+          InsTabRow ChromRes[1],"Peak",k
+          SetTabVal ChromRes[1],"Peak",k,"NextPeakComp",FirstPeak
+          SetTabVal ChromRes[1],"Peak",k-1,"NextPeakComp",k
+          Inserted = 1
+        endif
+      endif
+    until(Inserted <> 0)
+  endif
+  SetTabVal ChromRes[1],"Peak",k,"CalPeak",calPeakNum
+  SetTabVal ChromRes[1],"Peak",k,"Compound",resCompNum
+
+  ! k is the number of the new peak in ChromRes, link it to signal
+  !---------------------------------------------------------------
+  calSigNum = TabVal(_damethod[1],"Peak",calPeakNum,"Signal")
+  i = RowByVal(ChromRes[1],"Peak",k:-1,"Signal~CalSignal","=",calSigNum)
+  if (i>0)
+    SetTabVal ChromRes[1],"Peak",k,"Signal",\
+              TabVal(ChromRes[1],"Peak",i,"Signal")
+    n = RowByVal(ChromRes[1],"Peak",k:1,"NextPeakSignal","=",i)
+
+    if (n < 1)
+      n = RowByVal(ChromRes[1],"Peak",-1:1,"NextPeakSignal","=",i)
+      SetTabVal ChromRes[1],"Peak",k,"Signal~FirstPeak",k
+    endif
+
+    SetTabVal ChromRes[1],"Peak",k,"NextPeakSignal",i
+    SetTabVal ChromRes[1],"Peak",n,"NextPeakSignal",k
+  else
+    i = RowByVal(ChromRes[1],"Peak",k:-1,"Signal~CalSignal","=",calSigNum)
+    if (i>0)
+      SetTabVal ChromRes[1],"Peak",k,"Signal",\
+                TabVal(ChromRes[1],"Peak",i,"Signal")
+      SetTabVal ChromRes[1],"Peak",k,"NextPeakSignal",\
+          TabVal(ChromRes[1],"Peak",i,"NextPeakSignal")
+      SetTabVal ChromRes[1],"Peak",i,"NextPeakSignal",k      
+    else
+      SetTabVal ChromRes[1],"Peak",k,"Signal",\
+           RowByVal(ChromRes[1],"Signal",,"CalSignal","=",calSigNum)
+      SetTabVal ChromRes[1],"Peak",k,"NextPeakSignal",k      
+    endif
+  endif
+
+  ! k is still the number of the new peak in ChromRes, initialize it
+  !-----------------------------------------------------------------
+  SetTabVal ChromRes[1], "Peak",k,"ExpRetTime",ExpRetTime
+  SetTabVal ChromRes[1], "Peak",k,"IdMethod",\
+     TabVal(_damethod[1],"Peak",calPeakNum,"IdMethod")
+  SetTabVal ChromRes[1], "Peak",k,"CalcBase",\
+     TabVal(_damethod[1],"Peak",calPeakNum,"CalcBase")
+  SetTabVal ChromRes[1], "Peak",k,"CalPeakType",\
+     TabVal(_damethod[1],"Peak",calPeakNum,"CalPeakType")
+    
+endMacro ! addCalPeakToResComp
+
+!=============================================================================
+Name addCalCompToRes
+!-----------------------------------------------------------------------------
+
+! adds a not found calibrated compound and its peaks to ChromRes
+
+  parameter calCompNum,prevResCompNum,NOfResComps
+
+  local i,j,k,n,ExpRetTime,NOfResComp,calPeakNum,calSigNum
+!.............................................................................
+
+  ! insert row in compound table
+  !-----------------------------
+  i=prevResCompNum+1
+  if (i <= NOfResComps)
+    ExpRetTime = TabVal(_damethod[1],"Compound",calCompNum,\
+                                     "FirstPeak~ExpRetTime")
+    i = RowByVal(ChromRes[1],"Compound",i:-1,\
+                                     "FirstPeak~MeasRetTime",">",ExpRetTime)
+    if (i < 1)
+      i = NOfResComp+1
+    endif
+  endif
+  InsTabRow ChromRes[1],"Compound",i
+  SetTabVal ChromRes[1],"Compound",i,"CalCompound",calCompNum
+
+  ! copy compound data
+  !-------------------
+  SetTabText ChromRes[1],"Compound",i,"Name",\
+                    TabText$(_damethod[1],"Compound",calCompNum,"Name")
+  SetTabVal  ChromRes[1],"Compound",i,"AmtLimitHigh",\
+                    TabVal(_damethod[1],"Compound",calCompNum,"AmtLimitHigh")
+  SetTabVal  ChromRes[1],"Compound",i,"AmtLimitLow",\
+                    TabVal(_damethod[1],"Compound",calCompNum,"AmtLimitLow")
+  SetTabVal  ChromRes[1],"Compound",i,"Multiplier",\
+                    TabVal(_damethod[1],"Compound",calCompNum,"AmtLimitLow")
+  SetTabVal  ChromRes[1],"Compound",i,"UseQualifiers",\
+                    TabVal(_damethod[1],"Compound",calCompNum,"UseQualifiers")
+  SetTabVal  ChromRes[1],"Compound",i,"IsTimeRef",\
+                    TabVal(_damethod[1],"Compound",calCompNum,"IsTimeRef")
+
+  ! add main peak
+  !--------------
+  calPeakNum = TabVal(_damethod[1],"Compound",calCompNum,"FirstPeak")
+  k = RowByVal(ChromRes[1],"Peak",,"MeasRetTime",">",ExpRetTime)
+  if (k < 0)
+    k = TabHdrVal(ChromRes[1],"Peak","NumberOfRows")+1
+  endif
+  InsTabRow ChromRes[1],"Peak",k
+  SetTabVal ChromRes[1],"Peak",k,"CalPeak",calPeakNum
+  SetTabVal ChromRes[1],"Peak",k,"Compound",        i
+  SetTabVal ChromRes[1],"Peak",k,"NextPeakComp",    k
+  SetTabVal ChromRes[1],"Compound",i,"FirstPeak",   k
+
+  ! copy main peak data
+  !--------------------
+  SetTabVal ChromRes[1], "Peak",k,"ExpRetTime",ExpRetTime
+  SetTabVal ChromRes[1], "Peak",k,"IdMethod",\
+     TabVal(_damethod[1],"Peak",calPeakNum,"IdMethod")
+  SetTabVal ChromRes[1], "Peak",k,"CalcBase",\
+     TabVal(_damethod[1],"Peak",calPeakNum,"CalcBase")
+  SetTabVal ChromRes[1], "Peak",k,"CalPeakType",\
+     TabVal(_damethod[1],"Peak",calPeakNum,"CalPeakType")
+            
+  calSigNum = TabVal(_damethod[1],"Peak",calPeakNum,"Signal")
+  n = RowByVal(ChromRes[1], "Peak",k:1,"Signal~CalSignal","=",calSigNum)
+  if (n > 0)
+    ! insert peak in signal lasso after previous peak (smaller ret time)
+    !-------------------------------------------------------------------
+    SetTabVal ChromRes[1], "Peak",k,"NextPeakSignal",\
+       TabVal(ChromRes[1], "Peak",n,"NextPeakSignal")
+    SetTabVal ChromRes[1], "Peak",n,"NextPeakSignal",k
+    SetTabVal ChromRes[1], "Peak",k,"Signal",\
+       TabVal(ChromRes[1], "Peak",n,"Signal")
+  else
+    n = RowByVal(ChromRes[1], "Peak",k:-1,"Signal~CalSignal","=",calSigNum)
+    if (n > 0)
+      ! insert peak as first in existing signal lasso (smallest ret time)
+      !------------------------------------------------------------------
+      j =  RowByVal(ChromRes[1], "Peak",,"NextPeakSignal","=",n)
+      SetTabVal ChromRes[1], "Peak",k,"NextPeakSignal",n
+      SetTabVal ChromRes[1], "Peak",j,"NextPeakSignal",k
+      SetTabVal ChromRes[1], "Peak",k,"Signal",\
+                TabVal(ChromRes[1], "Peak",j,"Signal")
+      SetTabVal ChromRes[1],"peak",k,"Signal~FirstPeak",k
+    else
+      ! insert peak as first in signal lasso
+      !-------------------------------------
+      n = RowByVal(ChromRes[1],"Signal",,"CalSignal","=",calSigNum)
+      SetTabVal ChromRes[1],"Signal",n,"FirstPeak",k
+      SetTabVal ChromRes[1],"Peak",k,"NextPeakSignal",k
+      SetTabVal ChromRes[1],"Peak",k,"Signal",n
+    endif
+  endif
+
+  k = TabVal(_damethod[1],"Compound",calCompNum,"FirstPeak~NextPeakComp")
+  while (k <> calPeakNum)
+    addCalPeakToResComp i, calCompNum, k
+    k = TabVal(_damethod[1],"Peak",k,"NextPeakComp")
+  endwhile
+
+  return i
+endMacro ! addCalCompToRes

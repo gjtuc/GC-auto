@@ -1,0 +1,335 @@
+
+! MSACQ_ES.MAC                                               8-APR-96
+!
+! COPYRIGHT (C) HEWLETT-PACKARD COMPANY, 1996.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! HEWLETT-PACKARD COMPANY.                                              
+!                                                                       
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! HEWLETT-PACKARD COMPANY                                               
+! California Analytical Division
+! 1601 California Avenue, Bldg. 17U                                     
+! Palo Alto, CA  94304                                                  
+!
+! macros defined
+! do_scan_write
+! err_save_acq_c
+! save_acq_cond
+
+!name err_save_acq_c
+!    parameter name$ default "\hpchem\data\default.d\msparms.tmp"
+!    on error generate error
+!    close #5
+!    DELETE name$, DONTASK
+!    alert "Param file not saved: " +_errmsg$, 3
+!    STOP
+!    ENDMACRO
+
+NAME MSSaveAcqCond
+! Saves the instrument parameters to msparms.tmp of the data directory.
+! If successful, copy to msparms.txt and delete msparms.tmp.
+! Requires getNoiseSupp macro.
+    PARAMETER path$ default ""
+local 	ID__DATE_ACQUIRED_1
+local 	ID__INSTRUMENT_2
+local 	ID__SAMPLE_INFORMA_3
+local 	ID__ES_PARAMETERS_4
+local 	ID__MS_PARAMETERS_5
+local 	ID__MASS_SCAN_FROM_6
+local 	ID__LOWMASS_7
+local 	ID___TO_8
+local 	ID__HIGHMASS_9
+local 	ID__NORMAL_10
+local 	ID__FILTERED_RAW_11
+local 	ID__RAW_12
+local 	ID__SCAN_TYPE_13
+local 	ID__SAMPLES_14
+local 	ID__AVERAGES_15
+local 	ID__STD_16
+local 	ID__GAUSS_17
+local 	ID__SG_18
+local 	ID__NONE_19
+local 	ID__POS_20
+local 	ID__NEG_21
+local 	ID__MS_ZONES_22
+    
+ID__DATE_ACQUIRED_1                                =  17001  
+ID__INSTRUMENT_2                                   =  17002  
+ID__SAMPLE_INFORMA_3                               =  17003  
+ID__ES_PARAMETERS_4                                =  17004  
+ID__MS_PARAMETERS_5                                =  17005  
+ID__MASS_SCAN_FROM_6                               =  17006  
+ID__LOWMASS_7                                      =  17007  
+ID___TO_8                                          =  17008  
+ID__HIGHMASS_9                                     =  17009  
+ID__NORMAL_10                                      =  17010  
+ID__FILTERED_RAW_11                                =  17011  
+ID__RAW_12                                         =  17012  
+ID__SCAN_TYPE_13                                   =  17013  
+ID__SAMPLES_14                                     =  17014  
+ID__AVERAGES_15                                    =  17015  
+ID__STD_16                                         =  17016  
+ID__GAUSS_17                                       =  17017  
+ID__SG_18                                          =  17018  
+ID__NONE_19                                        =  17019  
+ID__POS_20                                         =  17020  
+ID__NEG_21                                         =  17021  
+ID__MS_ZONES_22                                    =  17022  
+    LOCAL today$, tmvar, value, name$, type$, ion_mode$, nLength
+    IF (LEN (path$) = 0)
+      IF _SequenceOn <> 0
+        path$ = _DATAPATH$ + _DATASEQSUBDIR$
+      ELSE
+        path$ = _DATAPATH$ + _DATASUBDIR$
+      ENDIF
+      nLength = LEN (path$)
+      IF path$[nLength] <> "\"
+        path$ = path$ + "\"
+      ENDIF
+      path$ = path$ + _DATAFILE$
+    ENDIF
+    name$ = path$+"\msparms.tmp"
+    today$=date$()
+!   ON ERROR err_save_acq_c name$
+    OPEN name$ FOR OUTPUT AS #5
+
+    PRINT USING #5, TabText$ (MSAcqInfo[1],AcqStrings,3,"Description") + "        %/", TabText$ (MSAcqInfo[1],AcqStrings,3,"Variable")
+    PRINT USING #5, TabText$ (MSAcqInfo[1],AcqStrings,1,"Description") + "              %/", TabText$ (MSAcqInfo[1],AcqStrings,1,"Variable")
+    PRINT USING #5,ReadResource$("MsMacFiles",ID__DATE_ACQUIRED_1),today$
+    PRINT USING #5,ReadResource$("MsMacFiles",ID__INSTRUMENT_2),_INSTNAME$  
+    PRINT USING #5," /"
+    PRINT USING #5," /"
+    PRINT USING #5,ReadResource$("MsMacFiles",ID__SAMPLE_INFORMA_3)
+    PRINT USING #5,"----------------------------------/"
+    PRINT USING #5, TabText$ (MSAcqInfo[1],AcqStrings,5,"Description") + "             %/", TabText$ (MSAcqInfo[1],AcqStrings,5,"Variable")
+    PRINT USING #5, TabText$ (MSAcqInfo[1],AcqStrings,4,"Description") + "             %/", TabText$ (MSAcqInfo[1],AcqStrings,4,"Variable")
+    PRINT USING #5," /"
+    PRINT USING #5," /"
+    PRINT USING #5,ReadResource$("MsMacFiles",ID__ES_PARAMETERS_4)
+    PRINT USING #5,"----------------------------------/"
+
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,5,"Description")
+    IF (LEN (szDesc$) > 0)  ! VCap
+      PRINT USING #5, szDesc$ + "             ######/", TabVal (MSAcqInfo[1],TuneValues,5,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,6,"Description")
+    IF (LEN (szDesc$) > 0)  ! VChamber
+      PRINT USING #5, szDesc$ + "         ######/", TabVal (MSAcqInfo[1],TuneValues,6,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,7,"Description")
+    IF (LEN (szDesc$) > 0)  ! Corona
+      PRINT USING #5, szDesc$ + "           ######/", TabVal (MSAcqInfo[1],TuneValues,7,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,30,"Description")
+    IF (LEN (szDesc$) > 0)  ! OpolPeak
+      PRINT USING #5, szDesc$ + "       ####/", TabVal (MSAcqInfo[1],TuneValues,30,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,31,"Description")
+    IF (LEN (szDesc$) > 0)  ! OpolKnee
+      PRINT USING #5, szDesc$ + "       ####/", TabVal (MSAcqInfo[1],TuneValues,31,"Values")
+    ENDIF
+
+    PRINT USING #5," /"
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,15,"Description")
+    IF (LEN (szDesc$) > 0)  ! Fragmentor
+      PRINT USING #5, szDesc$ + "       ######/", TabVal (MSAcqInfo[1],TuneValues,15,"Values")
+    ENDIF
+
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,16,"Description")
+    IF (LEN (szDesc$) > 0)  ! Skim1
+      PRINT USING #5," /"
+      PRINT USING #5, szDesc$ + "           #####.#/", TabVal (MSAcqInfo[1],TuneValues,16,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,18,"Description")
+    IF (LEN (szDesc$) > 0)  ! IonEnery
+      PRINT USING #5, szDesc$ + "       ####.#/", TabVal (MSAcqInfo[1],TuneValues,18,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,17,"Description")
+    IF (LEN (szDesc$) > 0)  ! Skim2
+      PRINT USING #5, szDesc$ + "           #####.#/", TabVal (MSAcqInfo[1],TuneValues,17,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,19,"Description")
+    IF (LEN (szDesc$) > 0)  ! Lens1
+      PRINT USING #5, szDesc$ + "           #####.#/", TabVal (MSAcqInfo[1],TuneValues,19,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,20,"Description")
+    IF (LEN (szDesc$) > 0)  ! Lens2
+      PRINT USING #5, szDesc$ + "           #####.#/", TabVal (MSAcqInfo[1],TuneValues,20,"Values")
+    ENDIF
+
+    PRINT USING #5," /"
+    PRINT USING #5," /"
+    PRINT USING #5,ReadResource$("MsMacFiles",ID__MS_PARAMETERS_5)
+    PRINT USING #5,"----------------------------------/"
+    IF (TabVal (MSAcqInfo[1],AcqValues,9,"Values") = 0) ! For NOT SIM
+      PRINT USING #5,ReadResource$("MsMacFiles",ID__MASS_SCAN_FROM_6),TabVal (MSAcqInfo[1],ScanValues,1,"LowMass")
+      PRINT USING #5,ReadResource$("MsMacFiles",ID___TO_8),TabVal (MSAcqInfo[1],ScanValues,1,"HighMass")
+
+      type$ = ReadResource$("MsMacFiles",ID__NORMAL_10)
+      tmvar = TabVal (MSAcqInfo[1],ScanValues,1,"ScanType")
+      IF tmvar = 1 THEN
+        type$ = ReadResource$("MsMacFiles",ID__FILTERED_RAW_11)
+      ENDIF
+      IF tmvar = 2 THEN
+        type$ = ReadResource$("MsMacFiles",ID__RAW_12)
+      ENDIF
+      PRINT USING #5,ReadResource$("MsMacFiles",ID__SCAN_TYPE_13),type$
+ 
+      tmvar = TabVal (MSAcqInfo[1],ScanValues,1,"Samples")
+      PRINT USING #5,ReadResource$("MsMacFiles",ID__SAMPLES_14),tmvar
+      tmvar = TabVal (MSAcqInfo[1],ScanValues,1,"Averages")
+      PRINT USING #5,ReadResource$("MsMacFiles",ID__AVERAGES_15),tmvar
+      szDesc$ = TabText$ (MSAcqInfo[1],SpecifcValues,7,"Description")
+      IF (LEN (szDesc$) > 0)  ! Stepsize
+        PRINT USING #5, szDesc$ + "####.#/", TabVal (MSAcqInfo[1],SpecifcValues,7,"Values")
+      ENDIF
+
+!   print noise suppression
+!   value = 0
+!   getNoiseSupp value,_methpath$+_methfile$+"\msacq1.ini"
+!   type$ = "No"
+!   if value = 1 then
+!     type$ = "Low"
+!   endif
+!   if value = 2 then
+!     type$ = "Medium"
+!   endif
+!   if value = 3 then
+!     type$ = "High"
+!   endif
+!   PRINT USING #5, "Noise Suppression %/",type$
+    ENDIF
+
+    PRINT USING #5," /"
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,21,"Description")
+    IF (LEN (szDesc$) > 0)  ! WidthGain
+      PRINT USING #5,szDesc$ + "              #####/",TabVal (MSAcqInfo[1],TuneValues,21,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,22,"Description")
+    IF (LEN (szDesc$) > 0)  ! WidthGain
+      PRINT USING #5,szDesc$ + "               #####/",TabVal (MSAcqInfo[1],TuneValues,22,"Values")
+    ENDIF
+
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,3,"Description")
+    IF (LEN (szDesc$) > 0)  ! EMV
+      IF (TabVal (MSAcqInfo[1],TuneValues,2,"Values") = 1)
+        PRINT USING #5, szDesc$ + "      #####/",TabVal (MSAcqInfo[1],TuneValues,3,"Values")
+      ELSE
+        PRINT USING #5, szDesc$ + "        #####/",TabVal (MSAcqInfo[1],TuneValues,3,"Values")
+        szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,23,"Description")
+        PRINT USING #5, szDesc$ + "               #####/",TabVal (MSAcqInfo[1],TuneValues,23,"Values")
+      ENDIF
+    ENDIF
+
+    szDesc$ = TabText$ (MSAcqInfo[1],AcqValues,14,"Description")
+    IF (LEN (szDesc$) > 0)  ! Mass Filter Type
+      PRINT USING #5," /"
+      type$ = ReadResource$("MsMacFiles",ID__STD_16)
+      value = TabVal (MSAcqInfo[1],AcqValues,14,"Values")
+      IF value = 0  THEN
+         PRINT USING #5, szDesc$ + " %/",type$
+      ELSE 
+         IF value = 1 THEN
+            type$ = ReadResource$("MsMacFiles",ID__GAUSS_17)
+         ELSE
+            type$ = ReadResource$("MsMacFiles",ID__SG_18)
+         ENDIF
+         PRINT USING #5, szDesc$ + " %/",type$
+         szDesc$ = TabText$ (MSAcqInfo[1],AcqValues,15,"Description")
+         PRINT USING #5, szDesc$ + "##.#/",TabVal (MSAcqInfo[1],AcqValues,15,"Values")
+      ENDIF
+    ENDIF
+
+    szDesc$ = TabText$ (MSAcqInfo[1],AcqValues,16,"Description")
+    IF (LEN (szDesc$) > 0)  ! Time Filter Type
+      type$ = ReadResource$("MsMacFiles",ID__NONE_19)
+      value = TabVal (MSAcqInfo[1],AcqValues,16,"Values")
+      IF value = 0  THEN
+         PRINT USING #5, szDesc$ + " %/",type$
+      ELSE 
+         IF value = 1 THEN
+            type$ = ReadResource$("MsMacFiles",ID__GAUSS_17)
+         ELSE
+            type$ = ReadResource$("MsMacFiles",ID__SG_18)
+         ENDIF
+         PRINT USING #5, szDesc$ + " %/",type$
+         szDesc$ = TabText$ (MSAcqInfo[1],AcqValues,17,"Description")
+         PRINT USING #5, szDesc$ + "##.#/",TabVal (MSAcqInfo[1],AcqValues,17,"Values")
+      ENDIF
+    ENDIF
+
+    PRINT USING #5," /"
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,24,"Description")
+    IF (LEN (szDesc$) > 0)  ! WidthGain
+      PRINT USING #5,szDesc$ + "        #####/",TabVal (MSAcqInfo[1],TuneValues,24,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,25,"Description")
+    IF (LEN (szDesc$) > 0)  ! WidthOffset
+      PRINT USING #5,szDesc$ + "      #####/",TabVal (MSAcqInfo[1],TuneValues,25,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,26,"Description")
+    IF (LEN (szDesc$) > 0)  ! MassGain
+      PRINT USING #5,szDesc$ + "         #####/",TabVal (MSAcqInfo[1],TuneValues,26,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,27,"Description")
+    IF (LEN (szDesc$) > 0)  ! MassOffset
+      PRINT USING #5,szDesc$ + "       #####/",TabVal (MSAcqInfo[1],TuneValues,27,"Values")
+    ENDIF
+
+    PRINT USING #5," /"
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,28,"Description")
+    IF (LEN (szDesc$) > 0)  ! QuadFreq
+      PRINT USING #5,szDesc$ + "        ######/",TabVal (MSAcqInfo[1],TuneValues,28,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,29,"Description")
+    IF (LEN (szDesc$) > 0)  ! QuadDC
+      PRINT USING #5,szDesc$ + "            ####/",TabVal (MSAcqInfo[1],TuneValues,29,"Values")
+    ENDIF
+
+    PRINT USING #5," /"
+    szDesc$ = TabText$ (MSAcqInfo[1],TuneValues,4,"Description")
+    IF (LEN (szDesc$) > 0)  ! Polarity
+      IF TabVal (MSAcqInfo[1],TuneValues,4,"Values") = 0  THEN
+        type$ = ReadResource$("MsMacFiles",ID__POS_20)
+      ELSE
+        type$ = ReadResource$("MsMacFiles",ID__NEG_21)
+      ENDIF
+      PRINT USING #5, szDesc$ + "        %/",type$
+    ENDIF
+
+    PRINT USING #5," /"
+    PRINT USING #5," /"
+    PRINT USING #5,ReadResource$("MsMacFiles",ID__MS_ZONES_22)
+    PRINT USING #5,"----------------------------------/"
+    szDesc$ = TabText$ (MSAcqInfo[1],SpecifcValues,1,"Description")
+    IF (LEN (szDesc$) > 0)  ! MSQuad
+      PRINT USING #5, szDesc$ + "   #####/",TabVal (MSAcqInfo[1],SpecifcValues,1,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],SpecifcValues,2,"Description")
+    IF (LEN (szDesc$) > 0)  ! GasTemp
+      PRINT USING #5, szDesc$ + "  #####/",TabVal (MSAcqInfo[1],SpecifcValues,2,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],SpecifcValues,3,"Description")
+    IF (LEN (szDesc$) > 0)  ! Vapor
+      PRINT USING #5, szDesc$ + "    #####/",TabVal (MSAcqInfo[1],SpecifcValues,3,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],SpecifcValues,4,"Description")
+    IF (LEN (szDesc$) > 0)  ! DryingGas
+      PRINT USING #5, szDesc$ + "#####/",TabVal (MSAcqInfo[1],SpecifcValues,4,"Values")
+    ENDIF
+    szDesc$ = TabText$ (MSAcqInfo[1],SpecifcValues,5,"Description")
+    IF (LEN (szDesc$) > 0)  ! NebFlow
+      PRINT USING #5, szDesc$ + " #####/",TabVal (MSAcqInfo[1],SpecifcValues,5,"Values")
+    ENDIF
+
+    CLOSE #5
+    COPY name$, path$+"\MSPARMS.TXT", DONTASK
+    DELETE name$, DONTASK
+    RETURN
+    ENDMACRO

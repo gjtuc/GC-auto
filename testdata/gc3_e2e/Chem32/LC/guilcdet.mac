@@ -1,0 +1,980 @@
+ 
+!******************************************************************************
+!*
+!* FILE:  GuiLcDet.mac
+!*
+!* DESCRIPTION:  specific LC detectors GUI Macros
+!*
+!* $Header: /cag/DRIVERS/leo/gui/macros/guilcdet.mac 1.15 2003-02-14 00:40:15-08 fkremser Exp $
+!******************************************************************************
+!*
+!* MACROS :                     
+!*           
+!*           
+!*          
+!*         
+
+!############################################################################
+name GUICheckMenuTablesForModNumber
+
+parameter  ModNumber
+!############################################################################
+if ModNumber > 1
+   if ObjHdrType(LeoTemp,"MultiModules") = 99
+      DelReg LeoTmp
+      GOMLoadNLSMenuReg "LC", "LeoM", "LeoTemp"
+   endif   
+endif   
+
+endmacro
+
+
+!############################################################################
+name GUILeoBalanceAndTurnOnRequiredUvVisLamps
+
+parameter  RegName$
+parameter  RunState
+parameter  DlgDetName$
+parameter  SendModuleDetName$
+!############################################################################
+
+local nRdyTypeBits
+local iii                                       
+local iOn1 , iOn2
+Local bDoTurnOn
+Local uvnrdybit
+Local visnrdybit
+
+ID_ASTXDRIVERSMACFILES_TURN_ON_THE_LA_61           =  17061  
+ID_ASTXDRIVERSMACFILES_TURN_ON_THE_UV_63           =  17063  
+ID_ASTXDRIVERSMACFILES_TURN_ON_THE_VI_64           =  17064  
+ID_ASTXDRIVERSMACFILES__MODULE_65                  =  17065  
+ID_ASTXDRIVERSMACFILES_TURN_ON_THE_LA_66           =  17066  
+ID_ASTXDRIVERSMACFILES_ONGOING_RUN_67              =  17067  
+
+NLSFileName_astxmac$ = "astxmac"
+iii=1
+bDoTurnOn=0
+
+!only turn on the required lamps
+Evaluate "nRdyTypeBits=ObjHdrVal("+RegName$+",""nRdyType"" )"
+
+! check if nrdy bitmask for old Dad or new one
+If SendModuleDetName$[1]= "N"
+  uvnrdybit=0x400
+  visnrdybit=0x800
+Else
+  uvnrdybit=0x800
+  visnrdybit=0x1000
+endif
+
+if GuiTestForBit(nRdyTypeBits,uvnrdybit) = 1 AND GuiTestForBit(nRdyTypeBits,visnrdybit) = 1
+   !will also turn both lamps on, since both are required
+   iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TURN_ON_THE_LA_61) \
+             +DlgDetName$+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__MODULE_65),4,Alert4Title$)
+   if iii = 1
+      a$=SendModule$(SendModuleDetName$,"LAMP 1")
+      a$=SendModule$(SendModuleDetName$,"VIS 1") 
+   endif   
+   bDoTurnOn=1
+else
+if GuiTestForBit(nRdyTypeBits,uvnrdybit) = 1
+   !will also turn UV lamp on, since both are required
+   iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TURN_ON_THE_UV_63) \
+             +DlgDetName$+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__MODULE_65),4,Alert4Title$)
+   if iii = 1
+      a$=SendModule$(SendModuleDetName$,"LAMP 1")
+   endif
+   bDoTurnOn=1
+else
+if GuiTestForBit(nRdyTypeBits,visnrdybit) = 1
+   !will also turn Vis lamp on, since both are required
+   iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TURN_ON_THE_VI_64) \
+             +DlgDetName$+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__MODULE_65),4,Alert4Title$)
+   if iii = 1
+      a$=SendModule$(SendModuleDetName$,"VIS 1")
+   endif
+   bDoTurnOn=1
+else
+   !this is the OK case when det is ready
+   !test if both lamps are be off so turn all on
+   iii=1
+   evaluate "iOn1=ObjHdrType("+RegName$+",""UVLamp"" )"
+   if iOn1 <> 99
+      evaluate "iOn1=ObjHdrVal("+RegName$+",""UVLamp"" )"
+   else
+      iOn1=1   
+   endif
+   evaluate "iOn2=ObjHdrType("+RegName$+",""VisLamp"" )"
+   if iOn2 <> 99
+      evaluate "iOn2=ObjHdrVal("+RegName$+",""VisLamp"" )"
+   else
+      iOn2=1 
+   endif
+   
+   if iOn1=0 AND iOn2=0
+      iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TURN_ON_THE_LA_66) \
+                +DlgDetName$+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__MODULE_65),4,Alert4Title$)
+      if iii = 1
+         a$=SendModule$(SendModuleDetName$,"LAMP 1")
+         a$=SendModule$(SendModuleDetName$,"VIS 1")
+      endif   
+      bDoTurnOn=1
+   endif
+endif
+endif
+endif
+
+if iii = 1  AND bDoTurnOn = 0
+   !8 means RUN, and not in turn on case where PREP commands somehow wins
+   if RunState = 8
+      iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ONGOING_RUN_67)+DlgDetName$+ \
+                ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__MODULE_65),4,Alert4Title$)
+   endif
+   if iii=1
+      a$=SendModule$(SendModuleDetName$,"PREP")
+   endif
+endif
+
+endmacro
+
+
+
+
+!############################################################################
+!name GUIAddonBalanceDetector
+
+!parameter DetName$
+!parameter SendModuleDetName$    
+!parameter RegName$
+!can be supplied by addon to do a special balancing of their own
+!############################################################################
+!endmacro
+
+
+!############################################################################
+name GUIBalanceLeoUvVisDetector
+
+parameter DetName$
+parameter SendModuleDetName$    
+parameter RegName$
+!############################################################################
+
+local icnt
+local DetNo
+local FoundDetNo
+local iii                 
+local a$
+local RunState 
+
+if check(MACRO, GUIAddonBalanceDetector) = 1
+   !allows user to program his turn on wish like only lamp UV or VIS
+   GUIAddonBalanceDetector RegName$,DetName$,SendModuleDetName$
+else                   
+   evaluate "RunState=ObjHdrVal("+RegName$+",""RunState"" )"
+   if RunState = 2
+      !2 means powerfail
+      iii=GUIPowerFailAlertBox(RegName$,DetName$)
+   else
+      GUILeoBalanceAndTurnOnRequiredUvVisLamps RegName$,RunState,\
+                                               DetName$,SendModuleDetName$                                                                 
+   endif   
+endif
+
+endmacro
+
+
+
+
+
+!############################################################################
+name NoDo
+
+parameter DetName$
+parameter SendModuleDetName$    
+parameter RegName$
+!############################################################################
+
+
+endmacro
+
+
+
+
+
+!############################################################################
+name GUILeoTurnOnRequiredFldLamp
+
+parameter  DlgDetName$
+parameter  SendModuleDetName$    
+parameter  RegName$
+!############################################################################
+
+local nRdyTypeBits
+local iii                                       
+local iOn1
+local RunState 
+ID_ASTXDRIVERSMACFILES_TURN_ON_THE_XE_68           =  17068  
+ID_ASTXDRIVERSMACFILES__MODULE_65                  =  17065  
+NLSFileName_astxmac$ = "astxmac"
+
+evaluate "RunState=ObjHdrVal("+RegName$+",""RunState"" )"
+if RunState = 2
+   !2 means powerfail
+   iii=GUIPowerFailAlertBox(RegName$,DlgDetName$) !@1632@NVK@@9/16/2003@10.01_MERGE@
+else
+   !test if lamps is off so turn it on
+   evaluate "iOn1=ObjHdrType("+RegName$+",""Lamp"" )"
+   if iOn1 <> 99
+      evaluate "iOn1=ObjHdrVal("+RegName$+",""Lamp"" )"
+   else
+      iOn1=1   
+   endif
+      
+   if iOn1=0 
+      iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TURN_ON_THE_XE_68) \
+                +DlgDetName$+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__MODULE_65),4,Alert4Title$)
+      if iii = 1
+         a$=SendModule$(SendModuleDetName$,"LAMP 1")
+      endif   
+   endif
+endif
+
+endmacro
+
+
+!############################################################################
+name GuiFldScan
+
+parameter  Action$
+parameter  ModNr
+!############################################################################
+local iii$
+
+if Action$ = "START" 
+   evaluate "iii$=sendmodule$(LFLD"+val$(ModNr)+",""scan:sc3d;"")"
+else
+   evaluate "iii$=sendmodule$(LFLD"+val$(ModNr)+",""scan:ab3d;"")"
+endif
+
+endmacro
+
+
+
+
+    
+!############################################################################
+name GUILeoSingleDetectorUIReconfig
+
+parameter  DetectorsINIFile$
+parameter  iDetectorNumber     
+parameter  DetectorShortName$  !plus module No if needed
+parameter  MenuTab$            !plus module No if needed
+parameter  ToolBaseName$
+
+!############################################################################
+             
+             
+local HelpMessage$
+local GuiCommand$
+local ToolName$             
+
+ID_ASTXDRIVERSMACFILES_HELP_69                     =  17069  
+ID_ASTXDRIVERSMACFILES_NON_AGILENT_DE_71           =  17071  
+ID_ASTXDRIVERSMACFILES_DETECTOR_72                 =  17072  
+ID_ASTXDRIVERSMACFILES_COMMAND_73                  =  17073  
+ID_ASTXDRIVERSMACFILES_DETECTOR_74                 =  17074 
+NLSFileName_astxmac$ = "astxmac"
+!redefine the correct help message for the actual detector being at position x
+!by kepping the help message that was there only adding the detectors short name
+!set the correct floating menu call
+!set correct short text   
+
+!HOW about some parameters (wavelenghts)
+
+ToolName$=ToolBaseName$+val$(iDetectorNumber)
+!Add at help message the detector's short name
+HelpMessage$=GomText$(GUISystemDiagGOM$,DetectorsINIFile$,ToolName$,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HELP_69))
+HelpMessage$=HelpMessage$+" ("+DetectorShortName$+")"                        
+GomSetText GUISystemDiagGOM$,DetectorsINIFile$, ToolName$,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HELP_69),HelpMessage$
+
+!Set right command
+if MenuTab$ <> ""                        
+   !it is a known detector
+   GuiCommand$="@view.floatingmenu ""menu[1]"","""+MenuTab$+""" "
+else
+!#6468
+   !it is a non Agilent detector
+   !GuiCommand$="i=Alert("""+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NON_AGILENT_DE_71)+""",2,Alert2Title$)"
+   GuiCommand$=""
+
+endif                               
+GomSetText GUISystemDiagGOM$,DetectorsINIFile$,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_72)+val$(iDetectorNumber),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_COMMAND_73),\
+           GuiCommand$
+
+!Set detector name in image (must be always image1)
+GomSetText GUISystemDiagGOM$,DetectorsINIFile$,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DETECTOR_74)+val$(iDetectorNumber),\
+           "image1",DetectorShortName$
+
+endmacro
+
+    
+    
+    
+    
+    
+    
+!############################################################################
+name GUILeoSingleDetectorReconfig
+
+parameter  DetectorsINIFile$
+parameter  iDetectorNumber                 !also exec row in GuiDetector ordered hook table
+parameter  DetectorShortName$                  ! with module No if needed
+parameter  MenuTabName$                    ! with module No if needed
+parameter  GuiNdrName$                     ! with module No 
+parameter  StatusRegName$  default "lolo"  ! with module No 
+parameter  SendModuleDetName$              ! with module No 
+parameter  LampOnMacName$                 
+parameter  ExtraHelpMessage$   DEFAULT ""
+!############################################################################
+             
+local HelpMessage$
+local ToolBaseName$
+local Command$             
+local RunState
+local DetNumber
+
+!local  DetectorsINIFile$   !gui gom container for detector stack
+!local  iDetectorNumber     !exec row in GuiDetector ordered hook table
+
+ID_ASTXDRIVERSMACFILES_BALANCE_75                  =  17075  
+ID_ASTXDRIVERSMACFILES_COMMAND_73                  =  17073  
+ID_ASTXDRIVERSMACFILES_HELP_69                     =  17069  
+NLSFileName_astxmac$ = "astxmac"
+
+!DetectorsINIFile$=TabHdrText$(Hook[1],"GuiDetectors","DetStackIniFile")
+!iDetectorNumber=TabHdrVal(Hook[1],"GuiDetectors","ExecRow")
+
+!move balance button out of sight very early (looks better if done so)
+evaluate "RunState=RegSize("+StatusRegName$+")"
+if RunState > 0  ! means reg exists
+   evaluate "RunState=ObjHdrVal("+StatusRegName$+",RunState)"
+   if RunState = 1  ! means offline
+      !move balance button out of sight for offline case
+  !?????    GomSetVal GUISystemDiagGOM$, DetectorsINIFile$ , "Balance"+val$(iDetectorNumber) , y , 1000
+   endif             
+else
+   !move balance button out of sight for unknown module
+   GomSetVal GUISystemDiagGOM$, DetectorsINIFile$ , ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BALANCE_75)+val$(iDetectorNumber) , y , 1000
+endif
+
+if SendModuleDetName$ = "LRID" or SendModuleDetName$ = "LRID1" or SendModuleDetName$ = "LRID2" or SendModuleDetName$ = "LRID3" then
+   GomSetVal GUISystemDiagGOM$, DetectorsINIFile$ , ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BALANCE_75)+val$(iDetectorNumber) , y , 1000
+endif
+
+ToolBaseName$="Detector"
+
+! check if Starlight detector and if leonardo detector of same type already existing
+if len(SendModuleDetName$)>=4
+  If (DevLeoDad>0) and (SendModuleDetName$[1:4]="NDAD")
+    DetectorShortName$=DetectorShortName$+"2"
+  endif
+  If (DevLeoMwd>0) and (SendModuleDetName$[1:4]="NMWD")
+    DetectorShortName$=DetectorShortName$+"2"
+  EndIf
+  
+  If (DevLeoVwd>0) and  (SendModuleDetName$[1:4]="NVWD")
+	  If(Val(DetectorShortName$[4])<> 0) then
+	  	DetNumber = DevLeoVwd + Val(DetectorShortName$[4])
+	  else
+		DetNumber = DevLeoVwd + 1
+	  EndIf
+	  DetectorShortName$=DetectorShortName$[1:3]+Val$(DetNumber) 
+  EndIf
+endif
+
+GUILeoSingleDetectorUIReconfig  DetectorsINIFile$, iDetectorNumber,  \
+                                DetectorShortName$, MenuTabName$, ToolBaseName$
+
+
+!install hotlinks to this one
+!make hotlink connection all detectors have in GUI reg NDR : GuiNdrName$
+GUISetToolEvent  DetectorsINIFile$, ToolBaseName$+val$(iDetectorNumber), "elements", "gui" ,\
+                 GuiNdrName$
+
+
+GomSetText GUISystemDiagGOM$,DetectorsINIFile$,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BALANCE_75)+val$(iDetectorNumber),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_COMMAND_73),\
+           "CP3."+LampOnMacName$+" "+DetectorShortName$+","+SendModuleDetName$+"," \
+                                       +StatusRegName$
+
+if ExtraHelpMessage$ <> ""
+			GomSetText GUISystemDiagGOM$,DetectorsINIFile$,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BALANCE_75)+val$(iDetectorNumber),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_HELP_69),\
+			           ExtraHelpMessage$
+endif
+                             
+endmacro
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+!############################################################################
+name GUILeoSetGuiDetectorsOrderedHook
+
+parameter  DevMaxCnt 
+parameter  DetShortBaseName$
+parameter  MenuTabBaseName$
+parameter  GuiNdrAndRegBaseName$
+parameter  SendModuleDetBaseName$
+parameter  MethIniFileBase$
+parameter  MethGuiNdrBaseName$
+parameter  Priority
+parameter  LampOnMacName$                 
+parameter  ExtraHelpMessage$          DEFAULT ""
+
+!############################################################################
+
+local  DevCnt
+local  a$,b$,c$
+local  ExecCommand$
+local  ModPriority
+local  DetShortName$            
+local  MenuTabName$
+local  GuiNdrAndRegName$
+local  SendModuleDetName$
+local  MethIniFile$
+local  MethGuiNdrName$
+local  DetNumber
+
+for DevCnt=1 to DevMaxCnt
+    if DevMaxCnt <= 1
+       a$=""
+       b$="0"  
+       c$="1"
+    else
+       a$=val$(DevCnt)
+       b$=a$
+       c$=a$
+    endif
+
+    DetShortName$=DetShortBaseName$+a$
+	
+
+
+                    
+    MenuTabName$=MenuTabBaseName$+a$
+    GuiNdrAndRegName$=GuiNdrAndRegBaseName$+c$
+    SendModuleDetName$=SendModuleDetBaseName$+c$
+    MethIniFile$=MethIniFileBase$+b$
+    MethGuiNdrName$=MethGuiNdrBaseName$+c$
+    ModPriority=Priority-1+DevCnt
+    
+    ExecCommand$="GUILeoSingleDetectorReconfig "+\
+                 "TabHdrText$(Hook[1],""GuiDetectors"",""DetStackIniFile"") , " +\
+                 "TabHdrVal(Hook[1],""GuiDetectors"",""ExecRow"") , " +\
+                 DetShortName$+","+\
+                 MenuTabName$+","+\
+                 GuiNdrAndRegName$+","+\   
+                 GuiNdrAndRegName$+","+\   
+                 SendModuleDetName$+","+\   
+                 LampOnMacName$+","+\
+                 """"+ ExtraHelpMessage$ +""""
+
+
+  If (DevLeoDad>0) and (SendModuleDetBaseName$[1:4]="NDAD")
+	    DetShortName$=DetShortBaseName$+"2"
+		MethIniFile$=MethIniFileBase$+"2"
+	  endif
+	  If (DevLeoMwd>0) and (SendModuleDetBaseName$[1:4]="NMWD")
+	    DetShortName$=DetShortBaseName$+"2"
+		MethIniFile$=MethIniFileBase$+"2"
+	  EndIf  
+ 	 If (DevLeoVwd>0) and  (SendModuleDetBaseName$[1:4]="NVWD")
+     	  If(Val(a$)<> 0) then
+		  	DetNumber = DevLeoVwd + Val(a$)
+		  else
+			DetNumber = DevLeoVwd + 1
+		  EndIf
+	!  DetNumber = DevLeoVwd + 1
+	  MethIniFile$=MethIniFileBase$+Val$(DetNumber)
+	  DetShortName$=DetShortBaseName$+Val$(DetNumber) 
+ EndIf
+
+                 
+    GuiSetDetectorOrderedHook  ModPriority , ExecCommand$ , SendModuleDetName$ , \
+                               GuiNdrAndRegName$ , MethIniFile$ , \
+                               MethGuiNdrName$ , DetShortName$+":"
+
+next DevCnt
+
+
+
+endmacro
+
+
+
+!############################################################################
+name GUIReConfigureLeoDetectors
+
+!configure menus
+!set GuiDetectors ordered hook
+!assume here that LeoTemp reg is loaded , and that menu register is
+!sorted [1] = FULL
+!############################################################################
+local row, Tab$
+
+
+
+
+GUISetupMenuRegForConfiguration
+GUICheckMenuTablesForModNumber    DevLeoDAD
+GUIConfigureModuleNumberMenus     "LeoDAD" , DevLeoDAD , "LeoDADStatus"
+GUILeoSetGuiDetectorsOrderedHook  DevLeoDAD, "DAD", "LeoDAD", "LeoDADStatus" , \
+                                  "LDAD", "MthLDad", "LeoDADMethod", 30 , \
+                                  "GUIBalanceLeoUvVisDetector"
+
+!must patch MthLDad0 to MthLDad1
+Tab$="GuiDetectors"
+row=RowByText(Hook[1], Tab$, , "MethListIniFile", "i=" , "MthLDad0" ) 
+if row > -1                                                          
+   SetTabText Hook[1], Tab$, row , "MethListIniFile", "MthLDad1"  
+endif
+
+GUICheckMenuTablesForModNumber    DevNucDAD
+GUIConfigureModuleNumberMenus     "NucDAD" , DevNucDAD , "NucDadStatus"
+GUILeoSetGuiDetectorsOrderedHook  DevNucDAD, "DAD", "NucDAD", "NucDadStatus" , \
+                                  "NDAD", "MthNDad", "NucDadMethod", 30 , \
+                                  "GUIBalanceLeoUvVisDetector"
+!must patch MthNDad0 to MthNDad1
+Tab$="GuiDetectors"
+row=RowByText(Hook[1], Tab$, , "MethListIniFile", "i=" , "MthNDad0" ) 
+if row > -1                                                          
+   SetTabText Hook[1], Tab$, row , "MethListIniFile", "MthNDad1"  
+endif
+
+
+GUICheckMenuTablesForModNumber    DevNucMWD
+GUIConfigureModuleNumberMenus     "NucMWD" , DevNucMWD , "NucMWDStatus"
+GUILeoSetGuiDetectorsOrderedHook  DevNucMWD, "MWD", "NucMWD", "NucMWDStatus" , \
+                                  "NMWD", "MthNMWD", "NucMWDMethod", 30 , \
+                                  "GUIBalanceLeoUvVisDetector"
+!must patch MthNDad0 to MthNDad1
+Tab$="GuiDetectors"
+row=RowByText(Hook[1], Tab$, , "MethListIniFile", "i=" , "MthNMwd0" ) 
+if row > -1                                                          
+   SetTabText Hook[1], Tab$, row , "MethListIniFile", "MthNMwd1"  
+endif
+
+GUICheckMenuTablesForModNumber    DevLeoMWD
+GUIConfigureModuleNumberMenus     "LeoMWD" , DevLeoMWD , "LeoMWDStatus"
+GUILeoSetGuiDetectorsOrderedHook  DevLeoMWD, "MWD", "LeoMWD", "LeoMWDStatus" , \
+                                  "LMWD", "MthLMwd", "LeoMWDMethod", 30 , \
+                                  "GUIBalanceLeoUvVisDetector"
+!must patch MthLMwd0 to MthLMwd1
+Tab$="GuiDetectors"
+row=RowByText(Hook[1], Tab$, , "MethListIniFile", "i=" , "MthLMwd0" ) 
+if row > -1                                                          
+   SetTabText Hook[1], Tab$, row , "MethListIniFile", "MthLMwd1"  
+endif
+
+GUICheckMenuTablesForModNumber    DevLeoVWD
+GUIConfigureModuleNumberMenus     "LeoVWD" , DevLeoVWD , "LeoVWDStatus"
+GUILeoSetGuiDetectorsOrderedHook  DevLeoVWD, "VWD", "LeoVWD", "LeoVWDStatus" , \
+                                  "LVWD", "MthLVwd", "LeoVWDMethod", 40 , \
+                                  "GUIBalanceLeoUvVisDetector"
+
+
+GUICheckMenuTablesForModNumber    DevNucVWD
+GUIConfigureModuleNumberMenus     "NucVWD" , DevNucVWD , "NucVWDStatus"
+GUILeoSetGuiDetectorsOrderedHook  DevNucVWD, "VWD", "NucVWD", "NucVWDStatus" , \
+                                  "NVWD", "MthNVwd", "NucVWDMethod", 40 , \
+                                  "GUIBalanceLeoUvVisDetector"
+
+
+GUICheckMenuTablesForModNumber    DevLeoFLD
+GUIConfigureModuleNumberMenus     "LeoFLD" , DevLeoFLD , "LeoFLDStatus"
+GUILeoSetGuiDetectorsOrderedHook  DevLeoFLD, "FLD", "LeoFLD", "LeoFLDStatus" , \
+                                  "LFLD", "MthLFld", "LeoFLDMethod", 50 ,\
+                                  "GUILeoTurnOnRequiredFldLamp" ,\
+                                  "Click to turn on lamp."
+
+
+GUICheckMenuTablesForModNumber    DevLeoRID
+GUIConfigureModuleNumberMenus     "LeoRID" , DevLeoRID , "LeoRIDStatus"
+GUILeoSetGuiDetectorsOrderedHook  DevLeoRID, "RID", "LeoRID", "LeoRIDStatus" , \
+                                  "LRID", "MthLRid", "LeoRIDMethod", 60 , \
+                                  "NoDo"
+
+
+GuiDevGuiDets=GuiDevGuiDets+DevLeoDAD+DevLeoMWD+DevLeoVWD+DevNucVWD+DevLeoFLD+DevLeoRID+DevNucDad+DevNucMwd
+
+endmacro
+
+
+!################  for 1050 modules :
+
+
+    
+    
+!############################################################################
+name Gui1050SingleDetectorReconfig
+
+parameter  DetectorsINIFile$
+parameter  iDetectorNumber
+parameter  DetectorShortName$
+parameter  MenuTabName$
+parameter  CpVarName$  default "GuiDetNN$" 
+!############################################################################
+             
+local HelpMessage$
+local ToolBaseName$
+local Command$             
+local VarExists
+local RunState$
+
+ID_ASTXDRIVERSMACFILES_BALANCE_75                  =  17075  
+NLSFileName_astxmac$ = "astxmac"
+
+!move balance button out of sight very early (looks better if done so)
+evaluate "VarExists=Check ( VARIABLE, "+CpVarName$+" )"
+if VarExists = 1  ! exists
+   evaluate "RunState$="+CpVarName$
+   RunState$=UpperCase$(RunState$)
+   if RunState$ = "DETOFFLINE"  OR  RunState$ = "DETNN" 
+      !move balance button out of sight for offline case
+      GomSetVal GUISystemDiagGOM$, DetectorsINIFile$ , ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BALANCE_75)+val$(iDetectorNumber) , y , 1000
+   endif             
+else
+   !create variable
+   evaluate CpVarName$+"=DETNN"
+   !move balance button out of sight for unknown module
+   GomSetVal GUISystemDiagGOM$, DetectorsINIFile$ , ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BALANCE_75)+val$(iDetectorNumber) , y , 1000
+endif
+
+ToolBaseName$="Detector"
+
+GUILeoSingleDetectorUIReconfig  DetectorsINIFile$, iDetectorNumber,  \
+                                DetectorShortName$, MenuTabName$, ToolBaseName$
+
+
+!install hotlinks to this one
+!make hotlink connection all detectors have in GUI CpVar  : CpVarNameBase$+val$(DevNoOfThisModule)+"$"
+GUISetToolEvent  DetectorsINIFile$, ToolBaseName$+val$(iDetectorNumber), "elements" , \
+                 , ,CpVarName$
+ 
+endmacro
+    
+
+
+!############################################################################
+name GUI1050DetSetGuiDetectorsOrderedHook
+
+parameter  DevMaxCnt 
+parameter  DetShortBaseName$
+parameter  MenuTabBaseName$
+parameter  CpVarBaseName$             !without $ at end
+parameter  Priority
+!############################################################################
+
+local  DevCnt
+local  a$,c$
+local  ExecCommand$
+local  ModPriority
+local  CpVarName$
+
+for DevCnt=1 to DevMaxCnt
+    if DevMaxCnt <= 1
+       a$=""
+       c$="1"
+    else
+       a$=val$(DevCnt)
+       c$=a$
+    endif
+
+    DetShortName$=DetShortBaseName$+a$                
+    MenuTabName$=MenuTabBaseName$+a$
+    CpVarName$=CpVarBaseName$
+    if CpVarName$ <> ""
+       CpVarName$=""""+CpVarBaseName$+c$+"$"+""""
+    endif   
+    ModPriority=Priority-1+DevCnt
+    
+    ExecCommand$="GUI1050SingleDetectorReconfig "+\
+                 "TabHdrText$(Hook[1],""GuiDetectors"",""DetStackIniFile"") , " +\
+                 "TabHdrVal(Hook[1],""GuiDetectors"",""ExecRow"") , " +\
+                 DetShortName$+","+\
+                 MenuTabName$+","+\
+                 CpVarName$
+                 
+    GuiSetDetectorOrderedHook  ModPriority , ExecCommand$ ,  ,  ,  ,  , DetShortName$+":"
+
+next DevCnt
+
+
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIReConfigure1050Detectors
+
+!configure menus
+!set GuiDetectors ordered hook
+!assume here that LeoTemp reg is loaded , and that menu register is
+!sorted [1] = FULL
+!############################################################################
+
+local  HelpSubSystem$
+
+GUISetupMenuRegForConfiguration
+
+if Dev1050DAD+Dev1050MWD+Dev1050VWD+Dev1046FLD+Dev1049ECD > 0
+   if ObjHdrType(LeoTemp,"Modules1050") = 99
+      DelReg LeoTmp
+      GOMLoadNLSMenuReg "LC", "LeoM", "LeoTemp"
+   endif   
+endif   
+
+HelpSubSystem$="HPLC"
+GUIConfigureModuleNumberMenus  "DAD1050", Dev1050DAD , , HelpSubSystem$, 7008
+GUI1050DetSetGuiDetectorsOrderedHook  Dev1050DAD, "DAD", "DAD1050" , "" , 90
+
+GUIConfigureModuleNumberMenus  "MWD1050", Dev1050MWD , , HelpSubSystem$, 7008
+GUI1050DetSetGuiDetectorsOrderedHook  Dev1050MWD, "MWD", "MWD1050" , "" , 92
+
+GUIConfigureModuleNumberMenus  "VWD1050", Dev1050VWD , , HelpSubSystem$, 7008
+GUI1050DetSetGuiDetectorsOrderedHook  Dev1050VWD, "VWD", "VWD1050" , "" , 94
+
+GUIConfigureModuleNumberMenus  "FLD1046", Dev1046FLD , , HelpSubSystem$, 7008
+GUI1050DetSetGuiDetectorsOrderedHook  Dev1046FLD, "FLD", "FLD1046" , "" , 100
+
+GUIConfigureModuleNumberMenus  "ECD1049", Dev1049ECD , , HelpSubSystem$, 7008                                           
+GUI1050DetSetGuiDetectorsOrderedHook  Dev1049ECD, "ECD", "ECD1049" , "" , 102
+
+GuiDevNonGuiDets=GuiDevNonGuiDets+Dev1050DAD+Dev1050MWD+Dev1050VWD+Dev1046FLD+Dev1049ECD
+!GuiDevGuiDets  not counted up here since no full GUI support
+
+endmacro
+
+!################  end of 1050 module macros
+
+
+!################  for ADC module :
+
+
+!############################################################################
+name GuiADCSingleDetectorReconfig
+
+parameter  DetectorsINIFile$
+parameter  iDetectorNumber
+parameter  DetectorShortName$
+parameter  MenuTabName$
+parameter  CpVarName$  default "GuiDetNN$" 
+!############################################################################
+             
+local HelpMessage$
+local ToolBaseName$
+local Command$             
+local VarExists
+local RunState$
+
+ID_ASTXDRIVERSMACFILES_BALANCE_75                  =  17075  
+NLSFileName_astxmac$ = "astxmac"
+
+!move balance button out of sight very early (looks better if done so)
+GomSetVal GUISystemDiagGOM$, DetectorsINIFile$ , ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BALANCE_75)+val$(iDetectorNumber) , y , 1000
+
+ToolBaseName$="Detector"
+
+GUILeoSingleDetectorUIReconfig  DetectorsINIFile$, iDetectorNumber,  \
+                                DetectorShortName$, MenuTabName$, ToolBaseName$
+
+
+!install hotlinks to this one
+!make hotlink connection all detectors have in GUI CpVar  : CpVarNameBase$+val$(DevNoOfThisModule)+"$"
+GUISetToolEvent  DetectorsINIFile$, ToolBaseName$+val$(iDetectorNumber), "elements" , \
+                 , ,CpVarName$
+
+ 
+endmacro
+    
+
+
+
+!############################################################################
+name GUIADCDetSetGuiDetectorsOrderedHook
+
+parameter  DevMaxCnt 
+parameter  DetShortBaseName$
+parameter  MenuTabBaseName$
+parameter  CpVarBaseName$             !without $ at end
+parameter  Priority
+!############################################################################
+
+local  DevCnt
+local  a$,c$
+local  ExecCommand$
+local  ModPriority
+local  CpVarName$
+
+
+for DevCnt=1 to DevMaxCnt
+    if DevMaxCnt <= 1
+       a$=""
+       c$="1"
+    else
+       a$=val$(DevCnt)
+       c$=a$
+    endif
+
+DetShortName$=DetShortBaseName$+a$
+
+
+
+                    
+    MenuTabName$=MenuTabBaseName$+a$
+    CpVarName$=CpVarBaseName$
+    if CpVarName$ <> ""
+       CpVarName$=""""+CpVarBaseName$+c$+"$"+""""
+    endif   
+    ModPriority=Priority-1+DevCnt
+    
+    ExecCommand$="GUIADCSingleDetectorReconfig "+\
+                 "TabHdrText$(Hook[1],""GuiDetectors"",""DetStackIniFile"") , " +\
+                 "TabHdrVal(Hook[1],""GuiDetectors"",""ExecRow"") , " +\
+                 DetShortName$+","+\
+                 MenuTabName$+","+\
+                 CpVarName$
+                 
+    GuiSetDetectorOrderedHook  ModPriority , ExecCommand$ ,  ,  ,  ,  , DetShortName$+":"
+
+next DevCnt
+
+
+
+endmacro
+
+
+
+
+!############################################################################
+name GUICorrect35900ModuleMenus
+!############################################################################
+local irow
+local tab$, tabBase$            
+local iii,jjj,kkk,present  
+local adccmd$  
+
+tabBase$="AD35900"
+
+for jjj=1 to adcdevice
+    tab$=tabBase$
+    if adcdevice>1
+       tab$=tabBase$+val$(jjj)
+    else   
+       tab$=tabBase$
+    endif            
+    if GuiOffline=1
+       tab$=tab$+"OC"
+    endif  
+    
+    if adctimetab = 0            
+       !delete the TT menu row
+       for iii=1 to 2
+           !go through all menu objcets
+           if ObjHdrType( menu[iii], tab$) = 4
+              irow = RowByText( menu[iii], tab$, , "SearchKey", "i=" , "ADTIMETABLE" )
+              if irow > 0
+                 DelTabRow menu[iii],tab$,irow
+              endif   
+           endif      
+       next iii   
+    endif
+    for kkk = 1 to 18 
+        !this is only true in full menus menu[1]
+        if ObjHdrType( menu[1], tab$) = 4
+           evaluate "present = check(variable,adcnhpmenucmd"+val$(kkk)+"$)"
+           if present = 1
+              evaluate "adccmd$=adcnhpmenucmd"+val$(kkk)+"$"
+              irow = RowByText( menu[1], tab$, , "SearchKey", "i=" , "HELP" )
+              !insert before HELP
+              if irow > 0 
+                 if kkk=1
+                    !insert a separator
+                    InsTabRow menu[1], tab$, irow
+                    SetTabText menu[1], tab$, irow , "Action" , "SEPARATOR" 
+                    !don't increment irow put new item before separator
+                 endif
+                 InsTabRow menu[1], tab$, irow
+              else
+                 !add at end
+                 if kkk=1
+                    !insert a separator
+                    InsTabRow menu[1], tab$
+                    irow=TabHdrVal(menu[1], tab$, "numberofrows" )
+                    SetTabText menu[1], tab$, irow , "Action" , "SEPARATOR" 
+                 endif   
+                 InsTabRow menu[1], tab$ 
+                 irow=TabHdrVal(menu[1], tab$, "numberofrows" )
+              endif   
+              evaluate "SetTabText menu[1],tab$,irow,""Item"",adcnhpmenuitem"+val$(kkk)+"$" 
+              evaluate "SetTabText menu[1],tab$,irow,""Message"",adcnhpmenuhelp"+val$(kkk)+"$" 
+              SetTabText menu[1], tab$, irow , "Action" , "LC35900ADC."+adccmd$ 
+              SetTabText menu[1], tab$, irow , "Link" ,"MethLoadSaveIdle"
+              SetTabText menu[1], tab$, irow , "BitmapName" ,"methedit_bmp"
+           endif
+        endif   
+    next kkk
+next jjj 
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIReConfigureADConv
+
+!configure menus
+!set GuiDetectors ordered hook
+!assume here that LeoTemp reg is loaded , and that menu register is
+!sorted [1] = FULL
+!############################################################################
+
+GUISetupMenuRegForConfiguration
+
+GUICheckMenuTablesForModNumber adcdevice
+
+GUIConfigureModuleNumberMenus  "AD35900", adcdevice                                           
+GUICorrect35900ModuleMenus     
+GUIADCDetSetGuiDetectorsOrderedHook  adcdevice, "ADC", "AD35900" , "ADCStatus" , 80
+
+GuiDevGuiDets=GuiDevGuiDets+adcdevice
+
+endmacro
+
+
+!################  end of ADC module macros
+    
+
+    
+
+
+!############################################################################
+name Init_GuiLcDet
+
+!bootstrap macro        
+!############################################################################
+
+
+EndMacro
+

@@ -1,0 +1,16 @@
+;05Aug2003 KK  Derived this file from update.lst and edited to
+;          contain the copy specifications for bootburn.o and bootrom.hex
+;          needed for use by "msupdate.exe  ip_address  bootburn".
+;          NOTE: Must remove /flash/MSSC.O at least prior to doing the
+;                preceding so there is enough space in /flash/ to receive
+;                the large bootrom.hex file.
+;09Mar2010 KK  Added SC3type column to this file format for use with 
+;          msupdate version 3.96 adding support for Smartcard3.2 .
+;
+;SC3type    PC File Name        SC3 File Name                  Comments
+SC3         bootburn.o          /flash/bootburn.o              ;1.2/22T
+SC3         bootrom.hex         /flash/bootrom.hex             ;1.2/22T
+SC3Plus     bootburn.o          /flash/bootburn.o              ;1.2/22T
+SC3Plus     bootrom.hex         /flash/bootrom.hex             ;1.2/22T
+SC3p2       bootburn.o.SC3p2    /flash/bootburn.o              ;1.2/26T
+SC3p2       bootrom.hex.SC3p2   /flash/bootrom.hex             ;1.2/26T

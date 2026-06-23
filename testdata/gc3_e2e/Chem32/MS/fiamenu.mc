@@ -1,0 +1,72 @@
+local ID___METHOD_13
+local ID__EDIT__FIA_SERI_14
+local ID__EDIT_THE_FLOW_16
+local ID__SEPARATOR_17
+local ID___RUNCONTROL_18
+local ID__RUN_FIA_METHOD_21
+local ID__RUN_MULTIPLE_19
+ID___METHOD_13                                     =  17013  
+ID__EDIT__FIA_SERI_14                              =  17014  
+ID__EDIT_THE_FLOW_16                               =  17016  
+ID__SEPARATOR_17                                   =  17017  
+ID___RUNCONTROL_18 = 17018
+ID__RUN_FIA_METHOD_21 = 17021
+ID__RUN_MULTIPLE_19 = 17019
+
+!******************************************************************************
+!*
+!* FILE:  fiamenu.mc
+!*
+!* DESCRIPTION:  Direct execution file to build temporary FIA menu
+!*
+!* $Header: /cag/triath1b/dlc_cmds/fia/fiamenu.mc 1.19 1999-09-02 10:22:17-07 rajac Exp $
+!******************************************************************************
+!*
+!* MACROS :		 
+!*
+
+#include "fiahelp.h"
+         
+if Dev1946MSD > 0 AND _HPCE=0 then
+    !
+	!	FIA menu items
+	!  
+	menuadd ReadResource$("hbdafiamcx",ID___METHOD_13),ReadResource$("hbdafiamcx",ID__EDIT__FIA_SERI_14),"FIAEditTable",,\
+            ReadResource$("hbdafiamcx",ID__EDIT_THE_FLOW_16),,\
+            $FIAMenuHelp,MSD,4203100
+	menuadd ReadResource$("hbdafiamcx",ID___METHOD_13),,"SEPARATOR",,,,,,4203200
+	if _OFFLINE = 1 then
+	     	COM_iTotal = 0
+      		for COM_i=1 to 9
+        	COM_sFile$ = _TEMPPATH$ + "\seqinfo.00" + val$(COM_i) 
+        	if FileStat (Mode, COM_sFile$) <> -1
+           		COM_iTotal = COM_iTotal + 1
+        	endif
+      		next COM_i
+		if COM_iTotal > 1 then
+			return
+      		endif
+		s_COM_name$ = ""
+	        s_COM_name$ = PrivateProfileString$(("PCS,"+val$(_Instrument)),"_DDEOnline", "chemstation.ini")
+		if s_COM_name$ = "" then
+			menuadd ReadResource$("hbdafiamcx",ID___RUNCONTROL_18),,"SEPARATOR",,,,,,4008100
+			menuadd ReadResource$("hbdafiamcx",ID___RUNCONTROL_18),ReadResource$("hbdafiamcx",ID__RUN_MULTIPLE_19),"FIARUNNER",,\
+            		ReadResource$("hbdafiamcx",ID__RUN_FIA_METHOD_21),,\
+            		1900,MSD,4008200
+		else
+			On Error goto COM_LABEL
+			mychannel = DDeInitiate( s_COM_name$,"cpnowait")
+			DDeTerminate mychannel	
+		endif
+      else
+COM_LABEL:
+	menuadd ReadResource$("hbdafiamcx",ID___RUNCONTROL_18),,"SEPARATOR",,,,,,4008100
+	menuadd ReadResource$("hbdafiamcx",ID___RUNCONTROL_18),ReadResource$("hbdafiamcx",ID__RUN_MULTIPLE_19),"FIARUNNER",,\
+            ReadResource$("hbdafiamcx",ID__RUN_FIA_METHOD_21),,\
+            1900,MSD,4008200
+      endif
+      On Error
+endif
+
+
+

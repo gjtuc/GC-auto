@@ -1,0 +1,23 @@
+! $Header: /PHX3D/parts/macros/seqsum/ssrhook.mac 4.0 1996-03-22 17:50:09-05 hmgr Exp $
+!
+! sequence summary report hook; called directly from C code after sequence.
+!
+
+name SSR_SequenceSummaryReport
+  local Error
+  if Check (Macro, SSR_DoSequenceSummaryReport) = 0 then
+    LoadMacro "ssr.mcx"
+  endif
+  
+  if TabHdrVal(_Sequence[1], "SeqOutput", "SeqSumReport") = 1 then
+    if TabHdrVal(_Sequence[1], "SeqOutput", "UseIR") = 1 then
+      print ""
+      IR_DoSequenceSummaryReport
+    else
+      SSR_DoSequenceSummaryReport    
+    endif
+  endif
+  
+  GUISetDARunStatus "RESET"   ! clear state on GUI
+  return
+endmacro

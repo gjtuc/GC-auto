@@ -1,0 +1,851 @@
+    !===============================================================================
+    !  ENUTNPW.MAC: G2715 PeakWidths Algorithm  **August 2005
+    !
+    ! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+    ! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+    ! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+    ! AGILENT TECHNOLOGIES.
+    !
+    !                     RESTRICTED RIGHTS LEGEND                          
+    !                                                                       
+    ! Use, duplication, or disclosure by the Government is subject to       
+    ! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+    ! Technical Data and Computer Software clause at 52.227-7013.           
+    !                                                                       
+    ! AGILENT TECHNOLOGIES                                               
+    ! Life Sciences and Chemical Analysis Solutions           
+    ! 5301 Stevens Creek Blvd
+    ! Santa Clara, CA 95051-7201
+    ! United States
+    !
+    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    !  These MACROs are the common macros that are called when tune is invoked.
+    !  They take care of testing for the current instrument configuration and
+    !  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+    !  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    !  
+    !  The Purpose:   Calibrate peakwidths of up to five masses at a set peakwidth target.
+    !
+    !===============================================================================
+    !
+    ! $Header: /Lassen/Support/tunemac/enutnpw.mac 1.1 2005-08-18 clove Exp $"
+    !
+    !08/18/05  CPL  Updated with Agilent header information.  Added Ver$ 1.2 2007-04-30 clove Exp $"
+    !09/26/05  CPL  Updated to support G61x0A VL, SL, and HT models
+    !===============================================================================
+    !
+    !  Macros:
+    !            msat_Widths                ! Standard scanning PW adjustment macro
+    !            msat_SaveMasses              msat_WidthsErr
+    !            msat_RestoreMasses           msat_WidthsAbort
+    !            msat_Profile                 msat_WidthsCleanup
+    !            msat_AdjustMassAxis          msat_SetAllWidths
+    !            msat_Checkpw                 msat_WOramp
+    ! 
+    !===============================================================================
+    ! Global variables used:  widthA,rangeA,NumMass,delta_pwA
+    ! Needs MSMassSort and MSPWidths
+    !===============================================================================
+    !
+     AtunePWVer$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/enutnpw.mac 1.63 2007-06-15 10:00:00-08 clove Exp $"
+     verIx = instr(AtunePWVer$, ".mac ") + 5
+     AtunePWVer$ =  AtunePWVer$[verIx:VerIx + instr(AtunePWVer$[VerIx:len(AtunePWVer$)]," ") - 1] 
+     remove verIx
+    !
+    !===============================================================================
+    
+    !===============================================================================
+    name msat_SaveMasses
+    ! Save the current tune mass settings to register SaveMass
+    !===============================================================================
+    local i,mass,selected
+       if RegSize(SaveMass) > -1 then
+         DelReg SaveMass
+       endif
+    
+       NewObj SaveMass[1],2,1,6
+       for i = 1 to 6
+         MSMassValue i, mass,, selected
+         SetData SaveMass, 1,i, mass
+         SetData SaveMass, 0,i, selected
+       next i
+    endmacro  ! msat_SaveMasses
+    
+    !===============================================================================
+    name msat_RestoreMasses
+    ! Restore the mass tune settings from register SaveMass
+    !===============================================================================
+      if RegSize (SaveMass) = 1 then
+        numcols = DataCols(SaveMass[1])
+        for i = 1 to numcols
+          MSMassValue i,, Data(SaveMass[1],1,i),, Data(SaveMass[1],0,i)
+        next i
+      else
+        generate error , "Error: Cannot restore previous tune mass settings."
+      endif
+    endmacro  ! msat_RestoreMasses
+    
+    !===============================================================================
+    name msat_Profile
+    parameter massID
+    parameter numToAvg default 1
+    parameter extra    default 0
+    parameter checkValley default 0
+    ! Special Profile that sets global variables      !* Leftover from old PW method;
+    ! peakwidthA, peakmaxA for mass # NumMass         !* leaving in for historical reasons
+    !===============================================================================
+    !* Globals:  peakwidthA, peakmaxA
+       if numToAvg = 1 AND extra = 0 AND checkValley = 0 then
+         MSProfile
+       else
+         print MSProfileAvg(numToAvg, extra, checkValley)
+       endif
+    
+      evaluate "peakwidthA = peakwidth" + val$(massID)
+      evaluate "peakmaxA = peakmax" + val$(massID)
+      evaluate "basepeakA = basepeak" + val$(massID)
+    
+      delta_pwA = peakwidthA - widthA
+    endmacro  !msat_Profile
+    
+    !===============================================================================
+    !
+    name msat_adjustMassAxis
+    parameter doAdjustment default 0
+    !
+    !===============================================================================
+    ! adjust axis with the neighboring mass
+    local highmass
+    
+      MSMassValue NumMass,highMass
+      delta_mzA = abs(basepeakA - highMass)
+    
+      if (delta_mzA > 1 AND peakmaxA > 1000) OR doAdjustment = 1  then  ! adjust mass axis
+        msMassWindow 50
+        msMassValue numMass-1,,,,1
+        msAxis numMass,1,1
+        msMassValue numMass-1,,,,0
+      endif
+    endmacro  ! msat_adjustMassAxis
+    
+    !===============================================================================
+    name msat_SetAllWidths
+    parameter usertarget default 0.65
+    parameter tolerance default 0.05
+    parameter regIndex default 0
+    ! Set all tune masses to peakwidth target and tolerance
+    ! Set tune mass peakwidth according to tunemix register
+    !===============================================================================
+    local i, mass, target, actualNumIons, tableNumIons, useNumIons
+    
+    Local  ID_TUNEMAC_TARGET_PEAK_WI_841
+    Local  ID_TUNEMAC_SETTING_PEAKWI_842
+    ID_TUNEMAC_TARGET_PEAK_WI_841                      =  17841  
+    ID_TUNEMAC_SETTING_PEAKWI_842                      =  17842  
+      print ReadResource$("tunemac",ID_TUNEMAC_TARGET_PEAK_WI_841), usertarget
+      if RegIndex > 0 then
+        actualNumIons = TabHdrVal(TuneMixReg[RegIndex],TuneIons,NumberOfRows)
+        tableNumIons  = ObjHdrVal(TuneMixReg[RegIndex], "NumIons")
+        if actualNumIons >= tableNumIons
+          useNumIons = tableNumIons
+        else
+          useNumIons = actualNumIons
+        endif
+        for i = 1 to useNumIons
+          target = TabVal(TuneMixReg[RegIndex],"TuneIons",i,"PW50")
+          MSPWidths i,,target,,tolerance
+        next i
+      else
+        if (MSD_VL = 1) then
+          useNumIons=3
+        else
+          useNumIons=6
+        endif
+        for i = 1 to useNumIons
+          MSMassValue i, mass
+          if (mass > 2000) then
+            if  (usertarget <= 0.66) then
+              target = mass/3000
+              if target > 0.8 then
+                target = 0.8
+              endif
+            else 
+              target = usertarget
+            endif
+          else
+            target = usertarget
+          endif
+          print SprintF$(mass, ReadResource$("tunemac",ID_TUNEMAC_SETTING_PEAKWI_842)), \
+                SprintF$(target, "%4.2f")
+          MSPWidths i,,target,,tolerance
+        next i
+      endif
+    endmacro  !msat_SetAllWidths
+    
+    !===============================================================================
+    !
+    name msat_checkpw            !initial peakwidth check
+    parameter target default 0.65
+    parameter tolerance default 0.05
+    !
+    !===============================================================================
+    local j,pwdiff
+    
+    Local  ID_TUNEMAC_____MASS_843
+    ID_TUNEMAC_____MASS_843                            =  17843  
+      print MSProfileAvg(3,1)
+      for j = 1 to NumMass
+        MSPWidths j,target,,tolerance
+        Evaluate "pwdiff =" + "ABS(PeakWidth" + val$(j) + "-target)"
+        Print ReadResource$("tunemac",ID_TUNEMAC_____MASS_843), j, "PW delta: ", pwdiff
+        if j=5 then
+          Abund5=peakmax5-peakmin5
+          if Abund5 < 50000 then
+            pwdiff = tolerance * 2
+          endif
+        endif   
+        if pwdiff > tolerance then
+          return 1
+        endif
+      next j
+      return 0
+    endmacro  !msat_checkpw
+    
+    !===============================================================================
+    name msat_WidthsErr
+    !===============================================================================
+    Local  ID_TUNEMAC_PEAK_WIDTH_ADJ_845
+    ID_TUNEMAC_PEAK_WIDTH_ADJ_845                      =  17845  
+    on error print
+      print Alert(ReadResource$("tunemac",ID_TUNEMAC_PEAK_WIDTH_ADJ_845) + _errmsg$,3,"Error")
+      msat_WidthsCleanup
+      stop
+    endmacro  !msat_WidthsErr
+    
+    !===============================================================================
+    name msat_WidthsAbort
+    !===============================================================================
+    on error print
+      msat_WidthsCleanup
+    endmacro  !msat_WidthsAbort
+    
+    !===============================================================================
+    name msat_WidthsCleanup
+    PARAMETER numStepsize default 0.10
+    PARAMETER numSample default 12
+    ! PARAMETER oldavg default 1
+    ! Remove global variables used to do peak widths
+    !===============================================================================
+    on error print
+      remove widthA,rangeA,NumMass
+      remove peakwidthA, peakmaxA
+      remove mass1,mass2
+      if RegSize(SaveMass) > -1 then
+        msat_RestoreMasses
+        DelReg SaveMass
+      endif
+      if RegSize(MassTable) > -1 then
+        DelReg MassTable
+      endif
+      mstn_RemoveAbortHandler "msat_WidthsAbort"
+    
+      ! change stepsize to original stepsize
+        MSStepsize ,numStepsize
+      ! change sample to original sample
+        MSSamples ,numSample
+    endmacro  ! msat_WidthsCleanup
+    
+    !===============================================================================
+    ! 
+    name msat_WOramp                   ! Only adjusts the WO ramp
+    PARAMETER target default 0.65
+    PARAMETER tolerance default 0.05
+    PARAMETER polarity default 0
+    PARAMETER regIndex default 2
+    ! CPL 08/09/2005 Decrease WO stepsize for Lassen
+    ! CPL 01/31/2006 Restore original WO stepsize
+    ! CPL 04/25/2006 Remove print statements to clean up U.I.
+    !
+    !===============================================================================
+    !global MSD_HT
+    local oldWO,newWO,oldWidthOffset,oldavg,i,j,param$,oldset,lCharge
+    local largestMass,nextMass,mass,saveStepsize,saveSample
+    local lens1$,lens2$,lens3$,lens4$,lens5$,lens6$,lens7$,lens8$
+    local WO_Row,WO_mass1,mass1,mass2,mass3,mass4,mass5,mass6
+    local delta_pw,saveWidthOffset,doit
+    local best_delta,bestWO,old_delta,count,act_tgt,delta_act
+    local numpts,massval1,WOval1,massval2,WOval2,massval3,WOval3,massval4,WOval4,massval5,WOval5 
+    
+    Local  ID_TUNEMAC_UNABLE_TO_ADJU_668
+    Local  ID_TUNEMAC__MASSVAL_I_846
+    Local  ID_TUNEMAC_PEAKWIDTHS_ARE_848
+    ID_TUNEMAC_UNABLE_TO_ADJU_668                      =  17668  
+    ID_TUNEMAC_UNABLE_TO_ADJU_668                      =  17668  
+    ID_TUNEMAC__MASSVAL_I_846                          =  17846  
+    ID_TUNEMAC_PEAKWIDTHS_ARE_848                      =  17848  
+      
+      largestMass = 0
+      nextMass = 0
+    
+      !* Set up basic settings
+        !MSMassWindow 3
+        MSMassWindow 5				! changed to 5 for SL-HT
+        MSParm Polarity,lCharge
+          If (MSD_HT = 1) And ((lCharge = 2) Or (lCharge = 3)) Then    
+            MSFilterMass,,,0.4 ! To allow 0.2 amu step size
+            ! MSStepsize saveStepsize,0.1 ! CPL 10/10/2006
+            ! MSStepsize saveStepsize,0.2 ! CPL 04/30/2007 For better PW calibration 
+            MSStepsize saveStepsize,0.15 ! CPL 04/30/2007 Best value for UFS PW calibration               
+            MSSamples saveSample,1     
+            MSAverages oldavg,9
+          Else
+            MSStepsize saveStepsize,0.05 ! CPL 10/10/2006                
+            MSSamples saveSample,12    ! changed to 12 for fast scan FW change PHC 06/12/2002
+            MSAverages oldavg,9
+          Endif
+    
+      on error msat_WidthsErr
+      mstn_AddAbortHandler "msat_WidthsAbort"
+    
+      ! Get values from current ramp:
+        MSDynamic widthoffset,read,0,numpts    ! Get number of pairs in the WO ramp            
+        for i = 1 to numpts
+          MSDynamic widthoffset,read,i,x,y    
+          evaluate "massval"+val$(i)+" = x"    
+          evaluate "WOval"+val$(i)+" = y"                           
+        next i
+    
+      ! Disable current ramp:
+        lens1$ = ""
+        lens2$ = ""
+        lens3$ = ""               !* Initialize to empty string
+        lens4$ = ""               !* because MSDynamic won't reset
+        lens5$ = ""               !* lens strings that are not active
+        lens6$ = ""
+        lens7$ = ""
+        lens8$ = ""
+        msdynamic list,lens1$,lens2$,lens3$,lens4$,lens5$,lens6$,lens7$,lens8$
+        if instr("WidthOffset",lens1$)=1 OR instr("WidthOffset",lens2$)=1 OR \
+           instr("WidthOffset",lens3$)=1 OR instr("WidthOffset",lens4$)=1 OR \
+           instr("WidthOffset",lens5$)=1 OR instr("WidthOffset",lens6$)=1 OR \
+           instr("WidthOffset",lens7$)=1 OR instr("WidthOffset",lens8$)=1 then
+          MSDynamic widthOffset, disable  
+          MSParm WidthOffset,,WOval1
+        endif
+    
+        ! Set up WO ramp:
+          param$ = "widthOffset,set"
+          for i = 1 to numpts
+            evaluate "MSParm WidthOffset,,WOval"+val$(i)   ! Start where it was in msat_widths ramp
+            evaluate "newWO = WOval"+val$(i)               ! To start with
+            for j = 1 to numpts
+              MSMassValue j,,,,1                  ! Select the mass
+            next j
+            for j = 1 to numpts
+              if j <> i then
+                MSMassValue j,,,,0                ! Deselect all other masses
+              endif
+            next j
+    
+            print MSProfileAvg(3,1)
+            
+            MSMassValue i, mass
+            evaluate "delta_pw = peakwidth"+val$(i)+"-target"
+          ! print delta_pw                        ! Clean up U.I.
+            if (abs(delta_pw) <= tolerance) then
+              doit = 1
+            else
+              doit = 0
+            endif
+            count = 0
+            best_delta = delta_pw
+            bestWO = newWO
+            while (abs(delta_pw) > tolerance) or (doit = 0)
+              oldWO = newWO
+              old_delta = delta_pw
+              newWO = newWO + (delta_pw*500)      ! Restore original WO stepsize CPL 01/31/2006
+              ! newWO = newWO + (delta_pw*250)    ! Decrease WO stepsize for Lassen  CPL 08/09/2005
+              Print "New WidthOffs =", newWO
+              MSParm WidthOffset,,newWO
+              print MSProfileAvg(3,1)
+              evaluate "delta_pw = peakwidth"+val$(i)+"-target"
+              if (abs(delta_pw) <= tolerance) then
+                doit = 1
+              else
+                doit = 0
+              endif
+              if delta_pw < old_delta             ! keep track of best effort
+                best_delta = delta_pw
+                bestWO = newWO
+              endif
+          ! print delta_pw                        ! Clean up U.I.
+              if (abs(delta_pw) > abs(old_delta)) and (count > 9) then
+                if (i=5) or (i=6) then
+                  MSParm WidthOffset,,bestWO   ! Set back to smallest delta
+                  if (lCharge = 0) or (lCharge = 1) then ! CPL 10/11/2006 begin
+                    act_tgt = TabVal(TuneMixReg[RegIndex],"TuneIons",i,"GPW50")
+                  else
+                    act_tgt = TabVal(FSTuneMixReg[RegIndex],"TuneIons",i,"GPW50")
+                  endif ! CPL 10/11/2006 end
+                  ! print act_tgt                 ! Clean up U.I.
+                  delta_act = best_delta - act_tgt
+                  ! print delta_act               ! Clean up U.I.
+                  if abs(delta_act) < tolerance
+                    doit = 1
+                  else
+                    generate error 1,ReadResource$("tunemac",ID_TUNEMAC_UNABLE_TO_ADJU_668) + val$(mass)      ! quits after this message
+                  endif
+                else
+                  generate error 1,ReadResource$("tunemac",ID_TUNEMAC_UNABLE_TO_ADJU_668) + val$(mass)      ! quits after this message
+                endif !* if (i=5) or (i=6)
+              endif !* if delta_pw > old_delta
+              count = count + 1
+            endwhile !* while (abs(delta_pw) > tolerance)
+    
+            msparm widthOffset, oldWidthOffset
+            evaluate "o" + val$(i) + " = " + val$(oldWidthOffset)
+            param$ = param$ + sprintf$(i,ReadResource$("tunemac",ID_TUNEMAC__MASSVAL_I_846)) + sprintf$(i,"o%i")
+          next i
+    
+          for j = 1 to numpts
+            MSMassValue j,,,,1
+          next j
+          
+          ! Send down the ramp now:
+            MSDynamic widthOffset, enable
+            evaluate "MSDynamic " + param$
+            
+          MSSamples ,saveSample
+          MSAverages ,oldavg
+          !print MSProfileAvg(2,1)			! Wide peaks from msProfile command fixed CPL 01/27/2006
+          MSProfile
+          msat_WidthsCleanup saveStepsize,saveSample
+    
+      print ReadResource$("tunemac",ID_TUNEMAC_PEAKWIDTHS_ARE_848)
+    endmacro  ! msat_WOramp
+    
+    !===============================================================================
+    ! 
+    name msat_widths                   !start here
+    PARAMETER target default 0.65
+    PARAMETER tolerance default 0.05
+    PARAMETER polarity default 0
+    PARAMETER regIndex default 2
+    PARAMETER autobit default 0        ! 0 = called by menu item (skips call to lens calibration macro)
+                                       ! 1 = called while running autotune, for full PW adjustment
+    !
+    !Note: This macro contains many loops to ensure that the
+    !      required variables are correctly assigned, in order
+    !      to ensure that the WG and WO calculation are correct.
+    !      PHC 10/13/00
+    !
+    !      CPL 08/08/05 Decrease WO stepsize to 250 from 500 for Lassen
+    !      CPL 01/31/06 Restore original WO stepsize
+    !      CPL 04/24/06 Change PwMzFactor for Lassen Quad Driver Scaling
+    !      ueff 060829  Cleanup of algorithm, parameterized, scaling, debugging, 
+    !                   code reduction.
+    !===============================================================================
+    !* Globals:  charge, msat_mode, NumMass, MSD_VL, peakmaxA
+    local oldWG,newWG,oldWO,newWO,oldWidthOffset
+    local oldavg,counter,Button,i,j,param$,oldset
+    local largestMass,nextMass,mass,saveStepsize,saveSample
+    local NumMassMz,NumMassPW,firstm_z,Mass1Mz,PwMzFactor,delta_WG,delta_WO
+    local lens1$,lens2$,lens3$,lens4$,lens5$,lens6$,lens7$,lens8$
+    local RowBelow,WO_Row,WO_mass1,M1Targ,NumMassTarg,corstgt
+    local mass1,mass2,mass3,mass4,mass5,mass6
+    local delta_pw,saveWidthOffset,saveNumMass,chkcount,doit
+    Local  ID_TUNEMAC_NEED_AT_LEAST_667
+    Local  ID_TUNEMAC_ADJUSTING_MASS_849
+    
+    Local  ID_TUNEMAC_UNABLE_TO_ADJU_668
+    Local  ID_TUNEMAC__MASS_I_850
+    Local  ID_TUNEMAC_PEAKWIDTHS_ARE_848
+    ID_TUNEMAC_NEED_AT_LEAST_667                       =  17667  
+    ID_TUNEMAC_ADJUSTING_MASS_849                      =  17849  
+    ID_TUNEMAC_UNABLE_TO_ADJU_668                      =  17668  
+    ID_TUNEMAC_UNABLE_TO_ADJU_668                      =  17668  
+    ID_TUNEMAC__MASS_I_850                             =  17850  
+    ID_TUNEMAC_PEAKWIDTHS_ARE_848                      =  17848  
+    Local lDebug;			lDebug = 0
+    Local lPeakWidthGainSlope;	! Holds the proportional factor for width gain 
+    				! adjustment. Differs from 1946/56 to 6100 
+    Local lPeakWidthOffsetSlope;    ! Holds the proportinal factor for width offset
+                                    ! adjustment.
+    Local lSaveStepWidth;		! Width for save iteration step. must be < 1
+        If ( Pre6100() > 0 ) then
+    	lPeakWidthGainSlope   = 3276.8 * 20
+    	lPeakWidthOffsetSlope = -500
+    	lSaveStepWidth = 0.6
+        else ! CPL 10/08/2006 start
+          if (MSD_HT = 1) then
+            !lPeakWidthGainSlope = 3276.8 * 10 
+            lPeakWidthGainSlope = 2048 * 20 ! from Beacon Theory of Operation
+            lPeakWidthOffsetSlope = -1000
+            lSaveStepWidth = 0.6
+          else
+            !lPeakWidthGainSlope = 3276.8 * 10
+            lPeakWidthGainSlope = 2048 * 20 ! from Beacon Theory of Operation
+            lPeakWidthOffsetSlope = -500
+            lSaveStepWidth = 0.6
+          endif ! CPL 10/08/2006 end
+        Endif
+      
+      largestMass = 0
+      nextMass = 0
+      
+      if check(variable,charge) = 0 then
+        MSParm polarity,charge               !* set charge if not defined
+      endif
+      if check(variable,msat_mode) = 0 then
+        msat_SetMode charge                  !* set msat_mode if not defined
+      endif
+    
+    !* Save tune masses settings
+      on error print                      !* ignore errors and prevent aborts
+      setabort off                        !* until settings are saved
+      msat_SaveMasses
+      msat_SetAllWidths target,tolerance,regIndex
+      setabort on
+    
+      !change stepsize to 0.05
+        MSStepsize saveStepsize,0.05
+        MSSamples saveSample,12                      ! changed to 12 for fast scan FW change PHC 06/12/2002
+        MSAverages oldavg,3
+    
+    !* sorts tune masses, delete replicates, moves selected masses up, 
+    !* and masses that are not selected are removed
+      MSMassSort 1
+    
+    !* gets the number of tune masses available, also represents highest mass number
+      MSMassValue 0,NumMass                          ! Yields number of masses
+      MSMassValue 1,M1Targ
+    
+      if NumMass < 2 then
+        Button = alert(ReadResource$("tunemac",ID_TUNEMAC_NEED_AT_LEAST_667),1)          ! quits after this message
+        if RegSize(SaveMass) > -1 then
+          msat_RestoreMasses
+          DelReg SaveMass
+        endif
+        remove NumMass
+        return
+      endif
+    
+      on error msat_WidthsErr
+      mstn_AddAbortHandler "msat_WidthsAbort"
+    
+    
+    ! Check to see if any masses outside target, +/- tolerance or lacking dynamic WidthOffset:
+      ! CPL 06/25/09 start
+        !  if msat_checkpw (target,tolerance) = 1 then
+      if (msat_checkpw (target,tolerance) = 1) OR (isDynamic ("WidthOffset") < 1) then
+      ! CPL 06/25/09 end 
+        lens1$ = ""
+        lens2$ = ""
+        lens3$ = ""               !* Initialize to empty string
+        lens4$ = ""               !* because MSDynamic won't reset
+        lens5$ = ""               !* lens strings that are not active
+        lens6$ = ""
+        lens7$ = ""
+        lens8$ = ""
+        msdynamic list,lens1$,lens2$,lens3$,lens4$,lens5$,lens6$,lens7$,lens8$
+        if instr("WidthOffset",lens1$)=1 OR instr("WidthOffset",lens2$)=1 OR \
+           instr("WidthOffset",lens3$)=1 OR instr("WidthOffset",lens4$)=1 OR \
+           instr("WidthOffset",lens5$)=1 OR instr("WidthOffset",lens6$)=1 OR \
+           instr("WidthOffset",lens7$)=1 OR instr("WidthOffset",lens8$)=1 then
+            ! Find value for mass1, Parameter ID = 21 is for width offset
+            WO_Row = RowByVal (TuneFileReg[1],DynParm_Table,,ParmID,"=",21)
+            WO_mass1 = TabVal(TuneFileReg[1],DynParm_Table,WO_Row,funcValue1)
+            If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+                Print "MSAT_Width: WO_Mass1 =", WO_Mass1
+            Endif
+    	MSDynamic widthOffset, disable  
+    	MSParm WidthOffset,,WO_mass1
+        endif
+        ! Do not use high mass because there is a greater chance of the peak 
+        ! being unresolved or unstable
+        MSMassValue NumMass,largestMass
+        if largestMass > 2300 AND NumMass >= 3 then
+            nextMass = 1
+            NumMass = NumMass - nextMass
+        endif
+        MSMassValue NumMass,NumMassTarg
+          
+        for counter = 2 to (NumMass - 1)
+          !* This will set up MSProfile to do only two masses
+          !* by unselecting masses all but the first and NumMass masses
+          !* assuming that first and NumMass masses are selected
+          MSMassValue counter,,,,0
+        next counter
+      
+        ! See if mass axis calibration required:
+          MSMassValue 1,Mass1Mz
+          if peakm_z1 < (Mass1Mz*0.999) or peakm_z1 > (Mass1Mz*1.001) then
+            Print ReadResource$("tunemac",ID_TUNEMAC_ADJUSTING_MASS_849)
+            MSMassWindow 50
+            evaluate "peakmaxA = peakmax" + val$(NumMass)
+            evaluate "basepeakA = basepeak" + val$(NumMass)
+            msat_adjustMassAxis
+            print MSProfileAvg(2,1)
+          endif 
+        
+        ! Get mass 1 in the working range
+        ! MSAbundance 20000,400000,1
+        MSAbundance 10000,400000,1
+        print msprofileavg(2,1)
+    
+        ! Lower WG to fatten peaks up:
+        MSMassWindow 50
+        evaluate "NumMassPW = peakwidth"+ val$(NumMass)
+        evaluate "NumMassAbund = peakmax"+ val$(NumMass)+ "- peakmin"+ val$(NumMass)
+        while (NumMassPW < 1) or NumMassAbund < 5000
+            MSParm WidthGain,oldWG
+            newWG = oldWG - 50
+            MSParm WidthGain,,newWG
+            print msprofileavg(2,1)
+            evaluate "NumMassPW = peakwidth"+ val$(NumMass)
+            evaluate "NumMassAbund = peakmax"+ val$(NumMass) + "- peakmin"+ val$(NumMass)
+            If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+                Print "MSAT_Width: WO_Mass1 =", WO_Mass1
+    	    Print "MSAT_Width: NumMassPW, NumMassAbund =",\
+                       NumMassPW, NumMassAbund
+            Endif
+          endwhile ! while nummassPW < 1
+          
+          MSAbundance 20000,400000,1       ! after getting it in the ballpark
+    
+        ! First pass at target width + 0.15:
+          corstgt = target + 0.15
+          MSMassWindow 50
+          print msprofileavg(2,1)
+          evaluate "NumMassPW = peakwidth"+ val$(NumMass)
+          evaluate "NumMassMZ = peakm_z"+ val$(NumMass)
+          if NumMassMZ = -1 then
+              evaluate "NumMassMZ = BasePeak"+ val$(NumMass)
+          endif
+          firstm_z = peakm_z1
+          if peakm_z1 < 100 then
+              firstm_z = BasePeak1
+          endif
+          origmax1 = peakmax1
+          evaluate "origmaxNumMass = peakmax"+val$(NumMass)
+          PwMzFactor = (NumMassPW-peakwidth1)/(NumMassMZ-firstm_z)
+          delta_WG = PwMzFactor * lPeakWidthGainSlope
+          delta_WO = ((corstgt-peakwidth1)+(PwMzFactor*firstm_z)) \
+                     * lPeakWidthOffsetSlope
+          ! Set new values and re-do Mass Axis:
+          MSParm WidthGain,oldWG
+          MSParm WidthOffset,oldWO
+          newWG = oldWG + ( delta_WG * lSaveStepWidth )
+          newWO = oldWO + delta_WO
+            If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+                Print "MSAT_Width: Peak width first iteration:"
+                Print "MSAT_Width: lSaveStepWidth =", lSaveStepWidth
+                Print "MSAT_Width: origmax1 =", origmax1
+                Print "MSAT_Width: origmaxNumMass =", origmaxNumMass
+                Print "MSAT_Width: NumMassPW =", NumMassPW
+                Print "MSAT_Width: NumMassMZ =", NumMassMZ
+                Print "MSAT_Width: PeakWidth1 =", PeakWidth1
+                Print "MSAT_Width: Peakm_z1 =", Peakm_Z1
+                Print "MSAT_Width: Firstm_z =", Firstm_z
+                Print "MSAT_Width: PWMZFactor =", PWMZFactor
+                Print "MSAT_Width: Delta_WG =", Delta_WG
+                Print "MSAT_Width: Delta_WO =", Delta_WO
+                Print "MSAT_Width: Old and New WO =", OldWO, NewWO
+                Print "MSAT_Width: Old and New WG =", OldWG, NewWG
+            Endif
+          MSParm WidthGain,,newWG
+          MSParm WidthOffset,,newWO
+          evaluate "peakmaxA = peakmax" + val$(NumMass)
+          evaluate "basepeakA = basepeak" + val$(NumMass)
+          msat_adjustMassAxis
+    
+        ! Second pass, at actual target:
+        chkcount = 0
+        while chkcount = 0
+          print msprofileavg(3,1)
+          evaluate "NumMassPW = peakwidth"+ val$(NumMass)
+          evaluate "NumMassMZ = peakm_z"+ val$(NumMass)
+          if NumMassMZ = -1 then
+            evaluate "NumMassMZ = BasePeak"+ val$(NumMass)
+          endif
+          firstm_z = peakm_z1
+          if peakm_z1 < 100 then
+            firstm_z = BasePeak1
+          endif
+          PwMzFactor = (NumMassPW-peakwidth1)/(NumMassMZ-firstm_z)
+          delta_WG = PwMzFactor * lPeakWidthGainSlope * lSaveStepWidth
+          delta_WO = ((target-peakwidth1)+(PwMzFactor*firstm_z)) \
+            * lPeakWidthOffsetSlope
+          ! Set new values and re-do Mass Axis:
+          newWG = newWG + delta_WG
+          newWO = newWO + delta_WO
+            If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+              Print "MSAT_Width: N-Iteration"
+              Print "MSAT_Width: NumMassPW =", NumMassPW
+              Print "MSAT_Width: NumMassMZ =", NumMassMZ
+              Print "MSAT_Width: PeakWidth1 =", PeakWidth1
+              Print "MSAT_Width: Peakm_z1 =", Peakm_Z1
+              Print "MSAT_Width: PWMZFactor =", PWMZFactor
+              Print "MSAT_Width: Delta_WG =", Delta_WG
+              Print "MSAT_Width: Delta_WO =", Delta_WO
+              Print "MSAT_Width: New WO =", NewWO
+              Print "MSAT_Width: New WG =", NewWG
+            Endif
+          MSParm WidthGain,,newWG
+          MSParm WidthOffset,,newWO
+          MSMassWindow 5
+          evaluate "peakmaxA = peakmax" + val$(NumMass)
+          evaluate "basepeakA = basepeak" + val$(NumMass)
+          msat_adjustMassAxis
+        
+          ! Check if peakwidths are low enough to proceed:
+          print msprofileavg(2,1)
+          newmax1 = peakmax1
+          evaluate "newmaxNumMass = peakmax"+val$(NumMass)
+          evaluate "NumMassPW = peakwidth"+ val$(NumMass)
+          if ( peakwidth1 < 3 ) and ( NumMassPW < 3 ) then
+              chkcount = 1
+          endif
+        endwhile !* while chkcount = 0
+    
+        ! Adjust lenses if in the midst of autotune:
+        if autobit = 1 then
+            MSMassValue 2,,,oldset,1          ! Mass 2 selected for lens calibration
+          if (MSD_SL = 1) or (MSD_HT = 1) then
+                msat_CalibD msat_mode,charge,RegIndex,polarity     !optimizes lens voltage for SL models
+          else 
+                msat_Calibrate msat_mode,charge,RegIndex,polarity  !optimizes lens voltage for all others
+          endif
+              MSMassValue 2,,,,oldset
+        endif ! autobit = 1
+    
+        ! Last pass changing both WG and WO:
+        print msprofileavg(2,1)
+        evaluate "NumMassPW = peakwidth"+ val$(NumMass)
+        evaluate "NumMassMZ = peakm_z"+ val$(NumMass)
+        if NumMassMZ = -1 then
+            evaluate "NumMassMZ = BasePeak"+ val$(NumMass)
+        endif
+        firstm_z = peakm_z1
+        if peakm_z1 < 100 then
+            firstm_z = BasePeak1
+        endif
+        PwMzFactor = (NumMassPW-peakwidth1)/(NumMassMZ-firstm_z)
+        delta_WG = PwMzFactor * LPeakWidthGainSlope
+        delta_WO = ((target-peakwidth1)+(PwMzFactor*firstm_z)) \
+    	     * lPeakWidthOffsetSlope
+        newWG = newWG + delta_WG
+        newWO = newWO + delta_WO
+        If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+          Print "MSAT_Width: Last-Iteration"
+          Print "MSAT_Width: NumMassPW =", NumMassPW
+          Print "MSAT_Width: NumMassMZ =", NumMassMZ
+          Print "MSAT_Width: PeakWidth1 =", PeakWidth1
+          Print "MSAT_Width: Peakm_z1 =", Peakm_Z1
+          Print "MSAT_Width: PWMZFactor =", PWMZFactor
+          Print "MSAT_Width: Delta_WG =", Delta_WG
+          Print "MSAT_Width: Delta_WO =", Delta_WO
+          Print "MSAT_Width: New WO =", NewWO
+          Print "MSAT_Width: New WG =", NewWG
+        Endif
+          MSParm WidthGain,,newWG
+          MSParm WidthOffset,,newWO
+          evaluate "peakmaxA = peakmax" + val$(NumMass)
+          evaluate "basepeakA = basepeak" + val$(NumMass)
+          msat_adjustMassAxis
+    
+        ! Set up WO ramp:
+          !MSMassWindow 3
+          MSMassWindow 5				! change to 5 for SL-HT
+          MSAverages ,9
+          NumMass = NumMass + NextMass            ! Resets it to 6 if in 6 mass tune
+          msparm widthOffset,saveWidthOffset
+          param$ = "widthOffset,set"
+          for i = 1 to NumMass
+            evaluate "MSMassValue " + val$(i) + ",mass" + val$(i)
+            MSParm WidthOffset,,saveWidthOffset
+            newWO = saveWidthOffset               ! To start with
+            for j = 1 to NumMass
+              MSMassValue j,,,,1                  ! Select the mass
+            next j
+            for j = 1 to NumMass
+              if j <> i then
+                MSMassValue j,,,,0                ! Deselect all other masses
+              endif
+            next j
+    
+            print MSProfileAvg(2,1)
+            
+            MSMassValue i, mass
+            evaluate "delta_pw = peakwidth"+val$(i)+"-target"
+          !print delta_pw                     ! Clean up U.I.
+            if (abs(delta_pw) <= tolerance) then
+              doit = 1
+            else
+              doit = 0
+            endif
+            count = 0
+            best_delta = delta_pw
+            bestWO = newWO
+            while (abs(delta_pw) > tolerance) or (doit = 0)
+              oldWO = newWO
+              old_delta = delta_pw
+              newWO = newWO + (delta_pw*500)       ! Restore original WO stepsize
+              ! newWO = newWO + (delta_pw*250)     ! Decrease WO stepsize for Lassen  CPL 08/09/2005
+              MSParm WidthOffset,,newWO
+              print MSProfileAvg(2,1)
+              evaluate "delta_pw = peakwidth"+val$(i)+"-target"
+              if (abs(delta_pw) <= tolerance) then
+                doit = 1
+              else
+                doit = 0
+              endif
+              if delta_pw < old_delta              ! keep track of best effort
+                best_delta = delta_pw
+                bestWO = newWO
+              endif
+          !print delta_pw                     ! Clean up U.I.
+              if (abs(delta_pw) > abs(old_delta)) and (count > 9) then
+                if (i=5) or (i=6) then
+                  MSParm WidthOffset,,bestWO   ! Set back to smallest delta
+                  act_tgt = TabVal(TuneMixReg[RegIndex],"TuneIons",i,"GPW50")
+          !print delta_pw                     ! Clean up U.I.
+                  delta_act = best_delta - act_tgt
+          !print delta_pw                     ! Clean up U.I.
+                  if abs(delta_act) < tolerance
+                    doit = 1
+                  else
+                    generate error 1,ReadResource$("tunemac",ID_TUNEMAC_UNABLE_TO_ADJU_668) + val$(mass)  ! quits after this message
+                  endif
+                else
+                  generate error 1,ReadResource$("tunemac",ID_TUNEMAC_UNABLE_TO_ADJU_668) + val$(mass)    ! quits after this message
+                endif !* if (i=5) or (i=6)
+              endif !* if delta_pw > old_delta
+              count = count + 1
+            endwhile !* while (abs(delta_pw) > tolerance)
+    
+            msparm widthOffset, oldWidthOffset
+            evaluate "o" + val$(i) + " = " + val$(oldWidthOffset)
+            param$ = param$ + sprintf$(i,ReadResource$("tunemac",ID_TUNEMAC__MASS_I_850)) + sprintf$(i,"o%i")
+          next i
+    
+          for j = 1 to NumMass
+            MSMassValue j,,,,1
+          next j
+          
+          ! Send down the ramp now:
+            MSDynamic widthOffset, enable
+            evaluate "MSDynamic " + param$
+    
+          MSMassWindow 5
+          MSAverages ,oldavg
+          !print msprofileavg(3,1,1)		! Run 2x to avoid wide peaks from msProfile  CPL 08/08/2005
+          print msprofileavg(2,1)			! Wide peaks from msProfile command fixed CPL 01/27/2006
+        endif  ! if msat_checkpw (target,tolerance) = 1
+      msat_WidthsCleanup saveStepsize,saveSample
+    
+      print ReadResource$("tunemac",ID_TUNEMAC_PEAKWIDTHS_ARE_848)
+    endmacro  ! msat_widths
+    
+    

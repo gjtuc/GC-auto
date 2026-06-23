@@ -1,0 +1,165 @@
+!----- Caution: ---------------------------------------------------------
+! Macros contained in this macro file should not call printing commands. 
+! Macro names must not be a duplicate of any macro delivered with the
+! Agilent ChemStation.
+! It is recommended to keep this macro file in \CHEM32\REPSTYLE\
+!------------------------------------------------------------------------
+
+!********************
+name USR_sortedby$ !*
+!********************
+  SortedBy = TabHdrVal(_DaMethod[1], "RptParm", "SortedBy")
+  if SortedBy = 0 then
+    return "RT"
+  else
+    return "Signal"
+  endif
+endmacro
+
+!*************************
+name USR_SortedBySignal !*
+!*************************
+  parameter SignalIndex
+
+  return TabHdrVal(_DaMethod[1], "RptParm", "SortedBy")
+endmacro
+
+!*********************************
+name USR_SortedBySigAndSigFound !*
+!*********************************
+  parameter SignalIndex
+
+  if (RowByVal(ChromRes[1],Signal,,"CalSignal","=",SignalIndex) < 1)
+    return 0
+  else
+    return TabHdrVal(_DaMethod[1], "RptParm", "SortedBy")
+  endif
+endmacro
+
+!**************************
+name USR_SortedByRetTime !*
+!**************************
+  parameter SignalIndex
+
+  if (TabHdrVal(_DaMethod[1], "RptParm", "SortedBy")=0)
+    return 1
+  else
+    return 0
+  endif
+endmacro
+
+!*******************
+name USR_CurIndex !*
+!*******************
+parameter Index
+  
+  return Index
+endmacro
+
+!*************************
+name USR_CalcPerfNoise$
+!*************************
+
+  if (Check(MACRO,evaluatePerformance) = 0)
+	macro "report.mcx"
+  endif
+ 
+  evalperf 
+  evalperf ,1
+  CalcNoise
+  return ""	
+endmacro
+
+!*************************
+name USR_CalcPerfShort$
+!*************************
+
+  if (Check(MACRO,evaluatePerformance) = 0)
+	macro "report.mcx"
+  endif
+  evalperf  ,1
+  return ""	
+endmacro
+
+
+!********************
+name USR_ECMServer$
+!********************
+Local Server$
+
+Server$=""
+IF VCS_INTEGRATION=1 THEN
+  IF VcsService_IsAttached(dadatapath$)<>0 THEN
+	  Server$ = VcsService_GetVcsInfo$(dadatapath$,VcsService_IVcsWorkingCopyItem_HostUrl$)+"/"+VcsService_GetVcsInfo$(dadatapath$,VcsService_IVcsWorkingCopyItem_TenantKey$)
+  ENDIF
+ENDIF
+return Server$
+endmacro
+
+!********************
+name USR_ECMOperator$
+!********************
+Local Operator$
+
+Operator$=""
+IF VCS_INTEGRATION=1 THEN
+  IF VcsService_IsAttached(dadatapath$)<>0 THEN
+     Operator$ = _Operator$
+  ENDIF
+ENDIF
+return Operator$
+endmacro
+
+!********************
+name USR_ECMPath$
+!********************
+Local Path$
+
+Path$=""
+IF VCS_INTEGRATION=1 THEN
+  IF VcsService_IsAttached(dadatapath$)<>0 THEN
+	  Path$ = VcsService_GetVcsInfo$(dadatapath$,VcsService_IVcsWorkingCopyItem_RepositoryPath$)
+  ENDIF
+ENDIF
+return Path$
+endmacro
+
+
+!********************
+name USR_ECMVersion$
+!********************
+Local Version$
+
+Version$=""
+IF VCS_INTEGRATION=1 THEN
+  IF VcsService_IsAttached(dadatapath$)<>0 THEN
+	  Version$ = VcsService_GetVcsInfo$(dadatapath$,VcsService_IVcsWorkingCopyItem_VersionUI$)+VC_PrintContainerChangedText$(dadatapath$)
+  ENDIF
+ENDIF
+return Version$
+endmacro
+
+
+!********************
+name USR_ECMinfo$
+!********************
+local info$
+
+info$=""
+IF VCS_INTEGRATION=1 THEN
+  IF VcsService_IsAttached(dadatapath$)<>0 THEN
+    info$ = "ECM Server      : " + USR_ECMServer$() + chr$(13)+chr$(10) +\ 
+            "ECM Operator    : " + USR_ECMOperator$() + chr$(13)+chr$(10) +\
+            "ECM Path        : " + USR_ECMPath$() + chr$(13)+chr$(10) +\
+            "ECM Version     : " + USR_ECMVersion$()
+  Else
+  if (VC_IsAcquisitionWithUpload() = 1) or (VC_IsReprocessWithImport() = 1)            
+    info$ = "ECM Operator    : " + _Operator$ + chr$(13)+chr$(10) +\
+            "ECM Target Path : " + VC_DetermineReportUploadPath$()
+  EndIf
+  Endif
+  
+Endif
+return info$
+endmacro
+

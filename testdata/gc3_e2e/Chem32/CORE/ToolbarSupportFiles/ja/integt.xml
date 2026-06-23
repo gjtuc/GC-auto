@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="IntegT" PosStyle="TOP" DockRow="1" DockCol="1" Caption="積分カーソル ツールバー" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="シグナル表示" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals " DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="グラフィック ツールバー表示" CmdList="ANN_CloseTask|ANN_InitTask" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="ウィンドウを拡大" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="ウィンドウを縮小" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="選択モード" Command="INT_SetIntegMenuSelection NoSel,1" NewGroup="1" Group="2" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="DrawBaseline" Help="マニュアル積分: ピーク ベースラインを設定し、積分します" Command="INT_SetIntegMenuSelection DrawBaseline,1" Group="2" ImageName="Int_DrawBaseline20" ImageNameDisabled="Int_DrawBaseline20_d"/>
+		<RadioButton Name="NegatievePeaks" Help="マニュアル積分: ネガティブ ピークのベースラインを設定し積分します" Command="INT_SetIntegMenuSelection NegatievePeaks,1" Group="2" ImageName="Int_DrawBaseline_Negative20" ImageNameDisabled="Int_DrawBaseline_Negative20_d"/>
+		<RadioButton Name="TangentSkim" Help="マニュアル積分: タンジェント スキムで積分します" Command="INT_SetIntegMenuSelection TangentSkim,1" Group="2" ImageName="Int_TangentSkim20" ImageNameDisabled="Int_TangentSkim20_d"/>
+		<RadioButton Name="SplitPeaks" Help="マニュアル積分: マニュアルでピークを分割し、積分します" Command="INT_SetIntegMenuSelection SplitPeaks,1" Group="2" ImageName="Int_SplitPeak20" ImageNameDisabled="Int_SplitPeak20_d"/>
+		<RadioButton Name="DeletePeaks" Help="マニュアル積分: 積分結果から積分ピークを削除します" Command="INT_SetIntegMenuSelection DeletePeaks,1" Group="2" ImageName="Int_RemovePeak20" ImageNameDisabled="Int_RemovePeak20_d"/>
+		<PushButton Name="UndoEvent" Help="マニュアル積分: 現在のクロマトグラムから最終のマニュアル積分イベントを取り消す。個々のシグナルにのみ有効; 'シグナル表示' リストからシグナルを選択" Command="DFEvents_TLB_UndoEvents" ImageName="ManInt_Undo20" ImageNameDisabled="ManInt_Undo20_d"/>
+		<PushButton Name="RemoveEvents" Help="マニュアル積分: 現在クロマトグラムに表示されている、全てのイベントを削除する。 データ ファイルは更新されない; データ ファイルからイベントを削除するためには、保存ボタンを使用してください。" Command="DFEvents_TLB_RemoveEvents" ImageName="ManInt_Del20" ImageNameDisabled="ManInt_Del20_d"/>
+		<PushButton Name="SaveEvents" Help="マニュアル積分: データ ファイルに、現在表示されているクロマトグラムのイベントを保存" Command="DFEvents_TLB_SaveEvents" ImageName="ManInt_Save20" ImageNameDisabled="ManInt_Save20_d"/>
+
+		<RadioButton Name="PeakPerfTool" Help="Interactive Peak Performance" Command="PKP_getPeakPerfManually" Group="2" ImageName="Int_PeakPerf20" ImageNameDisabled="Int_PeakPerf20_d"/>
+
+	</toolbar>
+</graphical_object>

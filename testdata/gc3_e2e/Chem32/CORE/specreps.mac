@@ -1,0 +1,84 @@
+! Report macros for library search results
+! Last altered by RZ 25-Aug-93
+
+Name printLibResNotes
+
+Local firstNote
+  
+  local ID_PHX3DSUPPORTFILES_NOTE_S_303
+  ID_PHX3DSUPPORTFILES_NOTE_S_303                    =  17303  
+  
+  firstNote = 1
+  if tabHdrType(chromRes, "compound", "upslopeNote") <> 99 then
+    if firstNote = 1 then; firstNote = 0
+      print #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NOTE_S_303); endIf
+    print #5, tabHdrText$(chromRes, "compound", "upslopeNote"); endIf
+  if tabHdrType(chromRes, "compound", "downslopeNote") <> 99 then
+    if firstNote = 1 then; firstNote = 0
+      print #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NOTE_S_303); endIf
+    print #5, tabHdrText$(chromRes, "compound", "downslopeNote"); endIf
+  if tabHdrType(chromRes, "compound", "thresholdNote") <> 99 then
+    if firstNote = 1 then; firstNote = 0
+      print #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NOTE_S_303); endIf
+    print #5, tabHdrText$(chromRes, "compound", "thresholdNote"); endIf
+  if tabHdrType(chromRes, "compound", "proposal2Note") <> 99 then
+    if firstNote = 1 then; firstNote = 0
+      print #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NOTE_S_303); endIf
+    print #5, tabHdrText$(chromRes, "compound", "proposal2Note"); endIf
+  if tabHdrType(chromRes, "compound", "doubleNameNote") <> 99 then
+    if firstNote = 1 then; firstNote = 0
+      print #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NOTE_S_303); endIf
+    print #5, tabHdrText$(chromRes, "compound", "doubleNameNote"); endIf
+  return
+
+endMacro ! printLibResNotes
+
+
+!Print library search parameter
+Name printLibParms
+
+  parameter destination$
+
+  local i, max_i
+Local firstTime, purThreshold
+  
+Local ID_PHX3DSUPPORTFILES___LIBRARY_SEAR_304
+Local ID_PHX3DSUPPORTFILES_LIBRARY_FILE_N_305
+Local ID_PHX3DSUPPORTFILES_LIBRARY_FILE_N_306 
+Local ID_PHX3DSUPPORTFILES_MATCH_THRESHOL_307
+Local ID_PHX3DSUPPORTFILES________PURITY_308
+Local ID_PHX3DSUPPORTFILES________PURITY_309
+Local ID_PHX3DSUPPORTFILES________PURITY_310
+  
+      
+  ID_PHX3DSUPPORTFILES___LIBRARY_SEAR_304            =  17304  
+  ID_PHX3DSUPPORTFILES_LIBRARY_FILE_N_305            =  17305  
+  ID_PHX3DSUPPORTFILES_LIBRARY_FILE_N_306            =  17306  
+  ID_PHX3DSUPPORTFILES_MATCH_THRESHOL_307            =  17307  
+  ID_PHX3DSUPPORTFILES________PURITY_308             =  17308  
+  ID_PHX3DSUPPORTFILES________PURITY_309             =  17309  
+  ID_PHX3DSUPPORTFILES________PURITY_310             =  17310  
+
+  print using #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES___LIBRARY_SEAR_304), tabHdrText$(chromRes, "autoIDparms", "modus")
+  max_i = tabHdrVal(chromRes, "autoIDparms", "numberOfRows")
+  for i = 1 to max_i
+    if (destination$ = "PRINTER") and (yLogMax()-yLoc() < 5) then; formFeed; endIf
+    print using #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_LIBRARY_FILE_N_305), i
+    print using #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_LIBRARY_FILE_N_306), tabText$(chromRes, "autoIDparms", i, "libraryName")
+    print using #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_MATCH_THRESHOL_307), tabVal(chromRes, "autoIDparms", i, "libThreshold")
+    if tabHdrVal(chromRes, "autoIDparms", "doPurity") = 1 then
+      purThreshold = tabVal(chromRes, "autoIDparms", i, "purThreshold")
+      if purThreshold = -2 then
+        print using #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES________PURITY_308)
+      else
+        print using #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES________PURITY_309), purThreshold
+      endIf
+    else
+      print using #5, ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES________PURITY_310)
+    endIf
+    printLibSearchTemp 5, 0, "libSearchTab"+val$(i), 1
+    print using #5, "/"
+  next i
+  return
+
+endMacro ! printLibParms

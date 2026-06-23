@@ -1,0 +1,14 @@
+name shutdown
+    local reply$
+
+    print NLSCoreUtil$("ShutdownMsg")
+    !!!!!   Do your own commands  here
+    STANDBY
+    ! switch off FLD lamp
+    if dev1046FLD = 1
+       if _offline = 0
+          reply$ = SendModule$ ("FLD", "LAMP=0")
+       endif
+    endif
+    print NLSCoreUtil$("ShutdownMsg")
+    endmacro

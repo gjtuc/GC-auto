@@ -1,0 +1,45 @@
+!******************************************************************************
+!*
+!* FILE:  hpmslbsr.mac
+!*
+!* DESCRIPTION:  MS Library Search start up
+!* $Header: /cag/triath1b/dlc_cmds/mslibsrc/hpmslbsr.mac 1.2 1998-01-16 13:14:54-08 hmgr Exp $
+!******************************************************************************
+!*
+!* MACROS : HpMsLibSrc		Initialize the MS Library Search if the NIST package is loaded
+!*          MSToolbarButtons	Display the library toolbar buttons
+!*
+
+!############################################################################
+name  HpMsLibSrc 
+!  Loads HPMSLB00.DLC if the NIST MS Library Search is installed.
+!############################################################################
+
+  if LEN(PrivateProfileString$("General","NistDirectory",_AutoMSPath$ + "NistMs.Ini","")) > 0 then
+    print "MS library search installed."
+    _NISTMS = InstallCmds(_AutoMSPath$ + "HPMSLB00.DLC")
+  endif
+
+endmacro
+
+!############################################################################
+name  MSToolbarButtons
+!  Adds buttons to the library toolbar
+!############################################################################
+
+  if Check(VARIABLE,_NISTMS)=1
+    tlbrsetpropertyval , "specf", "NISTCreateFile", "visible", 1 
+    tlbrsetpropertyval , "specf", "NISTStartSearch", "visible", 1 
+    ! GOMSetVal "","LIB","AddOnButton1","y",340
+    ! GOMSetText "","LIB","AddOnButton1","Help","Create/Append MS NIST File"
+    ! GOMSetText "","LIB","AddOnButton1","ImageList","BMP.MSEXPORT|BMP.MSEXPORT|BMP.MSEXPRTD|"
+    ! GOMSetText "","LIB","AddOnButton1","Command","MSSrchExport MSReg[1];print ""One spectrum was added to the NIST file."""
+    ! GOMSetVal "","LIB","AddOnButton2","y",380
+    ! GOMSetText "","LIB","AddOnButton2","Help","Close MS NIST file and go to NIST program"
+    ! GOMSetText "","LIB","AddOnButton2","ImageList","BMP.MSNIST|BMP.MSNIST|BMP.MSNISTD|"
+    ! GOMSetText "","LIB","AddOnButton2","Command","MSSrchGotoNist"
+  endif
+
+endmacro
+
+

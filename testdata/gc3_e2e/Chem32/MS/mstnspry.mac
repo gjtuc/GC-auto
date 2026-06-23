@@ -1,0 +1,1277 @@
+!***************************************************************************!
+! $Header: /cag/DRIVERS/sprite1b/macros/tune/mstnspry.mac 1.10 2002-06-18 16:12:39-07 clove Exp $
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+!* Edit Spray Chamber setpoints via dialog boxes.
+!*
+!* Macros:   EdUpdSetpoint ! update current setpoints
+!*           EdUpdTuneMix  ! update TuneMix register
+!*           EdUpdAllTune  ! update all tune files with the same ion mode
+!*           EditESI       ! edit ESI spray chamber setpoints.
+!*           EditAPCI      ! edit APCI spray chamber setpoints.
+!*           EditAPPI      ! edit APPI spray chamber setpoints.
+!*           Edit_Spray    ! Main dialog box that calls EditESI, EditAPCI, or EditAPPI
+!*
+!* Globals:  EdSprayVer$, TuneMixReg
+!*
+!*!***************************************************************************!
+
+ EdSprayVer$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/mstnspry.mac 1.10 2002-06-18 clove Exp $"
+ verIx = instr(EdSprayVer$, ".mac") + 5
+ EdSprayVer$ =  EdSprayVer$[verIx:VerIx + instr(EdSprayVer$[VerIx:len(EdSprayVer$)]," ") - 1] 
+ remove verIx
+
+
+!***************************************************************************!
+name EdUpdSetpoint
+PARAMETER selmode$
+!
+! Description: Update current setpoints only if the ion mode matches
+!              the selected mode (APCI, APPI, or API-ES) in the current tune file.
+!
+!***************************************************************************!
+local IonMode$		! ion mode
+local currentpol    ! current polarity
+
+Local  ID_TUNEMAC_CURRENT_SETPOI_259
+Local  ID_TUNEMAC_CURRENT_SETPOI_260
+Local  ID_TUNEMAC_UPDATING_POSIT_261
+Local  ID_TUNEMAC_UPDATING_NEGAT_262
+Local  ID_TUNEMAC_CURRENT_SETPOI_263
+ID_TUNEMAC_CURRENT_SETPOI_259                      =  17259  
+ID_TUNEMAC_CURRENT_SETPOI_260                      =  17260  
+ID_TUNEMAC_UPDATING_POSIT_261                      =  17261  
+ID_TUNEMAC_UPDATING_NEGAT_262                      =  17262  
+ID_TUNEMAC_CURRENT_SETPOI_263                      =  17263  
+  if _offline = 1 then
+     Print ReadResource$("tunemac",ID_TUNEMAC_CURRENT_SETPOI_259)
+     RETURN
+  endif
+
+!UPDATE CURRENT SETPOINTS 
+  MSGetMode IonMode$
+ 
+  !*** CHECK FOR CORRECT IONIZATION MODE ***!
+  if instr(IonMode$,selmode$) = 0 then
+    print alert(ReadResource$("tunemac",ID_TUNEMAC_CURRENT_SETPOI_260))
+  else
+    msparm ionpol,currentpol
+
+   !*** LOAD POSITIVE ION TUNE FILE ***!
+    MSGetTuneFile TuneFileName$, 0,, 
+    if (selmode$ = "ES") then
+      mszone GasTemp,,,val(ESPos_Temp$)
+      mszone DryingGas,,,val(ESPos_Flow$)
+      mszone Neb_Pres,,,val(ESPos_Pressure$)
+      msparm VCap,,val(ESPos_VCap$)
+    endif
+      
+    if (selmode$ = "APCI") then
+      mszone Vaporizer,,,val(APCIPos_Vaporizer$)
+      mszone GasTemp,,,val(APCIPos_Temp$)
+      mszone DryingGas,,,val(APCIPos_Flow$)
+      mszone Neb_Pres,,,val(APCIPos_Pressure$)
+      msparm Corona,,val(APCIPos_Corona$)
+      msparm VCap,,val(APCIPos_VCap$)
+    endif
+      
+    if (selmode$ = "APPI") then
+      mszone Vaporizer,,,val(APPIPos_Vaporizer$)
+      mszone GasTemp,,,val(APPIPos_Temp$)
+      mszone DryingGas,,,val(APPIPos_Flow$)
+      mszone Neb_Pres,,,val(APPIPos_Pressure$)
+      msparm VCap,,val(APPIPos_VCap$)
+    endif
+    
+    !***  SAVE POSITIVE ION TUNE FILE ***!
+    print ReadResource$("tunemac",ID_TUNEMAC_UPDATING_POSIT_261)
+    MSSaveTuneFile _tunepath$ + TuneFileName$,0	
+    
+    !*** LOAD NEGATIVE ION TUNE ION ***!
+    MSGetTuneFile TuneFileName$, 1,,1		   
+        
+    if (selmode$ = "ES") then
+      mszone GasTemp,,,val(ESNeg_Temp$)
+      mszone DryingGas,,,val(ESNeg_Flow$)
+      mszone Neb_Pres,,,val(ESNeg_Pressure$)
+      msparm VCap,,val(ESNeg_VCap$)
+    endif
+    
+    if (selmode$ = "APCI") then
+      mszone Vaporizer,,,val(APCINeg_Vaporizer$)
+      mszone GasTemp,,,val(APCINeg_Temp$)
+      mszone DryingGas,,,val(APCINeg_Flow$)
+      mszone Neb_Pres,,,val(APCINeg_Pressure$)
+      msparm Corona,,val(APCINeg_Corona$)
+      msparm VCap,,val(APCINeg_VCap$)
+    endif
+    
+    if (selmode$ = "APPI") then
+      mszone Vaporizer,,,val(APPINeg_Vaporizer$)
+      mszone GasTemp,,,val(APPINeg_Temp$)
+      mszone DryingGas,,,val(APPINeg_Flow$)
+      mszone Neb_Pres,,,val(APPINeg_Pressure$)
+      msparm VCap,,val(APPINeg_VCap$)
+    endif
+    
+    !*** SAVE NEGATIVE ION TUNE FILE ***!
+    print ReadResource$("tunemac",ID_TUNEMAC_UPDATING_NEGAT_262)
+    MSSaveTuneFile _tunepath$ + TuneFileName$,1	
+
+    !*** RELOAD TUNE FILE WITH THE CURRENT ION POL ***!   
+    MSGetTuneFile TuneFileName$, currentpol,,1	
+    print ReadResource$("tunemac",ID_TUNEMAC_CURRENT_SETPOI_263)
+
+  endif !*** if instr(IonMode$,selmode$) = 0 ***!
+
+return	
+
+endmacro !EdUpdSetpoint
+
+!***************************************************************************!
+name EdUpdTuneMix
+PARAMETER selmode$
+!
+! Description: Update TuneMix register
+!
+!***************************************************************************!
+local tunemixsize	
+local count		
+
+!UPDATE TUNE MIX REGISTER 
+Local  ID_TUNEMAC_TUNEMIX_REGIST_264
+ID_TUNEMAC_TUNEMIX_REGIST_264                      =  17264  
+  Delreg TuneMixReg
+  msat_InitTuneMix	!*** RELOAD TUNEMIX REG FROM FILE ***!
+
+  tunemixsize = regsize(TuneMixReg)
+  if (tunemixsize > 1) then
+   
+    !STEP THRU TUNE MIX & CHANGE SET VALUES                     
+    !1ST REG. IS IGNORED SINCCE IT IS A TEMPLATE 
+    for count = 2 to tunemixsize
+     !API -ES 
+      if (selmode$ = "ES") and (ObjHdrVal(TuneMixReg[count], "ionMode") = 0) then	
+       
+        !POSITIVE
+        if ObjHdrVal(TuneMixReg[count], "ionpolarity") = 0 then	
+         
+          !DRYING GAS TEMP DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 13, "Default", val(ESPos_Temp$)
+         
+          !DRYING GAS FLOW DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 14, "Default", val(ESPos_Flow$)
+         
+          !NEBULIZER PRESSURE DEFAULTS 
+          SetTabVal TuneMixReg[count], "TuneParms", 15, "Default", val(ESPos_Pressure$)
+         
+          !VCap DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 11, "Default", val(ESPos_VCap$)
+        endif
+            
+      !NEGATIVE
+        if ObjHdrVal(TuneMixReg[count], "ionpolarity") = 1 then	
+         
+          !DRYING GAS TEMP DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 13, "Default", val(ESNeg_Temp$)
+         
+          !DRYING GAS FLOW DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 14, "Default", val(ESNeg_Flow$)
+          
+          !NEBULIZER PRESSURE DEFAULTS 
+          SetTabVal TuneMixReg[count], "TuneParms", 15, "Default", val(ESNeg_Pressure$)
+          
+          !VCap DEFAULTS 
+          SetTabVal TuneMixReg[count], "TuneParms", 11, "Default", val(ESNeg_VCap$)
+        endif
+      
+      endif
+      
+     !APCI
+      if (selmode$ = "APCI") and (ObjHdrVal(TuneMixReg[count], "ionMode") = 1) then	
+        if ObjHdrVal(TuneMixReg[count], "ionpolarity") = 0 then	! positive
+         
+          !VCap DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 11, "Default", val(APCIPos_VCap$)
+         
+          !ICor DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 12, "Default", val(APCIPos_Corona$)
+         
+          !DRYINING GAS TEMP DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 13, "Default", val(APCIPos_Temp$)
+         
+          !DRYING GAS FLOW DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 14, "Default", val(APCIPos_Flow$)
+         
+          !NEBULIZER PRESSURE DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 15, "Default", val(APCIPos_Pressure$)
+         
+          !VAPORIZER PRESSURE DEFAULTS 
+          SetTabVal TuneMixReg[count], "TuneParms", 16, "Default", val(APCIPos_Vaporizer$)
+        endif
+
+        !NEGATIVE           
+        if ObjHdrVal(TuneMixReg[count], "ionpolarity") = 1 then	
+         
+          !VCap DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 11, "Default", val(APCINeg_VCap$)
+         
+          !ICor DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 12, "Default", val(APCINeg_Corona$)
+         
+          !DRYING GAS TEMP DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 13, "Default", val(APCINeg_Temp$)
+         
+          !DRYING GAS FLOW DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 14, "Default", val(APCINeg_Flow$)
+         
+          !NEBULIZER PRESSURE DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 15, "Default", val(APCINeg_Pressure$)
+         
+          !VAPORIZER PRESSURE DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 16, "Default", val(APCINeg_Vaporizer$)
+        endif
+      endif
+      
+     !APPI
+      if (selmode$ = "APPI") and (ObjHdrVal(TuneMixReg[count], "ionMode") = 2) then	
+        if ObjHdrVal(TuneMixReg[count], "ionpolarity") = 0 then	! positive
+         
+          !VCap DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 11, "Default", val(APPIPos_VCap$)
+         
+          !DRYINING GAS TEMP DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 12, "Default", val(APPIPos_Temp$)
+         
+          !DRYING GAS FLOW DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 13, "Default", val(APPIPos_Flow$)
+         
+          !NEBULIZER PRESSURE DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 14, "Default", val(APPIPos_Pressure$)
+         
+          !VAPORIZER PRESSURE DEFAULTS 
+          SetTabVal TuneMixReg[count], "TuneParms", 15, "Default", val(APPIPos_Vaporizer$)
+        endif
+
+        !NEGATIVE           
+        if ObjHdrVal(TuneMixReg[count], "ionpolarity") = 1 then	
+         
+          !VCap DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 11, "Default", val(APPINeg_VCap$)
+         
+          !DRYING GAS TEMP DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 12, "Default", val(APPINeg_Temp$)
+         
+          !DRYING GAS FLOW DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 13, "Default", val(APPINeg_Flow$)
+         
+          !NEBULIZER PRESSURE DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 14, "Default", val(APPINeg_Pressure$)
+         
+          !VAPORIZER PRESSURE DEFAULTS
+          SetTabVal TuneMixReg[count], "TuneParms", 15, "Default", val(APPINeg_Vaporizer$)
+        endif
+      endif
+      
+    next count  !*** for count = 2 to tunemixsize ***!
+    SaveObj TuneMixReg, _tunepath$ + "tune_mix.reg", NEW
+    print ReadResource$("tunemac",ID_TUNEMAC_TUNEMIX_REGIST_264)
+  
+  endif  !*** if (tunemixsize > 1) ***! 
+
+  return 
+    
+endmacro !EdUpdTuneMix
+
+!***************************************************************************!
+name EdUpdAllTune
+PARAMETER selmode$
+!
+!Description: Update all tune files in the tunepath with the matching
+!             selected ion mode.
+!
+!***************************************************************************!
+local curTuneFile$
+local currentpol   
+local FileList$
+local TuneName$	
+local IonMode$	
+
+Local  ID_TUNEMAC_UPDATING_265
+
+Local  ID_TUNEMAC_ALL_TUNE_FILES_268
+ID_TUNEMAC_UPDATING_265                            =  17265  
+ID_TUNEMAC_UPDATING_265                            =  17265  
+ID_TUNEMAC_ALL_TUNE_FILES_268                      =  17268  
+  curTuneFile$ = TuneFileName$
+  msparm ionpol,currentpol
+  FileList$ = FindFile$(_tunePath$ + "*.TUN")
+
+!CYCLE THRU EACH TUNE FILE AND UPDATE VALUES 
+  while (len(FileList$) > 0) do								  
+    if instr(FileList$,"|") > 0 then
+      TuneName$ = FileList$[1:instr(FileList$,"|")-1]
+      FileList$ = FileList$[instr(FileList$,"|")+1:len(FileList$)]
+    else
+      TuneName$ = FileList$
+      FileList$ = ""
+    endif
+
+    if (converttext$("upper",TuneName$) <> "DEFAULT.TUN") then
+      MSGetTuneFile TuneName$, 0,,1
+      MSGetMode IonMode$	   
+      
+      if (selmode$ = "ES") and (instr(IonMode$,"ES") > 0) then 
+        mszone GasTemp,,,val(ESPos_Temp$)
+        mszone DryingGas,,,val(ESPos_Flow$)
+        mszone Neb_Pres,,,val(ESPos_Pressure$)
+        msparm VCap,,val(ESPos_VCap$)
+      endif
+        
+      if (selmode$ = "APCI") and (instr(IonMode$,"APCI") > 0) then
+        ! mszone Vaporizer,,,val(APCIPos_Vaporizer$),,val(APCIPos_Vaporizer$)
+        mszone Vaporizer,,,val(APCIPos_Vaporizer$)   ! PHC 10/11/2001 Don't want to change limit!
+        mszone GasTemp,,,val(APCIPos_Temp$)
+        mszone DryingGas,,,val(APCIPos_Flow$)
+        mszone Neb_Pres,,,val(APCIPos_Pressure$)
+        msparm Corona,,val(APCIPos_Corona$)
+        msparm VCap,,val(APCIPos_VCap$)
+      endif
+        
+      if (selmode$ = "APPI") and (instr(IonMode$,"APPI") > 0) then
+        ! mszone Vaporizer,,,val(APPIPos_Vaporizer$),,val(APPIPos_Vaporizer$)
+        mszone Vaporizer,,,val(APPIPos_Vaporizer$)
+        mszone GasTemp,,,val(APPIPos_Temp$)
+        mszone DryingGas,,,val(APPIPos_Flow$)
+        mszone Neb_Pres,,,val(APPIPos_Pressure$)
+        msparm VCap,,val(APPIPos_VCap$)
+      endif
+        
+      !SAVE POSITIVE ION TUNE FILE   
+      print ReadResource$("tunemac",ID_TUNEMAC_UPDATING_265) + _tunepath$ + TuneName$ + " -- Positive Ion"
+      MSSaveTuneFile _tunepath$ + TuneName$,0  
+
+      
+      MSGetTuneFile TuneName$, 1,,1	
+      MSGetMode IonMode$	   
+            
+      if (selmode$ = "ES") and (instr(IonMode$,"ES") > 0) then	  
+        mszone GasTemp,,,val(ESNeg_Temp$)
+        mszone DryingGas,,,val(ESNeg_Flow$)
+        mszone Neb_Pres,,,val(ESNeg_Pressure$)
+        msparm VCap,,val(ESNeg_VCap$)
+      endif
+         
+      if (selmode$ = "APCI") and (instr(IonMode$,"APCI") > 0) then 
+        ! mszone Vaporizer,,,val(APCINeg_Vaporizer$),,val(APCINeg_Vaporizer$) 
+        mszone Vaporizer,,,val(APCINeg_Vaporizer$)
+        mszone GasTemp,,,val(APCINeg_Temp$)
+        mszone DryingGas,,,val(APCINeg_Flow$)
+        mszone Neb_Pres,,,val(APCINeg_Pressure$)
+        msparm Corona,,val(APCINeg_Corona$)
+        msparm VCap,,val(APCINeg_VCap$)
+      endif
+         
+      if (selmode$ = "APPI") and (instr(IonMode$,"APPI") > 0) then
+        ! mszone Vaporizer,,,val(APPINeg_Vaporizer$),,val(APPINeg_Vaporizer$)
+        mszone Vaporizer,,,val(APPINeg_Vaporizer$)
+        mszone GasTemp,,,val(APPINeg_Temp$)
+        mszone DryingGas,,,val(APPINeg_Flow$)
+        mszone Neb_Pres,,,val(APPINeg_Pressure$)
+        msparm VCap,,val(APPINeg_VCap$)
+      endif
+         
+      print ReadResource$("tunemac",ID_TUNEMAC_UPDATING_265) + _tunepath$ + TuneName$ + " -- Negative Ion"
+      MSSaveTuneFile _tunepath$ + TuneName$,1	
+    endif
+
+  endwhile !*** while (len(FileList$) > 0) ***!
+
+
+!RESTORE CURRENT TUNE FILE 
+ MSGetTuneFile _tunepath$ + curTuneFile$, currentpol,,1   
+ print using ReadResource$("tunemac",ID_TUNEMAC_ALL_TUNE_FILES_268), selmode$
+
+  return
+  	
+endmacro ! EdUpdAllTune
+
+!***************************************************************************!
+name EditESI
+!
+!Description: Allow operator to edit ESI spray chamber setpoints via a
+!             dialog box.
+!
+!***************************************************************************!
+local bCheck  ! check box default selection
+local title   ! option box title
+local bEnable ! Enable state for updating tune files
+local bDone	  ! loop control var
+local drive$  ! drive where triathlon is loaded
+
+local XMAXPOS, YMAXPOS	             !Dialog box dimensions.
+local xPos1, xPos2, yPos, xLen, yLen !Generic coordinates
+local xGap, YGap		             !Horiz & vert margins betw objects.
+
+local textXPos, textYPos, textXLen, textYLen  !Coords for text labels
+local editXLen, editYLen   !Coords for edit box labels
+local YOptionBox           !Y-coordinate for option box. Referenced to by buttons.
+local XPosOffset, yPosOffset, offset 
+local HelpIndex
+local PosTuneMixIx, NegTuneMixIx
+local Text$
+
+!DEFINE CONSTANTS HERE.
+Local  ID_TUNEMAC_VCAP_269
+
+Local  ID_TUNEMAC_POSITIVE_API_E_271
+Local  ID_TUNEMAC_NEGATIVE_API_E_273
+Local  ID_TUNEMAC_DRYING_GAS_TEM_274
+Local  ID_TUNEMAC_DRYING_GAS_FLO_276
+Local  ID_TUNEMAC_NEBULIZER_PRES_277
+Local  ID_TUNEMAC_VCAP__V_278
+Local  ID_TUNEMAC_UPDATE_LC_MSD_279
+Local  ID_TUNEMAC_UPDATE_ALL_TUN_280
+Local  ID_TUNEMAC_OK_281
+Local  ID_TUNEMAC_CANCEL_282
+Local  ID_TUNEMAC__HELP_283
+Local  ID_TUNEMAC_VALID_NUMBERS_286
+ID_TUNEMAC_VCAP_269                                =  17269  
+ID_TUNEMAC_VCAP_269                                =  17269  
+ID_TUNEMAC_POSITIVE_API_E_271                      =  17271  
+ID_TUNEMAC_NEGATIVE_API_E_273                      =  17273  
+ID_TUNEMAC_DRYING_GAS_TEM_274                      =  17274  
+ID_TUNEMAC_DRYING_GAS_FLO_276                      =  17276  
+ID_TUNEMAC_NEBULIZER_PRES_277                      =  17277  
+ID_TUNEMAC_VCAP__V_278                             =  17278  
+ID_TUNEMAC_UPDATE_LC_MSD_279                       =  17279  
+ID_TUNEMAC_UPDATE_ALL_TUN_280                      =  17280  
+ID_TUNEMAC_OK_281                                  =  17281  
+ID_TUNEMAC_CANCEL_282                              =  17282  
+ID_TUNEMAC__HELP_283                               =  17283  
+ID_TUNEMAC_VALID_NUMBERS_286                       =  17286  
+  XMAXPOS = 230
+  YMAXPOS = 190
+  xGap = 5
+  YGap = 10
+  YOptionBox =  YMAXPOS * 0.6
+  HelpIndex = HelpSubSystemTopic("msd") + 9113
+  
+!DISABLE TUNE FILE UPDATES IN OFFLINE SESSION
+  if _offline = 1 then 
+     bEnable = 0 
+     bCheck  = 0
+  else
+     bEnable = 1
+     bCheck  = 1
+  endif
+
+!Get current defaults from tune mix register
+  PosTuneMixIx = msat_SelectTuneMix("ESI Pos")
+  NegTuneMixIx = msat_SelectTuneMix("ESI Neg")
+
+  ESPos_Temp$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "GasTemp"), "%3.0f")
+  ESNeg_Temp$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "GasTemp"), "%3.0f")
+  ESPos_Flow$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "DryingGas"), "%3.1f")
+  ESNeg_Flow$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "DryingGas"), "%3.1f")
+  ESPos_Pressure$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "Neb_Pres"), "%2.0f")
+  ESNeg_Pressure$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "Neb_Pres"), "%2.0f")
+  ESPos_VCap$ = SPrintF$(msat_GetDefault(PosTuneMixIx, ReadResource$("tunemac",ID_TUNEMAC_VCAP_269)), "%3.0f")
+  ESNeg_Vcap$ = SPrintF$(msat_GetDefault(NegTuneMixIx, ReadResource$("tunemac",ID_TUNEMAC_VCAP_269)), "%3.0f")
+
+  if dialogExists("ESDialog") > 0 Then
+    RemoveDialog ("ESDialog")
+  endif
+
+                                  
+!DEFINE DIALOG BOX
+  BeginDialog "ESDialog", 0, 0, XMAXPOS, YMAXPOS, "Edit API-ES Spray Chamber Parameters"
+   
+    !-----------------------------------------------------                  
+    !DEFINE COLUMNS LABELS HERE.
+    !-----------------------------------------------------                  
+      
+     xPos1 = 110
+     xPos2 = xPos1 + 60
+     yPos = 15
+
+     xLen = 50
+     yLen = 10 
+     StaticText xPos1 -5, yPos, xLen + 5, yLen, ReadResource$("tunemac",ID_TUNEMAC_POSITIVE_API_E_271), "L"
+     StaticText xPos2 -5, yPos, xLen + 5, yLen, ReadResource$("tunemac",ID_TUNEMAC_NEGATIVE_API_E_273), "L"
+
+    !-----------------------------------------------------
+    !DEFINE ROW LABELS HERE.
+    !-----------------------------------------------------
+
+     textXPos = 5
+     textYPos = YMAXPOS * 0.10
+
+     textXLen = 100
+     textYLen = 50
+   
+     editXLen = 40
+     editYLen = 11
+
+     yPosOffset = 20
+   
+   
+     !DRYING GAS TEMP
+     yPos  = yPos + yGap
+     StaticText textXPos, yPos, textXLen, textYLen, ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TEM_274), "R"
+     EditBox xPos1, yPos, editXLen, editYLen, ESPos_Temp$
+     EditBox xPos2, yPos, editXLen, editYLen,  ESNeg_Temp$
+
+     !DRYING GAS FLOW
+     yPos  = yPos + yPosOffset
+     StaticText  textXPos, yPos, textXLen, textYLen, ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_FLO_276), "R"
+     EditBox xPos1, yPos, editXLen, editYLen, ESPos_Flow$
+     EditBox xPos2, yPos, editXLen, editYLen, ESNeg_Flow$
+
+     !NEBULIZER PRESSURE
+     yPos  = yPos + yPosOffset
+     StaticText textXPos, yPos, textXLen, textYLen, ReadResource$("tunemac",ID_TUNEMAC_NEBULIZER_PRES_277), "R"
+     EditBox xPos1, yPos,editXLen, editYLen, ESPos_Pressure$
+     EditBox xPos2, yPos, editXLen, editYLen, ESNeg_Pressure$
+  
+     !CAPILLARY VOLTAGE	 
+     yPos  = yPos + yPosOffset
+     StaticText textXPos, yPos, textXLen, textYLen, ReadResource$("tunemac",ID_TUNEMAC_VCAP__V_278), "R"
+     EditBox xPos1, yPos, editXLen, editYLen, ESPos_VCap$
+     EditBox xPos2, yPos,editXLen, editYLen,ESNeg_VCap$
+
+    !---------------------------------
+    !DEFINE UPDATE OPTION BOX HERE.
+    !---------------------------------
+
+     xPos = xPos1 - 4
+     yPos = yPos + yPosOffset 
+
+     xPosOffSet = 20
+     xLen = (2 * editXLen) + xPosOffset 
+     yLen = 35
+     title$ = ReadResource$("tunemac",ID_TUNEMAC_UPDATE_LC_MSD_279)
+     GroupBox xPos, yPos, xLen, yLen, title$
+
+     xPos = xPos + 8
+     yPos = yPos + 15
+     xLen = 90
+     yLen = 10
+     text$ = ReadResource$("tunemac",ID_TUNEMAC_UPDATE_ALL_TUN_280)
+     CheckBox xPos, yPos, xLen, yLen, text$, bCheck, bEnable
+
+    !------------------------------
+    !DEFINE ACTION BUTTONS
+    !------------------------------
+
+     xPos = 35
+     yPos = YOptionBox + 45
+
+     xLen = 42
+     yLen = 15
+     offset = 60 
+   
+    !OK BUTTON
+    OKButton xPos, yPos, xLen, yLen, ReadResource$("tunemac",ID_TUNEMAC_OK_281)  
+
+    !CANCEL BUTTON.
+    xPos = xPos + offset
+    CancelButton xPos, yPos, xLen, yLen, ReadResource$("tunemac",ID_TUNEMAC_CANCEL_282)  
+  
+    !HELP BUTTON.
+    xPos = xPos + offset
+    ExecPushButton xPos, yPos, xLen, yLen, ReadResource$("tunemac",ID_TUNEMAC__HELP_283),CP2, "Help " + sprintf$(HelpIndex,"%f")
+
+
+  EndDialog
+
+  _button=ShowDialog("ESDialog",HelpIndex)
+  MSTN_CPSafeStart "CP2"
+  
+!ENFORCE ALL FIELDS TO BE ENTERED WHEN OK BUTTON IS PUSHED.
+  bDone=0
+  while (bDone = 0) do
+        bDone = 1
+    if (_button = 1) then  !*** PRESSED OK BUTTON ***!
+      if (ESPos_Temp$ = "") or (ESNeg_Temp$ = "") or     (ESPos_Flow$ = "") or \
+         (ESNeg_Flow$ = "") or (ESPos_Pressure$ = "") or (ESNeg_Pressure$ = "") or \
+         (ESPos_VCap$ = "") or (ESNeg_Vcap$ = "") then
+        print alert(ReadResource$("tunemac",ID_TUNEMAC_VALID_NUMBERS_286),2)
+       _button=ShowDialog("ESDialog")
+
+      bDone = 0
+      endif
+    endif
+  endwhile
+
+!-----------------------------------
+!PROCESS THE CANCEL BUTTON HERE.
+!-----------------------------------
+  if _button = 0 then 
+    RemoveDialog "ESDialog"
+    return
+  endif
+
+!-----------------------------------
+!PROCESS THE OK BUTTON HERE.
+!-----------------------------------
+  if _button = 1 then 
+
+    !UPDATE CURRENT & TUNE MIX REGISTER 
+    EdUpdSetpoint "ES"
+    EdUpdTuneMix "ES"
+
+    if (bCheck = 1) then	!*** UPDATE ALL TUNE FILES ***! 
+      EdUpdAllTune "ES"
+      Text$ = "All tune files with API-ES mode, current setpoints and "
+    else
+      Text$ = ""
+    endif
+    print Text$ + "TuneMix register updated."
+
+    return
+  endif
+
+  RemoveDialog "ESDialog"
+  remove ESPos_Temp$
+  remove ESNeg_Temp$
+  remove ESPos_Flow$
+  remove ESNeg_Flow$
+  remove ESPos_Pressure$
+  remove ESNeg_Pressure$
+  remove ESPos_VCap$
+  remove ESNeg_Vcap$
+
+  return   
+
+endmacro !EditESI
+
+!***************************************************************************!
+name EditAPCI
+!
+! Description: Allow operator to edit APCI spray chamber setpoints
+!              via a dialog box.
+!
+!***************************************************************************!
+
+local bCheck      ! check box default selection
+local title$      ! option box title
+local bDone       ! loop control var		
+local bEnable     ! enable state for tune file update 
+
+local XMAXPOS, YMAXPOS	             !Dialog box dimensions.
+local xPos1, xPos2, yPos, xLen, yLen !Generic coordinates
+local xGap, YGap                     !Horiz & vert margins betw objects.
+                   
+local textXPos, textYPos, textXLen, textYLen  !Coords for text labels
+local editXLen, editYLen             !Coords for edit box labels
+local YOptionBox         !Y-coordinate for option box. Referenced to by buttons.
+local XPosOffset, yPosOffset, offset 
+local HelpIndex
+local PosTuneMixIx, NegTuneMixIx
+
+
+!DEFINE CONSTANTS HERE.
+  XMAXPOS = 230
+  YMAXPOS = 230
+  xGap = 5
+  YGap = 10
+  YOptionBox =  YMAXPOS * 0.6
+  HelpIndex = HelpSubSystemTopic("msd") + 9114
+
+!DISABLE TUNE FILE UPDATES IN OFFLINE SESSION
+  if _offline = 1 then 
+     bEnable = 0 
+     bCheck  = 0
+  else
+     bEnable = 1
+     bCheck  = 1
+  endif
+
+!Get current defaults from tune mix register
+  PosTuneMixIx = msat_SelectTuneMix("APCI Pos")
+  NegTuneMixIx = msat_SelectTuneMix("APCI Neg")
+
+  ESPos_Temp$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "GasTemp"), "%3.0f")
+  ESNeg_Temp$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "GasTemp"), "%3.0f")
+  ESPos_Flow$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "DryingGas"), "%3.1f")
+  ESNeg_Flow$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "DryingGas"), "%3.1f")
+  ESPos_Pressure$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "Neb_Pres"), "%2.0f")
+  ESNeg_Pressure$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "Neb_Pres"), "%2.0f")
+  ESPos_VCap$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "Vcap"), "%3.0f")
+  ESNeg_Vcap$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "Vcap"), "%3.0f")
+
+  APCIPos_Vaporizer$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "Vaporizer"), "%3.0f")
+  APCINeg_Vaporizer$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "Vaporizer"), "%3.0f")
+  APCIPos_Corona$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "Corona"), "%1.0f")
+  APCINeg_Corona$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "Corona"), "%1.0f")
+  APCIPos_Temp$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "GasTemp"), "%3.0f")
+  APCINeg_Temp$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "GasTemp"), "%3.0f")
+  APCIPos_Flow$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "DryingGas"), "%3.1f")
+  APCINeg_Flow$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "DryingGas"), "%3.1f")
+  APCIPos_Pressure$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "Neb_Pres"), "%2.0f")
+  APCINeg_Pressure$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "Neb_Pres"), "%2.0f")
+  APCIPos_VCap$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "Vcap"), "%3.0f")
+  APCINeg_VCap$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "Vcap"), "%3.0f")
+
+  if dialogExists("APCIDialog") <> 0 Then
+    RemoveDialog "APCIDialog"
+  endif
+ 
+ 
+!DEFINE DIALOG BOX
+  BeginDialog "APCIDialog", 0, 0, XMAXPOS, YMAXPOS, "Edit APCI Spray Chamber Parameters"
+   
+   !-----------------------------------------------------
+   !DEFINE COLUMN LABELS HERE.
+   !-----------------------------------------------------
+      
+    xPos1 = 110
+    xPos2 = xPos1 + 50
+    yPos = 15
+
+    xLen = 50
+    yLen = 10 
+    
+    StaticText xPos1, yPos, xLen, yLen, "Positive APCI", "L"
+    StaticText xPos2, yPos, xLen, yLen, "Negative APCI", "L"
+
+   !-----------------------------------------------------
+   !DEFINE ROW LABELS HERE.
+   !-----------------------------------------------------
+   
+    textXPos = 5
+    textYPos = YMAXPOS * 0.10
+
+    textXLen = 100
+    textYLen = 50
+   
+    editXLen = 40
+    editYLen = 11
+   
+    xPos2 = xPos2 + 2
+    yPosOffset = 20
+   
+    !VAPORIZER
+    yPos  = yPos + yGap
+    StaticText textXPos, textYPos, textXLen, textYLen, "Vaporizer (deg C):", "R"
+    EditBox xPos1, yPos, editXLen, editYLen, APCIPos_Vaporizer$
+    EditBox xPos2, yPos, editXLen, editYLen, APCINeg_Vaporizer$
+
+    !CORONA 
+    yPos  = yPos + yPosOffset
+    StaticText textXPos, yPos, textXLen, textYLen, "Corona (micro A):", "R"
+    EditBox xPos1, yPos, editXLen, editYLen, APCIPos_Corona$
+    EditBox xPos2, yPos, editXLen, editYLen, APCINeg_Corona$
+
+
+    !DRYING GAS TEMP
+    yPos  = yPos + yPosOffset
+    StaticText textXPos, yPos, textXLen, textYLen, "Drying Gas Temp (deg C):", "R"
+    EditBox xPos1, yPos, editXLen, editYLen, APCIPos_Temp$
+    EditBox xPos2, yPos,editXLen, editYLen,  APCINeg_Temp$
+
+    !DRYING GAS FLOW
+    yPos  = yPos + yPosOffset
+    StaticText  textXPos, yPos, textXLen, textYLen, "Drying Gas Flow (liter/min):", "R"
+    EditBox xPos1, yPos, editXLen, editYLen, APCIPos_Flow$
+    EditBox xPos2, yPos, editXLen, editYLen, APCINeg_Flow$
+
+    !NEBULIZER PRESSURE
+    yPos  = yPos + yPosOffset
+    StaticText textXPos, yPos, textXLen, textYLen, "Nebulizer Pressure (psig):", "R"
+    EditBox xPos1, yPos,editXLen, editYLen, APCIPos_Pressure$
+    EditBox xPos2, yPos, editXLen, editYLen, APCINeg_Pressure$
+  
+    !CAPILLARY VOLTAGE	 
+    yPos  = yPos + yPosOffset
+    StaticText textXPos, yPos, textXLen, textYLen, "VCap (V):", "R"
+    EditBox xPos1, yPos, editXLen, editYLen, APCIPos_VCap$
+    EditBox xPos2, yPos,editXLen, editYLen,APCINeg_VCap$
+
+   !---------------------------------
+   !DEFINE UPDATE OPTION BOX HERE.
+   !---------------------------------
+
+    xPos = xPos1 - 4
+    yPos = yPos + yPosOffset 
+
+    xPosOffSet = 20
+    xLen = (2 * editXLen) + xPosOffset 
+    yLen = 35
+    title$ = "Update LC/MSD Parameters"
+    GroupBox xPos, yPos, xLen, yLen, title$
+
+    xPos = xPos + 8
+    yPos = yPos + 15
+    xLen = 90
+    yLen = 10
+    text$ = "Update All Tune Files"
+    CheckBox xPos, yPos, xLen, yLen, text$, bCheck, bEnable
+
+   !------------------------------
+   !DEFINE ACTION BUTTONS
+   !------------------------------
+
+    xPos = 35
+    yPos = YOptionBox + 55
+
+    xLen = 42
+    yLen = 15
+    offset = 60 
+   
+    !OK BUTTON
+    OKButton xPos, yPos, xLen, yLen, "OK"  
+
+    !CANCEL BUTTON.
+    xPos = xPos + offset
+    CancelButton xPos, yPos, xLen, yLen, "Cancel"  
+  
+    !HELP BUTTON.
+    xPos = xPos + offset
+    ExecPushButton xPos, yPos, xLen, yLen, "&Help",CP2, "Help " + sprintf$(HelpIndex,"%f")
+
+
+  EndDialog
+  
+  
+!ENFORCE ALL FIELDS TO BE ENTERED WHEN OK BUTTON IS PUSHED.
+  bDone=0
+  while (bDone = 0) do
+    _button=ShowDialog("APCIDialog",HelpIndex)
+   MSTN_CPSafeStart "CP2"
+
+    bDone = 1
+    if (_button = 1) then !*** OK BUTTON IS PRESSED ***!
+      if (APCIPos_Vaporizer$ = "") or (APCINeg_Vaporizer$ = "") or (APCIPos_Corona$ = "") or \
+         (APCINeg_Corona$ = "") or (APCIPos_Temp$ = "") or (APCINeg_Temp$ = "") or \
+         (APCIPos_Flow$ = "") or (APCINeg_Flow$ = "") or (APCIPos_Pressure$ = "") or \
+         (APCINeg_Pressure$ = "") or (APCIPos_VCap$ = "") or (APCINeg_VCap$ = "") then
+        print alert("Valid numbers must be entered for all fields.",2)
+       bDone = 0
+      endif
+    endif
+  endwhile
+
+
+!PROCESS THE CANCEL BUTTON 
+  if _button = 0 then   
+    RemoveDialog "APCIDialog"
+    return
+  endif
+
+!PROCESS THE OK BUTTON 
+  if _button = 1 then
+     
+    !UPDATE CURRENT & TUNE MIX REGISTER 
+    EdUpdSetpoint "APCI"
+    EdUpdTuneMix "APCI"
+
+    if (bCheck = 1) then	!*** UPDATE ALL TUNE FILES ***!
+      EdUpdAllTune "APCI"
+      Text$ = "All tune files with APCI mode, current setpoints and "
+    else
+      Text$ = ""
+    endif
+    print Text$ + "TuneMix register updated."
+
+    return
+  endif
+
+!CLEANUP
+  RemoveDialog "APCIDialog"
+  remove APCIPos_Vaporizer$
+  remove APCINeg_Vaporizer$
+  remove APCIPos_Corona$
+  remove APCINeg_Corona$
+  remove APCIPos_Temp$
+  remove APCINeg_Temp$
+  remove APCIPos_Flow$
+  remove APCINeg_Flow$
+  remove APCIPos_Pressure$
+  remove APCINeg_Pressure$
+  remove APCIPos_VCap$
+  remove APCINeg_VCap$
+
+  return  
+
+endmacro !EditAPCI
+
+!***************************************************************************!
+!***************************************************************************!
+name EditAPPI
+!
+! Description: Allow operator to edit APPI spray chamber setpoints
+!              via a dialog box.
+!
+!***************************************************************************!
+
+local bCheck      ! check box default selection
+local title$      ! option box title
+local bDone       ! loop control var		
+local bEnable     ! enable state for tune file update 
+
+local XMAXPOS, YMAXPOS	             !Dialog box dimensions.
+local xPos1, xPos2, yPos, xLen, yLen !Generic coordinates
+local xGap, YGap                     !Horiz & vert margins betw objects.
+                   
+local textXPos, textYPos, textXLen, textYLen  !Coords for text labels
+local editXLen, editYLen             !Coords for edit box labels
+local YOptionBox         !Y-coordinate for option box. Referenced to by buttons.
+local XPosOffset, yPosOffset, offset 
+local HelpIndex
+local PosTuneMixIx, NegTuneMixIx
+
+
+!DEFINE CONSTANTS HERE.
+  XMAXPOS = 230
+  YMAXPOS = 230
+  xGap = 5
+  YGap = 10
+  YOptionBox =  YMAXPOS * 0.6
+  HelpIndex = HelpSubSystemTopic("msd") + 9115
+
+!DISABLE TUNE FILE UPDATES IN OFFLINE SESSION
+  if _offline = 1 then 
+     bEnable = 0 
+     bCheck  = 0
+  else
+     bEnable = 1
+     bCheck  = 1
+  endif
+
+!Get current defaults from tune mix register
+  PosTuneMixIx = msat_SelectTuneMix("APPI Pos")
+  NegTuneMixIx = msat_SelectTuneMix("APPI Neg")
+
+  APPIPos_Vaporizer$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "Vaporizer"), "%3.0f")
+  APPINeg_Vaporizer$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "Vaporizer"), "%3.0f")
+  APPIPos_Temp$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "GasTemp"), "%3.0f")
+  APPINeg_Temp$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "GasTemp"), "%3.0f")
+  APPIPos_Flow$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "DryingGas"), "%3.1f")
+  APPINeg_Flow$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "DryingGas"), "%3.1f")
+  APPIPos_Pressure$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "Neb_Pres"), "%2.0f")
+  APPINeg_Pressure$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "Neb_Pres"), "%2.0f")
+  APPIPos_VCap$ = SPrintF$(msat_GetDefault(PosTuneMixIx, "Vcap"), "%3.0f")
+  APPINeg_VCap$ = SPrintF$(msat_GetDefault(NegTuneMixIx, "Vcap"), "%3.0f")
+
+  if dialogExists("APPIDialog") <> 0 Then
+    RemoveDialog "APPIDialog"
+  endif
+ 
+ 
+!DEFINE DIALOG BOX
+  BeginDialog "APPIDialog", 0, 0, XMAXPOS, YMAXPOS, "Edit APPI Spray Chamber Parameters"
+   
+   !-----------------------------------------------------
+   !DEFINE COLUMN LABELS HERE.
+   !-----------------------------------------------------
+      
+    xPos1 = 110
+    xPos2 = xPos1 + 50
+    yPos = 15
+
+    xLen = 50
+    yLen = 10 
+    
+    StaticText xPos1, yPos, xLen, yLen, "Positive APPI", "L"
+    StaticText xPos2, yPos, xLen, yLen, "Negative APPI", "L"
+
+   !-----------------------------------------------------
+   !DEFINE ROW LABELS HERE.
+   !-----------------------------------------------------
+   
+    textXPos = 5
+    textYPos = YMAXPOS * 0.10
+
+    textXLen = 100
+    textYLen = 50
+   
+    editXLen = 40
+    editYLen = 11
+   
+    xPos2 = xPos2 + 2
+    yPosOffset = 20
+   
+    !VAPORIZER
+    yPos  = yPos + yGap
+    StaticText textXPos, textYPos, textXLen, textYLen, "Vaporizer (deg C):", "R"
+    EditBox xPos1, yPos, editXLen, editYLen, APPIPos_Vaporizer$
+    EditBox xPos2, yPos, editXLen, editYLen, APPINeg_Vaporizer$
+
+
+    !DRYING GAS TEMP
+    yPos  = yPos + yPosOffset
+    StaticText textXPos, yPos, textXLen, textYLen, "Drying Gas Temp (deg C):", "R"
+    EditBox xPos1, yPos, editXLen, editYLen, APPIPos_Temp$
+    EditBox xPos2, yPos,editXLen, editYLen,  APPINeg_Temp$
+
+    !DRYING GAS FLOW
+    yPos  = yPos + yPosOffset
+    StaticText  textXPos, yPos, textXLen, textYLen, "Drying Gas Flow (liter/min):", "R"
+    EditBox xPos1, yPos, editXLen, editYLen, APPIPos_Flow$
+    EditBox xPos2, yPos, editXLen, editYLen, APPINeg_Flow$
+
+    !NEBULIZER PRESSURE
+    yPos  = yPos + yPosOffset
+    StaticText textXPos, yPos, textXLen, textYLen, "Nebulizer Pressure (psig):", "R"
+    EditBox xPos1, yPos,editXLen, editYLen, APPIPos_Pressure$
+    EditBox xPos2, yPos, editXLen, editYLen, APPINeg_Pressure$
+  
+    !CAPILLARY VOLTAGE	 
+    yPos  = yPos + yPosOffset
+    StaticText textXPos, yPos, textXLen, textYLen, "VCap (V):", "R"
+    EditBox xPos1, yPos, editXLen, editYLen, APPIPos_VCap$
+    EditBox xPos2, yPos,editXLen, editYLen,APPINeg_VCap$
+
+   !---------------------------------
+   !DEFINE UPDATE OPTION BOX HERE.
+   !---------------------------------
+
+    xPos = xPos1 - 4
+    yPos = yPos + yPosOffset 
+
+    xPosOffSet = 20
+    xLen = (2 * editXLen) + xPosOffset 
+    yLen = 35
+    title$ = "Update LC/MSD Parameters"
+    GroupBox xPos, yPos, xLen, yLen, title$
+
+    xPos = xPos + 8
+    yPos = yPos + 15
+    xLen = 90
+    yLen = 10
+    text$ = "Update All Tune Files"
+    CheckBox xPos, yPos, xLen, yLen, text$, bCheck, bEnable
+
+   !------------------------------
+   !DEFINE ACTION BUTTONS
+   !------------------------------
+
+    xPos = 35
+    yPos = YOptionBox + 55
+
+    xLen = 42
+    yLen = 15
+    offset = 60 
+   
+    !OK BUTTON
+    OKButton xPos, yPos, xLen, yLen, "OK"  
+
+    !CANCEL BUTTON.
+    xPos = xPos + offset
+    CancelButton xPos, yPos, xLen, yLen, "Cancel"  
+  
+    !HELP BUTTON.
+    xPos = xPos + offset
+    ExecPushButton xPos, yPos, xLen, yLen, "&Help",CP2, "Help " + sprintf$(HelpIndex,"%f")
+
+
+  EndDialog
+  
+  
+!ENFORCE ALL FIELDS TO BE ENTERED WHEN OK BUTTON IS PUSHED.
+  bDone=0
+  while (bDone = 0) do
+print "Got to Point1"
+    _button=ShowDialog("APPIDialog",HelpIndex)
+Print "Got to Point2"
+   MSTN_CPSafeStart "CP2"
+
+    bDone = 1
+    if (_button = 1) then !*** OK BUTTON IS PRESSED ***!
+      if (APPIPos_Vaporizer$ = "") or (APPINeg_Vaporizer$ = "") or \
+         (APPIPos_Temp$ = "") or (APPINeg_Temp$ = "") or \
+         (APPIPos_Flow$ = "") or (APPINeg_Flow$ = "") or (APPIPos_Pressure$ = "") or \
+         (APPINeg_Pressure$ = "") or (APPIPos_VCap$ = "") or (APPINeg_VCap$ = "") then
+        print alert("Valid numbers must be entered for all fields.",2)
+       bDone = 0
+      endif
+    endif
+  endwhile
+
+
+!PROCESS THE CANCEL BUTTON 
+  if _button = 0 then   
+    RemoveDialog "APPIDialog"
+    return
+  endif
+
+!PROCESS THE OK BUTTON 
+  if _button = 1 then
+     
+    !UPDATE CURRENT & TUNE MIX REGISTER 
+    EdUpdSetpoint "APPI"
+    EdUpdTuneMix "APPI"
+
+    if (bCheck = 1) then	!*** UPDATE ALL TUNE FILES ***!
+      EdUpdAllTune "APPI"
+      Text$ = "All tune files with APPI mode, current setpoints and "
+    else
+      Text$ = ""
+    endif
+    print Text$ + "TuneMix register updated."
+
+    return
+  endif
+
+!CLEANUP
+  RemoveDialog "APPIDialog"
+  remove APPIPos_Vaporizer$
+  remove APPINeg_Vaporizer$
+  remove APPIPos_Temp$
+  remove APPINeg_Temp$
+  remove APPIPos_Flow$
+  remove APPINeg_Flow$
+  remove APPIPos_Pressure$
+  remove APPINeg_Pressure$
+  remove APPIPos_VCap$
+  remove APPINeg_VCap$
+
+  return  
+
+endmacro !EditAPPI
+
+!***************************************************************************!
+ name Edit_Spray
+!
+! Description: Main dialog box to let user choose editing APCI, APPI
+!              or API-ES setpoints.
+!
+!***************************************************************************!
+local XMAXPOS, YMAXPOS	!Dialog box dimensions.
+local xPos, yPos, xLen, yLen	!Generic coordinates
+local xGap, YGap		!Horiz & vert margins between objects.
+local dselect		! option box default selection
+local but1$			! option box button 1
+local but2$			! option box button 2
+local title$		! option box title
+ 
+
+!DEFINE CONSTANTS HERE.
+
+  XMAXPOS = 145
+  YMAXPOS = 97	
+  xGap = 18
+  yGap = 16	   
+
+  if dialogExists("APCIESIDialog") > 0 Then
+    RemoveDialog "APCIESIDialog"
+  endif
+
+!DEFINE DIALOG BOX 
+  BeginDialog "APCIESIDialog", 0, 0, XMAXPOS, YMAXPOS,\
+              "Spray Chamber Parameter Editor"
+
+    !---------------------------------
+    !DEFINE APCI/API-ES OPTION BOX HERE 
+    !---------------------------------
+    
+     !OPTION BOX SPEC
+    dSelect = 1
+     xPos = XMAXPOS * 0.06
+     yPos = YMAXPOS * 0.05
+     xLen = 127; yLen = 60
+     title$ = "Select Spray Chamber Type"
+     GroupBox xPos, yPos, xLen, yLen, title$
+     OptionGroup dSelect
+   
+     
+     !OPTION 1
+     but1$ = "G1947A APCI Ionization"
+     xPos = xPos + 12
+     yPos = yPos + 15
+     xLen = 130
+     yLen = 10
+     OptionButton xPos, yPos, xLen, yLen, but1$
+   
+     !OPTION 2
+     but2$ = "G1948A API-ES Ionization"
+     yPos = yPos + 14
+     OptionButton xPos, yPos, xLen, yLen, but2$
+   
+     !OPTION 3
+     but3$ = "G1971A APPI Ionization"
+     yPos = yPos + 14
+     OptionButton xPos, yPos, xLen, yLen, but3$
+
+    !---------------------------------
+    !Define OK and CANCEL buttons here.
+    !---------------------------------
+   
+     xLen = 42; yLen = 15
+   
+     !OK BUTTON.
+     xPos = XMAXPOS * 0.15
+     yPos = yPos + yLen + yGap 
+     OKButton xPos, yPos, xLen, yLen, "OK" 
+
+     !CANCEL BUTTON.
+     xPos = xPos + xLen + xGap
+     CancelButton xPos, yPos, xLen, yLen, "Cancel"  	  
+ 
+  EndDialog
+
+  _button=ShowDialog("APCIESIDialog") 
+
+!IF CANCEL IS SELECTED IN MAIN MENU, LOOP WILL BE SKIPPED AND EXIT.
+  while (_button > 0) do
+    !ENSURE ALL TUNE FILES ARE WRITABLE
+!    execwait "attrib -r " + _tunepath$+"*.* /s"	
+
+    cmdpath$ = chr$(34) + _tunepath$ +  chr$(34)
+	execwait "attrib -r " + cmdpath$ + "*.* /s"	
+
+    if (dselect = 1) then	
+      EditAPCI
+    else 
+      if (dselect = 2) then	
+        EditESI
+      else 
+        EditAPPI     ! deselect = 3
+      endif
+    endif
+    
+    !IF CANCEL OR HELP IS SELECTED IN THE APCI, APPI, OR API-ES DIALOG
+    !IT WILL RETURN TO THE MAIN DIALOG BOX 
+    if (_button = 0) or (_button = 4) then
+      _button=ShowDialog("APCIESIDialog")
+      else
+      _button = 0	
+    endif
+  endwhile
+
+  RemoveDialog "APCIESIDialog"
+
+endmacro !Edit_Spray
+
+
+!*************************************************************************
+
+if Check(Variable, PRTestVer$) = 1 or Check(Variable, mstnUtilVer$) = 1 then
+   print "mstnspry.mac v. " + EdSprayver$ + " loaded."
+endif
+

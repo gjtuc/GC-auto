@@ -1,0 +1,200 @@
+! $Header: /PHX3D/parts/macros/report/calopt.mac 4.0 1996-03-22 17:47:48-05 hmgr Exp $
+!
+! These are the macros for the "Calibration Report Options" dialog box.
+!
+
+Name ShowCalOpt
+  local lRptMask
+  local calTabBefRec, norRepBefRec, calRepBefRec, calTabAfRec, norRepAfRec, resOneCycle, resTwoCycle
+  local nTransactionID, bResult
+  local pMsg$, pFrom$, pTo$
+  local EnuFile$
+
+  local ID_PHX3DSUPPORTFILES_AUDIT_CalTableBefRec   
+  local ID_PHX3DSUPPORTFILES_AUDIT_NorRepBefRec     
+  local ID_PHX3DSUPPORTFILES_AUDIT_CalRepBefRec     
+  local ID_PHX3DSUPPORTFILES_AUDIT_CalTabAfRec     
+  local ID_PHX3DSUPPORTFILES_AUDIT_NorRepAfRec     
+  local ID_PHX3DSUPPORTFILES_AUDIT_ResFirstCycle    
+  local ID_PHX3DSUPPORTFILES_AUDIT_ResSecondCycle  
+  local ID_PHX3DSUPPORTFILES_AUDIT_ON	            
+  local ID_PHX3DSUPPORTFILES_AUDIT_OFF
+
+  EnuFile$ = "Phx3dSupport"
+  ID_PHX3DSUPPORTFILES_AUDIT_CalTableBefRec  = 17362 
+  ID_PHX3DSUPPORTFILES_AUDIT_NorRepBefRec    = 17363     
+  ID_PHX3DSUPPORTFILES_AUDIT_CalRepBefRec    = 17364 
+  ID_PHX3DSUPPORTFILES_AUDIT_CalTabAfRec     = 17365
+  ID_PHX3DSUPPORTFILES_AUDIT_NorRepAfRec     = 17366
+  ID_PHX3DSUPPORTFILES_AUDIT_ResFirstCycle   = 17367 
+  ID_PHX3DSUPPORTFILES_AUDIT_ResSecondCycle  = 17368
+  ID_PHX3DSUPPORTFILES_AUDIT_ON	             = 17369
+  ID_PHX3DSUPPORTFILES_AUDIT_OFF			 = 17370
+
+! FS AuditTrail
+  nTransactionID = AuditOpenTransaction()
+
+  ! initialize flags for calibration report options:
+  CalRptDecode
+  lRptMask = CAL_RptMask
+
+  if DialogExists ("CalOpt") = 0 then
+    CalOptBox
+  endif
+
+! FS AuditTrail
+  calTabBefRec = CAL_PreCalData 
+  norRepBefRec = CAL_PreCalRpt
+  calRepBefRes = CAL_CalRpt
+  calTabAfRec = CAL_PostCalData
+  norRepAfRec = CAL_PostCalRpt
+  resOneCycle = CAL_EndBracket
+  resTwoCycle = CAL_StartBracket
+
+! Help context id 8045 - Fix for PVCS# 15256
+  if ShowDialog ("CalOpt", 8045) <= 0 then
+    AuditCancelTransaction nTransactionID   ! FS
+    return
+  else
+
+! === FS AuditTrail Begin =========================================== 
+    if calTabBefRec <> CAL_PreCalData then
+	  if calTabBefRec = 0 then
+        pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+	  else
+	    pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+	    pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+	  endif
+
+	  pMsg$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_CalTableBefRec)
+
+	  bResult = AuditLog(nTransactionID, 1, pMsg$, pFrom$, pTo$)	
+    endif	 
+
+    if norRepBefRec <> CAL_PreCalRpt then
+	  if norRepBefRec = 0 then
+        pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+	  else
+	    pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+	  endif
+
+      pMsg$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_NorRepBefRec)
+
+	  bResult = AuditLog(nTransactionID, 1, pMsg$, pFrom$, pTo$)	
+	endif
+
+    if calRepBefRes <> CAL_CalRpt then
+	  if calRepBefRes = 0 then
+        pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+	  else
+	    pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+	  endif
+
+      pMsg$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_CalRepBefRec)
+
+	  bResult = AuditLog(nTransactionID, 1, pMsg$, pFrom$, pTo$)	
+    endif
+
+    if calTabAfRec <> CAL_PostCalData then
+	  if calTabAfRec = 0 then
+        pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+	  else
+	     pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+		 pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+	  endif
+
+      pMsg$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_CalTabAfRec)
+
+	  bResult = AuditLog(nTransactionID, 1, pMsg$, pFrom$, pTo$)	
+	endif
+
+    if norRepAfRec <> CAL_PostCalRpt then
+	  if norRepAfRec = 0 then
+        pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+	  else
+	    pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+	  endif 
+
+      pMsg$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_NorRepAfRec)
+
+	  bResult = AuditLog(nTransactionID, 1, pMsg$, pFrom$, pTo$)	
+	endif
+
+    if resOneCycle <> CAL_EndBracket then
+	  if resOneCycle = 0 then
+        pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+	  else
+	    pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+	  endif
+
+	  pMsg$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ResFirstCycle)
+
+	  bResult = AuditLog(nTransactionID, 1, pMsg$, pFrom$, pTo$)	
+	endif
+
+    if resTwoCycle <> CAL_StartBracket then
+	  if resTwoCycle = 0 then
+        pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+	  else
+	    pFrom$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ON)
+		pTo$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_OFF)
+	  endif
+
+      pMsg$ = ReadResource$(EnuFile$,ID_PHX3DSUPPORTFILES_AUDIT_ResSecondCycle)
+
+	  bResult = AuditLog(nTransactionID, 1, pMsg$, pFrom$, pTo$)	
+	endif
+ 
+
+    AuditCommitTransaction nTransactionID
+! === FS AuditTrail End =================================================
+
+  endif
+
+  AuditCloseTransaction nTransactionID   ! FS
+
+
+  lRptMask = CAL_PostCalRpt + 2*CAL_PostCalData + 4*CAL_CalRpt + \
+             8*CAL_PreCalRpt + 16*CAL_PreCalData + 32*CAL_StartBracket + \
+             64*CAL_EndBracket
+
+  if lRptMask <> CAL_RptMask then
+    CAL_RptMask = lRptMask
+    SetTabHdrVal _DAMethod[1], "RptParm", "CalRpt", CAL_RptMask
+  endif
+
+  return
+endmacro
+
+Name CalOptBox
+  LoadDialog  NLSCoreMacDLL$, "CalOpt", "CalOpt", "%s" + _InstName$
+
+  checkBoxParm 10000, CAL_PreCalData
+  checkBoxParm 10001, CAL_PreCalRpt
+  checkBoxParm 10002, CAL_CalRpt
+  checkBoxParm 10003, CAL_PostCalData
+  checkBoxParm 10004, CAL_PostCalRpt
+
+  checkBoxParm 10005, CAL_EndBracket
+  checkBoxParm 10006, CAL_StartBracket
+  endDialog 
+  return 
+endMacro 
+
+Name Init_CalOpt
+  if DialogExists ("CalOpt") <> 0 then
+    removedialog "CalOpt"
+  endif
+  return 
+endMacro 

@@ -1,0 +1,487 @@
+name zone_error
+Local  ID_SUPPORTMACFILES_INVALID_ZONE_I_123
+ID_SUPPORTMACFILES_INVALID_ZONE_I_123              =  17123  
+  print ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_INVALID_ZONE_I_123)
+  print "  Usage:  Integral zone_id"
+  print "  Where zone_id: " 
+  print "     0-UNUSED"
+  print "     1-DRYING GAS FLOW"
+  print "     2-NEBULIZER"
+  print "     3-DRYING GAS TEMPERATURE"
+  print "     4-QUAD TEMPERATURE"
+  print "     5-UNUSED"
+  print "     6-UNUSED"
+  print "     7-APCI VAPORIZER TEMP"
+endmacro
+
+name p110level
+  local query_str$
+  query_str$="msc:nrt:nv? pdb,p110level"
+  msscquery query_str$
+endmacro
+name integral
+parameter zone_id default -1
+local query_str$,read_str$,command$,state$,byte1$,byte2$,byte3$,byte4$
+local cmd,warning,fault
+if (zone_id = -1)  OR (zone_id<0) OR (zone_id>7) then
+  zone_error
+  return 
+endif
+  query_str$="msc:nrt:nv pdb,diag,'15,"+val$(zone_id)+",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+  msscwrite query_str$
+  cmd=255
+  while (cmd<>15) do
+    if (cmd<>255) then
+      msscwrite query_str$
+    endif
+    msscquery "msc:nrt:nv? pdb,diag",read_str$
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+    byte1$=substring$(read_str$,3,,",")
+    byte2$=substring$(read_str$,4,,",")
+    byte3$=substring$(read_str$,5,,",")
+    byte4$=substring$(read_str$,6,,",")
+    rval=val(byte1$)*16777216+val(byte2$)*65536+val(byte3$)*256+val(byte4$)
+    print rval
+endmacro
+name timer
+parameter zone_id default -1
+local query_str$,read_str$,command$,state$,byte1$,byte2$,byte3$,byte4$
+local cmd,warning,fault
+if (zone_id = -1)  OR (zone_id<0) OR (zone_id>7) then
+  zone_error
+  return 
+endif
+  query_str$="msc:nrt:nv pdb,diag,'15,"+val$(zone_id)+",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+  msscwrite query_str$
+  cmd=255
+  while (cmd<>15) do
+    if (cmd<>255) then
+      msscwrite query_str$
+    endif
+    msscquery "msc:nrt:nv? pdb,diag",read_str$
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+    byte1$=substring$(read_str$,15,,",")
+    byte2$=substring$(read_str$,16,,",")
+    rval=val(byte1$)*256+val(byte2$)
+    print rval
+endmacro
+! JAM mszonepid 7 will give you the value for pid that would be set by this command.
+! can also set value to non initial values by typing
+! pid 7,5000,1,0,1
+! JAM mszonepid 7 will give you the value for pid that would be set by this command.
+! can also set value to non initial values by typing
+! pid 7,5000,1,0,1
+name pidinit1
+! execute pid command and initializes values without printing
+! zone_id = 7
+! P = 2500
+! I = 1
+! D = 0
+! I_D = 1
+ local query_str$,read_str$,command$,state$,byte1$,byte2$,byte3$,byte4$
+ local ph,pl,ih,il,dh,dl,i_dh,i_dl
+ local cmd,which
+ local zone_id, p, i, d, i_d
+! Run the pidinit function if temp file not present
+ IF (FILESTAT(MODE,_AutoMSPath$ + "pidparam.txt") = -1) THEN
+  pid 7,2500,1,0,1
+  zone_id = 7
+  p = 2500
+  i = 1
+  d = 0
+  i_d = 0
+  if filestat( SIZE, _AutoMSPath$ + "pidparam.txt" ) > -1 then
+    Delete _AutoMSPath$ + "pidparam.txt", DONTASK
+  endif
+  if (zone_id = -1)  OR (zone_id<0) OR (zone_id>7) then
+    zone_error
+    return
+  endif
+  if (p>=0) and (i>=0) and (d>=0) and (i_d>=1) then
+    ph=div(p,256)
+    pl=mod(p,256)
+    ih=div(i,256)
+    il=mod(i,256)
+    dh=div(d,256)
+    dl=mod(d,256)
+    i_dh=div(i_d,256)
+    i_dl=mod(i_d,256)
+    query_str$="msc:nrt:nv pdb,diag,'3,"+val$(zone_id)+","+val$(ph)+","+val$(pl)+","
+    query_str$=query_str$+val$(ih)+","+val$(il)+","+val$(dh)+","+val$(dl)+","
+    query_str$=query_str$+val$(i_dh)+","+val$(i_dl)+",0,0,0,0,0,0'"
+    msscwrite query_str$
+  endif
+  query_str$="msc:nrt:nv pdb,diag,'11,"+val$(zone_id)+",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+! print query_str$
+  msscwrite query_str$
+  cmd=255
+  while (cmd<>11) do
+    if (cmd<>255) then
+      msscwrite query_str$
+    endif
+    msscquery "msc:nrt:nv? pdb,diag",read_str$
+!   print substring$(read_str$,1,,",")
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+  which=3
+  while (which<>0) do
+      byte1$=substring$(read_str$,which,,",")
+      byte2$=substring$(read_str$,which+1,,",")
+      rval=val(byte1$)*256+val(byte2$)
+      if (which=3) then 
+         P=rval
+      endif
+      if (which=5) then 
+         I=rval
+      endif
+      if (which=7) then
+         D=rval
+      endif
+      if (which=9) then
+         I_D=rval
+         which=-2
+      endif
+      which=which+2
+  endwhile
+  ! Print results to text file:
+  open _AutoMSPath$ + "pidparam.txt" for append as #4
+  print using #4,"/                   PID Parameter Report"
+  print using #4,"//P = "+val$(P)
+  print using #4,"//I = "+val$(I)
+  print using #4,"//D = "+val$(D)
+  print using #4,"//I_D = "+val$(I_D)
+  close #4
+ ENDIF
+endmacro
+name pidinit
+! execute pid command and initializes values
+! P = 2500
+! I = 1
+! D = 0
+! I_D = 1
+	pid 7,2500,1,0,1
+! It will print out the PID numbers on your printer as:
+endmacro
+name timeout
+parameter zone_id default -1
+parameter value default -1
+local query_str$,read_str$,command$,write_str$,state$,byte1$,byte2$,byte3$,byte4$
+local cmd,warning,fault,hb,lb,command_value
+  hb=div(value,256)
+  lb=mod(value,256)
+  if (zone_id<0) OR (zone_id>7) then
+    zone_error
+    return 
+  endif
+  query_str$="msc:nrt:nv pdb,diag,'14,"+val$(zone_id)+",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+  write_str$="msc:nrt:nv pdb,diag,'13,"+val$(zone_id)+","+val$(hb)+","+val$(lb)+",0,0,0,0,0,0,0,0,0,0,0,0'"
+  if (value>0) then 
+    command_value=13
+    command$=write_str$
+  else
+    command_value=14
+    command$=query_str$
+  endif
+  cmd=255
+  msscwrite command$
+  while (cmd<>command_value) do
+    if (cmd<>255) then
+      msscwrite command$
+    endif
+    msscquery "msc:nrt:nv? pdb,diag",read_str$
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+    byte1$=substring$(read_str$,3,,",")
+    byte2$=substring$(read_str$,4,,",")
+    rval=val(byte1$)*256+val(byte2$)
+    print "TIMEOUT ZONE "+val$(zone_id)+": "+val$(rval)
+endmacro
+name duty_cycle
+parameter zone_id default -1
+local query_str$,read_str$,command$,state$,byte1$,byte2$,byte3$,byte4$
+local cmd,warning,fault
+if (zone_id = -1)  OR (zone_id<0) OR (zone_id>7) then
+  zone_error
+  return
+endif
+  query_str$="msc:nrt:nv pdb,diag,'11,"+val$(zone_id)+",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+! print query_str$
+  msscwrite query_str$
+  cmd=255
+  while (cmd<>11) do
+    if (cmd<>255) then
+      msscwrite query_str$
+    endif
+    msscquery "msc:nrt:nv? pdb,diag",read_str$
+!   print substring$(read_str$,1,,",")
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+    byte1$=substring$(read_str$,15,,",")
+    byte2$=substring$(read_str$,16,,",")
+!    print byte1$
+!    print byte2$
+    rval=val(byte1$)*256+val(byte2$)
+    print rval
+endmacro
+name diag
+parameter diag_str$ default "-99,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+local query_str$
+ print substring$(diag_str$,1,,",")
+  if (val(substring$(diag_str$,1,,","))= -99) then
+    msscquery "msc:nrt:nv? pdb,diag"
+  else
+    query_str$="msc:nrt:nv pdb,diag,"+diag_str$
+    msscwrite query_str$
+   endif
+endmacro
+name vaportemp
+parameter parm default -1
+local query_str$
+  if (parm=-1) then
+    msscquery "msc:nrt:nv? pdb,vaportemp"
+  else
+    query_str$="msc:nrt:nv pdb,vaportemp,"+val$(parm)
+    msscwrite query_str$
+  endif
+endmacro
+name quadtemp
+parameter parm default -1
+local query_str$
+  if (parm=-1) then
+    msscquery "msc:nrt:nv? pdb,quadtemp"
+  else
+    query_str$="msc:nrt:nv pdb,quadtemp,"+val$(parm)
+    msscwrite query_str$
+  endif
+endmacro
+name dgastemp
+parameter parm default -1
+local query_str$
+  if (parm=-1) then
+    msscquery "msc:nrt:nv? pdb,dgastemp"
+  else
+    query_str$="msc:nrt:nv pdb,dgastemp,"+val$(parm)
+    msscwrite query_str$
+  endif
+endmacro
+name dgaspres
+parameter parm default -1
+local query_str$
+  if (parm=-1) then
+    msscquery "msc:nrt:nv? pdb,dgaspres"
+  else
+    query_str$="msc:nrt:nv pdb,dgaspres,"+val$(parm)
+    msscwrite query_str$
+  endif
+endmacro
+name nebpres
+parameter parm default -1
+local query_str$
+  if (parm=-1) then
+    msscquery "msc:nrt:nv? pdb,nebpres"
+  else
+    query_str$="msc:nrt:nv pdb,nebpres,"+val$(parm)
+    msscwrite query_str$
+  endif
+endmacro
+name pid
+parameter zone_id default -1
+parameter p default -1
+parameter i default -1
+parameter d default -1
+parameter i_d default 1
+local query_str$,read_str$,command$,state$,byte1$,byte2$,byte3$,byte4$
+local ph,pl,ih,il,dh,dl,i_dh,i_dl
+local cmd,which
+  if filestat( SIZE, _AutoMSPath$ + "pidparam.txt" ) > -1 then
+    Delete _AutoMSPath$ + "pidparam.txt", DONTASK
+  endif
+if (zone_id = -1)  OR (zone_id<0) OR (zone_id>7) then
+  zone_error
+  return
+endif
+  if (p>=0) and (i>=0) and (d>=0) and (i_d>=1) then
+    ph=div(p,256)
+    pl=mod(p,256)
+    ih=div(i,256)
+    il=mod(i,256)
+    dh=div(d,256)
+    dl=mod(d,256)
+    i_dh=div(i_d,256)
+    i_dl=mod(i_d,256)
+    query_str$="msc:nrt:nv pdb,diag,'3,"+val$(zone_id)+","+val$(ph)+","+val$(pl)+","
+    query_str$=query_str$+val$(ih)+","+val$(il)+","+val$(dh)+","+val$(dl)+","
+    query_str$=query_str$+val$(i_dh)+","+val$(i_dl)+",0,0,0,0,0,0'"
+    msscwrite query_str$
+  endif
+  query_str$="msc:nrt:nv pdb,diag,'11,"+val$(zone_id)+",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+! print query_str$
+  msscwrite query_str$
+  cmd=255
+  while (cmd<>11) do
+    if (cmd<>255) then
+      msscwrite query_str$
+    endif
+    msscquery "msc:nrt:nv? pdb,diag",read_str$
+!   print substring$(read_str$,1,,",")
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+  which=3
+  while (which<>0) do
+      byte1$=substring$(read_str$,which,,",")
+      byte2$=substring$(read_str$,which+1,,",")
+      rval=val(byte1$)*256+val(byte2$)
+      if (which=3) then 
+         P=rval
+      endif
+      if (which=5) then 
+         I=rval
+      endif
+      if (which=7) then
+         D=rval
+      endif
+      if (which=9) then
+         I_D=rval
+         which=-2
+      endif
+      which=which+2
+  endwhile
+! Print results to text file:
+  open _AutoMSPath$ + "pidparam.txt" for append as #4
+  print using #4,"/                   PID Parameter Report"
+  print using #4,"//P = "+val$(P)
+  print using #4,"//I = "+val$(I)
+  print using #4,"//D = "+val$(D)
+  print using #4,"//I_D = "+val$(I_D)
+  close #4
+! Send the whole thing to the printer:
+  BeginJob
+  FPRINT _AutoMSPath$ + "pidparam.txt"
+  EndJob
+  !delete _AutoMSPath$ + "pidparam.txt",DONTASK
+endmacro
+name zerror
+parameter zone_id default -1
+local query_str$,read_str$,command$,state$,byte1$,byte2$,byte3$,byte4$
+local cmd,warning,setpoint,current
+if (zone_id = -1)  OR (zone_id<0) OR (zone_id>7) then
+  zone_error
+  return
+endif
+  query_str$="msc:nrt:nv pdb,diag,'11,"+val$(zone_id)+",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+!  print query_str$
+  msscwrite query_str$
+  cmd=255
+  while (cmd<>11) do
+    if (cmd<>255) then
+      msscwrite query_str$
+    endif
+    msscquery "msc:nrt:nv? pdb,diag",read_str$
+!    print substring$(read_str$,1,,",")
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+    byte1$=substring$(read_str$,11,,",")
+    byte2$=substring$(read_str$,12,,",")
+    byte3$=substring$(read_str$,13,,",")
+    byte4$=substring$(read_str$,14,,",")
+!    print byte1$
+!    print byte2$
+!    print byte3$
+!    print byte4$
+    setpoint=val(byte1$)*256+val(byte2$) 
+    current=val(byte3$)*256+val(byte4$)
+    print "SETPOINT="+val$(setpoint)
+    print "CURRENT="+val$(current)
+    print "ERROR="+val$(setpoint-current)
+endmacro
+name gainscale
+parameter zone_id default -1
+parameter gain default -1
+parameter gain_d default 1
+parameter intercept default 0
+local query_str$
+local intercepth,interceptl
+local cmd
+if (zone_id = -1)  OR (zone_id<0) OR (zone_id>7) then
+  zone_error
+  return
+endif
+  if (gain>=0) and (gain_d>=1)
+    intercepth=div(intercept,256)
+    interceptl=mod(intercept,256)
+    query_str$="msc:nrt:nv pdb,diag,'16,"+val$(zone_id)+","+val$(gain)+","+val$(gain_d)+","
+    query_str$=query_str$+val$(intercepth)+","+val$(interceptl)+",0,0,0,0,0,0,0,0,0,0'"
+    msscwrite query_str$
+  endif
+  query_str$="msc:nrt:nv pdb,diag,'17,"+val$(zone_id)+",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+  cmd=0
+  while (cmd<>17) do
+    if (cmd<>255) then
+      msscwrite query_str$
+    endif
+    msscquery "msc:nrt:nv? pdb,diag",read_str$
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+  gain=val(substring$(read_str$,3,,","))
+  gain_d=val(substring$(read_str$,4,,","))
+  intercept=256*val(substring$(read_str$,5,,","))+val(substring$(read_str$,6,,","))
+  print "ZONE "+val$(zone_id)
+  print "  GAIN="+val$(gain)
+  print "  GAIN_D="+val$(gain_d)
+  print "  INTERCEPT="+val$(intercept)
+endmacro
+name leak_cal
+  msscwrite "msc:nrt:nv pdb,diag,'23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+endmacro
+name clear_leak_cal
+  msscwrite "msc:nrt:nv pdb,diag,'22,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+endmacro
+name get_leak_cal
+  local cmd,lb,hb,result
+  local read_str$
+Local  ID_SUPPORTMACFILES_CURRENT_LEAK_C_124
+ID_SUPPORTMACFILES_CURRENT_LEAK_C_124              =  17124  
+  msscwrite "msc:nrt:nv pdb,diag,'24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+  cmd=0
+  while (cmd<>24) do
+    msscquery "msc:nrt:nv? pdb,diag",read_str$
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+  hb=val(substring$(read_str$,2,,","))
+  lb=val(substring$(read_str$,3,,","))
+  result=lb+hb*256
+  print "hb="+val$(hb)
+  print "lb="+val$(lb)
+  print ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CURRENT_LEAK_C_124)+val$(result)
+endmacro
+
+name testssv
+parameter count default 1
+local read_str$
+  open "c:\temp\ssvdata.txt" for output as #3
+  while count > 0
+     msscwrite "msc:nrt:nv pdb,ssvstate,energ"
+     sleep 3
+     msscquery "msc:nrt:stat? pdb",read_str$
+     print "  PDB STATUS = "+read_str$
+     print using #3, "  PDB STATUS = "+read_str$+"/"
+     msscwrite "msc:nrt:nv pdb,ssvstate,unenerg"
+     sleep 3
+     msscquery "msc:nrt:stat? pdb",read_str$
+     print "  PDB STATUS = "+read_str$
+     print using #3, "  PDB STATUS = "+read_str$+"/"
+     count=count-1
+  endwhile
+  close #3
+endmacro  
+name nodelay
+  msscwrite "msc:parm cdsdonps,0"
+  msscwrite "msc:parm cdsdofp1,0"
+  msscwrite "msc:parm cdsdofp2,0"
+  msscwrite "msc:parm cdsdoncd,0"
+  msscwrite "msc:parm cdsdofrs,0"
+  msscwrite "msc:parm mssdau,0"
+  msscwrite "msc:parm mssdae,0"
+endmacro

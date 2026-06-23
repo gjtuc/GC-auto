@@ -1,0 +1,413 @@
+name BuildProductSpecialMenus
+
+  local ADCHelp
+  local GC58Help
+  local GC68Help
+  local InjHelp
+  local Leohelp
+  local ValueProdReg
+  local iGCModule
+
+
+local ID_ASTXDRIVERSMACFILES__INSTRUMENT_253       
+local ID_ASTXDRIVERSMACFILES_SE_LECT_INJECT_254    
+local ID_ASTXDRIVERSMACFILES_SELECT_INJECTI_255    
+local ID_ASTXDRIVERSMACFILES_SETUP__ADC_SIG_256   
+local ID_ASTXDRIVERSMACFILES_SETUP_SIGNAL_I_257    
+local ID_ASTXDRIVERSMACFILES_SETUP_ADC__TIM_258  
+local ID_ASTXDRIVERSMACFILES_SETUP_TIMED_EV_259  
+local ID_ASTXDRIVERSMACFILES__INSTRUMENT_SE_260  
+local ID_ASTXDRIVERSMACFILES_SETUP_SIGNAL_I_261    
+local ID_ASTXDRIVERSMACFILES__INSTRUMENT_SE_262  
+local ID_ASTXDRIVERSMACFILES_SETUP_TIMED_EV_263  
+local ID_ASTXDRIVERSMACFILES__INJECTOR_264            
+local ID_ASTXDRIVERSMACFILES_MODIFY_INJECTO_265   
+local ID_ASTXDRIVERSMACFILES__TEMPERATURE_266     
+local ID_ASTXDRIVERSMACFILES_MODIFY_INLET_T_267   
+local ID_ASTXDRIVERSMACFILES_I_NLET_TEMPERA_268   
+local ID_ASTXDRIVERSMACFILES_DEVELOP_INJECT_269   
+local ID_ASTXDRIVERSMACFILES_INLET__PRESSUR_270   
+local ID_ASTXDRIVERSMACFILES_DEVELOP_INJECT_271   
+local ID_ASTXDRIVERSMACFILES_INLET_SPLIT__F_272    
+local ID_ASTXDRIVERSMACFILES_MODIFY_FLOW_SE_273  
+local ID_ASTXDRIVERSMACFILES_PACKED__COLUMN_274  
+local ID_ASTXDRIVERSMACFILES_MODIFY_FLOW_FO_275  
+local ID_ASTXDRIVERSMACFILES__AUX_PRESSURE_276    
+local ID_ASTXDRIVERSMACFILES_MODIFY_AUX_PRE_277  
+local ID_ASTXDRIVERSMACFILES_PURGE__VALVE_278     
+local ID_ASTXDRIVERSMACFILES_MODIFY_PURGE_A_279  
+local ID_ASTXDRIVERSMACFILES_VALVES__RELAYS_280   
+local ID_ASTXDRIVERSMACFILES_PROGRAM_THE_IN_281  
+local ID_ASTXDRIVERSMACFILES__DETECTOR_282          
+local ID_ASTXDRIVERSMACFILES_MODIFY_DETECTO_283   
+local ID_ASTXDRIVERSMACFILES__SIGNAL_284              
+local ID_ASTXDRIVERSMACFILES_EVALUATE_INJEC_285   
+local ID_ASTXDRIVERSMACFILES__VIEW_290                 
+local ID_ASTXDRIVERSMACFILES_S_AMPLING_DIAG_291  
+local ID_ASTXDRIVERSMACFILES_DISPLAY_GRAPHI_292     
+local ID_ASTXDRIVERSMACFILES_DISPLAY_GRAPHI_294   
+local ID_GCMISC__INSTRUMENT_DI_GC_2_82	
+
+local ID_ASTXDRIVERSMACFILES_SET_UP_G_CI_306 
+local ID_ASTXDRIVERSMACFILES_SET_UP_GCI__S_307 
+local ID_ASTXDRIVERSMACFILES_METHOD_G_CI_310   
+local ID_ASTXDRIVERSMACFILES_LABMON_DIAGSOFTWARE_311 
+local ID_ASTXDRIVERSMACFILES_LABMON_DIAGSOFTWARE_312 
+local ID_ASTXDRIVERSMACFILES_LAB_ADVISOR_317    
+local ID_ASTXDRIVERSMACFILES_LAB_ADVISOR_318    
+local ID_ASTXDRIVERSMACFILES_INSTRUMENT_UTILITIES_319 
+local ID_ASTXDRIVERSMACFILES_INSTRUMENT_UTILITIES_320 
+
+
+
+ID_ASTXDRIVERSMACFILES__INSTRUMENT_253             =  17253  
+ID_ASTXDRIVERSMACFILES_SE_LECT_INJECT_254          =  17254  
+ID_ASTXDRIVERSMACFILES_SELECT_INJECTI_255          =  17255  
+ID_ASTXDRIVERSMACFILES_SETUP__ADC_SIG_256          =  17256  
+ID_ASTXDRIVERSMACFILES_SETUP_SIGNAL_I_257          =  17257  
+ID_ASTXDRIVERSMACFILES_SETUP_ADC__TIM_258          =  17258  
+ID_ASTXDRIVERSMACFILES_SETUP_TIMED_EV_259          =  17259  
+ID_ASTXDRIVERSMACFILES__INSTRUMENT_SE_260          =  17260  
+ID_ASTXDRIVERSMACFILES_SETUP_SIGNAL_I_261          =  17261  
+ID_ASTXDRIVERSMACFILES__INSTRUMENT_SE_262          =  17262  
+ID_ASTXDRIVERSMACFILES_SETUP_TIMED_EV_263          =  17263  
+ID_ASTXDRIVERSMACFILES__INJECTOR_264               =  17264  
+ID_ASTXDRIVERSMACFILES_MODIFY_INJECTO_265          =  17265  
+ID_ASTXDRIVERSMACFILES__TEMPERATURE_266            =  17266  
+ID_ASTXDRIVERSMACFILES_MODIFY_INLET_T_267          =  17267  
+ID_ASTXDRIVERSMACFILES_I_NLET_TEMPERA_268          =  17268  
+ID_ASTXDRIVERSMACFILES_DEVELOP_INJECT_269          =  17269  
+ID_ASTXDRIVERSMACFILES_INLET__PRESSUR_270          =  17270  
+ID_ASTXDRIVERSMACFILES_DEVELOP_INJECT_271          =  17271  
+ID_ASTXDRIVERSMACFILES_INLET_SPLIT__F_272          =  17272  
+ID_ASTXDRIVERSMACFILES_MODIFY_FLOW_SE_273          =  17273  
+ID_ASTXDRIVERSMACFILES_PACKED__COLUMN_274          =  17274  
+ID_ASTXDRIVERSMACFILES_MODIFY_FLOW_FO_275          =  17275  
+ID_ASTXDRIVERSMACFILES__AUX_PRESSURE_276           =  17276  
+ID_ASTXDRIVERSMACFILES_MODIFY_AUX_PRE_277          =  17277  
+ID_ASTXDRIVERSMACFILES_PURGE__VALVE_278            =  17278  
+ID_ASTXDRIVERSMACFILES_MODIFY_PURGE_A_279          =  17279  
+ID_ASTXDRIVERSMACFILES_VALVES__RELAYS_280          =  17280  
+ID_ASTXDRIVERSMACFILES_PROGRAM_THE_IN_281          =  17281  
+ID_ASTXDRIVERSMACFILES__DETECTOR_282               =  17282  
+ID_ASTXDRIVERSMACFILES_MODIFY_DETECTO_283          =  17283  
+ID_ASTXDRIVERSMACFILES__SIGNAL_284                 =  17284  
+ID_ASTXDRIVERSMACFILES_EVALUATE_INJEC_285          =  17285  
+ID_ASTXDRIVERSMACFILES__VIEW_290                   =  17290  
+ID_ASTXDRIVERSMACFILES_S_AMPLING_DIAG_291          =  17291  
+ID_ASTXDRIVERSMACFILES_DISPLAY_GRAPHI_292          =  17292    
+ID_ASTXDRIVERSMACFILES_DISPLAY_GRAPHI_294          =  17294  
+ID_GCMISC__INSTRUMENT_DI_GC_2_82				   =  17082
+
+ID_ASTXDRIVERSMACFILES_SET_UP_G_CI_306             =  17306
+ID_ASTXDRIVERSMACFILES_SET_UP_GCI__S_307           =  17307
+ID_ASTXDRIVERSMACFILES_METHOD_G_CI_310             =  17310
+ID_ASTXDRIVERSMACFILES_LABMON_DIAGSOFTWARE_311     =  17311
+ID_ASTXDRIVERSMACFILES_LABMON_DIAGSOFTWARE_312     =  17312
+ID_ASTXDRIVERSMACFILES_LAB_ADVISOR_317             =  17317
+ID_ASTXDRIVERSMACFILES_LAB_ADVISOR_318             =  17318
+ID_ASTXDRIVERSMACFILES_INSTRUMENT_UTILITIES_319    =  17319
+ID_ASTXDRIVERSMACFILES_INSTRUMENT_UTILITIES_320    =  17320
+
+  ADCHelp=HelpSubSystemTopic("35900")
+  GC58Help=HelpSubSystemTopic("5890")
+  GC68Help=HelpSubSystemTopic("68GC")
+  InjHelp=HelpSubSystemTopic("7673")
+  Leohelp=HelpSubSystemTopic("HPLC1100")
+
+  NLSFileName_astxmac$ = "astxmac"
+
+  if _License$ <> "DA"
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SE_LECT_INJECT_254),"SelectInjSource",,\
+	ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SELECT_INJECTI_255),"_METHODIDLE/_SLAVEIDLE"
+  endif
+
+  if (devGCI > 0)
+     if devRCnet > 1 then
+        menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SET_UP_G_CI_306)+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METHOD_G_CI_310)+"...", "CPRC.RCEditMethod",,\
+                ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SET_UP_GCI__S_307),\
+                "MethLoadSaveIdle",Leohelp+10100
+        for ii=1 to devGCI
+           if InStr(GCIGetBaseType$(ii), "RAPIDCONTROL") = 0 then
+              if GCIGetMenuDeviceName$(ii) <> "" then 
+                 menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SET_UP_G_CI_306)+GCIGetMenuDeviceName$(ii)+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METHOD_G_CI_310)+"...", "gci.EdGci ""METH"","+val$(ii),,\
+                         ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SET_UP_GCI__S_307)+val$(ii),\
+                         "MethLoadSaveIdle",Leohelp+10100
+              endif
+           endif
+        next ii        
+     else
+        for ii=1 to devGCI
+           if InStr(GCIGetBaseType$(ii), "RAPIDCONTROL") = 0 then
+              if GCIGetMenuDeviceName$(ii) <> "" then 
+                 menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SET_UP_G_CI_306)+GCIGetMenuDeviceName$(ii)+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METHOD_G_CI_310)+"...", "gci.EdGci ""METH"","+val$(ii),,\
+                         ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SET_UP_GCI__S_307)+val$(ii),\
+                         "MethLoadSaveIdle",Leohelp+10100
+              endif
+           else
+              if GCIGetMenuDeviceName$(ii) <> "" then 
+                 menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SET_UP_G_CI_306)+GCIGetMenuDeviceName$(ii)+ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METHOD_G_CI_310)+"...", "CPRC.RCEditMethod",,\
+                         ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SET_UP_GCI__S_307)+val$(ii),\
+                         "MethLoadSaveIdle",Leohelp+10100
+              endif
+           endif
+        next ii        
+     endif
+  endif
+
+
+  !Begin of 35900 section
+  devadc = adcdevice
+
+  if adcdevice = 1
+     menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),,,,,,ADCHelp+10400
+     if _License$ <> "DA"
+	menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SE_LECT_INJECT_254),,,,,ADCHelp+10400
+     endif
+     menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP__ADC_SIG_256),"LC35900ADC.EDADC ,1",,\
+	     ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP_SIGNAL_I_257),\
+	     "MethLoadSaveIdle",ADCHelp+10400
+     if adctimetab > 0
+	menuadd  ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP_ADC__TIM_258),"LC35900ADC.EDEVTADC ,1",,\
+		 ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP_TIMED_EV_259),"MethLoadSaveIdle",ADCHelp+10400
+     endif
+  endif
+
+  if adcdevice > 1
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),,,,,,ADCHelp+10400
+    if _License$ <> "DA"
+	menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SE_LECT_INJECT_254),,,,,ADCHelp+10400
+    endif
+    for adccount = 1 to adcdevice
+      menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP__ADC_SIG_256),"SUBMENU",,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP_SIGNAL_I_257)
+      menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_SE_260),"ADC&"+val$(adccount)+"","LC35900ADC.EDADC ,"+val$(adccount)+"",,\
+	     ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP_SIGNAL_I_261)+val$(adccount)+"",\
+	     "MethLoadSaveIdle",ADCHelp+10400
+      if adctimetab > 0
+	menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP_ADC__TIM_258),"SUBMENU",,ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP_TIMED_EV_259)
+	menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_SE_262),"ADC&"+val$(adccount)+"","LC35900ADC.EDEVTADC ,"+val$(adccount)+"",,\
+		 ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP_TIMED_EV_263)+val$(adccount)+"","MethLoadSaveIdle",ADCHelp+10400
+      endif
+    next adccount
+  adccount = adccount - 1
+  endif
+  !End of 35900 section
+
+  if TestForDevice("6890Classic", 0, "") <> 0 then
+    if filestat(MODE, _ProductPath$ + "iqstop.mac") = 1 
+	macro _ProductPath$ + "iqstop.mac"
+    endif
+  endif
+
+  if TestForDevice("6850Classic", 0, "") <> 0 then
+    if filestat(MODE, _ProductPath$ + "6850stop.mac") = 1 
+	macro _ProductPath$ + "6850stop.mac"
+    endif
+  endif
+
+  if (TestForDevice( "INJ",0,"") <> 0) AND \
+     (TestForDevice("6850GC", 0, "") = 0) AND \
+     (TestForDevice("68GC", 0, "") = 0) then
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),,"SEPARATOR"
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INJECTOR_264),"INJ7673.INJECTOR",, \
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MODIFY_INJECTO_265),"_SLAVEIDLE",InjHelp+10600
+  endif
+
+  if TestForDevice( "GC", 0, "" ) <> 0 then
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),,"SEPARATOR"
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__TEMPERATURE_266),"GC5890.TEMPERATURE",,\
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MODIFY_INLET_T_267),"METHLOADSAVEIDLE",GC58Help+10000
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_I_NLET_TEMPERA_268),"GC5890.INLETTEMP",,\
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DEVELOP_INJECT_269),"_GCINLETTEMPPROG/METHLOADSAVEIDLE",GC58Help+10000
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INLET__PRESSUR_270),"GC5890.INLETPRESSURE",,\
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DEVELOP_INJECT_271),"_GCINLETPRESPROG/METHLOADSAVEIDLE",GC58Help+10000
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INLET_SPLIT__F_272),"GC5890.INLETFLOW",,\
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MODIFY_FLOW_SE_273),"_GCINLETPRESPROG/_GCAUXPROG/METHLOADSAVEIDLE",GC58Help+10000
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PACKED__COLUMN_274),"GC5890.PACKEDFLOW",,\
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MODIFY_FLOW_FO_275),"_GCINLETPRESPROG/METHLOADSAVEIDLE",GC58Help+10000
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__AUX_PRESSURE_276),"GC5890.AUXPRESSURE",,\
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MODIFY_AUX_PRE_277),"_GCAUXPROG/METHLOADSAVEIDLE",GC58Help+10000
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PURGE__VALVE_278),"GC5890.PURGE",,\
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MODIFY_PURGE_A_279),"METHLOADSAVEIDLE",GC58Help+10000
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VALVES__RELAYS_280),"GC5890.VALVES",,\
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PROGRAM_THE_IN_281),"METHLOADSAVEIDLE",GC58Help+10000
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__DETECTOR_282),"GC5890.DETECTOR",,\
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_MODIFY_DETECTO_283),"METHLOADSAVEIDLE",GC58Help+10000
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__SIGNAL_284),"GC5890.SIGNAL",,\
+	    ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_EVALUATE_INJEC_285),"METHLOADSAVEIDLE",GC58Help+10000
+  endif
+
+  if (TestForDevice("68GC",0,"") <> 0) OR \
+     (devGCI > 0) then
+    MenuAdd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),, "SEPARATOR" 
+    ValueProdReg = ReadProd (win) !reading product name from the registry for sub menu under instrument menu.
+    if (ValueProdReg = 0) then
+      MenuAdd ReadResource$(NLSFileName_astxmac$, ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_LAB_ADVISOR_317),"LabPatrolStartup",,\
+        ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_LAB_ADVISOR_318),"LabPatrolInstalled",0
+    else 
+        !if (ValueProdReg = 1) then
+          MenuAdd ReadResource$(NLSFileName_astxmac$, ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INSTRUMENT_UTILITIES_319),"LabPatrolStartup",,\
+            ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INSTRUMENT_UTILITIES_319),"LabPatrolInstalled",0
+        !else
+        ! MenuAdd ReadResource$(NLSFileName_astxmac$, ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_LABMON_DIAGSOFTWARE_311),"LabPatrolStartup",,\
+        ! ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_LABMON_DIAGSOFTWARE_312),"LabPatrolInstalled",0
+        !endIf
+    endIf 
+  endif
+
+  ! The following is for the GC Graphical User Interface (GUI):
+  ! The GUI is installed for 6890s, 5890s and 35900s:
+if TabHdrVal(_config[1], "window", "CrtxResolution") > 640
+  if (TestForDevice("68GC", 0, "") <> 0) or \
+     (TestForDevice("6850GC", 0, "") <> 0) or \
+     (TestForDevice("7890", 0, "") <> 0) or \
+     (TestForDevice("GC", 0, "") <> 0) or \
+     (adcdevice >= 1) then
+    bVBSamplingGUINeeded = 0
+    bRCSamplingGUINeeded = 0
+    bNoTrayOrTurretsInstalled = 0
+
+    ! figure out when we need the old GUIs
+    if (TestForDevice("6890Classic", 0, "") <> 0) or \
+       (TestForDevice("6850Classic", 0, "") <> 0) or \
+       (TestForDevice("GC", 0, "") <> 0) or \
+       (adcdevice >= 1) then     
+       bVBSamplingGUINeeded = 1
+       bVBInstGUINeeded = 1
+    else
+      if (TestForDevice("RC6850", 0, "") <> 0) then
+        bVBInstGUINeeded = 1
+        ! do not use the VB sampling GUI if Spot is present
+        if (RCGetResourceVal("GC1", "Config", "ALS.fr.Present") = 1) AND (RCGetResourceText$("GC1","Config", "ALS.fr.Model") = "G4513A") then
+          bVBSamplingGUINeeded = 0
+          bRCSamplingGUINeeded = 1
+        else
+          if (RCGetResourceVal("GC1", "Config", "ALS.fr.Present") = 1)
+             bVBSamplingGUINeeded = 1
+          else
+             bVBSamplingGUINeeded = 0
+             bRCSamplingGUINeeded = 1
+             bNoTrayOrTurretsInstalled = 1
+          endif
+        endif
+      else
+        if (TestForDevice("RC6890", 0, "") <> 0) then
+          bVBInstGUINeeded = 1
+          ! Spot & Rover do not use the VB sampling gui
+          if ((RCGetResourceVal("GC1","config", "ALS.tray.present") = 1) AND (RCGetResourceVal("GC1","config", "ALS.tray.Capacity") = 150)) or \
+             ((RCGetResourceVal("GC1", "config", "ALS.fr.Present") = 1) AND (RCGetResourceText$("GC1","config", "ALS.fr.Model") = "G4513A"))  or \
+             ((RCGetResourceVal("GC1", "config", "ALS.bk.Present") = 1) AND (RCGetResourceText$("GC1","config", "ALS.bk.Model") = "G4513A")) then
+            bVBSamplingGUINeeded = 0
+            bRCSamplingGUINeeded = 1
+          else
+            if (RCGetResourceVal("GC1", "config", "ALS.fr.Present") = 1) or (RCGetResourceVal("GC1", "config", "ALS.bk.Present") = 1)
+               bVBSamplingGUINeeded = 1
+            else
+               bVBSamplingGUINeeded = 0
+               bRCSamplingGUINeeded = 1
+               bNoTrayOrTurretsInstalled = 1
+            endif
+          endif
+        else
+          if (TestForDevice("7890",0,"") <> 0) then
+            ! turn off the VB Instrument GUI - never needed for 7890
+            bVBInstGUINeeded = 0
+            iGCModule = GetModuleNumber("7890A")
+            if iGCModule = -1 then
+               ! check if this is a 7820
+               iGCModule = GetModuleNumber("7820A")
+            endif
+            if iGCModule <> -1 then     
+               if ((GetMyItemDouble(iGCModule, "Als.tray.capacity") > 0) and (GetMyItem$(iGCModule, "ALS.tray.Model") <> "G4514A")) or \
+                    ((GetMyItemDouble(iGCModule, "Als.fr.capacity") > 0) and ((GetMyItem$(iGCModule, "ALS.fr.Model") <> "G4513A") and (GetMyItem$(iGCModule, "ALS.fr.Model") <> "G4567A"))) or \
+                    ((GetMyItemDouble(iGCModule, "Als.bk.capacity") > 0) and ((GetMyItem$(iGCModule, "ALS.bk.Model") <> "G4513A") and (GetMyItem$(iGCModule, "ALS.bk.Model") <> "G4567A"))) then
+                 bVBSamplingGUINeeded = 1
+               else
+                  bVBSamplingGUINeeded = 0
+                  bRCSamplingGUINeeded = 1
+                  if (GetMyItemDouble(iGCModule, "Als.fr.capacity") = 0) and (GetMyItemDouble(iGCModule, "Als.bk.capacity") = 0) then
+                     bNoTrayOrTurretsInstalled = 1
+                  endif
+               endif
+            endif
+          endif
+        endif
+
+
+      endif
+
+      if (TestForDevice("7697", 0, "") <> 0) or (TestForDevice("CTC", 0, "") <> 0) then
+         bRCSamplingGUINeeded = 1
+      endif
+    endif
+
+    !Add menu items to View menu:
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__VIEW_290),,"SEPARATOR"
+!       if (iAddsampGUI = 1)
+    menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__VIEW_290), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_S_AMPLING_DIAG_291),"ToggleSampGUI",Unchecked,               ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DISPLAY_GRAPHI_292)
+ !      endif
+
+    if (bVBInstGUINeeded = 1)  then
+      menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__VIEW_290), ReadResource$(NLSFileName_astxmac$,ID_GCMISC__INSTRUMENT_DI_GC_2_82),"ToggleInstGUI",Unchecked,            ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DISPLAY_GRAPHI_294)
+
+    endif
+
+    !if (bVBInstGUINeeded = 1) or (bVBSamplingGUINeeded = 1) then
+       if CHECK (VARIABLE, ShowGCGUI$) = 0 THEN  !Only do this if GUI hasn't already been started.
+	    macro _ProductPath$ + "systgui.mac"
+	    Init_systgui   !Initialize the VB GUI (menuadd, start .exe,...)
+       endif
+
+       !This sets the menu check marks the way they should be:
+       UpdateGCGUIDisplay
+
+   endif
+
+endif
+
+endmacro
+
+!############################################################################
+name GetGCType
+!********************************************
+!  Description:  Returns an integer representing the 
+!      type of GC configured for the current method.
+!  Parameters: (none)
+!  Return Value: <x>|-1
+!    <x> = the type of GC where valid values of x are
+!        6850 (6850 GC)
+!        6890 (6890 GC)
+!        7890 (7890 GC)
+!     -1 = ERROR - The type of GC could not be found to be 6850|6890|7890.
+!******************************************
+
+Local gcType; gcType = -1
+
+  If (TestForDevice("6850GC", 0, "")<> 0) Then
+    gcType = 6850
+  Else
+    If (TestForDevice("68GC", 0, "")<> 0) Then
+      gcType = 6890
+    Else
+      If (TestForDevice("7890", 0, "")<> 0) Then
+        gcType = 7890
+      EndIf
+    EndIf
+  EndIf
+  
+  return gcType
+
+EndMacro
+
+
+!############################################################################
+name TestForDeviceEx
+!********************************************
+!  Description:  OBsolete 
+Parameter deviceName$, count, serialNumber$
+Local result
+  result = TestForDevice(deviceName$, count, serialNumber$)
+
+  return result
+  
+EndMacro

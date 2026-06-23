@@ -1,0 +1,31 @@
+Mode=3CEMS
+highpress=Off
+LoadVials=On
+LiftOfs=4
+Stoptime=7.00
+Posttime=Off
+Peakwidth=>0.03
+RawdataVoltage=Off
+RawdataCurrent=On
+RawdataPower=Off
+RawdataPressure=Off
+RawdataCassTemp=Off
+Voltage=0.00
+Current=50.00
+Power=SysLimit
+LowCurrent=0.00
+CapTemp=20.00
+InletVial=5
+OutletVial=None
+HeightSensing=Off
+SwitchElectric=On
+Polarity=Positive
+Inject=Table,2.00,50.00
+Parallel=0
+ReplenUse=0
+PreconUse=1
+PostconUse=0
+cond pre FLUSH 3.00,6,don't care
+cond inj PRESSURE 50.0,2.0,InjectVial,don't care
+cond inj PRESSURE 50.0,2.0,InHomeVial,don't care
+at 0.30 Voltage=27.00

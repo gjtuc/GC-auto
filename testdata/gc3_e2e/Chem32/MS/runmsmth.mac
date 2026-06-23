@@ -1,0 +1,213 @@
+! $Header: /cag/triath1b/dlc_cmds/release/runmsmth.mac 1.6 1998-12-16 17:25:35-08 ydeng Exp $
+!
+! This is the DoRunDAMethod macro, modified for MS
+!
+
+!############################################################################
+Name DoRunMSMethod
+
+! this does the following:
+! - performs standard Data Analysis
+! - calls custom Data Analysis
+! - calls save GLP data
+!############################################################################
+  ! initialize flags and registers for calibration report options:
+  CalRptDecode
+  DelReg DAEndBracket
+  DelReg DAPreCal
+
+  SSR_PrintNewMethod          ! print new method for inclusion in SSR
+  ExecHook "PreLoadFile"      ! can be used to change file name and other vars
+  LoadReqMSSigs               ! load all required signals
+  LoadColumns                 ! if columns.reg file exists load Columns table
+  ExecHook "PreInteg"         ! can be used to modify the loaded signals, e.g.
+                              ! by scaling or shifting, subtract blank run, etc.
+  GUISetDARunStatus "Integ"   ! display Integrate state on GUI
+  IntSignals                  ! integrate
+  ExecHook "PostInteg"        ! can be used to do manual integ, or
+                              ! re-integrate with optimized parameters.
+  GUISetDARunStatus "Quant"   ! display Quantify state on GUI
+  IdentPeaks                  ! identify peaks, if necessary via library search
+                              ! but prevent recalibration if library search
+  SetCalibInfo                ! set RunType and SampleLevel for calibration run
+  SetUpdateRT                 ! set ChromRes[1] (QuantParm, Update Ret. Time)
+  SetUpdateResp               ! set ChromRes[1] (QuantParm, Update Response)
+
+  if BracketingRequired() = 1 then
+    DoBracketRun              ! quantify calibs plus evtl. delayed sample runs
+  else
+    QuantPeaks                ! quantify peaks
+    DoPrintReport             ! print report if not disabled by seq sum report
+    DoSaveChromResults        ! save results for seq sum report
+!    DoCustomDA                ! custom Data Analysis if enabled
+    DoSaveGLPData             ! save GLP Data if enabled
+    ExecHook "PostDA"         ! can be used to transfer result files
+    if (TabHdrVal (ChromRes[1], "QuantParm", "RTUpdate") > 0) or \
+       (TabHdrVal (ChromRes[1], "QuantParm", "RespUpdate") > 0) \
+    then
+      ! This is a calibration run
+      ! Calibrate the method with sorting enabled, and save it to disc.
+      UpdateCalibAndSave
+      ! No QuantifyPeaks, CalibratePeaks or DoPrintReport must come after this,
+      ! because the references from ChromRes to _DAMethod may have been changed.
+    endif
+  endif
+
+  ! cleanup registers used for special calibration report options:
+  DelReg DAEndBracket
+  DelReg DAPreCal
+  return
+endmacro
+
+!############################################################################
+Name LoadReqMSSigs
+
+! this loads all signals required in _DAMethod[1], Signal
+!############################################################################
+
+! ===========================================================================
+! Revision History:
+! 12/03/98 YD  Added detector information for multisignal support
+! ===========================================================================
+
+  local MethRow,nMethRows,MethDesc$
+  local nSigRows, Start, End
+  local nObj, i, found
+  local ForceLoadAll
+  local SignalObj
+  ! YD
+  local Detector$
+
+  WriteToLogbook sprintf$(DADataFile$, NLSCoreChrom$("LogRunDA"))
+  File DADataPath$ + DADataFile$
+!  if RowByVal (_Config[1], "Signal",, "Source", "=", 1) = -1 then
+    ! no signals available in data file
+!    generate error 30005, ""
+!  endif
+  if _SequenceOn = 0 then  ! within Run Method
+    UpdateFourFileMenu "DataFile", DADataPath$, DADataFile$
+  endif
+  ShowTitle
+  REG_Path$ = ""        ! reset path for the Save Window function
+  MakeChromRes          ! delete old results, prepare initial contents
+  if _SequenceOn = 1 then  ! within Run Sequence
+    SetObjHdrText ChromRes[1], "SeqPathAndFile", _SeqPath$ + _SeqFile$
+  endif
+  if RegSize(ChromReg) > 0 then
+    DelObj ChromReg
+  endif
+  LoadDADiag            ! load DADiag register, if needed
+
+  ForceLoadAll = 0
+  SignalObj = 0
+  nMethRows = TabHdrVal (_DAMethod[1],"Signal","NumberOfRows")
+  if nMethRows > 0 then
+    ! for each signal in _DAMethod[1].Signal check the signal description
+    ! against the available signals in _Config[1].Signal:
+    nSigRows = TabHdrVal (_Config[1], "Signal", "NumberOfRows")
+    MethRow = 1
+    while (MethRow <= nMethRows) and (ForceLoadAll = 0) do
+      MethDesc$ = TabText$ (_DAMethod[1],"Signal",MethRow,"Desc")
+      if MethDesc$ <> "" then
+        ParseSigDesc MethDesc$ ! sets variables Desc_...
+        if Desc_Valid = 1 then
+          ! 12/03/98 YD  Get the detector info
+          if (InStr(Desc_Detector$, "MSD") = 0) then
+              Detector$ = ""
+          else
+              Detector$ = Desc_Dector$
+          endif
+
+          if Desc_SigSource = 0 then
+            ! this requests a signal from a .CH file
+	    if Instr(Desc_SignalId$,"TIC") = 1 then
+		LDMS_CheckLoadDLC
+            ! 12/03/98 YD
+		LoadTIC chromreg,,,Detector$
+		makechromres
+		loadfileinfo regsize(chromreg)
+		LoadSampleVars 0
+                SignalObj = RegSize(ChromReg)
+ 	    else
+               if LoadAcqSignal (MethRow, MethDesc$, nSigRows) = 1 then
+                 SignalObj = RegSize(ChromReg)
+               else
+                 ForceLoadAll = 1       ! force to load all available signals
+               endif
+	    endif
+          else
+            if Desc_SigSource = 1 then
+              ! this requests a signal to be extracted from spectra
+!		LDMS_LoadEIC Desc_SetPoint1 , Desc_SetPoint2, \
+!                        TabVal (_DAMethod[1],"Signal",MethRow,"Start"), \
+!                        TabVal (_DAMethod[1],"Signal",MethRow,"End"), \
+!			0, 1,
+!			Desc_Detector$, Desc_SignalId$
+		LDMS_CheckLoadDLC
+            ! 12/03/98 YD  Supplied Detector$ to LoadEIC
+		LoadEIC chromreg, \
+                        TabVal (_DAMethod[1],"Signal",MethRow,"Start") : \
+                        TabVal (_DAMethod[1],"Signal",MethRow,"End"), \
+			Desc_SetPoint1:Desc_SetPoint2, Detector$
+		makechromres
+		loadfileinfo regsize(chromreg)
+		LoadSampleVars 0
+                SignalObj = RegSize(ChromReg)
+            else
+              if Desc_SigSource = 2 then
+                ! this requests a signal from LCDIAG.REG
+                CopyInstrDataCurve MethDesc$
+              else
+                ! unknown Desc_SigSource
+                ForceLoadAll = 1       ! force to load all available signals
+              endif
+            endif
+          endif
+        else
+          ! MethDesc$ could not be parsed correctly
+          WriteToLogbook sprintf$(MethDesc$, NLSCoreChrom$("LogBadSigDesc"))
+          ForceLoadAll = 1       ! force to load all available signals
+        endif
+      else ! MethDesc$ empty
+        ForceLoadAll = 1       ! force to load all available signals
+      endif ! MethDesc$
+      MethRow = MethRow+1
+    endwhile
+  endif
+  if (ForceLoadAll = 1) and (RegSize(ChromReg) > 0) then
+    DelObj ChromReg
+  endif
+
+  if RegSize(ChromReg) <= 0 then
+    ! load all available signals:
+    ! YD   The Detector is not given. This is OK since according to LoadSignal description,
+    !      if the detector is "not specified, all selected signals from all detectors are
+    !      loaded."
+    LoadSignal , , , ChromReg
+    SignalObj = 1
+  endif
+
+  ! load rawdata file information from ChromReg[SignalObj] into ChromRes[1]:
+  if SignalObj = 0 then
+    Generate error 1, NLSCoreChrom$("LogNoReqSignal")
+  endif
+  LoadFileInfo SignalObj
+
+  GetInstrConditions    ! if available, extract info about Start/Stop etc.
+
+  ! load sample table info from SAMPLE.MAC to variables:
+  if (_SequenceOn = 1) and (_SeqMode = 3) then
+    LoadSampleVars 1
+  else
+    LoadSampleVars 0
+  endif
+
+  AddInstrOverlays      ! append instrument curves to ChromReg, if needed
+
+  ! Make sure the graphics is updated as well.
+  if FreeWin(38) <> 38 then     ! Window exists
+    DrawSignals
+  endif
+
+  return
+endmacro

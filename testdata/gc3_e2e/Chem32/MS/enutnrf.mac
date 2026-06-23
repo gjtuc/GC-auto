@@ -1,0 +1,288 @@
+! EnuTnRF.mac  Macro to enable Lens2RF on SL and HT models.        **August 2005
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+!===============================================================================================
+!
+! $Header: /Lassen/Support/tunemac/enutnrf.mac 1.1 2005-08-18 clove Exp $
+!
+! 08/18/05  CPL  Updated with Agilent header information.  Added Ver$ "1.1 2005-08-18 clove Exp $"
+!===============================================================================================
+
+!
+! File: EnuTnRF.mac
+!
+! Macros:  msat_RFOptMass
+!          msat_RFramp
+!          msat_RFopt
+!
+! Also uses the following macros from enutndyn.mac
+!          DYN_CheckState          MSTN_DynRampErr
+!          DYN_DynamicOptMass      DYN_Cleanup
+!          DYN_DoDynamicOpt
+!
+!  Registers and data objects used:
+!    dyn_OptMassReg    -- gets created and destroyed
+!    dyn_SetReg        -- gets created and destroyed
+!
+!
+!   Optimize signal at specified masses for Dynamic ramping of MS lenses.
+!
+!
+
+!==================================================================================
+!
+name msat_RFOptMass       ! Find the masses to use for dynamic ramping of RF parameter
+parameter RFlens$ default "Lens2RFAmplitude", OptMassReg$, max_entries default 6
+!
+!==================================================================================
+    local i,j,count
+    local m0,m1,m2,m3,m4,m5,m6
+    local s0,s1,s2,s3,s4,s5,s6
+    local select,minmass,maxmass
+    local tmp1,tmp2
+    local mass1,mass2,mass3,mass4,mass5,mass6
+    local lRegIndex;	! Index of tune mix register for source and polarity    
+    
+    !* Make sure that we only act on the masses selected in the tune registry    
+    ! CPL 06/24/09 start
+    ! if max_entries > 5 then
+    !   max_entries = 5
+    ! endif
+    lRegIndex = msat_SelectTuneMix( "auto" )
+    max_entries = ObjHdrVal( TuneMixReg[ lRegIndex ], "NumIons" )
+    ! CPL 06/24/09 end    
+
+    !* Initialize the min and max mass values    
+    minmass = MSInstrparm("minmass")
+    maxmass = MSInstrparm("maxmass")
+
+    !* use current tune masses:
+    count=0                             !* Count of tune masses
+    i = 1
+    while count <= max_entries and i <= 6
+        count = count + 1          !* initialize up to max_entries masses
+        evaluate "MSMassValue i,m"+val$(count)+",,select"
+        evaluate "s"+val$(count)+ " = "+val$(select)   
+        i = i + 1
+    endwhile
+    
+    count = 0               !* Redo the count of valid masses
+    for i=1 to max_entries
+    !* Remove unselected masses
+    !* Update the count of selected masses
+    !* Assert: count <= i <= max_entries
+       evaluate "select = s" +val$(i)
+       if select = 1 then
+        !* The ith mass is selected
+        !* Increment the count of selected mass 
+           count = count + 1  !* Only count if mass is selected
+           if (count <> i) then
+           !* move the selected ith mass up to the count position
+           !* if it is not already there
+                evaluate "s" + val$(count) +" = 1"
+                evaluate "m" + val$(count) +" = m" + val$(i)
+                evaluate "s" + val$(i) +" = 0"
+                evaluate "m" + val$(i) +" = 0"
+           endif
+       endif !* if select = 1
+    next i
+
+    !*Assert: At this point, masses 1 to count are all of the selected masses
+    !* Do insertion sort into OptMassReg$
+       m0 = 0                  !*Sentinel key for insertion sort
+       for i = 2 to count
+         evaluate "tmp1 = m" + val$(i)
+          j = i
+          evaluate "tmp2 = m" + val$(i-1)
+          while tmp2 > tmp1
+             evaluate "m" + val$(j) + " = m" + val$(j-1)
+             j = j -1
+             evaluate "tmp2 = m" + val$(j-1)
+          endwhile
+          evaluate "m" +val$(j) +"  = tmp1"
+       next i
+         
+    !* Eliminate redundant masses
+       if count > 0 then
+         evaluate "SetData "+OptMassReg$+ ",1,1,m1"
+         j = 1      !* Start with one mass
+         for i = 2 to count
+           evaluate "tmp1 = m" + val$(i-1)
+           evaluate "tmp2 = m" + val$(i)
+           if abs(tmp1-tmp2) > 0.1  then
+             j = j + 1   !*Preincrement j to count this mass
+             evaluate "SetData "+OptMassReg$+ ",1,j,m"+val$(i)
+           endif
+         next i
+         count = j         !* Reset the count to the new count
+       endif 
+       for i = count+1 to max_entries
+         !* Zero out all the remaining mass positions
+            evaluate "SetData "+OptMassReg$+ ",1,i,0"
+       next i
+
+    return count
+
+ENDMACRO     !msat_RFOptMass
+
+!==================================================================================
+!
+name msat_RFramp       ! "Autoset" dynamic ramping for RF params
+parameter RFlens$ default "Lens2RFAmplitude"
+!
+!===============================================
+local OldRFen,max_entries,count
+local a$,b$,c$,d$,e$,f$
+local lRegIndex;	! Index of tune mix register for source and polarity
+
+  ! Verify RF enabled:
+    ! Can't query Lens2RFEnable if Amplitude is ramped, but...
+    ! can assume Enable is set if Amplitude is ramped. 
+    ! Initialize strings: 
+      a$=" "
+      b$=" "
+      c$=" "
+      d$=" "
+      e$=" "
+      f$=" "
+      MSDynamic list,a$,b$,c$,d$,e$,f$
+    ! Create one long list of lenses
+      a$=a$+","+b$+","+c$+","+d$+","+e$+","+f$
+      a$=ConvertText$(upper,a$)
+      b$=ConvertText$(upper,"Lens2RFAmplitude")
+    ! Check to see if Amplitude is in the list:
+      if instr(a$,b$) = 0 then            ! it has not been dynamically ramped
+        MSParm Lens2RFEnable,OldRFen      ! Still need to check if RF is enabled
+        if OldRFen=0 then                 ! since Amplitude could be static.
+          AtunePrint "Enabling Lens2 RF parameters."
+          MSParm Lens2RFEnable,,1
+        endif
+      endif
+
+  ! A max of four tune masses used for HT instruments, otherwise use five tune masses
+  ! CPL 06/24/09 start
+  ! Use "NumIons" value from TuneMixReg to set ramp parameters.
+    lRegIndex = msat_SelectTuneMix( "auto" )
+    max_entries = ObjHdrVal( TuneMixReg[ lRegIndex ], "NumIons" )
+      ! if MSD_HT = 1 then
+        ! max_entries = 3     ! Only use masses 1-3
+      ! else
+        ! max_entries = 5     ! Only use masses 1-5
+      ! endif
+  ! CPL 06/24/09 end
+
+  !* Initialize some global registers to use in dynamic ramping only
+  !* Assume all matrix objects have one row and many columns
+
+    if RegSize(dyn_OptMassReg) <> -1 then
+      DelReg dyn_OptMassReg
+    endif
+      
+    if RegSize(dyn_SetReg) <> -1 then
+      DelReg dyn_SetReg
+    endif  
+    
+    NewObj dyn_OptMassReg, 2, 1, max_entries+2   !* Used as array of opt masses  
+    NewObj dyn_SetReg, 2, 1, max_entries+2
+
+    on error  mstn_dynramperr				!* Set error trap to call clean up and stop
+    MSTN_AddAbortHandler "dyn_CleanUp"
+   
+    ! Check if the RFLens$ is enabled for ramping;  if so, disable it
+      b$=ConvertText$(upper,RFlens$)
+      if instr(a$,b$) > 0 then            ! using a$ from above
+        evaluate "MSDynamic "+RFLens$+",disable"
+      endif
+
+    ! Set masses 1-5 to be selected, #6 to be unselected
+      count = msat_RFOptMass (RFLens$,"dyn_OptMassReg",max_entries)
+
+    ! Each mass simramped and max is saved:
+      count = dyn_DoDynamicOpt (RFLens$,"dyn_OptMassReg","dyn_SetReg",count)
+     
+    ! Plot the ramp:
+      evaluate "MSDynamic "+RFLens$+",plot"
+
+    DYN_Cleanup
+
+    return
+
+endmacro    !msat_RFramp
+
+!===============================================================================
+name msat_RFopt
+! Optimize the Lens2 RF parameters
+! Revision History:
+! 08/12/04  PHC  First created.
+! 07/26/05  CPL  Modified to support G61x0A prototypes.
+! 11/16/05  CPL  Eliminate "Initialize RF Parameters" section from msat_RFopt 
+!                since MSSetRamp defines dynamic ramp. 
+! 06 05 02  ueff Disable dynamic of lens2rfphase before ramping it.
+!===============================================================================
+   local OldRFen     !* mass1,mass5 defined earlier
+
+   ! Enable the RF:
+     ! Can't query Lens2RFEnable if Amplitude is ramped, but...
+     ! can assume Enable is set if Amplitude is ramped. 
+     ! Initialize strings: 
+       If ( isDynamic( "Lens2RFAmplitude" ) = 0 ) then
+         MSParm Lens2RFEnable,OldRFen      ! Still need to check if RF is enabled
+         if OldRFen=0 then                 ! since Amplitude could be static.
+           AtunePrint "Enabling Lens2 RF parameters."
+           MSParm Lens2RFEnable,,1        ! ToDo: Check if we can do it without check
+                                          ! ToDo: Check if parameter is available --> if not available bump
+	   MSParm Lens2RFAmplitude,,100    ! Set initial value for phase ramp
+         endif
+       endif
+
+   ! Perform a manual Dynamic ramp for Lens2DC:
+    if MSD_HT = 1 then     ! Todo: Make sure that masses are defined, delete it
+     MSMassValue 1,mass1
+     MSMassValue 3,mass3
+     MSDynamic Lens2DC,DISABLE                 ! In case there's an existing ramp
+     MSDynamic Lens2DC,ENABLE                  ! To allow a new ramp
+     ! CPL 06/24/09 start
+     ! MSDynamic Lens2DC,SET,50,0.5,350,2,1000,4 ! Todo Check in register
+     MSDynamic Lens2DC,SET,50,0.5,350,2,1000,4, 1350,5 ! Todo Check in register
+     ! CPL 06/24/09 end
+    else
+     MSMassValue 1,mass1
+     MSMassValue 5,mass5
+     MSDynamic Lens2DC,DISABLE                 ! In case there's an existing ramp
+     MSDynamic Lens2DC,ENABLE                  ! To allow a new ramp
+     MSDynamic Lens2DC,SET,50,0.5,100,1,350,2,1000,4,2000,6,3000,8
+    endif
+
+    If ( isDynamic( "Lens2RFPhase" ) > 0 ) then
+        MSDynamic Lens2RFPhase, DISABLE
+    Endif
+    MSSimramp Lens2RFPhase,2,max
+
+   ! Perform an automatic Dynamic ramp for Lens2RFAmp:
+     MSSetRamp Lens2RFAmplitude,10,400,1
+     msat_RFramp "Lens2RFAmplitude"
+
+endmacro  !* msat_RFopt

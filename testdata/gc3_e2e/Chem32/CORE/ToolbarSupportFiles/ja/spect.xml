@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="SpecT" PosStyle="TOP" DockRow="2" DockCol="0" Caption="純度カーソル ツールバー" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="シグナル表示" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals " DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="グラフィック ツールバー表示" CmdList="ANN_CloseTask|ANN_InitTask" Group="0" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="ウィンドウを拡大" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="ウィンドウを縮小" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="選択モード" Command="SPC_SetSpecMenuSelection NoSel,1" Group="2" NewGroup="1" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="Spec" Help="あるタイム ポイントでスペクトルを選択します" Command="SPC_SetSpecMenuSelection Spec,1" Group="2" ImageName="Spec_SelectSpectrum20" ImageNameDisabled="Spec_SelectSpectrum20_d"/>
+		<RadioButton Name="ApexSpec" Help="ピーク頂点のスペクトルを選択します" Command="SPC_SetSpecMenuSelection ApexSpec,1" Group="2" ImageName="Spec_SelectPeak20" ImageNameDisabled="Spec_SelectPeak20_d"/>
+		<RadioButton Name="AvgSpec" Help="選択された範囲のスペクトルを平均します" Command="SPC_SetSpecMenuSelection AvgSpec,1" Group="2" ImageName="Spec_Average20" ImageNameDisabled="Spec_Average20_d"/>
+		<RadioButton Name="PeakSpec" Help="ピーク スペクトルのセットを選択します" Command="SPC_SetSpecMenuSelection PeakSpec,1" Group="2" ImageName="Spec_PeakSpectra20" ImageNameDisabled="Spec_PeakSpectra20_d"/>
+		<RadioButton Name="PeakPurity" Help="純度表示するスペクトルを選択します" Command="SPC_SetSpecMenuSelection PeakPurity,1" Group="2" ImageName="Spec_PeakPurity20" ImageNameDisabled="Spec_PeakPurity20_d"/>
+		<RadioButton Name="Ref1Spec" Help="１番目のリファレンス スペクトルを選択します" Command="SPC_SetSpecMenuSelection Ref1Spec,1" Group="2" ImageName="Spec_FirstRef20" ImageNameDisabled="Spec_FirstRef20_d"/>
+		<RadioButton Name="Ref2Spec" Help="２番目のリファレンス スペクトルを選択します" Command="SPC_SetSpecMenuSelection Ref2Spec,1" Group="2" ImageName="Spec_SecondRef20" ImageNameDisabled="Spec_SecondRef20_d"/>
+		<NonEditCombobox Name="ActualReference" Help="スペクトル リファレンス オプション選択" Enable="1" Selection="1" TextList="リファレンスなし|マニュアル リファレンス|自動リファレンス" DefCommand="SPC_SetRefSpec 1," DefCmdParNumber="1" Width="200"/>
+		<NonEditCombobox Name="SpcRefSel" Help="スペクトル ツール選択" Visible="0" Selection="1" Table="ToolBar,1,SPCRefSel" IsPath="0" Width="160"/>
+		<NonEditCombobox Name="MSDRefSel" Help="スペクトル ツール選択" Visible="0" Selection="1" Table="ToolBar,1,MSDRefSel" IsPath="0" Width="160"/>
+		<RadioButton Name="ZoomInMS" Help="MS ウィンドウを拡大します" Command="MSD_SetIonSelection &quot;&quot;" NewGroup="1" Visible="0" ImageName="Spec_ZoominMS20" ImageNameDisabled="Spec_ZoominMS20_d"/>
+		<RadioButton Name="ExtractIon" Help="抽出イオン クロマトグラム" Command="MSD_SetIonSelection &quot;SelectIon&quot;" Visible="0" ImageName="Spec_ExtractIons20" ImageNameDisabled="Spec_ExtractIons20_d"/>
+		<RadioButton Name="TurnOnMathCalc" Help="計算ツールバーオン" Command="MSD_SetIonSelection &quot;Calculation&quot;" Visible="0" ImageName="Spec_MathToolbar20" ImageNameDisabled="Spec_MathToolbar20_d"/>
+	</toolbar>
+</graphical_object>

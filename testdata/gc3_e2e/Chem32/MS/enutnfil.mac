@@ -1,0 +1,739 @@
+! EnuTnFil.mac  Macro to manage calling and naming of tune files  **-Oct-96
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+! FILE:   EnuTnFil.mac
+!
+! MACROS:
+!         MSTN_DoGetTuneFile       MSTN_FreshTune
+!         MSTN_GetTuneFile         MSTN_DoSaveTuneFile
+!         MSTN_ErrGetTuneFile      MSTN_SaveTuneFile
+!         MSTN_GetTuneFileName$    MSTN_SaveTuneFileName
+!
+! GLOBAL VARIABLES: 
+!       _TUNEPATH$
+!       TUNEFILENAME$
+!       TUNEFILEPATH$
+!
+!=======================================================================
+! 10/6/2006 CPL: Update for 6140 model  
+!=======================================================================
+name MSTN_DoGetTuneFile
+parameter file$ default "1"
+parameter use_default default 0
+parameter special default 0 
+parameter title$ default "Load MSD Tune File"
+parameter deffile$ default tunefilename$
+parameter DontSave default 0
+
+! parameter
+!  file$   the path and name of the file to get; if set to 1, then
+!          the user is prompted for a path and name
+!
+! Globals:
+!  TuneFileName$
+!  _tunepath$
+!  comparable to old do_getconfig
+! Prompt the user for a tune file to load if no parameter is given
+!
+! Pre-conditions:
+!   Assume that the "MSDcalFile" table in the _config register exists.
+!   Assume that tunefilename$ is a valid tune file
+! The tune command dll must be loaded.
+!
+! Post-conditions:
+!
+! Known problems:
+!  The current file selection box allows the user to change the
+!  path, although the tune command only accepts the _tunepath$ path.
+!  The name of the default tune file is hard-coded as positive.u
+!====================================================================
+  local DefaultFile$, type, _button, scantype
+Local  ID_TUNEMAC_ERROR_LOADING_645
+ID_TUNEMAC_ERROR_LOADING_645                       =  17645  
+    
+    DefaultFile$ = "ATUNES.TUN"
+    
+    !* Load the tune file
+    if val(file$)= 1 then   
+         _button = MSTN_GetTuneFile (,special, title$,deffile$,DontSave)
+    else
+         if instr(file$,"\") = 0 then
+           file$ = _Tunepath$ + file$
+         endif
+         if (filestat(MODE,file$) = -1) 
+              if (use_default=1) then
+                   _button = MSTN_GetTuneFile (_TunePath$+DefaultFile$,special, title$,deffile$,DontSave)
+              else
+                   _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_ERROR_LOADING_645) + file$ + " does not exist or is missing values for the desired polarity. ",3)
+                   _button = 0
+              endif
+         else
+              _button = MSTN_GetTuneFile (file$, special, title$,deffile$,DontSave)
+         endif
+    endif 
+    
+    if _button = 0 then
+      !* user canceled out of the SelectTuneFile panel; use Atunes.tun
+      _button = MSTN_GetTuneFile (_TunePath$+"ATUNES.TUN",special, title$,deffile$,DontSave)
+    endif
+
+    if _button = 1 then
+         !* Tune File was loaded successfully
+         !* Set the filtered data flag according to the tune file just loaded.
+         MSScanparm scantype, type
+         if type = 1 then
+              !* Type 1 means filtered raw.
+              MSToggleScanState = 3
+         else 
+              !* Type 0 means normal.  Type 2 means raw  
+              MSToggleScanState = 1
+         endif        !toggle_scan_type
+      
+         !* Change the view title to show the tune file loaded 
+         UpdateFourFileMenu "MSDcalFile", TunefilePath$, TuneFileName$  !Update fourfile
+         MSTN_UpdateStatusBar
+         MSTN_UpdateMenuPolarity
+         mstn_UpdateMenuScanMode
+         MSScanParm scantype,scantype 
+         if scantype = 1 then
+            MSTN_FullData = 0x3
+            MSTN_CondensedData = 0x1
+         else
+            MSTN_FullData = 0x1
+            MSTN_CondensedData = 0x3
+         endif
+    endif
+     
+    return  
+                                     
+endmacro     !MSTN_DoGetTuneFile
+
+!====================================================================
+name MSTN_GetTuneFile
+parameter file$ default "1"
+parameter special default 0
+parameter title$ default "Load MSD Tune File"  !*Make sure this default matches mstn_DoGetTuneFile default
+                                               !* This must match title given in fmmcmenu.mac 
+parameter deffile$ default tunefilename$
+parameter DontSave default 0 
+Local  ID_TUNEMAC_ERROR_LOADING_645
+Local  ID_TUNEMAC_DO_YOU_WISH_TO_647
+ID_TUNEMAC_ERROR_LOADING_645                       =  17645  
+ID_TUNEMAC_DO_YOU_WISH_TO_647                      =  17647  
+    
+! parameter
+!  file$   the path and name of the file to get;
+!          if set to 1, then the user is prompted for a path and name;
+!          if set to 2, then the user is prompted for a path and name,
+!            but is only given standard scan tune files to choose from.
+!
+! Globals:
+!  TuneFileName$
+!  _tunepath$
+!  comparable to old do_getconfig
+!  Prompt the user for a tune file to load if no parameter is given
+!
+! Pre-conditions:
+!   Assume that the "MSDcalFile" table in the _config register exists.
+!   Assume that tunefilename$ is a valid tune file
+! The tune command dll must be loaded.
+!
+! Post-conditions:
+!
+! Known problems:
+!  The current file selection box allows the user to change the
+!  path, although the tune command only accepts the _tunepath$ path.
+!  The name of the default tune file is hard-coded as positive.u
+!====================================================================
+  local CurrentTuneFile$, CurrentTuneFileAndPath$, MyPath$, MyFile$
+  local polarity, MSTN_Polarity$, _button, tmpEnableFSvar
+  
+  ! LL Globalization PVCS#12598
+  local ID_TUNEMAC_Save_Tune_1128
+  ID_TUNEMAC_Save_Tune_1128 = 18128
+
+    CurrentTuneFile$ = ConvertText$("Upper",TuneFileName$)
+    CurrentTuneFileAndPath$ = ConvertText$("Upper",Tunefilepath$+TuneFileName$)
+
+    if val(file$)=1 or val(file$)=2 then      
+      !* no file specified or file not found
+      !* Use the file selection dialog box
+      MyPath$ = _TunePath$
+      MyFile$ = CurrentTuneFile$
+      if val(file$)=1 then
+        if MSSelectTune(MyFile$,polarity,1) = 0 then    ! Offer standard and fast scan files
+          !* Case cancelled
+          return 0
+        endif
+      else
+        if MSSelectTune(MyFile$,polarity,0) = 0 then    ! Offer only standard scan files
+          !* Case cancelled
+          return 0
+        endif
+      endif  !* if val(file$)=1
+    else
+         !* Use the full path given
+         !* If the file does not exist, then MSGetTuneFile will generate an error
+         if len(File$) < 0 then
+              !* Bad file name
+              return 0
+         endif
+
+         if instr(file$,"\") = 0 then
+              file$ = _tunepath$ + file$
+         endif
+
+         MyFile$ = ConvertText$("Upper",file$)
+         MyPath$ = ""
+         MSParm ionpolarity, polarity
+    endif
+
+    if polarity = 0 then
+      MSTN_Polarity$ = "POSITIVE"       !* positive - Standard scan mode
+    endif
+    if polarity = 1 then
+         MSTN_Polarity$ = "NEGATIVE"    !* negative - Standard scan mode
+    endif
+    if polarity = 2 then
+      MSTN_Polarity$ = "FASTPOS"       !* positive - Fast scan mode
+    endif
+    if polarity = 3 then
+         MSTN_Polarity$ = "FASTNEG"    !* negative - Fast scan mode
+    endif
+
+    !* Check if polarity exists
+    if FileStat(MODE,MyPath$+MyFile$+"\"+MSTN_Polarity$+".U") <> 1 then
+         _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_ERROR_LOADING_645) + MyFile$  + " does not exist or is missing values for the desired polarity. ",3)
+         return 0
+    endif
+
+    if (MSD_SL = 1) or (MSD_HT = 1) then         !* Need to update the menus for fast scan
+      if ((polarity = 0) or (polarity = 1)) and (_offline = 0) then
+        tmpEnableFSvar = 1
+      else
+        tmpEnableFSvar = 0
+      endif
+    endif
+
+    if DontSave = 0 then
+    !* Check if selected file is different from previous
+         if (MyFile$ <> CurrentTuneFile$) AND (MyFile$ <> CurrentTuneFileAndPath$) AND (special = 0) then
+              if 1 = alert (ReadResource$("tunemac",ID_TUNEMAC_DO_YOU_WISH_TO_647) + CurrentTuneFileAndPath$ +"?",4)
+                   ! LL Globalization PVCS#12598
+                   MSTN_DoSaveTuneFile, ReadResource$("tunemac",ID_TUNEMAC_Save_Tune_1128) !"Save Tune File As"
+              endif
+         endif
+    endif
+
+    !* non-cancelled case
+    !* MyPath$ will be blank if file$ was given
+    !* The command MSGetTuneFile name will generate an error if it cannot
+    !* load the tune file
+
+    MSGetTuneFile MyPath$+MyFile$,polarity,special      !* Load the tune file; will set tunefilename$
+    if (MSD_SL = 1) or (MSD_HT = 1) then
+      mmcMenuEnableFS = tmpEnableFSvar                  !* Set the global variable for menu items
+    endif
+    return 1
+
+endmacro     !MSTN_GetTuneFile
+
+!====================================================================
+name MSTN_ErrGetTuneFile
+parameter filename$ default "positive.u"
+!
+! Error handling routine that reloads the given
+! filename$ tunefile when an error occurs
+!====================================================================
+  on error print                           !* If error, give up
+  MSTN_DoGetTuneFile filename$,,2          !* Check if valid tune file
+  return 
+
+endmacro     !MSTN_ErrGetTuneFile
+
+!====================================================================
+name MSTN_GetTuneFileName$
+  parameter filename$ default tunefilename$, item$ default "estune"
+!  get saved tune file name from mstune.ini.  If not available, or invalid
+!  tune file, try the filename$.
+!
+!  Known problems:
+!   User interface strings are hard-coded.
+!   Title of MSTN_DoGetTuneFile is hard-coded but must match fmmcmenu.mac
+!====================================================================
+  local DlgTitle$, tempname$, inisect$, inifile$
+  local dlcPath$, idx, mode, cmd, _button
+  
+  DlgTitle$ = "Load MSD Tune File"  !* This must match title given in fmmcmenu.mac
+
+  on error MSTN_ErrGetTuneFile      !* Try the old file if error
+  
+  tempname$ = filename$
+  inisect$ = "TUNEFILE"
+  inifile$ = _tunepath$+"mstune.ini"
+  
+  if Check(function,PrivateProfileString$) = 0 then
+       !* Try to load the profile extension DLL
+       dlcPath$ = _EXEPath$
+       idx = instr(_EXEPath$,"CORE")
+       if idx > 0 then
+            dlcPath$ = dlcPath$[1:idx-1] + "SYS\"
+            mode = filestat(MODE,dlcPath$ + "HPProf01.DLC")
+            if (mode = 1) then 
+                 !* Extension DLL exists, so load and use command
+                 cmd = installcmds( dlcPath$ + "HPProf01.DLC")
+                 tempname$ = PrivateProfileString$(inisect$,item$,inifile$)
+            else
+                 !* Extension DLL does not exist, so default to empty string
+                 tempname$ = ""
+            endif  
+       else 
+            !* We can't build the path to the extension DLL, so default to
+            !* empty string
+            tempname$ = ""
+       endif
+  else
+       !* Command exists, so use and read the tune file name.
+       tempname$ = PrivateProfileString$(inisect$,item$,inifile$)
+  endif
+  
+  if len(tempname$) > 0 then
+       !* Use the full path name because we need to check for existance
+       !* in MSTN_DoGetTuneFileName   
+       filename$= tempname$               !* See if valid tune file
+       !* else
+       !* Reload the current tune file, not the one from the ini file.
+       !* Use the full path name because we need to check for existance
+       !* in MSTN_DoGetTuneFileName
+  endif
+  _button = MSTN_GetTuneFile (_tunepath$+filename$,2,DlgTitle$,filename$)  !* See if valid tune file
+
+  return  filename$
+
+endmacro     !MSTN_GetTuneFileName
+
+!====================================================================
+name MSTN_FreshTune
+!====================================================================
+local HelpIndex, line1$, line2$, line3$
+local _button, msg$, polarity
+
+Local  ID_TUNEMAC__HELP_283
+Local ID_TUNEMAC_1100
+Local ID_TUNEMAC_1101
+Local ID_TUNEMAC_1102
+Local ID_TUNEMAC_1103
+Local ID_TUNEMAC_1104
+Local ID_TUNEMAC_Reset_1131
+Local ID_TUNEMAC_Cancel_1132
+
+ID_TUNEMAC__HELP_283                               =  17283  
+ID_TUNEMAC_1100 = 18100
+ID_TUNEMAC_1101 = 18101
+ID_TUNEMAC_1102 = 18102
+ID_TUNEMAC_1103 = 18103
+ID_TUNEMAC_1104 = 18104
+ID_TUNEMAC_Reset_1131 = 18131
+ID_TUNEMAC_Cancel_1132 = 18132
+  if DialogExists("DlgFreshTune") <> 0 then
+    RemoveDialog "DlgFreshTune"
+  endif
+
+ !=== Build the dialog box ===!
+  HelpIndex = HelpSubSystemTopic("msd") + 9008
+  MSTN_CPSafeStart "CP2"
+
+  !line1$ = "To confirm overwriting your current settings, press Reset."
+  line1$=  ReadResource$("tunemac",ID_TUNEMAC_1100)
+  !BeginDialog "DlgFreshTune", 20, 20, 150, 70, "Reset to Defaults"
+  BeginDialog "DlgFreshTune", 20, 20, 150, 70, ReadResource$("tunemac",ID_TUNEMAC_1101)
+    StaticText  20, 5, 120, 24, line1$
+    !* Standard values for buttons
+    OKButton 10, 45, 40, 14, ReadResource$("tunemac", ID_TUNEMAC_Reset_1131)!"&Reset"
+    CancelButton 55, 45, 40, 14, ReadResource$("tunemac", ID_TUNEMAC_Cancel_1132)!"&Cancel"
+    ExecPushButton 100, 45, 40, 14, ReadResource$("tunemac",ID_TUNEMAC__HELP_283), CP2,"Help " + sprintf$(HelpIndex,"%f")
+    !* PushButton  100, 90, 40, 14, "&Help", 2 
+  EndDialog
+  
+  _button = ShowDialog ("DlgFreshTune", HelpIndex)
+
+  RemoveDialog "DlgFreshTune"
+  
+  MfgEnv = Check(Variable, PRTestVer$)
+
+  if _button = 1 then
+     MSParm ionpolarity, polarity
+     if MfgEnv = 1 then
+       MSSetDefaults  polarity,,1
+     else
+       MSSetDefaults  polarity
+     endif
+     !line1$ = "The tune parameters for the current polarity have been reset to their default values.  "
+     line1$ = ReadResource$("tunemac",ID_TUNEMAC_1102)
+     !line2$ = chr$(13) + chr$(13) +"Before the current tune file can be used for acquisition, please tune the MSD "
+     line2$ = chr$(13) + chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_1103)
+     !line3$ = "and save the current tune file."
+     line3$ = ReadResource$("tunemac",ID_TUNEMAC_1104)
+     msg$ = wrapText$(line1$ + line2$ + line3$, 60)
+     _button = Alert (msg$,2)
+  endif
+
+endmacro    !MSTN_FreshTune
+
+!===================================================================
+name MSTN_DoSaveTuneFile
+
+parameter file$ default "1"
+parameter title$ default "Save Tune File As"
+! Parameter
+!  file$   the path and name of the file to save; if set to 1, then
+!          the user is prompted for a path and name
+!
+! Prompt the user for a tune file to save.  Meant to be called from the
+! menu; UI code will change the view title
+!
+! Pre-conditions:
+!  Assumes that pre-conditions for MSTN_SaveTuneFile and MSTN_ChangeTitle are 
+!  met
+!
+! Post-conditions:
+!  Will save the tune file and update the MSD Cal View title
+!
+! Known problems:
+!  This routine hardcodes user interface strings.
+!====================================================================
+local msg$
+
+! LL Globalization PVCS#12598 
+local ID_TUNEMAC_Save_Tune_1128
+Local  ID_TUNEMAC_NO_FILE_NAME_W_648
+
+ID_TUNEMAC_NO_FILE_NAME_W_648                      =  17648  
+ID_TUNEMAC_Save_Tune_1128 = 18128
+
+! LL Globalization PVCS#12598 
+on error print
+if len(title$) > 0 then
+  if title$ = "Save Tune File As" and uppercase$(_Lang$) <> "ENU" then
+    title$ = ReadResource$("tunemac",ID_TUNEMAC_Save_Tune_1128)
+  endif
+endif
+on error
+! LL Globalization end
+
+
+msg$ = ReadResource$("tunemac",ID_TUNEMAC_NO_FILE_NAME_W_648)
+
+  if MSTN_SaveTuneFile(file$,title$) = 1 then
+       MSTN_UpdateStatusBar
+  else
+      message msg$
+  endif
+
+endmacro     !MSTN_DoSaveTuneFile
+
+!====================================================================
+name MSTN_SaveTuneFile
+parameter file$ default "1"
+parameter title$ default "Save Tune File As"
+! Parameter
+!
+!  file$   the path and name of the file to save; if set to 1, then
+!          the user is prompted for a path and name
+! Globals:
+!  TuneFilePath$
+!  _TunePath$
+!
+! Prompt the user for a tune file to save
+! comparable to old do_saveconfig
+!
+! Pre-conditions:
+!  Assumes _Tunepath$ exists.
+!
+! Post-conditions:
+!
+! Known problems:
+!  This routine hardcodes user interface strings.
+!====================================================================
+local ReadOnlyStr$, CurrentTuneFile$, polarity
+local MSTN_Pol1Scan1$, MSTN_Pol2Scan1$, MSTN_Pol1Scan2$, MSTN_Pol2Scan2$
+local FileStatus, MyPath$, MyFile$, _button, done
+
+! LL Globalization PVCS#12598
+Local  ID_TUNEMAC_Save_Tune_1128
+ID_TUNEMAC_Save_Tune_1128 = 18128  
+
+    !* Initialize the ReadOnlyStr$
+Local  ID_TUNEMAC_FILE_255
+Local ID_TUNEMAC_1105
+Local ID_TUNEMAC_1106
+Local ID_TUNEMAC_1107
+local ID_TUNEMAC_1108
+ID_TUNEMAC_FILE_255                                =  17255  
+ID_TUNEMAC_1105 = 18105
+ID_TUNEMAC_1106 = 18106
+ID_TUNEMAC_1107 = 18107
+ID_TUNEMAC_1108 = 18108
+    ReadOnlyStr$ = ""
+    
+    !* Save names of tune file and path before getting user specified name
+    !* Convert to upper case
+    CurrentTuneFile$ = ConvertText$("Upper",TuneFileName$)
+
+    !* Get the current polarity
+    MSParm ionpolarity, polarity 
+    if (polarity = 0) or (polarity = 1) then                !* Currently in Standard scan mode
+      if (polarity = 0) then            !* Positive polarity
+        MSTN_Pol1Scan1$ = "POSITIVE"
+        MSTN_Pol2Scan1$ = "NEGATIVE"
+      else                              !* Negative polarity
+        MSTN_Pol1Scan1$ = "NEGATIVE"
+        MSTN_Pol2Scan1$ = "POSITIVE"
+      endif
+      MSTN_Pol1Scan2$ = "FASTPOS"       !* Set up the fast scan variables
+      MSTN_Pol2Scan2$ = "FASTNEG"
+    else                                                    !* Currently in Fast scan mode
+      if (polarity = 2) then            !* Positive polarity
+        MSTN_Pol1Scan1$ = "FASTPOS"
+        MSTN_Pol2Scan1$ = "FASTNEG"
+      else                              !* Negative polarity
+        MSTN_Pol1Scan1$ = "FASTNEG"
+        MSTN_Pol2Scan1$ = "FASTPOS"
+      endif
+      MSTN_Pol1Scan2$ = "POSITIVE"      !* Set up the standard scan variables
+      MSTN_Pol2Scan2$ = "NEGATIVE"
+    endif
+
+    if file$ <> "" then
+         !* User specified a file; check if we can write to it
+         FileStatus = FileStat(PERM,file$+"\"+MSTN_Pol1Scan1$+".U")
+         if FileStatus = 4 then
+              file$ = "1"
+              !ReadOnlyStr$ = "This file is read-only.  Please save to another file"
+              ReadOnlyStr$ = ReadResource$("tunemac",ID_TUNEMAC_1105)
+         endif
+    endif
+    ! LL Globalization PVCS#12598
+    on error print
+    if len(title$) > 0 then
+      if title$ = "Save Tune File As" and uppercase$(_Lang$) <> "ENU" then
+        title$ = ReadResource$("tunemac",ID_TUNEMAC_Save_Tune_1128)
+      endif
+    endif
+    on error
+    ! LL Globalization end
+    
+    repeat 
+      !* Enter name validation loop
+
+         !* Get the name
+         if val(file$)=1 then                     !* no file specified
+              !* Use the mstn_SelectFile routine to let user specify data
+              MyPath$ = _TunePath$
+              MyFile$ = MSTN_SelectFile$(0,MyPath$,,title$,,2,ReadOnlyStr$,9082)
+              if len(MyFile$) > 0 then
+                   !* Convert selected file to upper
+                   file$ = ConvertText$("Upper",MyPath$+MyFile$)
+                   if instr(file$,".TUN") = 0 then
+                     file$ = file$ + ".TUN"
+                   endif
+              else
+                   !* User cancelled file selection
+                   file$ = ""
+              endif
+              ReadOnlyStr$ = ""
+         else
+              !* Name given as a parameter
+              if instr(file$,"\") = 0 then
+                   file$ = _tunepath$ + file$
+              endif
+              file$ = ConvertText$("Upper",file$)
+              MyFile$ = file$
+         endif
+
+         if file$ <> "" then
+              !* User specified a file; check if we can write to it
+              FileStatus = FileStat(PERM,file$+"\"+MSTN_Pol1Scan1$+".U")
+              if FileStatus = 4 then
+                   !_button = Alert(ReadResource$("tunemac",ID_TUNEMAC_FILE_255) + file$ + " is read-only.  Please save to another file",3,title$)
+                   _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_FILE_255) + file$ + ReadResource$("tunemac",ID_TUNEMAC_1106),3,title$)
+                   file$ = "1"
+                   if 4 = FileStat(PERM,tunefilepath$+tunefilename$+"\"+MSTN_Pol1Scan1$+".U")
+                        !* Check the status of the last tune file and reset the ReadOnlyStr$
+                        !* if needed
+                        !ReadOnlyStr$ = "This file is read-only.  Please save to another file"
+                        ReadOnlyStr$ = ReadResource$("tunemac",ID_TUNEMAC_1105)
+                   endif
+              endif
+         else
+              !* Either a bad name was given or user cancelled
+              return 0
+         endif
+
+         if FileStatus = -1 then
+              !* New file
+              done = 1
+         else
+              if FileStatus = 6 then
+                   !* File exists and is writable
+                   if file$ <> ConvertText$("Upper", tunefilepath$+tunefilename$) then
+                        !* Write to a different file, so check if file exists
+                        !if 0 = Alert( file$ + " already exists." + \
+                        if 0 = Alert( file$ + ReadResource$("tunemac",ID_TUNEMAC_1107) + \
+                            chr$(13) + chr$(13) + ReadResource$("tunemac",ID_TUNEMAC_1108),4,title$ )  then
+                             !chr$(13) + chr$(13) + " Replace?",4,title$ )  then
+                             !* User did not want to overwrite
+                             done = 0
+                             file$ = "1"
+                        else
+                             done = 1     !* User wants to overwrite file
+                        endif
+                   else
+                        done = 1    
+                   endif
+              else 
+                   !* This is not a writable file
+                   done = 0
+                   file$ = "1"
+              endif
+         endif
+    until  done = 1 
+
+    !*ASSERTION: file$ should contain the correct path and file name
+    !* of the place where the user wishes to save the file; it should be
+    !* writable
+
+    !* 
+    !* Is the user specified location different from the current
+    !* tune file name and path?
+    !*
+    if file$ = ConvertText$("Upper", tunefilepath$+tunefilename$) then
+         !* Same location: Save the current values to the current tune file assuming
+         !* the current polarity; assume file exists but check for read write
+         if FileStatus = 6 then
+           MSSaveTuneFile file$            !* Save the tune file
+         endif
+    else
+         !* Different location: Copy the file for the opposite polarity to the
+         !* new tune file - use the copy command to avoid losing the settings.
+         !* Save the current values to the new tune file
+         MSSaveTuneFile file$            !* Save the tune file for the current polarity
+         
+         UpdateFourFileMenu "MSDcalFile", TunefilePath$, TuneFileName$  !Update fourfile
+         
+         if FileStat(MODE,tunefilepath$+CurrentTuneFile$+"\"+MSTN_Pol2Scan1$+".U") = 1 then
+            !* There is an opposite polarity file; copy it.
+            Copy tunefilepath$+CurrentTuneFile$+"\"+ MSTN_Pol2Scan1$ + ".U", \
+            tunefilepath$+tunefilename$+"\"+ MSTN_Pol2Scan1$ + ".U", dontask
+         endif
+
+         if (MSD_SL = 1) or (MSD_HT = 1) then    ! SL or HT model - copy the opposite scan mode's files
+           if FileStat(MODE,tunefilepath$+CurrentTuneFile$+"\"+MSTN_Pol1Scan2$+".U") = 1 then
+              !* There is an opposite polarity file; copy it.
+              Copy tunefilepath$+CurrentTuneFile$+"\"+ MSTN_Pol1Scan2$ + ".U", \
+              tunefilepath$+tunefilename$+"\"+ MSTN_Pol1Scan2$ + ".U", dontask
+           endif
+           if FileStat(MODE,tunefilepath$+CurrentTuneFile$+"\"+MSTN_Pol2Scan2$+".U") = 1 then
+              !* There is an opposite polarity file; copy it.
+              Copy tunefilepath$+CurrentTuneFile$+"\"+ MSTN_Pol2Scan2$ + ".U", \
+              tunefilepath$+tunefilename$+"\"+ MSTN_Pol2Scan2$ + ".U", dontask
+           endif
+         endif  !* if (MSD_SL = 1) or (MSD_HT = 1)
+    endif
+
+    return 1
+
+endmacro     !MSTN_SaveTuneFile
+
+!====================================================================
+name MSTN_SaveTuneFileName
+parameter filename$ default TUNEFILENAME$, item$ default "estune"
+!  save tune file name in mstune.ini under [TUNEFILE] using the item$
+!  as the item name.
+! Global variables: TUNEFILENAME$, _TUNEPATH$  
+!
+! Pre-conditions:
+!  Assumes that the DLC containing the ini commands are 
+!  under \hpchem\sys
+!
+! Post-conditions:
+!  The DLC containing the ini access commands is loaded.
+!  The file name given is saved in the mstune.ini file under _tunepath$
+!
+! Known problems:
+!  Hard codes the name and path of the mstune.ini file.
+!  Ini file keyword estune is obscure and possibly inappropriate.
+!  User interface message strings are hard-coded.
+!====================================================================
+  local inisect$, inifile$, dlcPath$, idx, mode, cmd
+  local ShowErrMsg, _button
+  Local ID_TUNEMAC_1109
+  Local ID_TUNEMAC_1110
+  ID_TUNEMAC_1110 = 18110
+  ID_TUNEMAC_1109 = 18109
+  inisect$ = "TUNEFILE"
+  inifile$ = _tunepath$+"mstune.ini"
+  
+  if Check(function,PrivateProfileString$) = 0 then
+       !* Try to load the profile extension DLL
+       dlcPath$ = _EXEPath$
+       idx = instr(_EXEPath$,"CORE")
+       if idx > 0 then
+            !* Build path to look for DLL
+            dlcPath$ = dlcPath$[1:idx-1] + "SYS\"
+            mode = filestat(MODE,dlcPath$ + "HPProf01.DLC")
+            if (mode = 1) then 
+                 !* Found extension DLL
+                 cmd = installcmds( dlcPath$ + "HPProf01.DLC")
+                 ShowErrMsg = 0
+            else
+                 !* Could not find extension DLL
+                 ShowErrMsg = 1
+            endif  
+       else
+            !* Had trouble building path, so couldn't look for DLL
+            ShowErrMsg = 1
+       endif
+  else
+       ShowErrMsg = 0
+  endif
+  
+  if ShowErrMsg = 1 then
+       !* Report fact that file name was not saved in ini file.  
+       !print "The name of the MSD configuration file could not be saved in the initialization file!"
+       print ReadResource$("tunemac",ID_TUNEMAC_1109)
+       !_button = alert ("The command to load the initialization information was not found!!!",3)
+       _button = alert (ReadResource$("tunemac",ID_TUNEMAC_1110),3)
+  else
+       !* Save the name to the ini file
+       SetPrivateProfileString inisect$, item$, filename$, inifile$
+  endif
+  
+  return
+
+endmacro     !MSTN_SaveTuneFileName
+
+!========================= END OF MACRO FILE =========================

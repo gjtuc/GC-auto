@@ -1,0 +1,5419 @@
+!******************************************************************************
+!*
+!* FILE:  SystGui.mac
+!*
+!* DESCRIPTION:  specific GUI Macros
+!*
+!* $Header: /cag/DRIVERS/leo/gui/macros/systgui.mac 1.133 2003-12-02 06:13:23-08 ralkaase Exp $
+!******************************************************************************
+!*
+!* MACROS :                     
+!*           
+!*           
+!*          
+!*         
+
+!############################################################################
+name GuiNewDetectorOrderedHook
+
+!############################################################################
+local Tab$
+
+Tab$="GuiDetectors"
+RemoveHook  Tab$
+NewHook     Tab$     !"GuiDetectors"
+SetTabVal  Hook[1], Tab$, 0, "Order",   1000  !is default order here
+
+!additional information to be stored
+
+NewTabHdrVal   Hook[1], Tab$, "ExecRow" ,  0    , , 3
+NewTabHdrText  Hook[1], Tab$, "DetStackIniFile"
+
+NewColText     Hook[1], Tab$, "SymbolicName"
+NewColText     Hook[1], Tab$, "StatusRegName"
+NewColText     Hook[1], Tab$, "MethListIniFile"
+NewColText     Hook[1], Tab$, "MethListGuiNdr"
+NewColText     Hook[1], Tab$, "ShortNameLabel"
+
+
+endmacro
+
+
+!############################################################################
+name GuiSetDetectorOrderedHook
+
+parameter Priority  default -1  ! the priority for execution order
+parameter Command$              ! the command to be executed in the hook
+                                ! must be unique for every detector number
+parameter SymbolicName$      
+parameter StatusRegName$
+parameter MethListIniFile$
+parameter MethListGuiNdr$
+parameter ShortNameLabel$       !used in EMF warning quick listing
+!############################################################################
+local Tab$                           
+local row
+
+Tab$="GuiDetectors"
+if SymbolicName$ <> ""
+   row=RowByText(Hook[1], Tab$, , "SymbolicName", "i=" , SymbolicName$ ) 
+else
+   row=-1  !no name used since no bubble message feedback implemented
+endif   
+if row = -1                     
+   SetHook Tab$,Command$,Priority
+   row = RowByText (Hook[1], Tab$, , "Command", "i=",Command$)
+   if row > -1
+      SetTabText Hook[1],Tab$,row,"SymbolicName"   ,SymbolicName$
+      SetTabText Hook[1],Tab$,row,"StatusRegName"  ,StatusRegName$
+      SetTabText Hook[1],Tab$,row,"MethListIniFile",MethListIniFile$
+      SetTabText Hook[1],Tab$,row,"MethListGuiNdr" ,MethListGuiNdr$
+      SetTabText Hook[1],Tab$,row,"ShortNameLabel" ,ShortNameLabel$
+   endif
+!else ERROR   
+endif   
+
+endmacro
+
+
+!############################################################################
+name GuiFindDetHookSymbolicName
+
+parameter  SymbolicName$
+!returns the detector number
+!############################################################################
+local Tab$
+
+Tab$="GuiDetectors"
+return  RowByText(Hook[1], Tab$, , "SymbolicName", "i=" , SymbolicName$ ) 
+
+endmacro
+
+
+!############################################################################
+name GuiTestForBit
+                             
+parameter  BitField
+parameter  TestBit
+!can be used to test if a bit is set or not
+!############################################################################
+
+local iii
+
+iii=mod(BitField,TestBit*2)
+if iii >= TestBit
+   iii=1
+else 
+   iii=0
+endif   
+!print BitField,",",TestBit,",",iii
+
+return iii
+
+endmacro
+
+
+
+
+
+
+!############################################################################
+name LeoDefaultInitOfUnknownDetector
+                             
+parameter  RegName$                                             
+parameter  ModuleNo                                             
+!############################################################################
+
+Local isize
+local tempevalstr$
+
+local ID_ASTXDRIVERSMACFILES_OFF_47
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_OFF_47 = 17047
+NLSFileName_astxmac$= "astxmac"
+
+!print "isize=RegSize("+RegName$+")"
+evaluate "isize=RegSize("+RegName$+")"
+if isize < 1
+   evaluate "newobj "+RegName$+" , 1,0,0"
+endif
+
+!need to set defaults since no driver set anything
+!do this all to make hotlink filter work completely compatible as if module were there
+   
+tempevalstr$ = "SetObjHdrText  "+RegName$+", ""GUISTATUS"" , " + ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OFF_47)
+print tempevalstr$
+!evaluate "SetObjHdrText  "+RegName$+", ""GUISTATUS"" , " + ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OFF_47)
+evaluate tempevalstr$
+
+endmacro
+
+
+
+
+
+
+!############################################################################
+name GUIListingArea
+
+parameter   ListingArea$      default "DefaultCase" ! "" means do as last selected
+!############################################################################
+local iii
+local iMax
+local a$
+local OldListing$  
+local CurrentViewTable$                                                                                              
+                                                                                              
+!first find out if in Seq MODE
+                          
+CurrentViewTable$="View_"+TabHdrText$(_config[1], "Window", "CurrentView") 
+
+!consider startup missing items
+OldListing$=""
+
+if ObjHdrType(_config[1],CurrentViewTable$) = 4
+   if TabHdrType(_config[1],CurrentViewTable$,"ListingArea") = 99
+      SetTabHdrText  _config[1],CurrentViewTable$,"ListingArea",""
+   endif   
+   OldListing$=TabHdrText$(_config[1],CurrentViewTable$,"ListingArea")
+endif               
+
+if GomExist( , GUISystemDiagGOM$) = 0
+   return
+else
+   if GomExist( GUISystemDiagGOM$,GUIQuickListGOM$) = 1
+      GomDelete GUISystemDiagGOM$,GUIQuickListGOM$
+      GomDeleteToolEvent GUISystemDiagGOM$,GUIQuickListGOM
+   endif
+endif
+
+if (ListingArea$ = "UPDATE") OR (ListingArea$ = ""  AND  OldListing$ <> "")
+   !restore last selection
+   ListingArea$=OldListing$
+   !put this also right in the combobox
+   if GomExist( , GUISystemDiagGOM$, "Details") = 1
+      iMax=GomVal( , GUISystemDiagGOM$, "Details", "MaxListSize")
+      for iii=1 to iMax
+          a$=GomText$( , GUISystemDiagGOM$, "Details", "Command"+val$(iii) )
+          if InStr(a$,OldListing$) > 0 
+             GomSetVal  , GUISystemDiagGOM$, "Details", "Selection" , iii
+             iii=iMax+1
+          endif
+      next iii
+   endif
+endif
+
+if ObjHdrType(_config[1],CurrentViewTable$) = 4
+   SetTabHdrText _config[1],CurrentViewTable$,"ListingArea", ""
+endif
+
+if ListingArea$ = ""
+   ListingArea$="NONE"
+endif
+
+iii=RowByText(Hook[1], "GuiQuickLst", , "RowID", "=" , ListingArea$ ) 
+if iii > -1
+   !since above setting of selection is case sensitive also require it here
+   GuiExecVeneerHook   "GuiQuickLst" , ListingArea$
+endif   
+
+
+if ObjHdrType(_config[1],CurrentViewTable$) = 4
+   SetTabHdrText _config[1],CurrentViewTable$,"ListingArea",ListingArea$ 
+endif
+
+endmacro
+
+
+!############################################################################
+name GuiShowModuleMethodListing
+
+parameter  ProdArea$
+parameter  QuickListGom$
+parameter  IniFile$
+parameter  GuiNdr$
+parameter  yGomOffset   default  -100
+!############################################################################
+
+if IniFile$ <> "" AND  GuiNdr$ <> ""
+   GomSetToolEvent QuickListGom$,  IniFile$, "MethodListing","elements",Gui, GuiNdr$
+   if yGomOffset <>  -100
+      GOMShowGUI QuickListGom$, IniFile$ , ProdArea$ , , , , yGomOffset  
+   else
+      GOMShowGUI QuickListGom$, IniFile$ , ProdArea$
+   endif   
+   GOMSetToolEvent  QuickListGom$, IniFile$ , "MethodListing", "ENABLE" , , ,MethLoadSaveIdle 
+   if yGomOffset <>  -100
+      yGomOffset=GOMVal(QuickListGom$,IniFile$, ,"y")+ \
+                 GOMVal(QuickListGom$,IniFile$, ,"height")
+   endif   
+endif
+return  yGomOffset
+endmacro  
+
+
+
+
+!############################################################################
+name GuiShowQuickLcMethodListing
+!############################################################################
+
+local b$
+local LeoType   
+local Cluster   
+local ProdArea$ 
+local QuickListGom$
+local yGomOffset
+local Tab$
+local Row, RowMax
+local CountLeoThm
+
+QuickListGom$=GUIQuickListGOM$          
+
+if GomExist( , GUISystemDiagGOM$) = 1
+   
+      ProdArea$="DRIVERS"
+      
+      GOMShowGUI GUISystemDiagGOM$ , QuickListGom$, ProdArea$  
+   
+      QuickListGom$=GUISystemDiagGOM$+"|"+QuickListGom$
+   
+      b$="MthLAls"
+      !the following are in 1. column
+      if DevLeoAls > 0
+         yGomOffset=GuiShowModuleMethodListing(ProdArea$,QuickListGom$,b$,"INJMETH1")
+      else
+         !reinit hotlinks to be sure in unknow NN module cases we are correct
+         GomSetToolEvent QuickListGom$,  b$, "MethodListing","elements",   Gui, "INJMETH1"
+         !GOMShowGUI QuickListGom$, b$ , ProdArea$  
+         !GOMSetText QuickListGom$, b$ , "MethodListing", "CURSOR" , "ARROW"  
+         !GOMSetVal  QuickListGom$, b$ , "MethodListing", "ENABLE" , 0 
+      endif
+      
+      if DevLeoPump > 0
+         evaluate "LeoType=ObjHdrVal(LeoPumpStatus"+Val$(_GuiPump)+", ""PumpType"")"
+         if LeoType < 1  OR LeoType > 9 
+            !don't know what to do then
+            !default for now
+            LeoType=1 
+         endif   
+       
+         if _PumpUseBar = 1
+            b$="MthLPmp"+val$(LeoType)
+         else
+            b$="MthJPmp"+val$(LeoType)
+         endif
+
+         if LeoType = 6
+            evaluate "Cluster=ObjHdrVal(LeoPumpStatus"+Val$(_GuiPump)+", ""Clustered"")"
+		    if Cluster = 1
+               if _PumpUseBar = 1
+                  b$="MthLPmpA"
+               else
+                  b$="MthJPmpA"
+               endif
+		    endif
+		    if Cluster = 2
+               if _PumpUseBar = 1
+                  b$="MthLPmpB"
+               else
+                  b$="MthJPmpB"
+               endif
+		    endif
+		 endif
+
+         yGomOffset=GuiShowModuleMethodListing(ProdArea$,QuickListGom$,b$,"PumpMethod1")
+      else
+         LeoType=1 
+         if _PumpUseBar = 1
+            b$="MthLPmp"+val$(LeoType)
+         else
+            b$="MthJPmp"+val$(LeoType)
+         endif
+         !reinit hotlinks to be sure in unknow NN module cases we are correct
+         GomSetToolEvent QuickListGom$,  b$, "MethodListing","elements",   Gui, "PumpMethod1"
+         !GOMShowGUI QuickListGom$, b$ , ProdArea$  
+         !GOMSetText QuickListGom$, b$ , "MethodListing", "CURSOR" , "ARROW"  
+         !GOMSetVal  QuickListGom$, b$ , "MethodListing", "ENABLE" , 0  
+      endif   
+      
+      !the following are in 2. column
+      yGomOffset=0
+
+      CountLeoThm = DevLeoThm
+      if Check(Variable, _ClusteredTcc$) = 1 then
+         if InStr(_ClusteredTcc$, "1") > 0 then
+            CountLeoThm=0
+         else
+            if InStr(_ClusteredTcc$, "2") > 0 then
+               CountLeoThm=1
+            endif
+         endif
+      endif
+
+      if CountLeoThm > 0
+         b$="MthLThm1"
+         yGomOffset=GuiShowModuleMethodListing(ProdArea$,QuickListGom$,b$,"ThmMeth1",yGomOffset)
+         if CountLeoThm > 1
+            b$="MthLThm2"
+            yGomOffset=GuiShowModuleMethodListing(ProdArea$,QuickListGom$,b$,"ThmMeth2",yGomOffset)
+            GomSetToolEvent QuickListGom$,  b$, "MethodListing","elements", Gui, "ThmMeth2"
+         endif   
+      endif
+
+      Tab$="GuiDetectors"
+      RowMax=TabHdrVal(Hook[1],Tab$,"numberOfRows")
+      for Row=1 to RowMax
+          b$=TabText$(Hook[1],Tab$,Row,"MethListIniFile")
+          ndr$=TabText$(Hook[1],Tab$,Row,"MethListGuiNdr")
+          yGomOffset=GuiShowModuleMethodListing(ProdArea$,QuickListGom$,b$,ndr$,yGomOffset)
+      next Row
+
+
+endif
+
+endmacro
+
+
+!############################################################################
+name GuiShowQuickChemicalsListing
+!############################################################################
+
+local b$
+local LeoType   
+local Cluster
+local ProdArea$ 
+local QuickListGom$
+local ElemList$
+local iRows,iii,iInstalled
+local ColName$                       
+local ColTab$
+
+QuickListGom$=GUIQuickListGOM$                                       
+
+if GomExist( , GUISystemDiagGOM$) = 1
+   
+  
+      ProdArea$="DRIVERS"
+
+      GOMShowGUI GUISystemDiagGOM$ , QuickListGom$, ProdArea$  
+   
+      QuickListGom$=GUISystemDiagGOM$+"|"+QuickListGom$
+   
+   
+      if DevLeoPump > 0
+         evaluate "LeoType=ObjHdrVal(LeoPumpStatus"+Val$(_GuiPump)+", ""PumpType"")"
+         if LeoType > 0  AND LeoType < 10 
+            !
+         else 
+            !don't know what to do then
+            !default for now
+            LeoType=1 
+         endif   
+       
+         if _PumpUseBar = 1
+            b$="LChmPmp"+val$(LeoType)
+         else
+            b$="JChmPmp"+val$(LeoType)
+         endif
+                  
+         if LeoType = 6
+            evaluate "Cluster=ObjHdrVal(LeoPumpStatus"+Val$(_GuiPump)+", ""Clustered"")"
+            if Cluster = 1
+               if _PumpUseBar = 1
+                  b$="LChmPmpA"
+               else
+                  b$="JChmPmpA"
+               endif
+            endif
+            if Cluster = 2
+               if _PumpUseBar = 1
+                  b$="LChmPmpB"
+               else
+                  b$="JChmPmpB"
+               endif
+	        endif
+	     endif
+
+         !reinit hotlinks to be sure we are correct
+         GomSetToolEvent QuickListGom$,  b$, "ChemicalListing","elements",   Gui, "PumpMethod1"
+         GOMSetToolEvent  QuickListGom$, b$ , "ChemicalListing", "ENABLE" , , ,TopEnableSaveMethod 
+                                                                             !MethLoadSaveIdle
+         GOMShowGUI QuickListGom$, b$ , ProdArea$  
+      endif   
+
+      if GuiOffline = 0
+         !next show the installed columns
+         ElemList$=""
+         ColTab$="Columns"
+         if ObjHdrType(_config[1],ColTab$) = 4
+            iRows=TabHdrVal(_config[1],ColTab$,"numberofrows")
+            for iii=1 to iRows
+                iInstalled=TabVal(_config[1],ColTab$,iii,"ColInstalled")
+                if iInstalled = 1
+                   ColName$=TabText$(_config[1],ColTab$,iii,"ColDescription") 
+                   if ColName$ <> ""
+                      ElemList$=ElemList$+"COL"+val$(iii)+"|"+ColName$+"|"
+                   endif
+                endif   
+            next iii
+         endif
+         if ElemList$ = ""
+            ElemList$="COL1|"  !so at least something shows
+         endif
+         ElemList$=ElemList$+" | | | | | | | | | | | | | | | | "  !to clear old stuff
+      
+         b$="LChmCol"
+         !reinit hotlinks to be sure we are correct
+         !GomSetToolEvent QuickListGom$,  b$, "ChemicalListing","elements",   Gui, "PumpMethod1"
+         GOMShowGUI QuickListGom$, b$ , ProdArea$  
+         GomSetText QuickListGom$, b$ , "ChemicalListing", "elements", ElemList$
+      endif   
+   
+endif
+   
+endmacro
+
+!############################################################################
+name GuiSetModuleEmfWarningListing
+
+parameter  QuickListGom$
+parameter  GomName$
+parameter  ToolName$
+parameter  StatusReg$
+parameter  ModNameSymbol$     !is a symbolic name used in ini file
+parameter  iModuleCount
+!############################################################################
+local  ii                         
+
+ii=iModuleCount*2
+GomSetText      QuickListGom$,  GomName$, ToolName$ , "Image"+val$(ii+1) , ModNameSymbol$
+evaluate "GomSetToolEvent QuickListGom$,  GomName$, ToolName$ , ""Image""+val$(ii+2) , "+ \
+         StatusReg$+", EmfWarning"
+endmacro
+
+
+!############################################################################
+name GuiCheckLenOfEmfWarningListing$
+
+parameter  VarName$      ! Name of the variable to be checked
+parameter  VarValue      ! Value of the variable
+!############################################################################
+local RetCmd$
+
+if VarValue < 18-1 then
+  RetCmd$ = VarName$ + "=" + VarName$ + "+1"
+else
+  RetCmd$ = "return"
+endif
+
+return RetCmd$
+
+endmacro
+
+!############################################################################
+name GuiShowEmfWarningListing
+
+! NOTE: There won't listed be more than 18 modules
+!############################################################################
+
+local b$
+local LeoType   
+local ProdArea$ 
+local QuickListGom$   
+local iModuleCount                            
+local ToolName$
+local Tab$
+local Row, RowMax
+local RegName$, ShortName$
+local iExist
+local ret$
+
+QuickListGom$=GUIQuickListGOM$          
+
+if GomExist( , GUISystemDiagGOM$) = 1
+   
+  
+      ProdArea$="DRIVERS"
+      
+      GOMShowGUI GUISystemDiagGOM$ , QuickListGom$, ProdArea$  
+   
+      QuickListGom$=GUISystemDiagGOM$+"|"+QuickListGom$
+   
+      b$="LEmfWarn"
+
+      GOMShowGUI QuickListGom$, b$, ProdArea$  
+
+      ToolName$="LeoModules"
+
+      GOMShowGUI QuickListGom$, b$ , ProdArea$  
+                
+      !reinit hotlinks to be sure in unknow NN module cases we are correct
+      GomDeleteToolEvent QuickListGom$,  b$,
+      iModuleCount=0                              
+      
+      if DevLeoAls > 0
+         GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoAlsStatus1","LINJ",\
+                                       iModuleCount 
+         !iModuleCount=iModuleCount+1
+				 ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+				 evaluate ret$
+      endif
+      if DevLeoPump > 0
+         if DevLeoPump = 1
+            GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoPumpStatus1","LPUMP",\
+                                          iModuleCount 
+		 else
+            GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoPumpStatus1","LPUMP1",\
+                                          iModuleCount 
+		 endif
+         !iModuleCount=iModuleCount+1
+         ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+         evaluate ret$
+         if DevLeoPump > 1
+            GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoPumpStatus2","LPUMP2",\
+                                          iModuleCount 
+            !iModuleCount=iModuleCount+1
+            ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+            evaluate ret$
+            if DevLeoPump > 2
+               GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoPumpStatus3","LPUMP3",\
+                                             iModuleCount 
+               !iModuleCount=iModuleCount+1
+               ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+               evaluate ret$
+            endif
+         endif
+      endif
+
+      ! DevLeoThm does not have EMF limits
+      
+      Tab$="GuiDetectors"
+      RowMax=TabHdrVal(Hook[1],Tab$,"numberOfRows")
+      for Row=1 to RowMax
+          RegName$=TabText$(Hook[1],Tab$,Row,"StatusRegName")
+          if RegName$ <> ""
+             evaluate "iExist=RegSize("+RegName$+")"
+             if iExist <> -1
+                evaluate "iExist=ObjHdrType("+RegName$+",EMFWarning)"
+                if iExist <> 99
+                   !only modules that have an EMF in status reg
+                   ShortName$=TabText$(Hook[1],Tab$,Row,"ShortNameLabel")
+                   GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,RegName$,\
+                                                 ShortName$,iModuleCount
+                   !iModuleCount=iModuleCount+1
+                   ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+                   evaluate ret$
+                endif   
+             endif   
+          endif   
+      next Row
+      if DevLeoAfc > 0
+         if DevLeoAfc = 1
+            GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoAfcStatus1","LAFC",\
+                                          iModuleCount 
+		 else
+            GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoAfcStatus1","LAFC1",\
+                                          iModuleCount 
+		 endif
+         !iModuleCount=iModuleCount+1
+         ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+         evaluate ret$
+         if DevLeoAfc > 1
+            GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoAfcStatus2","LAFC2",\
+                                          iModuleCount 
+            !iModuleCount=iModuleCount+1
+            ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+            evaluate ret$
+            if DevLeoAfc > 2
+               GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoAfcStatus3","LAFC3",\
+                                             iModuleCount 
+               !iModuleCount=iModuleCount+1
+               ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+               evaluate ret$
+							 if DevLeoAfc > 3
+							    GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoAfcStatus4","LAFC4",\
+									                           iModuleCount 
+							    !iModuleCount=iModuleCount+1
+                  ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+                  evaluate ret$
+               endif
+            endif
+         endif
+      endif
+
+      if DevLeoVlv > 0
+         if DevLeoVlv = 1
+            GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoValveStatus1","LVLV",\
+                                          iModuleCount 
+	  	 else
+            GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,"LeoValveStatus1","LVLV1",\
+                                          iModuleCount 
+	  	 endif
+         !iModuleCount=iModuleCount+1
+         ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+         evaluate ret$
+         if DevLeoVlv > 1
+            For Row=2 To DevLeoVlv
+            
+                GuiSetModuleEmfWarningListing QuickListGom$,b$,ToolName$,\
+                                              sprintf$(Row, "LeoValveStatus%d"),\
+                                              sprintf$(Row, "LVLV%d"),\
+                                              iModuleCount 
+                !iModuleCount=iModuleCount+1
+                ret$ = GuiCheckLenOfEmfWarningListing$ ("iModuleCount", iModuleCount)
+                evaluate ret$
+            
+            Next Row
+      
+         endif
+      endif
+
+
+endif
+
+endmacro
+
+
+
+!############################################################################
+name GuiShowQuickDAMethodListing
+!############################################################################
+
+local b$
+local LeoType   
+local ProdArea$ 
+local QuickListGom$   
+local iModuleCount                            
+local ToolName$
+
+QuickListGom$=GUIQuickListGOM$
+                             
+if GomExist( , GUISystemDiagGOM$) = 1
+      ProdArea$="DRIVERS"
+      GOMShowGUI GUISystemDiagGOM$ , QuickListGom$, ProdArea$  
+      QuickListGom$=GUISystemDiagGOM$+"|"+QuickListGom$
+      b$="LDaMeth"
+      GOMShowGUI QuickListGom$, b$, ProdArea$  
+      GUICondenseDAMethodParameters
+      GOMSetToolEvent  QuickListGom$, b$ , "MethodListing", "ENABLE" , , ,TopEnableSaveMethod 
+                                                                          !MethLoadSaveIdle
+      
+endif
+
+
+endmacro
+
+
+!############################################################################
+name GUICondenseDAMethodParameters
+
+!is an empty macro will be overloaded for each product type
+!############################################################################
+
+local A$       
+local iii
+local irow
+local b$
+local ProdArea$ 
+local QuickListGom$
+local DestPrinter
+local DestScreen   
+local DestFile  
+
+QuickListGom$=GUISystemDiagGOM$+"|"+GUIQuickListGOM$
+b$="LDaMeth"
+
+if GomExist( QuickListGom$, b$) = 0
+   return  !don't need this
+endif
+
+         
+iii=TabHdrVal(_DAMethod[1], "RptParm", "Style")
+irow=RowByVal(_config[1],"ReportStyle",,"Style","=",iii)
+A$="RPTREPORT|RPTSTYLE|"
+if irow > 0                              
+   A$=A$+TabText$(_config[1],"ReportStyle",irow,"Title")+"|"
+else
+   A$=A$+" |"
+endif
+A$=A$+"RPTDEST|"
+DestPrinter=TabHdrVal(_DAMethod[1],"RptParm","DestPrinter")
+DestScreen=TabHdrVal(_DAMethod[1],"RptParm","DestScreen")
+if DestPrinter > 0 AND DestScreen > 0
+   A$=A$+"RPTPRINTERSCREEN|"
+else
+   if DestPrinter > 0 OR DestScreen > 0
+      if DestPrinter > 0
+         A$=A$+"RPTPRINTER|"
+      endif
+      if DestScreen > 0
+         A$=A$+"RPTSCREEN|"
+      endif
+   else
+      A$=A$+" |"
+   endif
+endif
+
+DestFile=TabHdrVal(_DAMethod[1],"RptParm","DestFile")
+if DestFile > 0 
+   A$=A$+"RPTFILE|"+TabHdrText$(_DAMethod[1],"RptParm","FileName")+"|"
+else
+   A$=A$+" | |"
+endif
+
+A$=A$+"RPTQUANT|RPTBASEDON|"
+iii=TabHdrVal(_DAMethod[1],"QuantParm","CalcBase")
+if iii > 0
+   A$=A$+"RPTPEAKHEIGHT|"
+else
+   A$=A$+"RPTPEAKAREA|"
+endif
+iii=TabHdrVal(_DAMethod[1],"QuantParm","CalcType")
+A$=A$+"RPTCALCTYPE|"+"RPT"+val$(iii)+"|"
+                                                                               
+A$=A$+" | | | | | | | | | | | | | | " !be sure left over places are empty
+
+GomSetText QuickListGom$, b$, "MethodListing","elements",A$
+
+endmacro
+    
+
+
+!############################################################################
+name GuiShowQuickEcmMethodListing
+!############################################################################
+
+local b$
+local LeoType   
+local ProdArea$ 
+local QuickListGom$   
+local iModuleCount                            
+local ToolName$
+
+QuickListGom$=GUIQuickListGOM$
+                             
+if GomExist( , GUISystemDiagGOM$) = 1
+      ProdArea$="DRIVERS"
+      GOMShowGUI GUISystemDiagGOM$ , QuickListGom$, ProdArea$  
+      QuickListGom$=GUISystemDiagGOM$+"|"+QuickListGom$
+      b$="ecmstatus"
+      GOMShowGUI QuickListGom$, b$, ProdArea$  
+      GUICondenseEcmParameters
+      GOMSetToolEvent QuickListGom$, b$ , "EcmInfos", "ENABLE" , , ,TopEnableSaveMethod 
+      
+endif
+
+endmacro
+
+!############################################################################
+name GUIEcmTranslateToYesNo$
+
+
+!############################################################################
+parameter p
+
+  if (p = 0)
+    return "no"
+  else
+    return "yes"
+  endif
+
+endmacro
+
+!############################################################################
+name GUICondenseEcmParameters
+
+
+!############################################################################
+
+local A$       
+local iii
+local irow
+local b$
+local ProdArea$ 
+local QuickListGom$
+
+  QuickListGom$=GUISystemDiagGOM$+"|"+GUIQuickListGOM$
+  b$="ecmstatus"
+
+  if GomExist( QuickListGom$, b$) = 0
+     return  !don't need this
+  endif
+
+  A$ = "LCDF Preferences: "
+  if VC_IsAcquisitionWithUpload() = 1
+    A$ = A$ + VcsFacade_AutoRepositoryLocation_get$()
+  else
+    A$ = A$ + "-\-\-\-"
+  endif
+
+  A$ = A$ + "|Operator: " + _Operator$
+
+  A$ = A$ + "|Automatic transfer after acquisition: " + GUIEcmTranslateToYesNo$(Vcs_get_TransferOnAcquisition())
+  A$ = A$ + "|Automatic transfer after reprocessing: " + GUIEcmTranslateToYesNo$(Vcs_get_TransferOnReprocessing())
+  A$ = A$ + "|Automatic transfer after any data modification: " + GUIEcmTranslateToYesNo$(Vcs_get_TransferOnDataChange())
+  A$ = A$ + "|Automatic import after reprocessing: " + GUIEcmTranslateToYesNo$(Vcs_get_TransferOnReprocessingIncludeNonAttached())
+  A$ = A$ + "|Calculate peak performance: " + GUIEcmTranslateToYesNo$(Vcs_get_CalculateOnTransfer())
+
+  GomSetText QuickListGom$, b$, "EcmInfos","elements", A$
+
+endmacro
+    
+ 
+ 
+ 
+
+!############################################################################
+name GUIPowerFailAlertBox
+                                             
+parameter  StatusReg$
+parameter  ModName$
+!############################################################################
+
+local iii                            
+local a$
+
+evaluate "iii=RegSize("+StatusReg$+")"
+   
+if iii > 0
+   !RunState 2 means powerfail
+   evaluate "a$=ObjHdrText$("+StatusReg$+",ErrorTextLong)"
+   if a$ = ""
+      evaluate "a$=ObjHdrText$("+StatusReg$+",ErrorTextShort)"
+   endif
+   if a$ = ""
+      a$="POWERFAIL"
+   endif
+   iii=alert(ModName$+": "+a$+"." , 3 ,Alert3Title$)
+endif
+ 
+return iii
+
+endmacro 
+
+!############################################################################
+name GUITogglePump
+                                             
+!############################################################################
+
+local iii                            
+local a$
+local x
+
+local ID_ASTXDRIVERSMACFILES_SWITCH_OFF_ALL_18
+local ID_ASTXDRIVERSMACFILES_TURN_PUMP_303
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_SWITCH_OFF_ALL_18 = 17018
+ID_ASTXDRIVERSMACFILES_TURN_PUMP_303     = 17303
+NLSFileName_astxmac$= "astxmac"
+
+evaluate "x = RegSize(LeoPumpStatus"+Val$(_GuiPump)+")"
+if x > 0
+   evaluate "iii=ObjHdrVal(LeoPumpStatus"+Val$(_GuiPump)+",""RunState"")" 
+   if iii = 2
+      !2 means powerfail
+      iii=GUIPowerFailAlertBox("LeoPumpStatus"+Val$(_GuiPump),"Pump")
+   else   
+   if iii <>  4
+      !4 means standby
+      iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SWITCH_OFF_ALL_18),4,Alert4Title$)
+      if iii = 1
+         PumpAll off
+      endif   
+   else
+      iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TURN_PUMP_303),4,Alert4Title$)
+      if iii = 1
+         PumpAll on
+      endif   
+   endif   
+   endif   
+endif
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIToggleThermostat
+
+parameter  ModuleNumber  default  1                                             
+!############################################################################
+
+local iii
+local RegName$                          
+local a$
+local ModuleName$
+
+local ID_ASTXDRIVERSMACFILES_SWITCH_OFF_THE_19
+local ID_ASTXDRIVERSMACFILES_TURN_ON_THE_TH_20
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_SWITCH_OFF_THE_19           =  17019  
+ID_ASTXDRIVERSMACFILES_TURN_ON_THE_TH_20           =  17020  
+NLSFileName_astxmac$= "astxmac"
+   
+
+RegName$="LeoThermostatStatus"+val$(ModuleNumber)
+evaluate "iii=RegSize("+RegName$+")"
+if iii > 0
+   evaluate "iii=ObjHdrVal("+RegName$+",RunState)"
+   ModuleName$="LTHM"+val$(ModuleNumber)
+   if iii = 2
+	  !2 means powerfail
+	  iii=GUIPowerFailAlertBox(RegName$,"Thermostat")
+   else   
+   if iii <>  4
+	  !4 means standby
+	  iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SWITCH_OFF_THE_19),4,Alert4Title$)
+	  if iii = 1
+	    if Check(Variable, _ClusteredTcc$) = 1 then
+		    if _ClusteredTcc$ <> "" then
+				ClusterTccSwitchTcc OFF
+			else
+				a$=SendModule$(ModuleName$,"THRM 0")
+			endif
+		endif
+	  endif   
+   else
+	  iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TURN_ON_THE_TH_20),4,Alert4Title$)
+	  if iii = 1
+	    if Check(Variable, _ClusteredTcc$) = 1 then
+		    if _ClusteredTcc$ <> "" then
+				ClusterTccSwitchTcc ON
+			else
+				a$=SendModule$(ModuleName$,"THRM 1")
+			endif
+		endif
+	  endif   
+   endif   
+   endif   
+endif
+
+endmacro
+
+
+
+
+
+
+
+!############################################################################
+name GUIRunReprocessing
+                                             
+!############################################################################
+
+!only do a da method run
+
+DoRunDAMethod
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIBuildSamplingTrayINI$      
+                                             
+!############################################################################
+
+local TrayType
+local RightTray
+local SamplingGomIni$
+
+if DevLeoALS > 0
+   TrayType=ObjHdrVal(LeoALSStatus1,"Act_Tray_A")
+
+   if (TrayType = 10) or (TrayType = 13) 	!WK: New well plate sampler
+      SamplingGomIni$="LWPSTr"
+	  ! WK: Just to be sure ( the driver should have done that, but doesn't
+      SetObjHdrVal LeoALSStatus1,"Act_Tray_B", 0
+   Else 
+     If TrayType = 12  ! New Automation Interface
+       SamplingGomIni$="LAITr"
+       SetObjHdrVal LeoALSStatus1,"Act_Tray_B", 0
+     else
+	   if TrayType > 40
+	      SamplingGomIni$="L100ooTr"
+	   else 
+	      !not val$(TrayType) since we don't have generalized pictures
+	      SamplingGomIni$="L"
+	      if TrayType <= 0      
+	         !before setting it to "oo" look into _config[1], Leo_Tray_A
+	         !for last configuration
+	         if ObjHdrType(_config[1], "Leo_Tray_A") = 99
+	            setobjhdrval _config[1],Leo_Tray_A,100
+	         endif   
+	         TrayType=objhdrval(_config[1],Leo_Tray_A)
+	         RightTray=ObjHdrVal(LeoALSStatus1,"Act_Tray_B")
+	         if RightTray > 0  AND  ( TrayType = 100 OR TrayType = 10 OR TrayType = 12 or TrayType = 13 )
+	            !then really something there, cannot accept a missing 100 tray
+				!or missing plate tray (WK)
+	            TrayType=0
+	         endif
+	      endif
+	      if TrayType <= 0      
+	         SamplingGomIni$=SamplingGomIni$+"oo"
+	      else
+		    if TrayType = 10 or TrayType=13	!WK: New well plate sampler
+		     SamplingGomIni$=SamplingGomIni$+"WPS"
+        Else 
+        If TrayType = 12 ! Automation Interface
+          SamplingGomIni$=SamplingGomIni$+"AI"
+        else
+	      if TrayType <= 15
+	         SamplingGomIni$=SamplingGomIni$+"15"
+	      else
+	      if TrayType <= 40
+	         SamplingGomIni$=SamplingGomIni$+"40"
+	      else
+	         SamplingGomIni$=SamplingGomIni$+"100"
+	         SamplingGomIni$=SamplingGomIni$+"oo"
+	      endif
+	      endif
+        endif
+        endif
+	      endif
+	      if TrayType <> 10 AND TrayType <> 12 and TrayType<>13 And TrayType <= 40 
+	         !WK: only then can come the 'normal' 2 tray parts
+	         TrayType=ObjHdrVal(LeoALSStatus1,"Act_Tray_B")
+	         if TrayType <= 0      
+	            !before setting it to "oo" look into _config[1], Leo_Tray_B
+	            !for last configuration
+	            if ObjHdrType(_config[1], "Leo_Tray_B") = 99
+	               setobjhdrval _config[1],Leo_Tray_B,40
+	            endif   
+	            TrayType=objhdrval(_config[1],Leo_Tray_B)
+	         endif
+	         if TrayType <= 0
+	            SamplingGomIni$=SamplingGomIni$+"oo"
+	         else   
+	         if TrayType <= 15
+	            SamplingGomIni$=SamplingGomIni$+"15"
+	         else
+	            SamplingGomIni$=SamplingGomIni$+"40"   
+	         endif
+	         endif
+	      endif
+	      if SamplingGomIni$ = "Loooo"
+	         SamplingGomIni$ = "L0oo"
+        EndIf
+        SamplingGomIni$=SamplingGomIni$+"Tr"
+     EndIf
+     endif
+   EndIf
+ Else                        
+   if Dev1090Inject = 1
+      SamplingGomIni$="L1090Tr"
+   else 
+      if Dev1050Sampler = 1
+         if Sampler = 21
+            SamplingGomIni$="L21Tr"
+         else
+            if Sampler = 34
+               SamplingGomIni$="L34Tr"
+            else
+               SamplingGomIni$="L121Tr"
+            endif
+         endif
+      else
+         if DevHPCE = 1
+            SamplingGomIni$="Ce48Tr"
+         else
+            SamplingGomIni$="L100ooTr"     !just take this one as the most general form
+         endif
+      endif
+   endif
+
+endif
+
+return SamplingGomIni$
+
+endmacro
+
+
+
+!############################################################################
+name GUIBuildLeftTrayINI$
+                                             
+!############################################################################
+
+local TrayType
+local RightTray
+local TrayGomIni$
+
+if DevLeoALS > 0
+   TrayType=ObjHdrVal(LeoALSStatus1,"Act_Tray_A")
+   if TrayType = 0
+      !before setting it to "oo" look into _config[1], Leo_Tray_A
+      !for last configuration
+      if ObjHdrType(_config[1], "Leo_Tray_A") = 99
+         setobjhdrval _config[1],Leo_Tray_A,100
+      endif   
+      TrayType=objhdrval(_config[1],Leo_Tray_A)
+      RightTray=ObjHdrVal(LeoALSStatus1,"Act_Tray_B")
+      if RightTray > 0  AND  ( TrayType = 100 OR TrayType = 10 Or TrayType = 12 or TrayType = 13)
+	     !then really something there, cannot accept a missing 100 tray
+		 !or missing plate tray (WK)
+         TrayType=0
+      endif
+   endif   
+   if TrayType = 10	or TrayType = 13	
+      TrayGomIni$="LVbaTray"	 ! WK: Vial bar on Wellplate Tray 
+    Else  
+     !If TrayType = 12          ! doesn't run
+     !  TrayGomIni$="LVb2Tray"
+     !else
+	   if TrayType = 100
+	      TrayGomIni$="L100Tray"
+	   else   
+	      if TrayType <= 0
+	         TrayGomIni$="LooTray" !which does not exist
+	      else
+	         TrayGomIni$="L"
+	         if TrayType <= 15
+	            TrayGomIni$=TrayGomIni$+"15"
+	         else
+	            TrayGomIni$=TrayGomIni$+"40"
+	         endif
+	         TrayGomIni$=TrayGomIni$+"LTray"
+	      endif
+     EndIf
+     !endif
+   endif
+else 
+   if Dev1090Inject = 1
+      TrayGomIni$="L1090_Tr"
+   else 
+      if Dev1050Sampler = 1
+         if Sampler = 21
+            TrayGomIni$="L21Tray"
+         else
+            if Sampler = 34
+               TrayGomIni$="L34Tray"
+            else
+               TrayGomIni$="L21sTray"
+            endif
+         endif
+      else
+         if DevHPCE = 1
+            TrayGomIni$="Ce48Tray"
+         else
+            TrayGomIni$="L100Tray"     !just take this one as the most general form
+         endif
+      endif
+   endif
+endif
+
+return TrayGomIni$
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIBuildRightTrayINI$
+                                             
+!############################################################################
+
+local TrayType
+local TrayGomIni$
+local LeftTray
+
+if DevLeoALS > 0
+   TrayType=ObjHdrVal(LeoALSStatus1,"Act_Tray_B")
+   if TrayType = 0
+
+      ! WK: Need to test whether the plate tray is configured or was 
+      !     in previous configuration
+      LeftTray = ObjHdrVal(LeoALSStatus1,"Act_Tray_A")
+	  if ObjHdrType(_config[1], "Leo_Tray_A") = 99
+	     setobjhdrval _config[1],Leo_Tray_A,100
+	  endif   
+
+      if ( LeftTray = 10 Or LeftTray = 12 or LeftTray = 13) OR \
+         ( ( LeftTray = 0 ) AND ( ObjHdrVal(_config[1], "Leo_Tray_A") = 10 Or ObjHdrVal(_config[1], "Leo_Tray_A") = 10) )
+		 ! WK: Wellplate Tray is identified by 
+		 !     TrayLeft: 10   TrayRight: 0
+		 !     For further work we 'simulate' the TrayRight
+	     TrayType = 10	 
+	  else
+         !before setting it to "oo" look into _config[1], Leo_Tray_B
+         !for last configuration
+         if ObjHdrType(_config[1], "Leo_Tray_B") = 99
+            setobjhdrval _config[1],Leo_Tray_B,100
+         endif   
+
+         TrayType=objhdrval(_config[1],Leo_Tray_B)
+
+	  endif
+   endif   
+   if TrayType <= 0
+      TrayGomIni$="LooTray" !which does not exist
+   else
+	  if TrayType = 10 or TrayType = 12 or TrayType = 13
+       TrayGomIni$="LPltTray" !WK: New well plate sampler, Shows the 2 plates
+                              ! the same for the Automation Interface
+	  else
+	      TrayGomIni$="L"
+	      if TrayType <= 15
+	         TrayGomIni$=TrayGomIni$+"15"
+	      else
+	         TrayGomIni$=TrayGomIni$+"40"
+	      endif
+	      TrayGomIni$=TrayGomIni$+"RTray"
+	  endif
+   endif
+else 
+   TrayGomIni$="L100Tray"     !just take this one
+   if Dev1050Sampler = 1
+      if Sampler <> 21  AND Sampler <> 34
+         TrayGomIni$="L121Tray"
+      endif
+   endif
+endif
+
+return TrayGomIni$
+
+endmacro
+
+
+
+!############################################################################
+name GUIBuildSequenceSamplingINI$
+                                             
+!############################################################################
+
+if Dev1050Sampler > 0
+   if Sampler = 21
+      return "Lsequenw"  
+   else
+      if Sampler = 34
+         return "Lsequenw"
+      else
+         return "Lsequewl"  
+      endif
+   endif
+else
+   if DevHPCE > 0
+      return "Csequenc"
+   else
+      return "Lsequenc"
+   endif
+endif
+
+
+endmacro
+
+
+
+
+
+!############################################################################
+name GUIBuildSingleSampleINI$
+                                             
+!############################################################################
+
+
+if Dev1050Sampler > 0
+   return "LSinglSW"
+else
+   if DevHPCE > 0
+      return "CSingleS"
+   else
+      if _WellPlateSampler > 0
+          return "LSinglWS"
+      else
+          return "LSingleS"
+      endif
+   endif   
+endif
+
+endmacro
+
+
+
+!############################################################################
+name GUIBuildLeoPumpPrefix$
+                                             
+parameter  PumpType  default  -1
+!############################################################################
+
+local Prefix$
+local Cluster
+
+if PumpType = -1
+   !only read if not requested to build a specific one
+   evaluate "PumpType=ObjHdrVal(LeoPumpStatus"+Val$(_GuiPump)+",""PumpType"")"
+endif   
+if PumpType > 0  AND PumpType < 10
+   Prefix$="L"+val$(PumpType)
+   if PumpType = 6
+      evaluate "Cluster=ObjHdrVal(LeoPumpStatus"+Val$(_GuiPump)+", ""Clustered"")"
+      if Cluster <> 0
+	     Prefix$ = Prefix$ +val$(Cluster)
+      endif
+   endif
+else 
+   !don't know what to do then
+   Prefix$="L1"  
+endif   
+
+return Prefix$
+
+endmacro
+
+
+!############################################################################
+name GUIBuildSolventsINI$
+
+parameter  PumpType  default  -1
+                                             
+!############################################################################
+
+local GomIni$
+
+if DevLeoPump > 0
+   GomIni$=GUIBuildLeoPumpPrefix$(PumpType)
+   if GomIni$ <> ""
+      GomIni$=GomIni$+"Solv"
+   else
+      GomIni$=GUIBuildLeoPumpPrefix$(0)+"Solv"  
+   endif   
+else 
+   GomIni$=GUIBuildLeoPumpPrefix$(0)+"Solv"
+endif
+
+return GomIni$
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIBuildColumnINI$
+                                             
+!############################################################################
+
+local ThmType
+local GomIni$
+local CountLeoThm
+            
+CountLeoThm=DevLeoThm
+if DevLeoThm > 2
+   CountLeoThm=2    !we don't give more for now
+endif
+
+GomIni$ = ""
+if DevLeoClc > 0
+   if CountLeoThm > 0
+      GomIni$="L3Column"
+   endif
+else
+   GomIni$="L"+val$(CountLeoThm)+"Column"
+endif
+
+return GomIni$
+
+endmacro
+
+!############################################################################
+name GUIBuildClcINI$
+                                             
+!############################################################################
+
+local GomIni$
+            
+!xxxCLC (new)
+GomIni$="L1CLC"
+!GomIni$="LCLC"
+
+return GomIni$
+
+endmacro
+
+
+
+
+
+
+!############################################################################
+name GUISetToolEvent
+                                             
+parameter  SubGom$
+parameter  ToolName$
+parameter  ToolAttribute$
+parameter  RegName$     
+parameter  HotlinkNdr$    default "???"                                    
+parameter  CpVarName$     default "???"                                   
+!############################################################################
+
+if  HotlinkNdr$ <> "???"
+    evaluate "GomSetToolEvent GUISystemDiagGOM$,SubGom$,ToolName$,ToolAttribute$,"\
+           +RegName$+",HotlinkNdr$,"
+else
+if  CpVarName$ <> "???"
+    evaluate "GomSetToolEvent GUISystemDiagGOM$,SubGom$,ToolName$,ToolAttribute$,"\
+           +",,"+CpVarName$
+else
+   !generate error        
+endif
+endif
+
+endmacro
+
+
+!############################################################################
+name GUISetSamplingToolEvent
+                                             
+parameter  SubGom$
+parameter  ToolName$
+parameter  ToolAttribute$
+parameter  RegName$     
+parameter  HotlinkNdr$    default "???"                                    
+parameter  CpVarName$     default "???"                                   
+!############################################################################
+
+if  HotlinkNdr$ <> "???"
+    evaluate "GomSetToolEvent GUISamplingDiagGOM$,SubGom$,ToolName$,ToolAttribute$,"\
+           +RegName$+",HotlinkNdr$,"
+else
+if  CpVarName$ <> "???"
+    evaluate "GomSetToolEvent GUISamplingDiagGOM$,SubGom$,ToolName$,ToolAttribute$,"\
+           +",,"+CpVarName$
+else
+   !generate error        
+endif
+endif
+
+endmacro
+
+
+
+!############################################################################
+name GUIInstallSequenceHotlinks
+                                             
+                                             
+!############################################################################
+
+local TrayGomIni$
+local SamplingGomIni$
+local TrayPartGomIni$
+
+SamplingGomIni$ = GUIBuildSequenceSamplingINI$()
+TrayGomIni$ = GUIBuildSamplingTrayINI$() 
+
+if GUILastSequenceTrayGOM$ <> SamplingGomIni$
+   if GUILastSequenceTrayGOM$ <> "" 
+      !future just delete out all hotlinks to last sampling system 
+      GOMDeleteToolEvent  GUISamplingDiagGOM$ , SamplingGomIni$
+   endif   
+
+   GUILastSequenceTrayGOM$=TrayGomIni$  !save this
+
+   !for all:                      
+   GUISetSamplingToolEvent  SamplingGomIni$, "SampleInfo", "elements", "Gui",  "SeqAct_SInf"
+   GUISetSamplingToolEvent  SamplingGomIni$, "DiskSpace",  "image4",   "Gui",  "SeqDataSubDir"
+   GUISetSamplingToolEvent  SamplingGomIni$, "Start",      "enable",     ,   ,   "TopEnableStart"
+   GUISetSamplingToolEvent  SamplingGomIni$, "Stop",       "enable",     ,   ,   "TopEnableStop"
+   
+   GUISetSamplingToolEvent  SamplingGomIni$, "DiskSpace",  "elements", "Gui",  "DiskSpace"
+
+   
+   TrayGomIni$=GUISamplingDiagGOM$+"|"+SamplingGomIni$+"|"+TrayGomIni$
+
+   !build left tray gom hotlinks
+   TrayPartGomIni$=GUIBuildLeftTrayINI$()
+   GomSetToolEvent TrayGomIni$, TrayPartGomIni$,\
+                   "LeftTray", "elements", Gui,  "SeqTray1"
+
+   !build right tray gom hotlinks
+   TrayPartGomIni$=GUIBuildRightTrayINI$()
+   GomSetToolEvent TrayGomIni$, TrayPartGomIni$,\
+                   "RightTray", "elements", Gui,  "SeqTray2"
+endif
+
+
+endmacro
+                            
+                            
+                            
+                            
+!############################################################################
+name GUIInstallSingleSampleHotlinks
+                                             
+                                             
+!############################################################################
+
+local SubGomIni$
+
+SubGomIni$=GUIBuildSingleSampleINI$()
+
+!future just delete out syscont sub items !!!
+GOMDeleteToolEvent GUISamplingDiagGOM$,SubGomIni$    !maybe do this only the first time at bootup
+
+!hotlinks for single sample mode
+GUISetSamplingToolEvent  SubGomIni$, "SampleInfo", "elements",  "Gui", "ACT_SINF"
+
+GUISetSamplingToolEvent  SubGomIni$, "DiskSpace",  "image4",   "Gui",  "SRDataSubDir"
+
+GUISetSamplingToolEvent  SubGomIni$, "Start",      "enable",    ,   ,   "TopEnableStart"
+GUISetSamplingToolEvent  SubGomIni$, "Stop",       "enable",    ,   ,   "TopEnableStop"
+
+GUISetSamplingToolEvent  SubGomIni$, "DiskSpace",  "elements", "Gui",  "DiskSpace"
+
+
+endmacro
+        
+        
+        
+        
+!############################################################################
+name GUIInstallNonInstrumentHotlinks
+                                             
+                                             
+!############################################################################
+
+local GomSubIni$
+
+local ID_ASTXDRIVERSMACFILES_METHOD_21
+local ID_ASTXDRIVERSMACFILES_METHODINFO_22
+local ID_ASTXDRIVERSMACFILES_INTEGRATE_23
+local ID_ASTXDRIVERSMACFILES_REPORT_25
+local ID_ASTXDRIVERSMACFILES_CALIBRATE_32
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_METHOD_21                   =  17021  
+ID_ASTXDRIVERSMACFILES_METHODINFO_22               =  17022  
+ID_ASTXDRIVERSMACFILES_INTEGRATE_23                =  17023  
+ID_ASTXDRIVERSMACFILES_REPORT_25                   =  17025  
+ID_ASTXDRIVERSMACFILES_CALIBRATE_32                =  17032  
+NLSFileName_astxmac$= "astxmac"
+!deltabrow _config, gomdatalinks, -1    !clean up from last time
+
+
+!hotlinks for sequence mode
+GUIInstallSequenceHotlinks  
+
+!hotlinks for single sample mode
+GUIInstallSingleSampleHotlinks  
+                           
+!hotlinks for method stuff
+GomSubIni$="LMethod"
+GUISetToolEvent  GomSubIni$, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METHODINFO_22), "text1",       , , "_METHODINFO$"
+GUISetToolEvent  GomSubIni$, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METHOD_21),     "elements",    , , "GuiSystemStatus$"
+
+
+!hotlinks for DA progress stuff
+GomSubIni$="LDaSimpl"
+GUISetToolEvent  GomSubIni$, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INTEGRATE_23), "image1",       , , "RUN_DA"
+GUISetToolEvent  GomSubIni$, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_CALIBRATE_32), "image1",       , , "RUN_DA"
+GUISetToolEvent  GomSubIni$, ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_REPORT_25),    "image1",       , , "RUN_DA"
+GUISetToolEvent  GomSubIni$, "GlpSave",   "image1",       , , "RUN_SAVEGLPDATA"
+        
+endmacro
+
+
+!############################################################################
+name GUIInstallSolventsHotlinks
+                                             
+!for pump 
+!and for method listing, and comsumption
+!############################################################################
+
+local LeoType
+local SubGomIni$
+
+SubGomIni$=GUIBuildSolventsINI$(-1)
+GUISetToolEvent  SubGomIni$, "Composition","elements",   "Gui", "SOLVENTS1"
+GUISetToolEvent  SubGomIni$, "bottles",    "elements",   "Gui", "BOTTLELEVEL1"
+
+
+endmacro              
+
+
+!############################################################################
+name GUIInstallInstrumentHotlinks
+                                             
+!for pump ALS and column and Legend
+!and for method listing, and comsumption
+!############################################################################
+
+local LeoType
+local SubGomIni$
+local CountLeoThm
+
+if _PumpUseBar = 1
+   SubGomIni$="LInjPump"
+else
+   SubGomIni$="JInjPump"
+endif
+GUISetToolEvent  SubGomIni$, "injection", "elements",   "Gui",  "INJACT1"
+if DevLeoAls > 0
+   !only then is Cp var "_LALSInjectIdle" there 
+   GUISetToolEvent  SubGomIni$, "AlsHome",   "enable",        ,  , "_LALSInjectIdle"
+endif   
+GUISetToolEvent  SubGomIni$, "pump",      "elements",   "Gui",  "FLOWPRESSURE1"
+
+GUIInstallSolventsHotlinks
+
+
+
+
+SubGomIni$=GUIBuildColumnINI$()
+
+CountLeoThm = DevLeoThm
+if Check(Variable, _ClusteredTcc$) = 1 then
+   if InStr(_ClusteredTcc$, "1") > 0 then
+      CountLeoThm=1
+   else
+      if InStr(_ClusteredTcc$, "2") > 0 then
+         CountLeoThm=2
+      endif
+   endif
+endif
+
+if CountLeoThm > 0 or DevLeoClc = 0
+   GUISetToolEvent  SubGomIni$, "column1", "elements",       "Gui",  "ThmTEMPTIME1"
+endif
+if CountLeoThm > 1 and DevLeoClc = 0
+   GUISetToolEvent  SubGomIni$, "column2", "elements",    "Gui",  "ThmTEMPTIME2"
+endif
+
+if DevLeoClc > 0
+   SubGomIni$=GUIBuildClcINI$()
+   GUISetToolEvent  SubGomIni$, "ChipCube", "elements",       "Gui",  "CLCACT1"
+!                                ToolName ,  ToolItem ,        Reg ,  NDR for Holink
+endif
+endmacro              
+
+
+
+!############################################################################
+name GUIConfigureGOMHotlinks
+                                             
+!initially sets up all data hotlinks for a working GUI system diagram                                             
+!############################################################################
+
+
+!deltabrow _config, gomdatalinks, -1    !clean up from last time
+
+!builds all necessary hotlinks
+!future just delete out syscont sub items !!!
+GOMDeleteToolEvent  , GUISystemDiagGOM$    !maybe do this only the first time at bootup
+
+
+!hotlinks for non instrument stuff
+GUIInstallNonInstrumentHotlinks  
+
+
+!hotlinks for instrument configuration dependant stuff
+if DevLeoPump+DevLeoAls+DevLeoThm+DevLeoClc+GuiDevGuiDets > 0
+   !if anyone is present (same as in Menuadd for system diagram)
+   GUIInstallInstrumentHotlinks  
+endif   
+
+
+
+endmacro
+
+
+
+
+
+!############################################################################
+name GUISamplingGomNameForMode$
+
+parameter  SamplingMode$     default "DefaultCase"
+!############################################################################
+
+
+if SamplingMode$ = ""
+   SamplingMode$="DefaultCase"
+endif
+on error goto DefaultCase
+evaluate "GoTo "+ SamplingMode$
+   TOPRUN:;on error
+     return GUIBuildSingleSampleINI$()
+     goto endswitch
+   TOPSEQ:;on error
+     return GUIBuildSequenceSamplingINI$()
+     goto endswitch
+   DefaultCase:;on error
+     return GUIBuildSingleSampleINI$()
+     goto endswitch
+endswitch:
+
+endmacro
+
+
+!############################################################################
+name CorrectCaseOfMode$
+
+parameter  SamplingMode$      default "DefaultCase"  !give default
+!############################################################################
+
+
+if SamplingMode$ = ""
+   SamplingMode$="TOPRUN"
+endif
+on error goto DefaultCase
+evaluate "GoTo "+ SamplingMode$
+   TOPRUN:;on error
+     return "TOPRUN"
+     goto endswitch
+   TOPSEQ:;on error
+     return "TOPSEQ"
+     goto endswitch
+   DefaultCase:;on error
+     !return "UNKNOWN"
+     return SamplingMode$
+     goto endswitch
+endswitch:
+
+endmacro
+
+
+
+    
+
+
+
+
+
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+!############################################################################
+name GuiLeoDetectorReconfiguration
+
+parameter  DetectorsINIFile$
+parameter  TotalNoOfDetectors
+!############################################################################
+
+
+!!WARNING
+!! here have exactly the same steps in numbering the detectors as in 
+!! GUIShowBubbleMessage or : GUIBalanceDetector (but no longer needed )
+
+             
+local icnt
+local iDetectorNumber
+local HelpMessage$
+local ToolName$
+local DetName$
+             
+iDetectorNumber=1
+
+!redo help message
+!set the correct floating menu call
+!do hotlink connection
+
+if TotalNoOfDetectors > 4
+   TotalNoOfDetectors=4
+endif
+
+if TotalNoOfDetectors < 1
+   !foreign one
+   !if this happens guilcdet.mac was not loaded
+   GUICheckProductMacDemandLoading "guilcdet.mac", "GuiLeoSingleDetectorReconfig" , , \
+                                   DetectorsINIFile$ +","+ val$(iDetectorNumber) +"," \
+                                   + """?"" , , ""LeoVwdStatus"" " 
+else                                 
+!!
+
+if 0=1
+!OLD if at release
+if Dev1946MSD > 0 AND check(MACRO, GUI1946MSDDetectorReconfiguration) = 1
+   GUI1946MSDDetectorReconfiguration   GUISystemDiagGOM$, DetectorsINIFile$,  TotalNoOfDetectors, iDetectorNumber
+   iDetectorNumber=iDetectorNumber+Dev1946MSD
+else
+   for icnt=1 to Dev1946MSD
+       if check(MACRO, GUI1946MSDSingleDetectorReconfiguration) = 1
+          !not yet done this way
+          !do as in GuiLeoSingleDetectorReconfig 
+          GUI1946MSDSingleDetectorReconfiguration DetectorsINIFile$,iDetectorNumber,Dev1946MSD,
+                                       icnt,"MSD","LeoMSD","LeoMSDStatus","LeoMSDStatus","LMSD"
+       else
+          Gui1050SingleDetectorReconfig DetectorsINIFile$,iDetectorNumber,Dev1946MSD,\
+                                        icnt,"MSD","LeoMSD","LeoMSDStatus"
+       endif                         
+       iDetectorNumber=iDetectorNumber+1
+       if iDetectorNumber > TotalNoOfDetectors
+          return
+       endif                           
+    next icnt                          
+endif
+endif
+
+
+!set DetStackIniFile parameter for GuiExecHook in table hdr
+SetTabHdrText Hook[1],"GuiDetectors","DetStackIniFile",DetectorsINIFile$
+GuiExecHook   "GuiDetectors"
+
+!calls:  GUILeoSingleDetectorReconfig     in GuiLcDet.mac
+!        Gui1050SingleDetectorReconfig    in GuiLcDet.mac
+!        GuiADCSingleDetectorReconfig     in GuiLcDet.mac
+   
+
+
+endif
+
+
+
+endmacro
+             
+             
+                   
+
+!############################################################################
+name GUIRemoveMenuRow
+
+  parameter  RegName$     
+  parameter  ObjNr        default 1
+  parameter  MenuTab$
+  parameter  SearchKey$                                                
+
+!############################################################################
+
+local irow
+local HelpCommand$
+local HelpOffset
+local HelpSubSystem$
+local iColPresent
+                 
+evaluate "iColPresent=TabColType( "+RegName$+"[ObjNr], MenuTab$, ""SearchKey"" )"
+if iColPresent <> 99
+   evaluate "irow = RowByText( "+RegName$+\
+                               "[ObjNr], MenuTab$, , ""SearchKey"", ""i="" , SearchKey$ )"
+    
+   if irow > 0                              
+      evaluate "DelTabRow "+RegName$+"[ObjNr], MenuTab$, irow "
+   endif
+endif
+
+endmacro                   
+                   
+             
+             
+             
+!############################################################################
+name GUICopyDiagramMenuTabs
+
+parameter  MenuTab$
+parameter  ModuleCount
+parameter  StatusRegNameBase$    default ""                             
+parameter  HelpSubSystem$  default ""  !to override whats coded                                                
+parameter  HelpOffset      default 0   !to override whats coded                                                
+parameter  DoRemove		   default 1
+parameter  SourceReg$	   default "LeoTemp"
+parameter  SrcMenuTab$     default ""
+ 
+!assumes menu tables to be copied to reside in LeoTemp reg
+!does menu correction for missing contacts option in modules
+!  NDR name : "CONT_INSTALLED" and search key row "CONTACTS"
+!does menu correction for online help sub system call
+!  this calls GOMRunTimeCorrectFloatingMenuHelpCalls
+!assumes also that tablename with OC at end is also there for offline copy menus
+!############################################################################
+   
+local RegSizeSource, RegSizeDest
+local icnt, imax                                                                  
+local OriginalTab$
+local iExists
+local KeepContactsMenuItem
+local KeepReleaseVialMenuItem
+local KeepPurgeMenuItem
+local KeepFCCMenuItem
+local KeepGuiMenuItem
+local KeepBottleMenuItem
+local Clusteres
+local PumpType
+local Pos
+local Mod$
+
+local KeepAfc4
+local KeepAfc3
+local KeepAfc2
+local Action$
+local iRow
+
+local KeepPurgeSyringeMenuItem
+
+local NumRows
+local Found
+local Loop
+local NameRef
+local PartNumber$
+
+local KeepIllumination
+local KeepIllumination1
+local KeepIllumination2
+local KeepIllumination3
+local KeepIllumination4
+local Device$
+local ModNumber
+local SerialNumber$
+local First1200
+local SerNo
+
+Local Type$
+Local KeepRunRecov
+
+
+KeepAfc4 = 0
+KeepAfc3 = 0
+KeepAfc2 = 0
+
+! Defaults for 'Purge' menu item
+PumpType		  = 0 
+KeepPurgeMenuItem = 1	  ! Always 'Keep or do nothing' if NO pump menu at all 
+KeepFCCMenuItem = 1       ! or capillary pump menu, (pumptype 5)
+
+if SrcMenuTab$ = ""
+   SrcMenuTab$ = MenuTab$
+endif
+
+! Test Autosampler  
+! Always 'Keep or do nothing' if ALS is present. Remove menu item 
+! if WLS is present
+KeepReleaseVialMenuItem = 1
+KeepPurgeSyringeMenuItem = 0
+if MenuTab$ = "LeoALS"
+	if check ( VARIABLE, _WellPlateSampler ) = 1
+		if _WellPlateSampler = 1
+			KeepReleaseVialMenuItem = 0
+
+            InjType = ObjHdrVal (LeoAlsStatus1[1], "ALS_TYPE")
+	        if InjType = 3
+			    KeepPurgeSyringeMenuItem = 1
+			endif
+	    endif
+	endif
+endif
+	
+Evaluate "RegSizeSource=RegSize("+SourceReg$+")"   
+RegSizeDest=RegSize(Menu)                 
+
+if RegSizeDest < RegSizeSource
+   imax=RegSizeDest
+else
+   imax=RegSizeSource
+endif
+
+if SourceReg$ = "Menu"
+   imax = 1
+endif
+if GuiOffline = 0
+   OriginalTab$=SrcMenuTab$
+else
+   OriginalTab$=SrcMenuTab$+"OC"   ! "OC" for Offline Copy menus table names
+endif                                                                   
+
+KeepRunRecov=1
+
+if StatusRegNameBase$ <> ""
+   StatusRegNameBase$=StatusRegNameBase$+val$(ModuleCount)    
+
+   evaluate "KeepContactsMenuItem=RegSize("+StatusRegNameBase$+")"
+   if KeepContactsMenuItem > 0
+      evaluate "KeepContactsMenuItem=ObjHdrVal("+StatusRegNameBase$+",""CONT_INSTALLED"")"
+
+	  ! Test whether this is a 'pump' status register and if, determine the pumptype
+      evaluate "if ObjHdrType("+StatusRegNameBase$+",""PUMPTYPE"")=1;" + \
+               "PumpType=ObjHdrVal("+StatusRegNameBase$+",""PUMPTYPE"");endif"
+
+	  if (PumpType <> 5) And (PumpType <> 7)! Not Capillary pump
+	  	 KeepPurgeMenuItem = 0
+	  	 KeepFCCMenuItem = 0
+	  else
+         NumRows = TabHdrVal(_Config, "ModuleInfo", "NumberOfRows")
+         Found = 0
+         For Loop = 1 To NumRows
+           NameRef = TabVal(_Config, "ModuleInfo", Loop, "NameRef")
+           PartNumber$ = TabText$(_Config, "Modules", NameRef, "PartNumber")
+           If PartNumber$ = "G1377A" Then
+             Found = 1
+           EndIf
+         Next Loop
+
+         if Found = 0 then
+            KeepFCCMenuItem = 0
+		 endif
+	  endif
+
+	  if PumpType = 6 ! Prep Pump pump
+         Clustered = 0
+         evaluate "if ObjHdrType("+StatusRegNameBase$+",""CLUSTERED"")=1;" + \
+                  "Clustered=ObjHdrVal("+StatusRegNameBase$+",""CLUSTERED"");endif"
+   	     if Clustered = 1
+	  	    KeepBottleMenuItem = 0
+		 else
+   	        KeepBottleMenuItem = 1
+	     endif
+	  else
+	     KeepBottleMenuItem = 1
+	  endif
+   else
+      KeepContactsMenuItem=0  !if HDR not there then Leo has no contacts
+   endif
+  Evaluate("Type$ = ObjHdrText$("+StatusRegNameBase$+", ""DRV_PRODUCT"")")
+  if ((Type$="G1315D")or (Type$="G1365D"))   
+    KeepContactsMenuItem=0
+    KeepRunRecov=0
+  endif
+  if ((Type$="G1315C")or (Type$="G1365C"))
+    KeepContactsMenuItem=0
+  endif
+  if ((Type$="G1314D")or (Type$="G1314E"))
+    KeepContactsMenuItem=0
+  endif
+
+else
+   KeepContactsMenuItem=1  !1050 modules always keep them
+   KeepBottleMenuItem = 0
+   KeepPurgeMenuItem = 0
+endif
+
+if DevLeoPump > 1
+   KeepGuiMenuItem=1  !if more than 1 pump is configured, keep menu item
+else
+   KeepGuiMenuItem=0  !Remove Menu Item
+endif
+
+If DevLeoAfc > 3
+    KeepAfc4 = 1
+EndIf
+If DevLeoAfc > 2
+    KeepAfc3 = 1
+EndIf
+If DevLeoAfc > 1
+    KeepAfc2 = 1
+EndIf
+
+
+
+KeepIllumination  = 1
+KeepIllumination1 = 1
+KeepIllumination2 = 1
+KeepIllumination3 = 1
+KeepIllumination4 = 1
+First1200         = 55000 ! use -1 for testing with 1100 modules
+
+If _OFFLINE = 0 Then
+   NumRows = TabHdrVal(_CONFIG[1], MODULEINFO, NumberOfRows)
+   For Loop = 1 To NumRows 
+      NameRef       = TabVal  (_CONFIG[1], MODULEINFO, Loop   , nameRef)
+      ModNumber     = TabVal  (_CONFIG[1], MODULEINFO, Loop   , number)
+      SerialNumber$ = TabText$(_CONFIG[1], MODULEINFO, Loop   , serialNumber)
+      Device$       = TabText$(_CONFIG[1], MODULES   , NameRef, Var)
+      If SerialNumber$ <> "" Then
+         ! test if third char is a letter or not
+         ! if it is a letter than it's the new serial number pattern
+         If SerialNumber$[3]<>"0" And Val(SerialNumber$[3])=0 Then
+            SerNo = First1200+1 ! generate temporary dummy serial number
+         else
+            SerNo = Val(SerialNumber$[3:Len(SerialNumber$)])
+         endif
+      Else
+         SerNo = First1200
+      EndIf
+      If (SerNo >= 0) And (SerNo < First1200) Then
+         if MenuTab$ = "LeoALS"
+            If Device$ = "LALS" Then
+               KeepIllumination  = 0
+            EndIf
+            If Device$ = "LWLS" Then
+               KeepIllumination  = 0
+            EndIf
+         EndIf
+         if MenuTab$ = "LeoAFC"
+            If Device$ = "LAFC" Then
+               Evaluate "KeepIllumination" + Val$(ModNumber) + " = 0"
+            EndIf
+         EndIf
+      EndIf
+   Next Loop
+Else
+   if MenuTab$ = "LeoALS"
+      KeepIllumination  = 0
+   EndIf
+   if MenuTab$ = "LeoAFC"
+      KeepIllumination1 = 0
+      KeepIllumination2 = 0
+      KeepIllumination3 = 0
+      KeepIllumination4 = 0
+   EndIf
+EndIf
+
+
+for icnt=1 to imax
+    if ObjHdrType(Menu[icnt],MenuTab$) = 4
+       DelTab Menu[icnt], MenuTab$
+    endif
+    Evaluate "iExists=ObjHdrType("+SourceReg$+"[icnt],OriginalTab$)"
+    if iExists = 99
+       OriginalTab$=SrcMenuTab$
+       Evaluate "iExists=ObjHdrType("+SourceReg$+"[icnt],OriginalTab$)"
+    endif
+    if iExists = 4
+       Evaluate "CopyTab "+SourceReg$+"[icnt], OriginalTab$, Menu[icnt], MenuTab$"
+
+       if DoRemove = 1
+       	       if KeepRunRecov=0
+       		  GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "RECOV"
+       	       endif
+	       if KeepIllumination = 0 
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "ILLU"
+	       endif
+	       if KeepIllumination1 = 0 
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "ILLU1"
+	       endif
+	       if KeepIllumination2 = 0 
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "ILLU2"
+	       endif
+	       if KeepIllumination3 = 0 
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "ILLU3"
+	       endif
+	       if KeepIllumination4 = 0 
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "ILLU4"
+	       endif
+	       if KeepContactsMenuItem = 0 
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTS"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTSA"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTSB"
+	       endif
+	       if KeepPurgeMenuItem = 0 
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONF"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONFA"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONFB"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "PURGE"
+	       endif
+	       if KeepFCCMenuItem = 0 
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "FCC"
+	       endif
+	       if KeepGuiMenuItem = 0 
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "GUIPMP"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "GUIPMPS"
+	       endif
+           if KeepBottleMenuItem = 0
+              GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "FLOW"
+              GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "AUX"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTS"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "STORE"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CTRL"
+
+              GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "FILLING"
+           else
+              GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "FLOWA"
+              GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "FLOWB"
+              GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "AUXA"
+              GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "AUXB"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTSA"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTSB"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "STOREA"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "STOREB"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CTRLA"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CTRLB"
+
+              GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "FILLINGA"
+              GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "FILLINGB"
+           endif
+	       if KeepReleaseVialMenuItem = 0
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "RELVIAL"
+	       endif
+	       if KeepPurgeSyringeMenuItem = 0
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "PURGESYR"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "INJFILLING"
+	       endif
+           If KeepAfc4 = 0
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CTRL4"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "RESET4"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "TEMPCTRL4"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTS4"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "ILLU4"
+           Else
+              If ObjHdrVal (Leoafcstatus4[1], "THRM_INSTALLED") = 0 
+    	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "TEMPCTRL4"
+              EndIf
+              If ObjHdrVal (Leoafcstatus4[1], "CONT_INSTALLED") = 0 
+    	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTS4"
+              EndIf
+           EndIf
+           If KeepAfc3 = 0
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CTRL3"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "RESET3"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "TEMPCTRL3"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTS3"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "ILLU3"
+           Else
+              If ObjHdrVal (Leoafcstatus3[1], "THRM_INSTALLED") = 0 
+    	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "TEMPCTRL3"
+              EndIf
+              If ObjHdrVal (Leoafcstatus3[1], "CONT_INSTALLED") = 0 
+    	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTS3"
+              EndIf
+           EndIf
+           If KeepAfc2 = 0
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CTRL2"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "RESET2"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "TEMPCTRL2"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTS2"
+	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "ILLU2"
+           Else
+              If ObjHdrVal (Leoafcstatus2[1], "THRM_INSTALLED") = 0 
+    	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "TEMPCTRL2"
+              EndIf
+              If ObjHdrVal (Leoafcstatus2[1], "CONT_INSTALLED") = 0 
+    	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTS2"
+              EndIf
+           EndIf
+           If DevLeoAfc > 0
+              If ObjHdrVal (Leoafcstatus1[1], "THRM_INSTALLED") = 0 
+    	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "TEMPCTRL1"
+              EndIf
+              If ObjHdrVal (Leoafcstatus1[1], "CONT_INSTALLED") = 0 
+    	          GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "CONTACTS1"
+              EndIf
+           EndIf
+	   endif
+
+
+
+       If (ModuleCount > 1) And (Instr(MenuTab$, "LeoThm") > 0)
+          iRow = RowByText (Menu[icnt], MenuTab$, -1, "SearchKey", "=", "METH")
+          If iRow > -1
+              Action$ = TabText$(Menu[icnt], MenuTab$, iRow, "Action")
+              Action$ = Action$ + "," + Val$(ModuleCount) 
+              SetTabText Menu[icnt], MenuTab$, iRow, "Action", Action$
+          EndIf
+	   EndIf
+
+       If (Instr(MenuTab$, "LeoThm") > 0)
+          if Check(Variable, _ClusteredTcc$) = 1 then
+             if InStr(_ClusteredTcc$, Val$(ModuleCount)) > 0 then
+             !if (InStr(_ClusteredTcc$, MenuTab$[Len(MenuTab$)]) > 0) Or (InStr(_ClusteredTcc$, Val$(ModuleCount)) > 0) then
+		          iRow = RowByText (Menu[icnt], MenuTab$, -1, "SearchKey", "=", "METH")
+		          If iRow > -1
+		              SetTabText Menu[icnt], MenuTab$, iRow, "Action", "ClusterTccMethod"
+				      !DelTabRow Menu[icnt], MenuTab$, 2
+                      GUIRemoveMenuRow "Menu" , icnt, MenuTab$, "ERRORINFO"
+		          EndIf
+			 endif
+          endif
+      endif
+		
+
+
+       !If (ModuleCount > 1) And \
+          !((Instr(MenuTab$, "LeoDAD") > 0) Or \
+          !(Instr(MenuTab$, "LeoVWD") > 0) Or \
+          !(Instr(MenuTab$, "NucVWD") > 0) Or \
+          !(Instr(MenuTab$, "LeoMWD") > 0) Or \
+          !(Instr(MenuTab$, "LeoFLD") > 0) Or \
+          !(Instr(MenuTab$, "NucDad") > 0) Or \
+          !(Instr(MenuTab$, "NucMwd") > 0) Or \
+          !(Instr(MenuTab$, "LeoRID") > 0))
+          
+        If (ModuleCount > 1) And \
+          ((Instr(MenuTab$, val$(ModuleCount)) > 0))  ! module number higher than 1
+          
+          iRow = RowByText (Menu[icnt], MenuTab$, -1, "SearchKey", "in", "SIGNAL")
+          If iRow > -1
+              Action$ = TabText$(Menu[icnt], MenuTab$, iRow, "Action")
+              Action$ = Action$ + "," + Val$(ModuleCount) 
+              SetTabText Menu[icnt], MenuTab$, iRow, "Action", Action$
+          EndIf
+
+          iRow = RowByText (Menu[icnt], MenuTab$, -1, "SearchKey", "in", "CONTACTS")
+          If iRow > -1
+              Action$ = TabText$(Menu[icnt], MenuTab$, iRow, "Action")
+              Action$ = Action$ + "," + Val$(ModuleCount) 
+              SetTabText Menu[icnt], MenuTab$, iRow, "Action", Action$
+          EndIf
+            
+          iRow = RowByText (Menu[icnt], MenuTab$, -1, "SearchKey", "in", "CONFIG")
+          If iRow > -1
+              Action$ = TabText$(Menu[icnt], MenuTab$, iRow, "Action")
+              Action$ = Action$ + "," + Val$(ModuleCount) 
+              SetTabText Menu[icnt], MenuTab$, iRow, "Action", Action$
+          EndIf
+ 
+          iRow = RowByText (Menu[icnt], MenuTab$, -1, "SearchKey", "in", "RECOV")
+           If iRow > -1
+               Action$ = TabText$(Menu[icnt], MenuTab$, iRow, "Action")
+               Action$ = Action$ + "," + Val$(ModuleCount) 
+               SetTabText Menu[icnt], MenuTab$, iRow, "Action", Action$
+          EndIf
+
+          iRow = RowByText (Menu[icnt], MenuTab$, -1, "SearchKey", "in", "CTRL")
+          If iRow > -1
+              Action$ = TabText$(Menu[icnt], MenuTab$, iRow, "Action")
+              Action$ = Action$ + "," + Val$(ModuleCount) 
+              SetTabText Menu[icnt], MenuTab$, iRow, "Action", Action$
+          EndIf
+
+          iRow = RowByText (Menu[icnt], MenuTab$, -1, "SearchKey", "in", "ERRORINFO")
+          If iRow > -1
+              Action$ = TabText$(Menu[icnt], MenuTab$, iRow, "Action")
+              Action$ = Action$ + "," + Val$(ModuleCount) 
+              SetTabText Menu[icnt], MenuTab$, iRow, "Action", Action$
+          EndIf
+
+          iRow = RowByText (Menu[icnt], MenuTab$, -1, "SearchKey", "in", "SPECMON")
+          If iRow > -1
+			  Mod$ = MenuTab$[4:6]
+              Action$ = TabText$(Menu[icnt], MenuTab$, iRow, "Action")
+			  Pos = InStr(Action$, Mod$)
+			  If Pos > 0
+                  Action$ = Action$[1:Pos] + MenuTab$[5:7] + """"
+                  SetTabText Menu[icnt], MenuTab$, iRow, "Action", Action$
+			  EndIf
+          EndIf
+       EndIf
+       GOMRunTimeCorrectFloatingMenuHelpCalls "Menu" , icnt, MenuTab$ ,HelpSubSystem$ ,HelpOffset     
+    endif
+next icnt
+
+
+endmacro
+
+
+!############################################################################
+name GUICopyDiagramMenuTabsNonModule
+
+parameter  MenuTab$
+parameter  ModuleCount
+parameter  StatusRegNameBase$    default ""                             
+parameter  HelpSubSystem$  default ""  !to override whats coded                                                
+parameter  HelpOffset      default 0   !to override whats coded                                                
+parameter  DoRemove		   default 1
+parameter  SourceReg$	   default "LeoTemp"
+ 
+   
+local RegSizeSource, RegSizeDest
+local icnt, imax                                                                  
+local OriginalTab$
+local iExists
+local SrcMenuTab$
+
+
+SrcMenuTab$ = MenuTab$
+
+Evaluate "RegSizeSource=RegSize("+SourceReg$+")"   
+RegSizeDest=RegSize(Menu)                 
+
+if RegSizeDest < RegSizeSource
+   imax=RegSizeDest
+else
+   imax=RegSizeSource
+endif
+
+if SourceReg$ = "Menu"
+   imax = 1
+endif
+if GuiOffline = 0
+   OriginalTab$=SrcMenuTab$
+else
+   OriginalTab$=SrcMenuTab$+"OC"   ! "OC" for Offline Copy menus table names
+endif                                                                   
+
+
+
+for icnt=1 to imax
+    if ObjHdrType(Menu[icnt],MenuTab$) = 4
+       DelTab Menu[icnt], MenuTab$
+    endif
+    Evaluate "iExists=ObjHdrType("+SourceReg$+"[icnt],OriginalTab$)"
+    if iExists = 99
+       OriginalTab$=SrcMenuTab$
+       Evaluate "iExists=ObjHdrType("+SourceReg$+"[icnt],OriginalTab$)"
+    endif
+    if iExists = 4
+       Evaluate "CopyTab "+SourceReg$+"[icnt], OriginalTab$, Menu[icnt], MenuTab$"
+       GOMRunTimeCorrectFloatingMenuHelpCalls "Menu" , icnt, MenuTab$ ,HelpSubSystem$ ,HelpOffset     
+    endif
+next icnt
+
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIUpdateClusteredThmMenu
+
+    local Dev
+    local icnt
+    local iRow
+
+    on error print ""
+
+    if Check(Variable, _ClusteredTcc$) = 1 then
+
+        for icnt=1 to RegSize(Menu)
+   
+            if InStr(_ClusteredTcc$, "1") > 0 then
+                iRow = RowByText (Menu[icnt], "LeoThm", -1, "SearchKey", "=", "METH")
+                If iRow > -1
+                    SetTabText Menu[icnt], "LeoThm", iRow, "Action", "ClusterTccMethod"
+                    GUIRemoveMenuRow "Menu" , icnt, "LeoThm", "ERRORINFO"
+                EndIf
+            endif
+
+            For Dev = 1 To DevLeoThm
+                DelTab Menu[icnt], "LeoThm"+Val$(Dev)
+                CopyTab Menu[icnt], "LeoThm", Menu[icnt], "LeoThm"+Val$(Dev)
+                if InStr(_ClusteredTcc$, Val$(Dev)) > 0 then
+                    iRow = RowByText (Menu[icnt], "LeoThm"+Val$(Dev), -1, "SearchKey", "=", "METH")
+                    If iRow > -1
+                        SetTabText Menu[icnt], "LeoThm"+Val$(Dev), iRow, "Action", "ClusterTccMethod"
+                        GUIRemoveMenuRow "Menu" , icnt, "LeoThm"+Val$(Dev), "ERRORINFO"
+                    EndIf
+                endif
+            Next Dev
+
+        next icnt
+    endif
+
+endmacro
+
+
+
+!############################################################################
+name GUIConfigureModuleNumberMenus
+
+parameter  Tab$
+parameter  NumberOfModules
+parameter  StatusRegNameBase$    default ""
+parameter  HelpSubSystem$    default ""  !to override whats coded                                                
+parameter  HelpOffset        default 0   !to override whats coded
+parameter  DoRemove		     default 1
+parameter  SourceReg$	     default "LeoTemp"
+parameter  SrcMenuTab$       default ""
+
+!assumes menu tables to be copied to reside in LeoTemp reg
+!allows copying multiple module menus (from 1 to devxxx )
+!does menu correction for missing contacts option in modules
+!  NDR name : "CONT_INSTALLED" and search key row "CONTACTS"
+!does menu correction for online help sub system call
+!  this calls GOMRunTimeCorrectFloatingMenuHelpCalls
+!assumes also that tablename with OC at end is also there for offline copy menus
+!############################################################################
+
+local  icnt
+
+if SrcMenuTab$ = ""
+   SrcMenuTab$ = Tab$
+endif
+
+!for instrument take only what is needed
+if NumberOfModules = 1
+   !without module number infos in menu items
+   GUICopyDiagramMenuTabs  Tab$, 1, StatusRegNameBase$, HelpSubSystem$, HelpOffset, DoRemove, SourceReg$, SrcMenuTab$
+else
+   for icnt=1 to NumberOfModules 
+      !with module number infos in menu items
+      GUICopyDiagramMenuTabs  Tab$+val$(icnt), icnt, StatusRegNameBase$, HelpSubSystem$, HelpOffset, DoRemove, SourceReg$, SrcMenuTab$
+   next icnt   
+endif   
+
+endmacro
+
+
+
+             
+             
+!############################################################################
+name GUIRemoveMenuTabMenuItem
+
+parameter  MenuTabName$
+parameter  ModuleCount
+parameter  StatusRegNameBase$
+parameter  OptionNdr$    
+parameter  MenuSearchKey$
+ 
+!############################################################################
+   
+local imax                                                                  
+local KeepOptionMenuItem
+
+imax=RegSize(Menu)                 
+
+if StatusRegNameBase$ <> ""
+   StatusRegNameBase$=StatusRegNameBase$+val$(ModuleCount)    
+   evaluate "KeepOptionMenuItem=RegSize("+StatusRegNameBase$+")"
+   if KeepOptionMenuItem > 0
+      evaluate "KeepOptionMenuItem=ObjHdrType("+StatusRegNameBase$+","+OptionNdr$+")"
+      if KeepOptionMenuItem = 1
+         evaluate "KeepOptionMenuItem=ObjHdrVal("+StatusRegNameBase$+","+OptionNdr$+")"
+      else   
+         KeepOptionMenuItem=0  !if HDR not there then Leo does not have this option
+      endif   
+   else
+      KeepOptionMenuItem=0  !if HDR not there then Leo does not have this option
+   endif
+else
+   KeepOptionMenuItem=0
+endif
+
+if KeepOptionMenuItem = 0
+   for icnt=1 to imax
+       if ObjHdrType(Menu[icnt],MenuTabName$) = 4
+          GUIRemoveMenuRow "Menu" , icnt, MenuTabName$, MenuSearchKey$
+       endif
+   next icnt
+endif
+
+endmacro
+
+
+
+
+
+!############################################################################
+name GUISetupMenuRegForConfiguration
+
+!set menu reg is sorted order so floating menu tables can be easily
+!be configured by using macro GUIConfigureModuleNumberMenus
+!and  GUICopyDiagramMenuTabs . This way menu[1] is the FULL menu obj
+!############################################################################
+local CurrentDiagramMenuType$
+
+!test the menu mode the system is in
+CurrentDiagramMenuType$=ObjHdrText$(menu[1], "MenuType")
+
+if CurrentDiagramMenuType$ <> "FULL"
+   ! need to exchange the objects
+   MoveObj Menu[2], Menu[1]
+endif
+
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIConfigureSystemDiagramMenus
+
+!menus 
+!plus ExecHook  "GuiReConfigDet"
+!############################################################################
+
+local  icnt                         
+local  DevCnt 
+local  HelpSubSystem$
+local CountLeoThm
+
+local ID_ASTXDRIVERSMACFILES_METHOD_21
+local ID_ASTXDRIVERSMACFILES_METHODINFO_22
+local ID_ASTXDRIVERSMACFILES_INTEGRATE_23
+local ID_ASTXDRIVERSMACFILES_IDENTIFY_24
+local ID_ASTXDRIVERSMACFILES_REPORT_25
+local ID_ASTXDRIVERSMACFILES_GLPSAVE_26
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_METHOD_21                   =  17021  
+ID_ASTXDRIVERSMACFILES_METHODINFO_22               =  17022  
+ID_ASTXDRIVERSMACFILES_INTEGRATE_23                =  17023  
+ID_ASTXDRIVERSMACFILES_IDENTIFY_24                 =  17024  
+ID_ASTXDRIVERSMACFILES_REPORT_25                   =  17025  
+ID_ASTXDRIVERSMACFILES_GLPSAVE_26                  =  17026  
+NLSFileName_astxmac$= "astxmac"
+
+GuiNewDetectorOrderedHook
+                         
+
+!for future optimize: keep at 1. only menu[1],
+!do load on demand of menu[2] only when requested
+
+!need menu register first
+if RegSize(Menu) < 2
+   newobj Menu,1,0,0
+   newobj Menu,1,0,0    
+   !give it the menu type names
+   SetObjHdrText menu[1], "MenuType", "FULL"
+   SetObjHdrText menu[2], "MenuType", "SHORT"
+endif
+
+!juggle all the menu registers around to the destination
+GUISetupMenuRegForConfiguration
+
+!GOMLoadNLSMenuReg "LC", "LeoM", "LeoTemp"
+
+DelReg LeoTemp
+GOMLoadNLSMenuReg "LC", "LSam", "LeoTemp"
+
+if ((devLeoAls > 0) or (Mrc_IsRcNetUi() > 0))
+   GUICopyDiagramMenuTabsNonModule  "Sequence"    
+   GUICopyDiagramMenuTabsNonModule  "SeqCurrVial"    
+   GUICopyDiagramMenuTabsNonModule  "SeqData"      
+   GUICopyDiagramMenuTabsNonModule  "SingleSample" 
+   GUICopyDiagramMenuTabsNonModule  "DataDir"     
+else
+if devHPCE > 0
+   HelpSubSystem$="HPCE"
+   GUICopyDiagramMenuTabs  "Sequence"     , , , HelpSubSystem$, 4100
+   GUICopyDiagramMenuTabs  "SeqCurrVial"  , , , HelpSubSystem$, 4100       
+   GUICopyDiagramMenuTabs  "SeqData"      , , , HelpSubSystem$, 4102  
+   GUICopyDiagramMenuTabs  "SingleSample" , , , HelpSubSystem$, 4101
+   GUICopyDiagramMenuTabs  "DataDir"      , , , HelpSubSystem$, 4102
+else
+   !it is 1050 or 1090
+   HelpSubSystem$="HPLC"
+   GUICopyDiagramMenuTabs  "Sequence"     , , , HelpSubSystem$, 7990
+   GUICopyDiagramMenuTabs  "SeqCurrVial"  , , , HelpSubSystem$, 7990       
+   GUICopyDiagramMenuTabs  "SeqData"      , , , HelpSubSystem$, 7992  
+   GUICopyDiagramMenuTabs  "SingleSample" , , , HelpSubSystem$, 7991
+   GUICopyDiagramMenuTabs  "DataDir"      , , , HelpSubSystem$, 7992
+endif
+endif
+
+
+DelReg LeoTemp
+GOMLoadNLSMenuReg "LC", "LeoM", "LeoTemp"
+!which is also ok for all single Leo DET and THM cases
+
+!GUICopyDiagramMenuTabs  "Reprocess"
+GUICopyDiagramMenuTabsNonModule  ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METHOD_21)
+GUICopyDiagramMenuTabsNonModule  ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METHODINFO_22)
+
+GUICopyDiagramMenuTabsNonModule  ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INTEGRATE_23)
+GUICopyDiagramMenuTabsNonModule  ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_IDENTIFY_24)
+GUICopyDiagramMenuTabsNonModule  ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_REPORT_25)
+GUICopyDiagramMenuTabsNonModule  ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_GLPSAVE_26)
+GUICopyDiagramMenuTabsNonModule  "ECM"
+
+
+if (Mrc_IsRcNetUi() = 0)
+
+!for instrument take only what is needed
+
+  DevCnt=DevLeoPump
+  if DevCnt > 1
+     !in case more modules are configured so 1. one goes in GUI
+     DevCnt=1
+  endif
+  GUIConfigureModuleNumberMenus  "LeoBottles"  , DevCnt , "LeoPumpStatus"
+  GUIConfigureModuleNumberMenus  "LeoBottlesX" , DevCnt , "LeoPumpStatus",,,0,,"LeoBottles"
+  GUIConfigureModuleNumberMenus  "LeoPump"     , DevCnt , "LeoPumpStatus"
+  GUIConfigureModuleNumberMenus  "LeoPumpX"    , DevCnt , "LeoPumpStatus",,,0,,"LeoPump"
+  GUIConfigureModuleNumberMenus  "LeoPumpSolv" , DevCnt , "LeoPumpStatus"
+  GUIConfigureModuleNumberMenus  "LeoPumpSolvX", DevCnt , "LeoPumpStatus",,,0,,"LeoPumpSolv"
+
+  DevCnt=DevLeoAls
+  if DevCnt > 1
+     !in case more modules are configured so 1. one goes in GUI
+     DevCnt=1
+  endif
+  GUIConfigureModuleNumberMenus  "LeoALS" , DevCnt , "LeoAlsStatus"
+  GUIRemoveMenuTabMenuItem       "LeoALS" , DevCnt , "LeoAlsStatus" ,  \
+                                         "THRM_INSTALLED" , "TEMPCTRL"
+  GUIRemoveMenuTabMenuItem       "LeoALS" , DevCnt , "LeoAlsStatus" ,  \
+                                         "THRM_INSTALLED" , "TEMPCTRLSEP"
+
+  if devLeoAfc > 0
+      GUICopyDiagramMenuTabs "LeoAFC"
+  endif
+
+                                          
+  if DevLeoTHM = 0
+     GUICopyDiagramMenuTabs  "LeoNoThm"
+  else
+  if DevLeoClc = 0
+     CountLeoThm = DevLeoThm
+     if Check(Variable, _ClusteredTcc$) = 1 then
+        if InStr(_ClusteredTcc$, "1") > 0 then
+           CountLeoThm=1
+        else
+           if InStr(_ClusteredTcc$, "2") > 0 then
+              CountLeoThm=2
+           endif
+        endif
+     endif
+
+     if CountLeoTHM > 1
+        DelReg LeoTmp
+        GOMLoadNLSMenuReg "LC", "LeoM", "LeoTemp"
+     endif   
+     GUIConfigureModuleNumberMenus  "LeoThm" , CountLeoTHM 
+     GUIConfigureModuleNumberMenus  "LeoThm" , 1
+  else
+     GUIConfigureModuleNumberMenus  "LeoThm" , 1
+  endif        
+  endif        
+
+  if DevLeoClc > 0
+     GUICopyDiagramMenuTabs "LeoCLC"
+  endif
+
+  GuiDevGuiDets=0
+  GuiDevNonGuiDets=0
+  !recount them all
+
+  ExecHook  "GuiReConfigDet"
+
+  !calls  :  GUIReConfigureLeoDetectors
+  !          GUIReConfigure1050Detectors
+  !          GUIReConfigureADConv
+
+
+else
+   if Dev1946MSD > 0
+      GUICheckProductMacDemandLoading "SGuiMsd.mac", "GUIReConfigure1946MSD", _AutoMSPath$
+   endif
+endif
+
+DelReg LeoTemp
+
+GUIAdaptFullShortMenus
+
+
+endmacro
+
+
+
+
+
+
+!############################################################################
+name GUIAdaptFullShortMenus
+
+parameter  menutype$  default ""  !"FULL" and "SHORT"  
+                                  !or "" to be set as in "MenusForViews" tab
+
+
+! this macro is called from the macro SwitchMenuInView (view.mac)
+!############################################################################
+
+if RegSize(Menu) > 0  
+   if menutype$ = ""
+      !test the menu mode the system is in by looking in the core menu handler table
+      !in _config[1], "MenusForViews", "MenuCol"
+      menutype$=GUIFindOutFullShortMenuState$()
+   endif
+   
+   if menutype$ <> ""
+      !the reg Menu contains the floating menus used for the system diagram
+      !diagram always works with Menu[1] object (fastest way to exchange the menus)
+      if ObjHdrText$(Menu[1], "MenuType") <> menutype$
+         ! need to exchange the objects
+         MoveObj Menu[2], Menu[1]
+      endif
+   endif
+
+endif
+
+endmacro
+
+
+!############################################################################
+name GUIPumpReconfiguration
+
+parameter  LastPumpType  default -1
+
+!callback from leo hotlink fiter for PUMP driver noticing Pump Type has changed
+!
+!when  Pump Type has changed throw away old solvents picture 
+!
+!set hotlinks at all times so it is correct when next switchview comes on
+!or when Sysdigram is built anew by GUIShowSystemDiagramCode
+!############################################################################
+
+local PumpConfigGomIni$
+local x
+
+if Check(Variable, PumpLastGomIni$) = 0
+   PumpLastGomIni$=""
+endif
+
+PumpConfigGomIni$=GUIBuildSolventsINI$(-1)                                                                                              
+
+if PumpConfigGomIni$<>PumpLastGomIni$
+   !redo pump solvents hotlinks if necessary
+   GUIInstallSolventsHotlinks
+endif   
+
+!only do any destroying and building if System Diagram is there at all
+if GomExist( , GUISystemDiagGOM$) = 1
+   !! 
+   !System GUI GOM is visible
+   if PumpConfigGomIni$=PumpLastGomIni$
+      if GomExist(GUISystemDiagGOM$, PumpConfigGomIni$) = 1
+         return !nothing to do  --> exit
+	  endif
+   endif
+
+   if GomExist(GUISystemDiagGOM$, PumpConfigGomIni$) = 1
+      GomDelete GUISystemDiagGOM$, PumpConfigGomIni$
+   endif   
+
+   GUICopyDiagramMenuTabs "LeoPump"    , _GuiPump, "LeoPumpStatus",,,1,"MENU","LeoPumpX"
+   GUICopyDiagramMenuTabs "LeoPumpSolv", _GuiPump, "LeoPumpStatus",,,1,"MENU","LeoPumpSolvX"
+   GUICopyDiagramMenuTabs "LeoBottles" , _GuiPump, "LeoPumpStatus",,,1,"MENU","LeoBottlesX"
+   Sleep 1
+   GOMShowGUI GUISystemDiagGOM$, PumpConfigGomIni$, "DRIVERS" 
+ 
+   evaluate "x = ObjHdrVal(LeoPumpStatus"+Val$(_GuiPump)+", ""RunState"")"
+   if x = 1
+      !move pump on off button out of sight
+      GomSetVal GUISystemDiagGOM$, PumpConfigGomIni$, "PumpOnOff" , y , 1000
+   endif             
+
+   !!
+endif   
+
+PumpLastGomIni$=PumpConfigGomIni$
+
+endmacro
+    
+
+
+
+!############################################################################
+name GUIAddMoreDetectors
+                             
+parameter  GuiParentName$                                             
+
+!Hook in macro for more modules on the detector side in an addon product
+!############################################################################
+
+
+return 0  !last right most edge after which to start DA displays
+
+endmacro
+
+
+!############################################################################
+name GUIAddMoreSamplePrepModules
+                             
+parameter  GuiParentName$                                             
+
+!Hook in macro for more modules on the sample prep side in an addon product
+!############################################################################
+
+
+return 0  !last right most edge after which to start injector display
+
+endmacro
+
+
+!############################################################################
+name GUIDiagramHelp
+
+parameter  HelpContext
+parameter  Delay
+parameter  HelpSubSystem$     default ""    
+!############################################################################
+                                       
+Local WantSeeDemo
+
+local ID_ASTXDRIVERSMACFILES_SHOW_THE_GUI_D_27
+local ID_ASTXDRIVERSMACFILES_ELSE_SHOW_THE_28
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_SHOW_THE_GUI_D_27           =  17027  
+ID_ASTXDRIVERSMACFILES_ELSE_SHOW_THE_28            =  17028  
+NLSFileName_astxmac$= "astxmac"
+
+WantSeeDemo=0
+if GuiOffline=1
+   !only safe in offline since restarts leo hotlink DLL
+   WantSeeDemo=Alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SHOW_THE_GUI_D_27)+chr$(13)+chr$(10)+ \ 
+                     ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ELSE_SHOW_THE_28) \ 
+                     ,5,Alert5Title$)
+   if WantSeeDemo = 1
+      GuiDemoSystemDiagram  "DEMO"
+   endif
+
+endif
+
+if WantSeeDemo = 0
+   GuiHelp  HelpContext, Delay, HelpSubSystem$   
+endif   
+
+endmacro
+
+
+
+
+
+!############################################################################
+name GUIReSizeMiniPlot
+                             
+parameter  PlotIniFile$  default "L1Plot"
+
+!############################################################################
+local yLoc
+local yHeight
+local yHeightOrig
+
+if GomExist( GUISystemDiagGOM$, PlotIniFile$ ) = 1         
+   yLoc=GomVal( , GUISystemDiagGOM$, , "Y")  \
+        + GomVal(GUISystemDiagGOM$, PlotIniFile$ , , "Y")  \
+        + GomVal(GUISystemDiagGOM$, PlotIniFile$ , "Plot1" , "Y") 
+   yHeightOrig=GomVal(GUISystemDiagGOM$, PlotIniFile$ , "Plot1" , "HEIGHT")
+   if yLoc+yHeightOrig > AppMetrics("MDIY" )
+      !must reduce to be fully visible
+      if AppMetrics("MDIY" ) - yLoc > 80
+         yHeight=AppMetrics("MDIY" ) - yLoc
+         GomSetVal GUISystemDiagGOM$, PlotIniFile$ , "Plot1" , "HEIGHT" , yHeight
+         !also place selection button at new location
+         if GomExist( GUISystemDiagGOM$, PlotIniFile$, "SELECTPLOT1" ) = 1
+            if GuiOffline = 1
+               GomSetVal  GUISystemDiagGOM$, PlotIniFile$ , "SELECTPLOT1" , x , 1000
+            else
+               yLoc=GomVal(GUISystemDiagGOM$, PlotIniFile$ , "SELECTPLOT1" , "Y")
+               yLoc=yLoc-(yHeightOrig-yHeight)
+               GomSetVal GUISystemDiagGOM$, PlotIniFile$ , "SELECTPLOT1" , "y" , yLoc
+            endif     
+         endif
+      endif
+   else
+      if GomExist( GUISystemDiagGOM$, PlotIniFile$, "SELECTPLOT1" ) = 1 \
+         AND  GuiOffline = 1
+         GomSetVal  GUISystemDiagGOM$, PlotIniFile$ , "SELECTPLOT1" , x , 1000
+      endif
+   endif
+endif
+
+endmacro
+
+!############################################################################
+name GUICornerCoordGomVal
+
+parameter  Type$     default "X"                !or "Y" or "BOTTOM" or  "RIGHT"
+parameter  RootGom$                             !return is relative to this one
+                                                !if no sub goms given then
+                                                !then just width height of this
+parameter  SubGom$
+parameter  ToolName$
+!############################################################################
+local Loc
+local GomHierarchy$
+local GomCoord$
+                  
+GomHierarchy$=RootGom$ +","+ SubGom$ +","+ToolName$
+evaluate "Loc=GomExist("+GomHierarchy$+")"
+if Loc = 1
+   if Type$ = "BOTTOM"
+      GomCoord$="Y"
+   else
+   if Type$ = "RIGHT"
+      GomCoord$="X"
+   else
+      GomCoord$=Type$
+   endif 
+   endif 
+
+   evaluate "Loc=GomVal("+GomHierarchy$+", GomCoord$)"
+
+   if Type$ = "BOTTOM"
+      GomCoord$="HEIGHT"
+   else
+   if Type$ = "RIGHT"
+      GomCoord$="WIDTH"
+   else
+      GomCoord$=""
+   endif 
+   endif 
+
+   if GomCoord$ <> ""
+      !add width or height
+      evaluate "Loc=Loc+GomVal("+GomHierarchy$+" , GomCoord$)"
+   endif
+endif
+
+return Loc
+
+endmacro
+
+
+!############################################################################
+name GUIFindGomCornerCoord
+
+parameter  Type$     default "X"                !or "Y" or "BOTTOM" or  "RIGHT"
+parameter  RootGom$                             !return is relative to this one
+                                                !if no sub goms given then
+                                                !then just width height of this
+parameter  SubGom1$
+parameter  SubGom2$
+parameter  SubGom3$
+parameter  ToolName$
+!############################################################################
+local Loc
+local GomHierarchy$
+local GomHierarchy1$
+local GomCoord$
+                  
+Loc=0                                 
+if Type$ = "BOTTOM"
+   GomCoord$="Y"
+else
+if Type$ = "RIGHT"
+   GomCoord$="X"
+else
+   GomCoord$=Type$
+endif 
+endif 
+
+if SubGom1$ = ""  
+   if ToolName$ <> ""
+      Loc=GUICornerCoordGomVal( Type$, , RootGom$, ToolName$ )
+   endif   
+else   
+if SubGom2$ = "" 
+   if ToolName$ = ""
+      Loc=GUICornerCoordGomVal( Type$, RootGom$ , SubGom1$ ) 
+   else
+      Loc=GUICornerCoordGomVal( GomCoord$, RootGom$ , SubGom1$ ) 
+      Loc=Loc+GUICornerCoordGomVal( Type$, RootGom$, SubGom1$, ToolName$ )
+   endif   
+else
+if SubGom3$ = ""
+   GomHierarchy$=RootGom$+"|"+SubGom1$ 
+   Loc= GUICornerCoordGomVal( GomCoord$, RootGom$      , SubGom1$  )  
+   if ToolName$ = ""
+      Loc=Loc+GUICornerCoordGomVal( Type$, GomHierarchy$ , SubGom2$ ) 
+   else       
+      Loc=Loc+GUICornerCoordGomVal( GomCoord$, GomHierarchy$ , SubGom2$ ) 
+      Loc=Loc+GUICornerCoordGomVal( Type$, GomHierarchy$, SubGom2$, ToolName$ )
+   endif   
+else
+   GomHierarchy1$=RootGom$+"|"+SubGom1$
+   GomHierarchy$=GomHierarchy1$+"|"+SubGom2$ 
+   Loc= GUICornerCoordGomVal( GomCoord$, RootGom$, SubGom1$  )  \
+       +GUICornerCoordGomVal( GomCoord$, GomHierarchy1$, SubGom2$ ) 
+   if ToolName$ = ""
+      Loc=Loc+GUICornerCoordGomVal( Type$, GomHierarchy$, SubGom3$ ) 
+   else
+      Loc=Loc+GUICornerCoordGomVal( GomCoord$, GomHierarchy$, SubGom3$ ) 
+      Loc=Loc+GUICornerCoordGomVal( Type$, GomHierarchy$, SubGom3$, ToolName$ )
+   endif   
+endif
+endif
+endif
+
+
+return Loc
+
+endmacro
+
+
+
+!------------------------------------------------------------------------
+Name Mrc_GUIShowSystemDiagramCode
+
+  parameter ShowType default 0
+
+
+  if (ShowType = 3)
+    if (Mrc_Exists() = 0)
+      Mrc_PreStart
+      Mrc_Create
+      GUIDiagramStateForMenu=1+2  !enabled plus checked
+    else
+      if (Mrc_IsVisible() = 0)
+        Mrc_Show
+        GUIDiagramStateForMenu=1+2  !enabled plus checked
+      else
+        Mrc_Hide
+        GUIDiagramStateForMenu=1  !enabled and unchecked
+      endif
+    endif
+  else
+    if (ShowType = 2)
+    Mrc_Destroy
+    GUIDiagramStateForMenu=1  !enabled and unchecked
+  else
+    if (ShowType = 1)
+    Mrc_PreStart
+    Mrc_Create
+    GUIDiagramStateForMenu=1+2  !enabled plus checked
+  else 
+    if (ShowType = 0)
+      if (Mrc_Exists() = 1)
+        Mrc_Show
+      else
+        Mrc_PreStart
+        Mrc_Create
+      endif
+      SetTabText _config[1], "window", GuiSystemDiagramWinNo, "Command", "GUIShowSystemDiagram 0"
+      SetTabVal  _config[1], "window", GuiSystemDiagramWinNo, "HelpContext", 0
+      GUIDiagramStateForMenu=1+2  !enabled plus checked
+
+    endif
+  endif
+  endif
+  endif
+
+endmacro
+
+
+
+!---------------------------------------------------------------------
+Name Mrc_PreStart
+
+  MrcDaRunStatus$="None"
+  SetTabVal  _config[1], "window", GuiSystemDiagramWinNo, "DefWXHigh", 1
+  SetTabVal  _config[1], "window", GuiSystemDiagramWinNo, "DefWYLow", 0.0  ! 0.3
+  GUICheckFreeDiskSpace
+  Mrc_EnablePause = 0
+  Mrc_EnableResume = 0
+  
+  if RCTrayAvailable() = 1 
+    MRC_RcTrayAvailable = 1
+  else
+    MRC_RcTrayAvailable = 0
+  endif
+  
+  If _OFFLINE = 1 Then
+    Mrc_Online = 0
+  Else
+  	Mrc_Online = 1  
+  Endif
+
+endmacro
+
+
+!---------------------------------------------------------------------
+Name Mrc_LoadTestMacro
+
+  if check ( macro, GuiDemoSystemDiagramCode ) = 0
+    GUIProductMacDemandLoading  "SystGuiD.mac"
+  endif
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIShowSystemDiagramCode
+
+parameter  ShowType   default  0  ! 0 is show in switch view (test if applicable)
+                                  ! others may be defined by product specific macros
+                                  ! example 1 create and show , 2 destroy, 3 toggle
+
+
+! this macro is called for example in a switchview 
+!(entry in the window table command column done automatically by this macro)
+! an existing system diagram is not deleted
+! does not do any building when the diagram is visible
+! sets start macro command in window table Command column
+
+! stores in _config[1],LeoGuiDemo if user wanted to see the demo
+!############################################################################
+                                       
+local b$
+local LeoType   
+local ProdArea$
+local DetNos
+local RunState                           
+local xLast
+local iii
+local iMax
+local a$
+local tab$
+local CountLeoThm
+
+if (Mrc_IsRcNetUi() > 0)
+  Mrc_GUIShowSystemDiagramCode ShowType
+  return
+endif
+
+if ShowType = 0                                       
+   if DevLeoPump+DevLeoAls+DevLeoThm+DevLeoClc+GuiDevGuiDets = 0
+      !in this case the diagram does not make sense in the view
+      GUIDiagramStateForMenu=1  !enabled and unchecked
+      return 
+   endif     
+endif   
+
+if ShowType = 3 AND FreeWin(GuiSystemDiagramWinNo) = GuiSystemDiagramWinNo \
+   AND GomExist( , GUISystemDiagGOM$) = 1
+   !was hidden with GuiShowHide
+   GuiShowHide 1
+   return
+endif
+
+if GomExist( , GUISystemDiagGOM$) = 1
+   if ShowType = 2 OR ShowType = 3
+      GUIDiagramStateForMenu=1  !enabled and unchecked
+      GomDelete , GUISystemDiagGOM$
+   else
+      !update menu checkmark
+      GUIDiagramStateForMenu=1+2  !enabled plus checked
+   endif
+else
+if ShowType <> 2
+   
+   GUIDiagramStateForMenu=1+2  !enabled plus checked
+   
+   ProdArea$="DRIVERS"
+   GOMShowGUI  , GUISystemDiagGOM$  , ProdArea$ , , GuiSystemDiagramWinNo
+
+   ExecHook "GuiMethSampLnks"  !do early since goes to a highly visible border
+
+   if GuiOffline = 1
+      GomSetVal  , GUISystemDiagGOM$, "SYSTEMON"  , y , 2000
+      GomSetVal  , GUISystemDiagGOM$, "SYSTEMOFF" , y , 2000
+   endif
+   
+   !put now in case some later crashes or error exits don't allow this later
+   SetTabText _config[1], "window", GuiSystemDiagramWinNo, "Command",  \
+                                         "GUIShowSystemDiagram 0"  !call via bootstrap macro
+
+   !NOTE: if any of GOMShowGUI did not find something , must set CRTxResolution to 800
+   !and redo all since we garantee at 800 is ALL there
+   
+   GOMShowGUI GUISystemDiagGOM$, "LMethod"  , ProdArea$
+
+   if _PumpUseBar = 1
+      b$="LInjPump"
+   else
+      b$="JInjPump"
+   endif
+   GOMShowGUI GUISystemDiagGOM$, b$ , ProdArea$ 
+   if DevLeoAls = 0  
+      GomSetVal  GUISystemDiagGOM$, b$, "Injection" , "Enable" , 0
+      RunState = 1
+   else
+      RunState=ObjHdrVal(LeoAlsStatus1, "RunState")
+   endif             
+   if RunState = 1
+      !move ALS HOME out of sight
+      GomSetVal GUISystemDiagGOM$, b$ , "ALSHome" , y , 1000
+   endif   
+   if DevLeoPump = 0
+      GomSetVal  GUISystemDiagGOM$, b$, "Pump" , "Enable" , 0
+   endif
+
+   !do all left side extension hooks now, also for combo box extensions
+   !do early since highy visible on left side
+   xLast=-100
+   tab$="GuiTopMthExt"
+   if TabHdrVal(Hook[1],tab$, "NumberOfRows") > 0
+      xLast=GUIFindGomCornerCoord ( "X", GUISystemDiagGOM$,  "LMethod" )  
+      SetTabHdrVal Hook[1],tab$,"xStartPos", xLast
+      SetTabHdrVal Hook[1],tab$,"yStartPos", \
+                   GUIFindGomCornerCoord ( "BOTTOM", GUISystemDiagGOM$,  "LMethod" )
+      GuiExecHook  tab$
+   endif
+
+   GuiShowBubbleMessage "LAST"  !so does not get bad edges through hooks "GuiTopMthExt"
+
+   tab$="GuiPreMthExt"   
+   if TabHdrVal(Hook[1],tab$, "NumberOfRows") > 0 
+      if xLast = -100
+         xLast=GUIFindGomCornerCoord ( "X", GUISystemDiagGOM$,  "LMethod" )  
+      endif   
+      SetTabHdrVal Hook[1],tab$,"xStartPos", xLast !syringe start more left for DRAW mode
+      if _PumpUseBar = 1
+         SetTabHdrVal Hook[1],tab$,"yStartPos", \
+                      GUIFindGomCornerCoord ( "BOTTOM", GUISystemDiagGOM$,  "LInjPump" )
+      else
+         SetTabHdrVal Hook[1],tab$,"yStartPos", \
+                      GUIFindGomCornerCoord ( "BOTTOM", GUISystemDiagGOM$,  "JInjPump" )
+      endif
+      GuiExecHook  tab$
+   endif   
+   
+   if DevLeoPump > 0
+      evaluate "LeoType=ObjHdrVal(LeoPumpStatus"+Val$(_GuiPump)+", ""PumpType"")"
+      evaluate "RunState=ObjHdrVal(LeoPumpStatus"+Val$(_GuiPump)+", ""RunState"")"
+      if LeoType > 0  AND LeoType < 10
+         b$=GUIBuildSolventsINI$(-1)
+      else 
+         !don't know what to do then , default for now 
+         b$=GUIBuildSolventsINI$(0)
+      endif   
+   else
+      RunState=1  !offline
+      !default for now 
+      b$=GUIBuildSolventsINI$(0)
+   endif   
+                
+   !reinit hotlinks to be sure in unknow NN module cases we are correct
+   GUIInstallSolventsHotlinks
+   
+   GOMShowGUI GUISystemDiagGOM$, b$ , ProdArea$    !solvent composistion and bottles
+   if DevLeoPump = 0
+      GomSetVal  GUISystemDiagGOM$, b$, "Composition" , "Enable" , 0
+      GomSetVal  GUISystemDiagGOM$, b$, "Bottles"     , "Enable" , 0
+   endif
+
+   if RunState = 1
+      !move pump on off button out of sight
+      GomSetVal GUISystemDiagGOM$, b$ , "PumpOnOff" , y , 1000
+   endif             
+   
+   
+   b$=GUIBuildColumnINI$()
+   if b$ <> ""
+      GOMShowGUI GUISystemDiagGOM$, b$ , ProdArea$ 
+   endif   
+
+   CountLeoThm = DevLeoThm
+   if Check(Variable, _ClusteredTcc$) = 1 then
+      if InStr(_ClusteredTcc$, "1") > 0 then
+         CountLeoThm=1
+         GomSetVal GUISystemDiagGOM$, b$ , "ThmOnOff2" , y , 1000
+         GomSetVal GUISystemDiagGOM$, b$ , "column2" , y , 1000
+
+         GomSetVal GUISystemDiagGOM$, b$ , "column1" , y5 , 29
+         GomSetVal GUISystemDiagGOM$, b$ , "column1" , x5 , 50
+         GomSetText GUISystemDiagGOM$, b$ , "column1" , justify5 , centered
+         GomSetVal GUISystemDiagGOM$, b$ , "column1" , y6 , 16
+         GomSetVal GUISystemDiagGOM$, b$ , "column1" , x6 , 2
+         GomSetText GUISystemDiagGOM$, b$ , "column1" , justify6 , left
+	 else
+         if InStr(_ClusteredTcc$, "2") > 0 then
+            CountLeoThm=2
+
+			GomSetVal GUISystemDiagGOM$, b$ , "column2" , y5 , 29
+	        GomSetVal GUISystemDiagGOM$, b$ , "column2" , x5 , 50
+	        GomSetText GUISystemDiagGOM$, b$ , "column2" , justify5 , centered
+	        GomSetVal GUISystemDiagGOM$, b$ , "column2" , y6 , 16
+	        GomSetVal GUISystemDiagGOM$, b$ , "column2" , x6 , 2
+	        GomSetText GUISystemDiagGOM$, b$ , "column2" , justify6 , left
+         endif
+      endif
+   endif
+
+   if CountLeoThm > 1 and DevLeoClc = 0
+      RunState=ObjHdrVal(LeoThermostatStatus2, "RunState")
+      if RunState = 1
+         GomSetVal GUISystemDiagGOM$, b$ , "ThmOnOff2" , y , 1000
+      endif             
+   endif
+   if CountLeoThm > 0
+      RunState=ObjHdrVal(LeoThermostatStatus1, "RunState")
+      if RunState = 1
+         GomSetVal GUISystemDiagGOM$, b$ , "ThmOnOff1" , y , 1000
+      endif             
+   !else without thm no on off button
+   endif             
+
+   if DevLeoClc > 0
+      b$=GUIBuildClcINI$()
+      GOMShowGUI GUISystemDiagGOM$, b$ , ProdArea$
+   endif
+      
+   !count out how many detectors are there
+   !LeoType=GuiDevGuiDets+dev1050DAD+dev1050MWD+dev1050VWD+dev1046FLD \
+   !       +dev1049ECD+adcdevice   !+Dev1946MSD
+   LeoType=GuiDevGuiDets+GuiDevNonGuiDets
+   if LeoType < 1
+      !assume foreign one and set it grayed
+      DetNos=1
+   else
+   if LeoType <= 4
+      DetNos=LeoType  
+   else
+      !take the max of four   
+      DetNos=4  
+   endif   
+   endif   
+
+   b$="L"+val$(DetNos)+"Detect"
+   GOMShowGUI GUISystemDiagGOM$, b$ , ProdArea$ 
+    
+   GuiLeoDetectorReconfiguration  b$, LeoType 
+   
+   xLast=GUIAddMoreDetectors()
+   if xLast = 0
+      xLast=GomVal(GUISystemDiagGOM$,b$,,"X")
+      xLast=xLast+GomVal(GUISystemDiagGOM$,b$,,"WIDTH")
+   endif   
+
+   ! insert fraction collector gui
+   If Check(Variable, DevLeoAfc) <> 0
+	  If DevLeoAfc > 0
+	     GOMShowGUI GUISystemDiagGOM$, "afraco" , ProdArea$ , , , xLast
+	   	 xLast = xLast + GomVal(GUISystemDiagGOM$,"afraco",,"WIDTH")
+   	  EndIf
+   EndIf
+
+   !now come DA parts  
+   !justify them to right of last modules
+   GOMShowGUI GUISystemDiagGOM$, "LDaSimpl" , ProdArea$ , , , xLast
+   
+   !now come Plot windows 
+   !Question HOW many to configure ?
+   !if Check ( VARIABLE, DacTst ) = 0
+   !does not work in dactst since hprtpl00 is not initialized
+   b$="L1Plot"
+   GOMShowGUI GUISystemDiagGOM$, b$    , ProdArea$
+   GUIReSizeMiniPlot b$
+   !endif
+
+   !do all right side extension hooks now, also for combo box extensions
+   tab$="GuiPostMthExt"   
+   if TabHdrVal(Hook[1],tab$, "NumberOfRows") > 0  
+      SetTabHdrVal Hook[1],tab$,"xStartPos", \
+                   GUIFindGomCornerCoord ( "X", GUISystemDiagGOM$,  "LDaSimpl" )
+      SetTabHdrVal Hook[1],tab$,"yStartPos", \
+                   GUIFindGomCornerCoord ( "BOTTOM", GUISystemDiagGOM$,  "LDaSimpl" )
+      GuiExecHook  tab$
+   endif   
+
+   GuiExecHook  "GuiMthDiagrmExt"
+
+   !now come Details, will be done by a command putting the selection right etc
+   GUIListingArea "" 
+   
+   !remove the possibility for EMF in offline copy
+   if GuiOffline = 1
+      b$="Details"
+      !GomSetText , GUISystemDiagGOM$ , b$ , "Text4" , ""
+      if GomExist( , GUISystemDiagGOM$, b$) = 1
+         iMax=GomVal( , GUISystemDiagGOM$, b$, "MaxListSize")
+         for iii=1 to iMax
+             a$=GomText$( , GUISystemDiagGOM$, b$, "Command"+val$(iii) )
+             if InStr(a$,"EMF") > 0 
+                GomSetText  , GUISystemDiagGOM$, b$, "Text"+val$(iii) , ""
+                iii=iMax+1
+             endif
+         next iii
+      endif
+   endif                     
+
+  !remove the possibility for ECM if no ecm is installed
+  if VCS_NOTINTEGRATED = 1
+      b$="Details"
+      if GomExist( , GUISystemDiagGOM$, b$) = 1
+         iMax=GomVal( , GUISystemDiagGOM$, b$, "MaxListSize")
+         for iii=1 to iMax
+             a$=GomText$( , GUISystemDiagGOM$, b$, "Command"+val$(iii) )
+             if InStr(a$,"ECM") > 0 
+                GomSetText  , GUISystemDiagGOM$, b$, "Text"+val$(iii) , ""
+                iii=iMax+1
+             endif
+         next iii
+      endif
+   endif                     
+
+   !for later reconstruction of diagram in switchview
+   SetTabText _config[1], "window", GuiSystemDiagramWinNo, "Command",  \
+                                         "GUIShowSystemDiagram 0"  !call via bootstrap macro
+   SetTabVal  _config[1], "window", GuiSystemDiagramWinNo, "HelpContext", 0
+   
+   !! 
+endif
+endif
+
+ExecHook "GuiMethSampLnks"  !for final cleanup do here also
+
+
+endmacro
+
+
+
+!############################################################################
+name GUIShowHide
+
+parameter  ShowType  ! 0 is hide, 1 is show
+
+!for better look in edit entire method, just does Gom hide and show
+!and not a complete timeconsuming rebuild (this is just for repaint
+!optimization)
+!############################################################################
+
+if GomExist( , GUISystemDiagGOM$) = 1
+   if ShowType = 1
+      GomShow , GUISystemDiagGOM$, ON 
+   else
+      GomShow , GUISystemDiagGOM$, OFF 
+   endif   
+   if ShowType = 0
+      GUIDiagramStateForMenu=1+0  !enabled plus unchecked
+   else
+      GUIDiagramStateForMenu=1+2  !enabled plus checked
+      !for later reconstruction of diagram in switchview
+      SetTabText _config[1], "window", GuiSystemDiagramWinNo, "Command",  \
+                                     "GUIShowSystemDiagram 0"  !call via bootstrap macro
+   endif
+   
+   !! 
+endif
+
+endmacro
+
+
+
+
+
+!############################################################################
+name GUIRebuildSystemDiagram
+
+!removes old picture and builds new one only if it was visible before
+!############################################################################
+
+
+if GomExist( ,GUISystemDiagGOM$) = 1
+   GUIShowSystemDiagramCode  2
+   !rebuild only if it was there and visible 
+   GUIShowSystemDiagramCode  1
+endif
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIReconfigureSystemDiagram
+
+parameter  bForce  Default 0 ! 1 forces to reinit hotlink DLL
+!indirectly called from Leonardo cluster controller if the Leonardo Module 
+!configruation has changed,
+!only deletes and reshows the diagram if it was there before
+!loads all necessary floating menus and installs the GOM hotlinks
+!this is the more powerful macro than in SGuiInit.mac
+!############################################################################
+
+local ID_ASTXDRIVERSMACFILES_SYSTEM_DIAGRAM_29
+local ID_ASTXDRIVERSMACFILES_LOADING_GUI_M_304
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_SYSTEM_DIAGRAM_29           =  17029  
+ID_ASTXDRIVERSMACFILES_LOADING_GUI_M_304           =  17304
+
+NLSFileName_astxmac$= "astxmac"
+!also the LEO gui hotlink DLL must reinit its BSP connections to the now available drivers
+GUIInstallLeoHotlinkDll  bForce
+                              
+                              
+!juggle all the menu registers around to the destination
+print ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_LOADING_GUI_M_304)
+GUIConfigureSystemDiagramMenus
+
+!builds all necessary hotlinks
+!but do anyway reconfigure the data hotlinks
+if (Mrc_IsRcNetUi() = 0) ! but we don't need this for the new MRC UI
+  GUIConfigureGOMHotlinks
+endif
+
+ExecHook  "GuiReConfigGUI"
+
+!do since in hook GuiReConfigGUI menus are loaded and juggled in objs by 
+!addon at other parts of GUI
+DelReg LeoTemp
+GUIAdaptFullShortMenus
+
+! init fraction collector gui
+AfcGuiInit
+
+!removes old picture or parts and builds new one if visible
+print ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SYSTEM_DIAGRAM_29)
+GUIRebuildSystemDiagram
+
+endmacro
+
+
+
+
+!############################################################################
+name GUISetDARunStatus
+
+parameter  DASectionName$     default "@"   
+                              ! "INTEG", "QUANT", "REPORT" , "GLPSAVE", "DONE" , "RESET"
+ 
+!for run progress display in system diagram hook DA progress into here
+!############################################################################
+
+MrcDaRunStatus$ = DASectionName$
+GUIStartDAProgressDisplay  DASectionName$
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIStartDAProgressDisplay
+
+parameter  FctArea$       default "DefaultCase" 
+                          ! "INTEG" , "QUANT" , "REPORT" , "GLPSAVE" , "DONE" , "RESET"
+
+!called when intergateObj or quantify or reporting or GLP save is on
+!############################################################################
+
+Local SubGom$, Tool$, Pict$, RunDAPart
+
+local ID_ASTXDRIVERSMACFILES_INTEGRATE_30
+local ID_ASTXDRIVERSMACFILES_RUN_31
+local ID_ASTXDRIVERSMACFILES_CALIBRATE_32
+local ID_ASTXDRIVERSMACFILES_REPORT_33
+local ID_ASTXDRIVERSMACFILES_INTEGRATE_23
+local ID_ASTXDRIVERSMACFILES_REPORT_25
+local NLSFileName_astxmac$
+  
+ID_ASTXDRIVERSMACFILES_INTEGRATE_30                =  17030  
+ID_ASTXDRIVERSMACFILES_RUN_31                      =  17031  
+ID_ASTXDRIVERSMACFILES_CALIBRATE_32                =  17032  
+ID_ASTXDRIVERSMACFILES_REPORT_33                   =  17033  
+ID_ASTXDRIVERSMACFILES_INTEGRATE_23                =  17023  
+ID_ASTXDRIVERSMACFILES_REPORT_25                   =  17025  
+NLSFileName_astxmac$= "astxmac"
+                   
+                 
+!terminate all last progresses
+!if GuiDAProgressEnd = 0
+   !SetSemaphore only needed when 2 threads write on this variable
+   !while SetSemaphore(GuiDAProgressEnd) = 0
+   !      _DebugPrint "SetSemaphore(GuiDAProgressEnd)" , ,0
+   !      sleep 1
+   !endwhile
+   !when this loop terminates GuiDAProgressEnd is 1
+!endif   
+
+if (Mrc_IsRcNetUi() > 0)
+  return
+endif
+
+if FctArea$= "ECM"
+  return
+endif
+
+If FctArea$ = "RESET"
+    GuiDAProgressEnd = 1
+    GuiDAProgressLoopRuning = 0
+endif
+
+!PVCS 6166, changed the if to while
+while GuiDAProgressLoopRuning=1
+   !terminate all last progresses in all cases
+   GuiDAProgressEnd = 1
+   sleep 1  !for 2. CP to catch it
+endwhile
+
+if GomExist ( , GUISystemDiagGOM$ ) = 0
+   return
+endif   
+
+if FctArea$ = ""
+   FctArea$="DefaultCase"
+endif
+on error goto DefaultCase
+evaluate "GoTo "+ FctArea$
+   INTEG:;on error
+     Tool$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INTEGRATE_30)
+     Pict$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_31)
+     goto endswitch
+   QUANT:;on error
+     Tool$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_CALIBRATE_32)
+     Pict$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_31)
+     goto endswitch
+   REPORT:;on error
+     Tool$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_REPORT_33)
+     Pict$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_31)
+     goto endswitch
+   GLPSAVE:;on error
+     Tool$="GlpSave"
+     Pict$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_31)
+     goto endswitch
+   DONE:;on error 
+     return 
+     goto endswitch
+   RESET:;on error 
+     if GomExist ( GUISystemDiagGOM$, "LDaSimpl" ) = 1
+        RunDAPart=RUN_DA
+        if RunDAPart = 1 AND    GuiSeqRunMode = 1         
+           if TabHdrVal(_sequence, "SeqParm" , "SeqMode") <> 1
+              RunDAPart = 1
+           else
+              RunDAPart = 0  !Seq ACQ only
+           endif
+        endif
+        Pict$=val$(RunDAPart)
+
+        Tool$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_INTEGRATE_23)
+        GomSetText GUISystemDiagGOM$ , "LDaSimpl", Tool$,"image1", Pict$
+
+        Tool$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_CALIBRATE_32)
+        GomSetText GUISystemDiagGOM$ , "LDaSimpl", Tool$,"image1", Pict$
+
+        Tool$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_REPORT_25)
+        GomSetText GUISystemDiagGOM$ , "LDaSimpl", Tool$,"image1", Pict$
+
+        Pict$=val$(RUN_SAVEGLPDATA)
+        Tool$="GlpSave"
+        GomSetText GUISystemDiagGOM$ , "LDaSimpl", Tool$,"image1", Pict$
+     endif   
+     return 
+     goto endswitch
+   DefaultCase:;on error
+     return 
+     goto endswitch
+endswitch:
+
+GuiDAProgressEnd=0   ! end condition is 1 in semaphore  GuiDAProgressEnd
+                     ! must do here since in very short actions like REPORT and DONE
+                     ! come nearly instantly after each other before CPGUI
+                     ! has started the macro where GuiDAProgressEnd was initialized 
+SubGom$="LDaSimpl"                                                    
+if GomExist ( GUISystemDiagGOM$, SubGom$, Tool$ ) = 1
+   CpRequest "CPGUI", "GUIShowDAProgressDisplay "+SubGom$+","+ Tool$+","+Pict$
+   Sleep 1 !PVCS 6166
+endif   
+
+endmacro
+
+
+
+!############################################################################
+name GUIShowDAProgressDisplay
+
+  parameter  SubGom$
+  parameter  Tool$
+  parameter  Pict$
+  
+!############################################################################
+local iii
+                           
+   iii=1
+   GuiDAProgressLoopRuning=1
+   while  GuiDAProgressEnd=0 
+       GomSetText GUISystemDiagGOM$ , SubGom$, Tool$,"image1", Pict$+val$(iii)
+       sleep 1
+ 
+       if iii<5
+          iii=iii+1
+       else
+          iii=1  !restart
+       endif
+   endwhile
+   iii=5
+   GomSetText GUISystemDiagGOM$ , SubGom$, Tool$,"image1", Pict$+val$(iii)
+   GuiDAProgressLoopRuning=0
+
+
+endmacro
+
+
+
+
+        
+        
+!############################################################################
+name GuiPrepearDataFile                          
+
+!############################################################################
+local err
+local SampleAreaWidth 
+local SamplingIni$                                                 
+local ScreenWidth
+                                  
+if FreeWin(38) = 38 
+   !draw window does not exist so show something            
+   on error err=1
+   if RegSize(ChromReg) < 1
+      if GuiOffline = 1
+         LoadFile TabText$(_Config[1],"DataFile", 1,"PathAndName")
+      else   
+         !or of current or last run
+         LoadFile _DATAPath$+_DATAFILE1$
+      endif   
+   endif   
+   on error
+   if RegSize(ChromReg) > 0
+      IntegSignals 
+      !set better default start values in window table if still original
+      if TabVal(_config[1], "window", 38 , "DefWXLow" ) < 0.05 \
+         AND  TabVal(_config[1], "window", 38 , "DefWXHigh" ) > 0.95  
+         if GomExist(GUISystemDiagGOM$,GUIBuildSequenceSamplingINI$()) = 1
+            SamplingIni$=GUIBuildSequenceSamplingINI$()
+         else
+         if GomExist(GUISystemDiagGOM$,GUIBuildSingleSampleINI$()) = 1  
+            SamplingIni$=GUIBuildSingleSampleINI$()
+         else
+            SamplingIni$=""
+         endif
+         endif
+         if SamplingIni$ <> ""
+            SampleAreaWidth=GomVal(GUISystemDiagGOM$,SamplingIni$,,"WIDTH")
+            ScreenWidth=TabHdrVal(_config[1], "window", "CrtxResolution")  
+            !only good for default app size
+            SetTabVal _config[1], "window", 38 , "DefWXLow", SampleAreaWidth/ScreenWidth
+            SetTabVal _config[1], "window", 38 , "DefWXHigh", 0.7
+         endif   
+      endif   
+      DrawSignals
+   endif   
+endif                                  
+
+endmacro
+
+        
+!############################################################################
+name GuiEditIntegEvents                            
+
+!############################################################################
+                                  
+!GuiPrepearDataFile
+
+Evaluate "CpRequest "+CpName$(0)+",EditEventsExt"
+
+endmacro
+
+
+!############################################################################
+name GuiEditEntireMethod                            
+
+!############################################################################
+                                  
+Evaluate "CpRequest "+CpName$(0)+",EditEntireMethod"
+
+endmacro
+
+
+        
+!############################################################################
+name GuiCheckCalibReportType
+     
+!############################################################################
+local  bNoCalib
+local iii
+
+local ID_ASTXDRIVERSMACFILES_NO_CALIBRATION_34
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_NO_CALIBRATION_34           =  17034  
+NLSFileName_astxmac$= "astxmac"
+!CalcType = TabHdrVal (_DAMethod[1], "QuantParm", "CalcType") ; 0 is area%
+bNoCalib=0
+
+if ObjHdrType(_DaMethod, "Compound") = 4
+   if TabHdrVal(_DaMethod, "Compound","NumberOfRows") = 0
+      bNoCalib=1
+   endif
+else   
+   bNoCalib=1
+endif
+
+if bNoCalib = 1
+   iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NO_CALIBRATION_34),3,Alert3Title$)
+   return  0
+endif
+
+return 1
+endmacro
+        
+!############################################################################
+name GuiCalibUIEvaluate
+     
+parameter  CpCommand$  default ""
+!############################################################################
+
+
+local iii
+local CalcType
+local dummy
+                                  
+!GuiPrepearDataFile
+!CAL_TLBFunction ReCalib,0
+
+!macro parts taken from EditEntireMethod
+!and EditDaMethod
+! hide the GUI to prevent repeated (and slow) screen updates between the
+if Check (Macro, GUIShowHide) = 1 then
+   GUIShowHide 0
+endif
+
+if GuiCheckCalibReportType() = 1 then
+
+   if TabHdrVal (_Config[1], "Features", "SignalDetails") = 1 then
+      if ObjHdrType(_DaMethod, "Signal") = 4
+         if TabHdrVal(_DaMethod, "Signal","NumberOfRows") = 0
+            !bring up the signals dialog first to set these for the calibration table
+            MenuCalSignals
+         endif
+      endif   
+   endif
+
+
+   SeeIfCalibUILoaded
+   CalTabClosed = 0   !must be global
+   on error dummy = 0
+   CpStart "CPEEM"    ! CP for Edit Entire Method
+   on error
+   CpRequest "CPEEM", CpCommand$+"  ""CalTabClosed = 1"", 1"
+   repeat ! wait until EditCalTab has executed the cmd given as parameter
+       sleep 1  ! 1 second
+   until CalTabClosed = 1
+   CpRequest "CP", "CpTerminate ""CPEEM"""
+   ! Calib U/I has no Cancel button, therefore no check for skip editing
+endif
+
+if Check (Macro, GUIShowHide) = 1 then
+   GUIShowHide 1
+endif
+
+  
+endmacro
+
+
+!############################################################################
+name GuiCheckForCalibTable
+
+!############################################################################
+local  bNoCalib, iii
+
+local ID_ASTXDRIVERSMACFILES_A_CALIBRATION_35
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_A_CALIBRATION_35            =  17035  
+NLSFileName_astxmac$= "astxmac"
+bNoCalib=0
+
+if ObjHdrType(_DaMethod, "Compound") = 4
+   if TabHdrVal(_DaMethod, "Compound","NumberOfRows") = 0
+      !tell to call the calibration table first
+      bNoCalib=1
+   endif
+else   
+   bNoCalib=1
+endif
+
+if bNoCalib = 1
+   iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_A_CALIBRATION_35),3,Alert3Title$) 
+   return  0
+endif
+              
+return 1
+endmacro
+
+
+!############################################################################
+name GuiRecalibrate  
+parameter DataOrigin$  DEFAULT "RUN"  ! RUN or FILE                         
+
+Evaluate "CpRequest "+CpName$(0)+",""DoGuiRecalibrate """""+DataOrigin$+""""""""
+
+EndMacro
+
+!############################################################################
+name DoGuiRecalibrate  
+parameter DataOrigin$  DEFAULT "RUN"  ! RUN or FILE                         
+
+
+local iii
+local CurrDataFile$
+
+local ID_ASTXDRIVERSMACFILES_METHOD_USED_FO_36
+local ID_ASTXDRIVERSMACFILES_RUN_THE_CALIBR_37
+local ID_ASTXDRIVERSMACFILES_DATAFILE_OF_TH_38
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_METHOD_USED_FO_36           =  17036  
+ID_ASTXDRIVERSMACFILES_RUN_THE_CALIBR_37           =  17037  
+ID_ASTXDRIVERSMACFILES_DATAFILE_OF_TH_38           =  17038  
+NLSFileName_astxmac$= "astxmac"
+
+if GuiCheckCalibReportType() = 0 then
+   return
+endif   
+
+if GuiCheckForCalibTable() = 0
+   return
+endif
+              
+if DataOrigin$ = "FILE"
+   !give good sizeable style
+   SetTabVal _config,"window",38,"DefWinStyle", 671  !temporary
+   LoadFile
+   if RegSize(Chromreg) > 0
+      IntegSignals 
+      if ObjHdrText$(Chromreg[1], "MethodFile") <> _MethFile$
+         iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_METHOD_USED_FO_36) \
+                   +Chr$(10)+chr$(13)+"Do you want to continue ? ",4,Alert4Title$)
+         if iii=0
+            Clearwin 38
+            return
+         endif   
+      endif
+   else
+      Clearwin 38
+      return
+   endif   
+else
+   if RegSize(Chromreg) < 1
+      iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_RUN_THE_CALIBR_37),3,Alert3Title$)
+      return
+   else                                  
+      if _DataSubDir$ = ""
+         CurrDataFile$=_DataPath$
+      else
+         CurrDataFile$=_DataPath$+_DataSubDir$+"\"
+      endif
+      CurrDataFile$=CurrDataFile$+_DataFile$
+      if ObjHdrText$(Chromreg[1], "RawDataFile") <> CurrDataFile$
+         iii=alert(ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DATAFILE_OF_TH_38),3,Alert3Title$)
+         return
+      endif
+   endif
+endif
+
+!CASD_CheckAcqSignalDesc  test consitency
+
+GuiCalibUIEvaluate   "RecalibrateDialog"
+
+!clear possible recalibration report processing DONE state
+GUIStartDAProgressDisplay "RESET"
+
+if DataOrigin$ = "FILE"
+   Clearwin 38
+   !but leave data for print report/preview etc
+endif
+
+endmacro
+
+
+        
+!############################################################################
+name GuiCalibrationTable
+     
+!############################################################################
+
+if GuiCheckForCalibTable() = 0
+   return
+endif
+              
+Evaluate "CpRequest "+CpName$(0)+",""GuiCalibUIEvaluate """"EditCalTab"""""""
+
+endmacro
+
+
+
+
+
+
+    
+!############################################################################
+name GuiDemoSystemDiagram
+
+parameter  RegPrefix$  default "DEMO"  ! "DEMO" can be used to switch demo to DEMOxxx regs
+!############################################################################
+
+if check ( macro, GuiDemoSystemDiagramCode ) = 0
+   GUIProductMacDemandLoading  "SystGuiD.mac"
+endif
+if check ( macro, GuiDemoSystemDiagramCode ) = 1
+   GuiDemoSystemDiagramCode  RegPrefix$
+endif
+
+endmacro 
+
+
+
+
+
+
+!############################################################################
+name GUIDeleteSamplingSubGom
+
+!############################################################################
+
+local SamplingGomIni$
+
+!delete old GOM since a new MODE has a new picture 
+      
+!delete possible SequenceSampleGOM
+SamplingGomIni$=GUIBuildSequenceSamplingINI$()
+if GomExist(GUISamplingDiagGOM$,SamplingGomIni$) = 1
+   GomDelete  GUISamplingDiagGOM$,SamplingGomIni$
+endif   
+      
+!delete possible SingleSampleGOM
+SamplingGomIni$=GUIBuildSingleSampleINI$()
+if GomExist(GUISamplingDiagGOM$,SamplingGomIni$) = 1
+   GomDelete  GUISamplingDiagGOM$,SamplingGomIni$
+endif   
+      
+endmacro
+
+
+!############################################################################
+name GUISamplingAreaReconfiguration
+
+parameter  RequestedNewMode$ default ""  !means reinstall last one used   
+parameter  TrayChanged       default 0   !0 means no tray change, 1 when tray changed (Gui hotlink dll)
+parameter  FiaMode           default -1  !0 means no change, 0 means turn back to no FIA display
+                                         !1 means turn to FIA display
+
+!callback from leo hotlink filter for ALS driver noticing Tray has changed
+!
+!checks for everything : SamplingMode, new tray type
+!when  Tray has changed throw away old tray picture 
+!only build new one if system diagram is on
+!
+!set hotlinks at all times so it is correct when next switchview comes on
+!or when Sysdigram is built anew by GUIShowSystemDiagramCode
+!
+!or when a Mode switch is requested from Toolbar , here give name for new mode
+!SingleSample, or Sequence, or Reprocess
+!relies on the contents of   TabHdrText$(_config[1],CurrentViewTable$,"SamplingMode")
+!to tell about last mode so no unneccessary rebuilds are done
+!############################################################################
+
+local SamplingGomIni$
+local CurrentViewTable$                                                                                              
+local TrayConfigGomIni$                      
+local bNeedToRebuild
+                                                                                              
+!first find out if in Seq MODE
+                          
+CurrentViewTable$=TabHdrText$(_config[1], "Window", "CurrentView")
+if CurrentViewTable$ = "" 
+   CurrentViewTable$="TOP"
+endif
+CurrentViewTable$="View_"+CurrentViewTable$
+
+if TrayChanged = 1
+   !only this case came from GUI Hotlink 
+   if RegSize(GUI) > 0
+      !clear hotlink infos so UserInterface is not crooked
+      !hotlink Dll will set new values after this mac has terminated
+      SetObjHdrText  GUI, SeqTray1, ""
+      SetObjHdrText  GUI, SeqTray2, ""
+      SetObjHdrText  GUI, SeqTray3, ""
+   endif
+   if Dev1050Sampler = 1
+      !since here might jump even to a different Sequence ini file
+      SamplingGomIni$="lSequenw"
+      if GomExist(GUISamplingDiagGOM$,SamplingGomIni$) = 1
+         GomDelete  GUISamplingDiagGOM$,SamplingGomIni$
+      endif   
+      SamplingGomIni$="lSequewl"
+      if GomExist(GUISamplingDiagGOM$,SamplingGomIni$) = 1
+         GomDelete  GUISamplingDiagGOM$,SamplingGomIni$
+      endif   
+   endif
+endif
+
+!consider startup missing items
+if RequestedNewMode$ = ""
+   if ObjHdrType(_config[1],CurrentViewTable$) = 4
+      if TabHdrType(_config[1],CurrentViewTable$,"CurrentTask") = 99
+         SetTabHdrText  _config[1],CurrentViewTable$,"CurrentTask","TOPRUN"
+      endif                        
+      !anton sets this info before calling here
+      RequestedNewMode$=TabHdrText$(_config[1],CurrentViewTable$,"CurrentTask")
+   endif               
+endif
+
+RequestedNewMode$=CorrectCaseOfMode$(RequestedNewMode$)
+
+if FiaMode = -1
+   if check ( VARIABLE, _FIAON ) = 1
+      if _FIAON = 1
+         FiaMode=1
+      else
+         FiaMode=0
+      endif
+   else
+      FiaMode=0
+   endif
+endif
+
+
+if RequestedNewMode$ = "TOPRUN"  OR  RequestedNewMode$ = "TOPSEQ" 
+   bNeedToRebuild=0
+
+   !only do any destroying and building if System Diagram is there at all
+   if GomExist( , GUISamplingDiagGOM$) = 1
+      !! 
+      !Sampling Area GUI GOM is visible
+   
+      if RequestedNewMode$="TOPRUN" 
+         SamplingGomIni$=GUIBuildSingleSampleINI$()
+         if GomExist(GUISamplingDiagGOM$,SamplingGomIni$) = 0 
+            bNeedToRebuild=1
+         endif   
+      endif
+      if RequestedNewMode$="TOPSEQ" 
+         SamplingGomIni$=GUIBuildSequenceSamplingINI$()
+         if GomExist(GUISamplingDiagGOM$,SamplingGomIni$) = 0
+            bNeedToRebuild=1
+         endif   
+      endif
+    
+
+      if bNeedToRebuild = 1
+         !!
+         !new MODE is requested
+         !delete old GOM since a new MODE has a new picture 
+         
+         GUIDeleteSamplingSubGom
+         !!
+      else
+         !!
+         !new and old MODE is same 
+         !test if it is Sequence because then just tray might have changed
+         if RequestedNewMode$ = "TOPSEQ"
+            SamplingGomIni$=GUIBuildSequenceSamplingINI$()
+            TrayConfigGomIni$=GUIBuildSamplingTrayINI$()
+            if GUILastSequenceTrayGOM$ <> TrayConfigGomIni$
+               !new tray type in ALS now, must delete old GOM
+               if GUILastSequenceTrayGOM$ <> ""  \
+                  AND  GomExist(GUISamplingDiagGOM$+"|"+SamplingGomIni$,GUILastSequenceTrayGOM$) = 1
+                  GomDelete  GUISamplingDiagGOM$+"|"+SamplingGomIni$,GUILastSequenceTrayGOM$
+               endif
+            endif
+         else
+         if RequestedNewMode$ = "TOPRUN"
+            if FiaMode = 1
+               !here FIA comes in
+               SamplingGomIni$=GUIBuildSingleSampleINI$()
+               if GomExist(GUISamplingDiagGOM$,SamplingGomIni$) = 1
+                  GomDelete GUISamplingDiagGOM$,SamplingGomIni$
+               endif   
+            endif
+         endif
+         endif
+         !!
+      endif
+   
+      !only rebuild if Gom for this is not there 
+      !covers also the case staying in Sequence MODE but the tray has changed
+      !another special thing is FIA, is done externally but is under TOPRUN mode !
+      if FiaMode = 0  OR  RequestedNewMode$ = "TOPSEQ"
+         ! this is standard case for no FIA
+         SamplingGomIni$=GUISamplingGomNameForMode$(RequestedNewMode$)
+         if GomExist(GUISamplingDiagGOM$,SamplingGomIni$) = 0
+            GOMShowGUI GUISamplingDiagGOM$, SamplingGomIni$ ,  "DRIVERS" 
+         endif   
+      endif   
+
+      if RequestedNewMode$ = "TOPSEQ"
+         !need to build sub goms
+         TrayConfigGomIni$=GUIBuildSamplingTrayINI$()
+         if GomExist(GUISamplingDiagGOM$+"|"+SamplingGomIni$,TrayConfigGomIni$) = 0
+            GOMShowGUI GUISamplingDiagGOM$+"|"+SamplingGomIni$, TrayConfigGomIni$ ,  "DRIVERS" 
+         endif
+      endif
+ 
+      !!
+   endif   
+
+   !successfully rebuilt (or had nothing to do since no picture there), 
+   !store info now
+
+   !redo sequence hotlinks if necessary
+   if RequestedNewMode$ = "TOPSEQ"              !case sensitive compare
+      !check if something changed in seq tray mode
+      if GUILastSequenceTrayGOM$ <> SamplingGomIni$
+         !need to redo hotlinks since tray has changed
+    
+         !GUILastSequenceTrayGOM$ set to new value after setting new hotlinks 
+         GUIInstallSequenceHotlinks
+      endif
+      GuiSeqRunMode=1  !let LeoGui hotlink know in order to gray start stop correctly
+   else      
+      GuiSeqRunMode=0
+   endif                
+else   
+   !its for other hooks
+   !close whatever I had here because others don't know what I used here
+   GUIDeleteSamplingSubGom
+   GuiSeqRunMode=0
+endif
+
+!let other hook process also for closing
+GuiExecHook  "GuiSampleTask" , RequestedNewMode$ +","+val$(TrayChanged) +","+val$(FiaMode)
+
+!so this is in place also for addon sampling areas    
+GUICheckFreeDiskSpace  !so init values are right, not after 15 min 1. polling
+    
+!??also do here since FIA changes come here directly ??
+ExecHook "GuiMethSampLnks"  !do early since goes to a highly visible border
+
+
+GUIStartDAProgressDisplay "RESET"
+
+endmacro
+    
+    
+    
+!############################################################################
+name GUIShowSamplingDiagramCode
+
+parameter  RequestedTaskMode$ default ""  !means reinstall last one used
+                                         !find out from view tbl hdr CurrentTask
+                                         !values: TOPSEQ, TOPRUN
+parameter  ShowType   default  0  ! 0 is show in switch view (test if applicable)
+                                  ! 1 create and show , 2 destroy (does not remove sidebar), 
+                                  ! 3 toggle (does create/remove sidebar),
+                                  ! 4 show only in new mode if already there or 
+                                  ! saved in view as to be there,
+                                  ! 5 is close in CloseView macro (remove sidebar)
+                                  ! 6 destroy (removes sidebar)
+                                  
+!setting via CP variable  GUISampleAreaStateForMenu
+!############################################################################
+
+local CurrentViewTable$                                                                                              
+local bRedoSamplingArea
+local OrigShowType                                                                                              
+
+OrigShowType=ShowType
+
+CurrentViewTable$=TabHdrText$(_config[1], "Window", "CurrentView")
+if CurrentViewTable$ = "" 
+   CurrentViewTable$="TOP"
+endif
+CurrentViewTable$="View_"+CurrentViewTable$
+
+if ShowType = 4
+   !look into  current view table hdr item SampleAreaOn
+   if TabHdrVal(_config[1],CurrentViewTable$,"SampleAreaOn") = 1
+      ShowType=0
+   else
+      ShowType=6
+   endif
+endif                       
+
+if ShowType = 5
+   ShowType=6
+endif          
+
+if ShowType = 0                                       
+   if DevLeoAls+Dev1090Inject+Dev1050Sampler+DevHPCE = 0
+   !if DevLeoAls = 0
+      !in this case the diagram does not make sense in the view
+      GUISampleAreaStateForMenu=1  !enabled and unchecked
+      return 
+   endif     
+endif   
+
+bRedoSamplingArea=1
+
+if GomExist( , GUISamplingDiagGOM$) = 1
+   if ShowType = 6 OR ShowType = 3
+      GUISampleAreaStateForMenu=1  !enabled and unchecked
+      GomDelete , GUISamplingDiagGOM$
+      if OrigShowType <> 5
+         !not in close view macro
+         SetTabHdrVal  _config[1],CurrentViewTable$,"SampleAreaOn",0
+      endif   
+      bRedoSamplingArea=0         
+   else   
+   if ShowType = 2
+      GUISampleAreaStateForMenu=1+2  !enabled and checked
+      GUIDeleteSamplingSubGom
+      bRedoSamplingArea=0
+   endif                       
+   endif                       
+else
+   if ShowType = 2 OR ShowType = 6 
+      GUISampleAreaStateForMenu=1  !enabled and unchecked
+      bRedoSamplingArea=0
+   endif                       
+endif   
+
+if bRedoSamplingArea = 1
+   !show it
+   if RequestedTaskMode$ = ""
+      !anton sets this info before calling here
+      RequestedTaskMode$=View_CurrentTaskName$()
+   endif
+
+   !RequestedTaskMode$=CorrectCaseOfMode$(RequestedTaskMode$)
+
+   !if RequestedTaskMode$ <> "UNKNOWN"
+      !consider startup missing items
+      GUISampleAreaStateForMenu=1+2  !enabled and checked
+
+      if GomExist( , GUISamplingDiagGOM$) = 0
+         GomShowGui , GUISamplingDiagGOM$, "DRIVERS"
+      endif   
+
+      if OrigShowType <> 5
+         !not in close view macro
+         SetTabHdrVal  _config[1],CurrentViewTable$,"SampleAreaOn",1
+      endif   
+      GUISamplingAreaReconfiguration  RequestedTaskMode$
+      
+   !!else let other hook process this   
+   !endif
+
+endif
+
+ExecHook "GuiMethSampLnks"  !do early since goes to a highly visible border
+
+
+endmacro
+    
+     
+    
+    
+!############################################################################
+name GUIDiagSwitchViewPreMac
+
+
+!is an empty macro will be overloaded for each product type
+!installs the menus for the GUI with the given names
+!the problem is that the GUI windows are closed by GOM on view switch
+!without letting outside macros world know (so checkmarks stay)
+!this macro comes definitely as part of the PreView Macro which is after the 
+!GUI window is destroyed
+!############################################################################
+
+if (Mrc_IsRcNetUi() = 0)
+
+  if GomExist( , GUISystemDiagGOM$) = 1
+    GUIDiagramStateForMenu=1+2  !enabled plus checked
+  else
+    GUIDiagramStateForMenu=1  !enabled and unchecked
+  endif
+
+  GuiUserCalledNrdyInfo$="" !clear bubble selection
+
+endif
+
+endmacro
+    
+    
+   
+    
+!############################################################################
+name GuiAlsRunModeInfo$
+
+!explain the offline gray state for online module
+!############################################################################
+
+local   MessageText$   
+local   iii
+local   iSeqLine
+
+local ID_ASTXDRIVERSMACFILES_SEQUENCE_PARAM_39
+local ID_ASTXDRIVERSMACFILES_DATA_ACQUISITI_40
+local ID_ASTXDRIVERSMACFILES_NO_RUN_IS_SETU_41
+local ID_ASTXDRIVERSMACFILES_BLANK_RUN_IS_S_42
+local ID_ASTXDRIVERSMACFILES_NO_RUN_IS_SETU_43
+local ID_ASTXDRIVERSMACFILES_BLANK_RUN_IS_S_44
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_SEQUENCE_PARAM_39           =  17039  
+ID_ASTXDRIVERSMACFILES_DATA_ACQUISITI_40           =  17040  
+ID_ASTXDRIVERSMACFILES_NO_RUN_IS_SETU_41           =  17041  
+ID_ASTXDRIVERSMACFILES_BLANK_RUN_IS_S_42           =  17042  
+ID_ASTXDRIVERSMACFILES_NO_RUN_IS_SETU_43           =  17043  
+ID_ASTXDRIVERSMACFILES_BLANK_RUN_IS_S_44           =  17044  
+NLSFileName_astxmac$= "astxmac"
+
+MessageText$=""
+
+
+iii=ObjHdrVal(LeoAlsStatus1,"RunState")
+if iii > 1
+   !is online
+   if GuiSeqRunMode = 1  AND  TabHdrVal(_sequence, "SeqParm" , "SeqMode") > 1
+      MessageText$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SEQUENCE_PARAM_39)
+   else
+      if RUN_ACQ = 0
+         MessageText$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_DATA_ACQUISITI_40)
+      else
+         !here it still can be blank RUN
+         if GuiSeqRunMode = 1
+            if _SeqCurrLine1 < 1
+               iSeqLine=1
+            else
+               iSeqLine=_SeqCurrLine1
+            endif
+            if TabHdrVal(_sequence,"SeqTable1","NumberOfRows") < iSeqLine
+               MessageText$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NO_RUN_IS_SETU_41)
+            else
+               if TabHdrVal(_sequence,"SeqTable1","NumberOfRows") >= iSeqLine  \
+                  AND TabVal(_sequence,"SeqTable1",iSeqLine,"Vial") = -1
+                  MessageText$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BLANK_RUN_IS_S_42)
+               else   
+                  MessageText$=""
+                  if check ( VARIABLE, _FIAON ) = 1
+                     if _FIAON = 1  AND  TabHdrVal(FIAREG,"FIATABLE","NumberOfRows") < 1
+                        MessageText$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NO_RUN_IS_SETU_43)
+                     endif
+                  endif
+               endif
+            endif
+         else
+            if _ALSBOTTLE1 = -1
+               MessageText$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_BLANK_RUN_IS_S_44)
+            else
+               MessageText$=""
+               if check ( VARIABLE, _FIAON ) = 1
+                  if _FIAON = 1  AND  TabHdrVal(FIAREG,"FIATABLE","NumberOfRows") < 1
+                     MessageText$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NO_RUN_IS_SETU_43)
+                  endif
+               endif
+            endif
+         endif
+      endif
+   endif            
+endif
+
+return  MessageText$
+
+endmacro
+    
+   
+    
+!############################################################################
+name GuiShowModuleNrdyInfo
+
+parameter   ModuleName$    default ""      !  LINJ LPUMP LTHM1 LTHM2 
+                                           !  MTH DA GLP
+                                           !  Detector symbolic names are in 
+                                           !  GuiDetecotors Hook table :
+                                           !  already used are: LDAD1 LDAD2 LMWD1 LMWD2 LVWD1 LVWD2 LVWD3 LVWD4 
+parameter   ModuleNumber   default 1
+!############################################################################
+
+local   InfoType$
+local   MessageText$   
+local   HelpNumber     
+local   RegName$           
+local   iii
+local   iSeqLine
+local   iDetNumber
+local   ii
+
+local ID_ASTXDRIVERSMACFILES_ERROR_NOT_SPEC_45
+local ID_ASTXDRIVERSMACFILES_NOT_READY_COND_46
+local ID_ASTXDRIVERSMACFILES_NO_ERRORS_305
+local NLSFileName_astxmac$
+
+ID_ASTXDRIVERSMACFILES_ERROR_NOT_SPEC_45           =  17045  
+ID_ASTXDRIVERSMACFILES_NOT_READY_COND_46           =  17046  
+ID_ASTXDRIVERSMACFILES_NO_ERRORS_305               =  17305
+
+NLSFileName_astxmac$= "astxmac"
+RegName$=""
+if ModuleName$= "LINJ" 
+   RegName$="LeoAlsStatus"+val$(ModuleNumber)
+else
+if ModuleName$= "LPUMP" 
+   RegName$="LeoPumpStatus"+val$(ModuleNumber)  
+else
+if ModuleName$= "LTHM" 
+   RegName$="LeoThermostatStatus"+val$(ModuleNumber)  
+   ModuleName$=ModuleName$+val$(ModuleNumber)
+else
+if ModuleName$= "LCLC" 
+   RegName$="LeoChipCubeStatus"+val$(ModuleNumber)  
+   ModuleName$=ModuleName$+val$(ModuleNumber)
+else
+if ModuleName$= "LAFC" 
+   ! check AFC Status register for appropriate module
+   For ii=1 To DevLeoAfc
+       RegName$="LeoAfcStatus"+val$(ii)  
+       evaluate "iii=ObjHdrVal("+RegName$+",NRDYState)"
+       If iii = 1
+          ModuleNumber = ii
+       EndIf
+   Next ii
+   For ii=1 To DevLeoAfc
+       RegName$="LeoAfcStatus"+val$(ii)  
+       evaluate "iii=ObjHdrVal("+RegName$+",ErrorState)"
+       If iii = 1
+          ModuleNumber = ii
+       EndIf
+   Next ii
+
+   RegName$="LeoAfcStatus"+val$(ModuleNumber)  
+else
+   ModuleName$=ModuleName$+val$(ModuleNumber)
+   iDetNumber=GuiFindDetHookSymbolicName(ModuleName$)
+   if iDetNumber > -1
+      RegName$=TabText$ (Hook[1],"GuiDetectors",iDetNumber,"StatusRegName")
+   endif   
+endif
+endif
+endif
+endif
+endif
+
+
+
+if RegName$ <> "" 
+   MessageText$=""
+   evaluate "iii=ObjHdrVal("+RegName$+",RunState)"
+   !iii=2 powerfail  modules give text now
+   evaluate "iii=ObjHdrVal("+RegName$+",ErrorState)"
+   if iii = 1
+      InfoType$="ERROR"
+      evaluate "MessageText$=ObjHdrText$("+RegName$+",ErrorTextLong)" 
+      if MessageText$=""
+         evaluate "MessageText$=ObjHdrText$("+RegName$+",ErrorTextShort)" 
+      endif
+      if MessageText$=""
+         MessageText$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_ERROR_NOT_SPEC_45)
+      endif
+      evaluate "HelpNumber=ObjHdrVal("+RegName$+",ErrorHelpNr)"
+   else
+      evaluate "iii=ObjHdrVal("+RegName$+",NRDYState)"
+      if iii = 1
+         InfoType$="WARNING"
+         evaluate "MessageText$=ObjHdrText$("+RegName$+",NRDYTextLong)" 
+         if MessageText$=""
+            evaluate "MessageText$=ObjHdrText$("+RegName$+",NRDYTextShort)" 
+         endif
+         if MessageText$=""
+            MessageText$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NOT_READY_COND_46)
+         endif
+         evaluate "HelpNumber=ObjHdrVal("+RegName$+",NRDYHelpNr)"
+      else                
+         InfoType$="INFO" 
+         HelpNumber=0
+         MessageText$=""
+         if ModuleName$= "LINJ" 
+            !explain the offline gray state for online module
+            MessageText$=GuiAlsRunModeInfo$()
+         endif   
+         if MessageText$ = ""
+            MessageText$=ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_NO_ERRORS_305)
+         endif
+      endif  
+   endif  
+   if MessageText$<> ""
+      GuiUserCalledNrdyInfo$=ModuleName$
+      GUIShowBubbleMessage  InfoType$, ModuleName$, MessageText$, HelpNumber
+   endif
+endif
+
+endmacro
+    
+   
+   
+    
+!############################################################################
+name GuiCloseModuleNrdyInfoBubble
+
+parameter   SubGomName$   
+!############################################################################
+
+GuiUserCalledNrdyInfo$=""
+GomDelete GUISystemDiagGOM$, SubGomName$
+    
+endmacro
+    
+   
+!GUIShowBubbleMessage "ERROR", "LAFC", "Hallo"    
+!############################################################################
+name GUIShowBubbleMessage
+
+parameter   InfoType$      default "LAST"  !  ERROR  WARNING  WAITING  INFO  NONE  LAST
+parameter   ModuleName$    default ""      !  LINJ LPUMP LTHM1 LTHM2 
+                                           !  MTH DA GLP
+                                           !  Detector symbolic names are in 
+                                           !  GuiDetecotors Hook table :
+                                           !  already used are: LDAD1 LDAD2 LMWD1 LMWD2 LVWD1 LVWD2 LVWD3 LVWD4 
+parameter   MessageText$   default ""
+parameter   HelpNumber     default  0
+
+!callback from GUI hotlinks filter DLL in case an error has occured
+!############################################################################
+
+local  NdrName$
+local  iii,icnt,xloc
+local  iType                     
+local  a$,b$
+local  InfoGomName$
+local  iDetectorNumber 
+local  TextTool1$, TextTool2$, TextTool3$
+
+local  errorvar
+
+
+
+if GomExist( ,GUISystemDiagGOM$ ) = 1   
+   InfoGomName$=""
+   if InfoType$ = "LAST"
+      InfoType$=   ObjHdrText$(Gui,"ModMsgType")
+      ModuleName$= ObjHdrText$(Gui,"ModMsgModName")
+      MessageText$=ObjHdrText$(Gui,"ModMsgText")
+      HelpNumber=  ObjHdrVal  (Gui,"ModMsgHelpNo")
+   else                         
+      if 1=0
+         !keep info for later reuse ; not needed
+         SetObjHdrText  Gui,"ModMsgType",InfoType$
+         SetObjHdrText  Gui,"ModMsgModName",ModuleName$
+         SetObjHdrText  Gui,"ModMsgText",MessageText$
+         SetObjHdrVal   Gui,"ModMsgHelpNo",HelpNumber
+      endif
+   endif
+   if ModuleName$ = "LINJ"
+      if InfoType$ = "NONE"  OR InfoType$ = "INFO"
+         !no errors so explain the offline gray state for online module
+         MessageText$=GuiAlsRunModeInfo$()
+         if MessageText$ <> ""
+            InfoType$="INFO" 
+            HelpNumber=0   
+         else   
+            InfoType$ = "NONE"
+         endif
+      endif   
+   endif
+   if InfoType$ <> "NONE"  
+      if ModuleName$ = "LINJ"  OR  ModuleName$ = "LPUMP"  \
+         OR  ModuleName$ = "LTHM1" OR  ModuleName$ = "LTHM2" \
+         OR  ModuleName$ = "LCLC1" \
+         OR  ModuleName$ = "MTH"
+         InfoGomName$="lsysinf1"
+      else
+      if ModuleName$ = "DA"  OR  ModuleName$ = "GLP"
+         InfoGomName$="lsysinf3"
+      else
+      if ModuleName$ = "LAFC"
+         InfoGomName$="lsysinf2"
+      else   
+         iDetectorNumber=GuiFindDetHookSymbolicName(ModuleName$)
+         if iDetectorNumber > -1
+            ModuleName$="DET"+val$(iDetectorNumber)
+            InfoGomName$="lsysinf2"
+         else
+            InfoGomName$=""  
+         endif
+      endif                     
+      endif
+      endif                     
+      if InfoGomName$ <> ""                    
+         !delete other info GOM 
+
+         on error   errorvar=1  !so in case multi CP yield between GomExist and SomShowGui
+      
+         if GomExist( GUISystemDiagGOM$, InfoGomName$ ) = 0
+            !it's one or the other
+            if GomExist( GUISystemDiagGOM$, "lsysinf1" ) = 1
+               GomDelete GUISystemDiagGOM$, "lsysinf1"
+            endif   
+            if GomExist( GUISystemDiagGOM$, "lsysinf2" ) = 1
+               GomDelete GUISystemDiagGOM$, "lsysinf2"
+            endif   
+            if GomExist( GUISystemDiagGOM$, "lsysinf3" ) = 1
+               GomDelete GUISystemDiagGOM$, "lsysinf3"
+            endif   
+         endif   
+     
+         if GomExist( GUISystemDiagGOM$, InfoGomName$ ) = 0
+            GomShowGui GUISystemDiagGOM$, InfoGomName$ , "DRIVERS"
+         endif
+         if HelpNumber <> 0
+            GomSetVal  GUISystemDiagGOM$, InfoGomName$, "Help", "Enable", 1 !disabled
+            GomSetText GUISystemDiagGOM$, InfoGomName$, "Help", "Command",   \
+                                                  "Help.topic "+sprintf$(HelpNumber, "%ld") 
+         else
+            !move out very early
+            GomSetVal  GUISystemDiagGOM$, InfoGomName$, "Help", "Enable", 0 !disabled
+         endif                                         
+         GomSetText GUISystemDiagGOM$, InfoGomName$, "BubbleMessage", "elements", \
+                                                           ModuleName$+"|"+InfoType$
+         !go by approximate str len of MessageText$ which text field to use
+         !move others out of sight
+         icnt=Len(MessageText$)
+         if icnt < 20
+            TextTool1$="MessageTextS"
+            TextTool2$="MessageTextM"
+            TextTool3$="MessageTextL"
+         else
+         if icnt < 35
+            TextTool1$="MessageTextM"
+            TextTool2$="MessageTextS"            
+            TextTool3$="MessageTextL"
+         else
+            TextTool1$="MessageTextL"
+            TextTool2$="MessageTextM"
+            TextTool3$="MessageTextS"
+         endif                                                  
+         endif                                                  
+         xloc=GomVal(  GUISystemDiagGOM$, InfoGomName$, TextTool1$, "X")
+         if xloc = 1000
+            xloc=GomVal(  GUISystemDiagGOM$, InfoGomName$, TextTool2$, "X")
+            if xloc = 1000
+               xloc=GomVal(  GUISystemDiagGOM$, InfoGomName$, TextTool3$, "X")
+            endif
+         endif
+         GomSetVal  GUISystemDiagGOM$, InfoGomName$, TextTool1$, "X", xloc
+         GomSetVal  GUISystemDiagGOM$, InfoGomName$, TextTool2$, "X", 1000
+         GomSetVal  GUISystemDiagGOM$, InfoGomName$, TextTool3$, "X", 1000
+         GomSetText GUISystemDiagGOM$, InfoGomName$, TextTool1$, "TextColor", \
+                                                           InfoType$+"TextColor"
+         GomSetText GUISystemDiagGOM$, InfoGomName$, TextTool1$, "BKColor",   \
+                                                           InfoType$+"BKColor"
+         GomSetText GUISystemDiagGOM$, InfoGomName$, TextTool1$, "text1", MessageText$ 
+
+         on error   
+      
+      endif
+   else   
+      if GomExist( GUISystemDiagGOM$, "lsysinf1" ) = 1
+         GomDelete GUISystemDiagGOM$, "lsysinf1"
+      endif   
+      if GomExist( GUISystemDiagGOM$, "lsysinf2" ) = 1
+         GomDelete GUISystemDiagGOM$, "lsysinf2"
+      endif   
+      if GomExist( GUISystemDiagGOM$, "lsysinf3" ) = 1
+         GomDelete GUISystemDiagGOM$, "lsysinf3"
+      endif   
+      !clear last info 
+      SetObjHdrText  Gui,"ModMsgType","NONE"
+      SetObjHdrText  Gui,"ModMsgModName",""
+      SetObjHdrText  Gui,"ModMsgText",""
+      SetObjHdrVal   Gui,"ModMsgHelpNo",0
+      !GuiUserCalledNrdyInfo$=""   !to clear setting for this module only in hotlink DLL
+   endif   
+endif
+
+endmacro
+
+
+   
+   
+
+
+
+!-------------------------------------------------------------------------------
+!
+! Extensions for Fraction Collector (rl)
+!
+!-------------------------------------------------------------------------------
+
+!-------------------------------------------------------------------------------
+Name AfcGuiGetLoc$
+
+	local sLoc$
+    local sAfcName$
+    local dNum
+
+
+    dNum = ObjHdrVal (LeoAfcStatus1[1], "Act_Frac")
+
+    If (dNum <= 0) Or (dNum > DevLeoAfc)
+        dNum = 1
+    EndIf
+
+    sAfcName$ = sprintf$(dNum, "LEOAFCSTATUS%1d[1]")
+    Evaluate ("sLoc$ = ObjHdrText$(" + sAfcName$ + ", ""ACT_APOS"" )")
+
+	return sLoc$
+
+EndMacro
+
+
+Name AfcGuiOffline
+	SetObjHdrText GUI, "leoafcstatus", "offline|" + AfcGuiGetLoc$() + "| "
+EndMacro
+
+Name AfcGuiReady
+	SetObjHdrText GUI, "leoafcstatus", "ready|" + AfcGuiGetLoc$()	+ "| "
+EndMacro
+
+Name AfcGuiError
+	SetObjHdrText GUI, "leoafcstatus", "error|" + AfcGuiGetLoc$() + "| "
+EndMacro
+
+Name AfcGuiPowerOn
+	SetObjHdrText GUI, "leoafcstatus", "poweron|" + AfcGuiGetLoc$() +"| "
+EndMacro
+
+Name AfcGuiRunning
+
+  local Module
+  local sNewPos$
+  local sCollectMode$
+  local Collecting
+  local CollectModeOn
+  local Ret$
+  local Mode
+
+  local ID_ASTXDRIVERSMACFILES_OFF_47
+  local ID_ASTXDRIVERSMACFILES_TIME_48
+  local ID_ASTXDRIVERSMACFILES_VOL_49
+  local ID_ASTXDRIVERSMACFILES_PEAK_50
+  local NLSFileName_astxmac$
+
+  ID_ASTXDRIVERSMACFILES_OFF_47                      =  17047  
+  ID_ASTXDRIVERSMACFILES_TIME_48                     =  17048  
+  ID_ASTXDRIVERSMACFILES_VOL_49                      =  17049  
+  ID_ASTXDRIVERSMACFILES_PEAK_50                     =  17050  
+  NLSFileName_astxmac$= "astxmac"
+  
+    sNewPos$ = AfcGuiGetLoc$()
+
+		sCollectMode$ = ""
+		CollectModeOn = 0
+    
+    If sActPictPos$ <> sNewPos$
+        sActPictPos$ = sNewPos$
+        dAfcPictRun = dAfcPictRun + 1
+        If dAfcPictRun > 3
+            dAfcPictRun = 0
+        EndIf
+    EndIf
+    
+    For Module=1 To DevLeoAfc
+      Evaluate "Collecting = ObjHdrVal(LEOAFCSTATUS"+Val$(Module)+"[1], ""COLLECTING"" )"
+      If (Collecting = 1)	Then
+        CollectModeOn = 1
+!ACT_TMOD2 beg
+        Evaluate "Mode = ObjHdrVal(LEOAFCSTATUS"+Val$(Module)+"[1], ""ACT_TMOD2"" )"
+!        Evaluate "Ret$ = SendModule$(LAFC"+Val$(Module)+", ""ACT:TMOD?"" )"
+!        If (Ret$[1:2] = "RA")	Then
+!          Mode = Val(Ret$[18])
+          If Mode = 0 Then
+          	sCollectMode$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_OFF_47)
+          EndIf
+          If Mode = 1 Then
+          	sCollectMode$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TIME_48)
+          EndIf
+          If Mode = 2 Then
+          	sCollectMode$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_TIME_48)
+          EndIf
+          If Mode = 3 Then
+          	sCollectMode$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_VOL_49)
+          EndIf
+          If Mode = 4 Then
+          	sCollectMode$ = ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_PEAK_50)
+          EndIf
+!        Else
+!          sCollectMode$ = "???"
+!        EndIf
+!ACT_TMOD2 end
+        Module = DevLeoAfc
+      EndIf
+    Next Module
+
+    If CollectModeOn = 0 Then
+			sCollectMode$ = " "
+		EndIf
+
+    sNewPos$ = sNewPos$ + "|"
+
+    If dAfcPictRun = 0
+    	SetObjHdrText GUI, "leoafcstatus", "run|" + sNewPos$ + sCollectMode$
+    EndIf
+    If dAfcPictRun = 1
+    	SetObjHdrText GUI, "leoafcstatus", "run1|" + sNewPos$ + sCollectMode$
+    EndIf
+    If dAfcPictRun = 2
+    	SetObjHdrText GUI, "leoafcstatus", "run2|" + sNewPos$ + sCollectMode$
+    EndIf
+    If dAfcPictRun = 3
+    	SetObjHdrText GUI, "leoafcstatus", "run3|" + sNewPos$ + sCollectMode$
+    EndIf
+
+
+EndMacro
+
+
+
+!-------------------------------------------------------------------------------
+Name AfcProcessStateEvent
+
+    Parameter	EventCause$
+    Parameter	EventLevel$
+    Parameter	EventSubjName$
+    Parameter	EventObj		DEFAULT 0
+    Parameter	EventPartName$		DEFAULT ""
+    Parameter	EventIndex		DEFAULT 0
+
+    Local RunState
+    Local NRdy
+    Local ErrorState
+
+    Local dTotalState ! 1=Red, 2=Yellow, 3=blue, 4=green, 5=grey
+    Local dState
+    Local i
+    Local sAfcName$
+
+    dTotalState = 5
+
+    GuiAFCNrdyInfoMenu = 0
+
+    For i=1 To DevLeoAfc
+
+        sAfcName$ = sprintf$(i, "LEOAFCSTATUS%1d[1]");
+        Evaluate ("RunState = ObjHdrVal(" + sAfcName$ + ", ""RunState"" )")
+        Evaluate ("NRdy = ObjHdrVal(" + sAfcName$ + ", ""NRdyState"" )")
+        Evaluate ("ErrorState = ObjHdrVal(" + sAfcName$ + ", ""ErrorState"" )")
+
+        dState = 5
+        If ErrorState = 1
+            dState = 1
+        Else
+        	If NRdy = 1
+                If RunState = 1
+                    dState = 5
+                Else
+                    dState = 2
+                EndIf
+            Else
+
+                !Run status:
+                !1 = offline	7 = postrun	
+                !2 = power off	8 = run
+                !3 = power on	9 = injecting
+                !4 = standby	10 = break
+                !5 = prerun	11 = initializing
+                !6 = preparing	12 = waiting
+                If RunState = 1
+                    dState = 5
+                EndIf
+                If RunState = 2
+                    dState = 5
+                EndIf
+                If RunState = 3
+                    dState = 2
+                EndIf
+                If RunState = 5
+                    dState = 4
+                EndIf
+                If RunState = 6
+                    dState = 4
+                EndIf
+                If RunState = 7
+                    dState = 3
+                EndIf
+                If RunState = 8
+                    dState = 3
+                EndIf
+                If RunState = 12
+                    dState = 4
+                EndIf
+            EndIf
+        EndIf
+
+        If dState < dTotalState
+            dTotalState = dState
+        EndIf
+    
+    Next i
+
+    If dTotalState = 1
+        GuiAFCNrdyInfoMenu = 1
+        AfcGuiError
+        GuiShowModuleNrdyInfo "LAFC"
+    EndIf
+    If dTotalState = 2
+        GuiAFCNrdyInfoMenu = 1
+        AfcGuiPowerOn
+    EndIf
+    If dTotalState = 3
+        If GuiUserCalledNrdyInfo$ = "LAFC"
+            GuiCloseModuleNrdyInfoBubble "lsysinf2"
+        EndIf
+        AfcGuiRunning
+    EndIf
+    If dTotalState = 4
+        If GuiUserCalledNrdyInfo$ = "LAFC"
+            GuiCloseModuleNrdyInfoBubble "lsysinf2"
+        EndIf
+        AfcGuiReady
+    EndIf
+    If dTotalState = 5
+        If GuiUserCalledNrdyInfo$ = "LAFC"
+            GuiCloseModuleNrdyInfoBubble "lsysinf2"
+        EndIf
+        AfcGuiOffline
+    EndIf
+
+
+
+
+EndMacro
+
+
+!-------------------------------------------------------------------------------
+Name AfcGuiInit
+
+	On error print
+
+    GuiAFCNrdyInfoMenu = 0
+
+    dAfcPictRun = 0
+    sActPictPos$ = ""
+
+    If DevLeoAfc > 0
+
+    	NewObjHdrText GUI, "leoafcstatus"
+    	GomSetToolEvent "LSysCont", "afraco", "pict", "Elements", GUI, "leoafcstatus"
+
+        ! connecting to status of leoafc
+
+        CpRequest CPGUI, "OnEvent ""LeoAfcStatus1[1].RunState"", ""AfcProcessStateEvent"" "
+        CpRequest CPGUI, "OnEvent ""LeoAfcStatus1[1].NRdyState"", ""AfcProcessStateEvent"" "
+        CpRequest CPGUI, "OnEvent ""LeoAfcStatus1[1].ErrorState"", ""AfcProcessStateEvent"" "
+        !CpRequest CPGUI, "OnEvent ""LeoAfcStatus1[1].Act_Apos"", ""AfcProcessStateEvent"" "
+        CpRequest CPGUI, "OnEvent ""LeoAfcStatus1[1].COLLECTING"", ""AfcProcessStateEvent"" "
+!ACT_TMOD2
+        CpRequest CPGUI, "OnEvent ""LeoAfcStatus1[1].ACT_TMOD2"", ""AfcProcessStateEvent"" "
+
+        If DevLeoAfc > 1
+            CpRequest CPGUI, "OnEvent ""LeoAfcStatus2[1].RunState"", ""AfcProcessStateEvent"" "
+            CpRequest CPGUI, "OnEvent ""LeoAfcStatus2[1].NRdyState"", ""AfcProcessStateEvent"" "
+            CpRequest CPGUI, "OnEvent ""LeoAfcStatus2[1].ErrorState"", ""AfcProcessStateEvent"" "
+            !CpRequest CPGUI, "OnEvent ""LeoAfcStatus2[1].Act_Apos"", ""AfcProcessStateEvent"" "
+            CpRequest CPGUI, "OnEvent ""LeoAfcStatus2[1].COLLECTING"", ""AfcProcessStateEvent"" "
+!ACT_TMOD2
+            CpRequest CPGUI, "OnEvent ""LeoAfcStatus2[1].ACT_TMOD2"", ""AfcProcessStateEvent"" "
+
+            If DevLeoAfc > 2
+                CpRequest CPGUI, "OnEvent ""LeoAfcStatus3[1].RunState"", ""AfcProcessStateEvent"" "
+                CpRequest CPGUI, "OnEvent ""LeoAfcStatus3[1].NRdyState"", ""AfcProcessStateEvent"" "
+                CpRequest CPGUI, "OnEvent ""LeoAfcStatus3[1].ErrorState"", ""AfcProcessStateEvent"" "
+                !CpRequest CPGUI, "OnEvent ""LeoAfcStatus3[1].Act_Apos"", ""AfcProcessStateEvent"" "
+                CpRequest CPGUI, "OnEvent ""LeoAfcStatus3[1].COLLECTING"", ""AfcProcessStateEvent"" "
+!ACT_TMOD2
+                CpRequest CPGUI, "OnEvent ""LeoAfcStatus3[1].ACT_TMOD2"", ""AfcProcessStateEvent"" "
+
+								If DevLeoAfc > 3
+								    CpRequest CPGUI, "OnEvent ""LeoAfcStatus4[1].RunState"", ""AfcProcessStateEvent"" "
+								    CpRequest CPGUI, "OnEvent ""LeoAfcStatus4[1].NRdyState"", ""AfcProcessStateEvent"" "
+								    CpRequest CPGUI, "OnEvent ""LeoAfcStatus4[1].ErrorState"", ""AfcProcessStateEvent"" "
+								    !CpRequest CPGUI, "OnEvent ""LeoAfcStatus4[1].Act_Apos"", ""AfcProcessStateEvent"" "
+								    CpRequest CPGUI, "OnEvent ""LeoAfcStatus4[1].COLLECTING"", ""AfcProcessStateEvent"" "
+!ACT_TMOD2
+								    CpRequest CPGUI, "OnEvent ""LeoAfcStatus4[1].ACT_TMOD2"", ""AfcProcessStateEvent"" "
+								EndIf
+            EndIf
+        EndIf
+    EndIf
+
+    AfcProcessStateEvent "", "", ""
+
+EndMacro
+
+
+
+
+!############################################################################
+name InitDebug_systgui
+
+!bootstrap macro        
+!it does something only when LeoALS and LeoPump are present
+!initialized global vars
+!installs the GUI protocol DLL
+!preloads all picture DLLs
+!installs all GOM hotlinks
+!############################################################################
+
+
+
+
+!############################################################################
+
+if Check ( VARIABLE, DacTst ) = 0
+   !for debugging under Dactst
+   DacTst = 0
+endif
+if DacTst = 1
+   !for dac test debugging
+   DevLeoPump=1
+   if RegSize(LeoPumpStatus1) < 1
+      newobj LeoPumpStatus1,1,0,0
+   endif
+   if ObjHdrType(LeoPumpStatus1, "PumpType") = 99  
+      SetObjHdrVal LeoPumpStatus1, "PumpType",2
+   endif   
+   if ObjHdrType(LeoPumpStatus1, "RunState") = 99  
+      SetObjHdrVal LeoPumpStatus1, "RunState",5   !5= prerun
+   endif   
+   if ObjHdrType(LeoPumpStatus1, "Pressure_MAX") = 99  
+      SetObjHdrVal LeoPumpStatus1, "Pressure_MAX",380
+   endif   
+   if ObjHdrType(LeoPumpStatus1, "Pressure_MIN") = 99  
+      SetObjHdrVal LeoPumpStatus1, "Pressure_MIN",80
+   endif   
+
+   DevLeoAls=1
+   if RegSize(LeoAlsStatus1) < 1
+      newobj LeoAlsStatus1,1,0,0
+   endif
+   if ObjHdrType(LeoAlsStatus1, "Act_Tray_A") = 99
+      SetObjHdrVal LeoAlsStatus1, "Act_Tray_A",100
+   endif   
+   if ObjHdrType(LeoAlsStatus1, "Act_Tray_B") = 99
+      SetObjHdrVal LeoAlsStatus1, "Act_Tray_B",0
+   endif   
+   if ObjHdrType(LeoAlsStatus1, "PrepProgress") = 99
+      SetObjHdrVal LeoAlsStatus1, "PrepProgress",0
+   endif   
+   if ObjHdrType(LeoAlsStatus1, "Act_Vial") = 99
+      setobjhdrval  leoalsstatus1 , "Act_Vial" ,-7
+   endif   
+   if ObjHdrType(LeoAlsStatus1, "Act_COMMAND") = 99
+      setobjhdrText  leoalsstatus1 , "Act_COMMAND" ,"hello"
+   endif   
+   if ObjHdrType(LeoAlsStatus1, "Act_Volume") = 99
+      setobjhdrval  leoalsstatus1 , "Act_Volume" ,-17.6
+   endif   
+   DevLeoTHM=1
+   if DevLeoTHM >= 1
+      if RegSize(LeoThermostatStatus1) < 1
+         newobj LeoThermostatStatus1,1,0,0
+      endif
+      !if ObjHdrType(LeoThermostatStatus1, "ThmType") = 99  
+      !   SetObjHdrVal LeoThermostatStatus1, "ThmType",1
+      !endif   
+      if ObjHdrType(LeoThermostatStatus1, "TempDiffLimit") = 99
+         setobjhdrval  LeoThermostatStatus1 , "TempDiffLimit" ,1
+      endif   
+      if ObjHdrType(LeoThermostatStatus1, "LeftTemp") = 99
+         setobjhdrval  LeoThermostatStatus1 , "LeftTemp" ,17
+      endif   
+      if ObjHdrType(LeoThermostatStatus1, "RightTemp") = 99
+         setobjhdrval  LeoThermostatStatus1 , "RightTemp" ,20
+      endif   
+   endif
+   DevLeoDAD=1
+   if DevLeoDAD = 1
+      if RegSize(LeoDadStatus1) < 1
+         newobj LeoDadStatus1,1,0,0
+      endif
+      if ObjHdrType(LeoDadStatus1, "UVLamp") = 99
+         setobjhdrval  LeoDadStatus1 , "UVLamp" ,1
+      endif   
+      if ObjHdrType(LeoDadStatus1, "VisLamp") = 99
+         setobjhdrval  LeoDadStatus1 , "VisLamp" ,1
+      endif   
+   endif
+   DevNucDAD=1
+   if DevNucDAD = 1
+      if RegSize(NucDadStatus1) < 1
+         newobj NucDadStatus1,1,0,0
+      endif
+      if ObjHdrType(NucDadStatus1, "UVLamp") = 99
+         setobjhdrval  NucDadStatus1 , "UVLamp" ,1
+      endif   
+      if ObjHdrType(NucDadStatus1, "VisLamp") = 99
+         setobjhdrval  NucDadStatus1 , "VisLamp" ,1
+      endif   
+   endif
+   DevLeoMWD=1
+   if DevLeoMWD = 1
+      if RegSize(LeoMwdStatus1) < 1
+         newobj LeoMwdStatus1,1,0,0
+      endif
+      if ObjHdrType(LeoMwdStatus1, "UVLamp") = 99
+         setobjhdrval  LeoMwdStatus1 , "UVLamp" ,1
+      endif   
+      if ObjHdrType(LeoMwdStatus1, "VisLamp") = 99
+         setobjhdrval  LeoMwdStatus1 , "VisLamp" ,1
+      endif   
+    EndIf
+   DevNucMWD=1
+   if DevNucMWD = 1
+      if RegSize(NucMwdStatus1) < 1
+         newobj NucMwdStatus1,1,0,0
+      endif
+      if ObjHdrType(NucMwdStatus1, "UVLamp") = 99
+         setobjhdrval  NucMwdStatus1 , "UVLamp" ,1
+      endif   
+      if ObjHdrType(NucMwdStatus1, "VisLamp") = 99
+         setobjhdrval  NucMwdStatus1 , "VisLamp" ,1
+      endif   
+   endif
+   DevLeoVWD=1
+   if DevLeoVWD = 1
+      if RegSize(LeoVwdStatus1) < 1
+         newobj LeoVwdStatus1,1,0,0
+      endif
+      if ObjHdrType(LeoVwdStatus1, "UVLamp") = 99
+         setobjhdrval  LeoVwdStatus1 , "UVLamp" ,1
+      endif   
+   endif
+   DevNucVWD=1
+   if DevNucVWD = 1
+      if RegSize(NucVwdStatus1) < 1
+         newobj NucVwdStatus1,1,0,0
+      endif
+      if ObjHdrType(NucVwdStatus1, "UVLamp") = 99
+         setobjhdrval  NucVwdStatus1 , "UVLamp" ,1
+      endif   
+   endif
+   DevLeoRID=1
+   if DevLeoRID = 1
+      if RegSize(LeoRidStatus1) < 1
+         newobj LeoRidStatus1,1,0,0
+      endif
+!      if ObjHdrType(LeoRidStatus1, "UVLamp") = 99
+!         setobjhdrval  LeoRidStatus1 , "UVLamp" ,1
+!      endif   
+   endif
+   Dev1050DAD=0
+   Dev1050MWD=0
+   Dev1050VWD=0
+   Dev1046FLD=0
+   Dev1049ECD=0
+   adcdevice=1
+   adctimetab=0
+endif
+
+
+   
+   if DacTst = 1
+      _DriverPath$="c:\drivers\leo\release\"  !release ist das beste dann stimmt alles ini und dll und 800
+      !_ProductPath$="c:\drivers\leo\release\"
+   endif
+
+   
+   !configure the GOM hotlinks and load all menus needed
+   GUIReconfigureSystemDiagram
+   
+   !BUT DON'T SHOW ANYTHING
+   
+
+
+
+endmacro
+
+
+!############################################################################
+name Init_systgui
+
+!bootstrap macro        
+!it does something only when LeoALS and LeoPump are present
+!initialized global vars
+!installs the GUI protocol DLL
+!preloads all picture DLLs
+!installs all GOM hotlinks
+!############################################################################
+
+
+
+local erroriii
+
+
+
+!configure the GOM hotlinks and load all menus needed
+GUIReconfigureSystemDiagram
+   
+GuiSetVeneerHook  "GuiQuickLst" , "METHODLC" ,      GuiShowQuickLcMethodListing
+GuiSetVeneerHook  "GuiQuickLst" , "METHODDA" ,      GuiShowQuickDAMethodListing
+GuiSetVeneerHook  "GuiQuickLst" , "CHEMICALNAMES" , GuiShowQuickChemicalsListing
+GuiSetVeneerHook  "GuiQuickLst" , "EMF" ,           GuiShowEmfWarningListing
+If VCS_INTEGRATION=1
+  GuiSetVeneerHook  "GuiQuickLst" , "ECM" , GuiShowQuickEcmMethodListing
+endif
+
+
+endmacro

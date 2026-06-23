@@ -1,0 +1,1774 @@
+! mstnNRT.mac  
+!
+! This file contains some utilities to quickly access some parameters in the
+! LC/MSD Non-Real Time subsystem.  These utilities can be divided into
+! three groups: 
+!
+! A. Power distribution board (includes flow and temperature control)
+! B. Vacuum system control
+! C. CDS (calibrant delivery system) control
+!
+!  
+! Power Distribution, flow and temperature control
+!   pdbfault       Retrieve status or event log information from the power 
+!                  distribution board (PDB).  
+!   pdblog         Extract PDB log information into a text file 
+!   msZoneTimeout  Set timeout values for flow and temperature control zones
+!   msZonePID      Sets the flow and temperature control constants
+!
+! Vacuum system control
+!   vacinfo        Display turbo status, speed, power, and pressure 
+!   tpcfault       Retrieve status or event log information from the turbo 
+!                  pump controller. 
+!   tpclog         Extract Turbo controller log information into a text file 
+!   tpcinfo        Display turbo speed and power 
+!   turboson       Turn the turbo pumps on (for diagnostic purposes only)
+!   turbosoff      Turn the turbo pumps off (for diagnostic purposes only)
+!   rpon           Turn the rough pump on (for diagnostic purposes only)
+!   rpoff          Turn the rough pump off (for diagnostic purposes only)
+!   autopumpdown   Disables or enables autopumpdown feature
+!   forepres       Display the stage 1 pressure 
+!   highpres       Display the stage 4 pressure 
+!
+! CDS control
+!   leakCal       Calibrates leak sensor.
+!   clearLeakCal  Clears leak sensor calibration value (disables leak sensor)
+!   getLeakCal    Returns the current leak calibration value
+!
+!
+!*****************************************************************************
+
+ NRTver$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/mstnnrt.mac 1.8 2007-06-14 09:10:00-08 clove Exp $"
+ verIx = instr(NRTver$, ".mac ") + 5
+ NRTver$ =  NRTver$[verIx:VerIx + instr(NRTver$[VerIx:len(NRTver$)]," ") - 1] 
+ remove verIx
+
+! A. Power distribution board (includes flow and temperature control)
+
+!******************************************************************************
+NAME pdbfault
+PARAMETER EventNumber default -1
+! Retrieves the specified entry from the power distribution board event log.
+! If no EventNumber is specified, the current state is displayed.  Previous
+! events are indexed by number, from 0 to 9, with 0 being the most recent.
+! Note: the date and time are set to GMT or Universal time.
+!******************************************************************************
+LOCAL flt$,wrn$,stat$,state$, nodeid$
+LOCAL status,warning,fault,leak
+
+Local  ID_TUNEMAC_1
+Local  ID_TUNEMAC_2
+Local  ID_TUNEMAC_HARDWARE_REV_3
+Local  ID_TUNEMAC_5
+Local  ID_TUNEMAC_ROUGH_PUMP_ON_6
+Local  ID_TUNEMAC_ROUGH_PUMP_OFF_7
+Local  ID_TUNEMAC_SSV_STEPPER_CL_8
+Local  ID_TUNEMAC_SSV_STEPPER_CO_9
+Local  ID_TUNEMAC_SSV_COUNTER_CL_10
+Local  ID_TUNEMAC_SSV_CLOCKWISE_11
+Local  ID_TUNEMAC_CDS_VALVE_1_ON_12
+Local  ID_TUNEMAC_CDS_VALVE_2_ON_13
+Local  ID_TUNEMAC_CDS_VALVE_3_ON_14
+Local  ID_TUNEMAC_CDS_VALVE_4_ON_15
+Local  ID_TUNEMAC_CDS_VALVE_5_ON_16
+Local  ID_TUNEMAC_MANUAL_INJECTO_17
+Local  ID_TUNEMAC_MANUAL_INJECTO_18
+Local  ID_TUNEMAC_19
+Local  ID_TUNEMAC_110V_RELAY_DIS_20
+Local  ID_TUNEMAC_110V_RELAY_ENA_21
+Local  ID_TUNEMAC_RFPA_OVERHEAT_22
+Local  ID_TUNEMAC_28V_SUPPLY_VOL_23
+Local  ID_TUNEMAC_28V_SUPPLY_VOL_24
+Local  ID_TUNEMAC_24V_SUPPLY_VOL_25
+Local  ID_TUNEMAC_24V_SUPPLY_VOL_26
+Local  ID_TUNEMAC_110V_ZERO_CROS_27
+Local  ID_TUNEMAC_DRYING_GAS_THE_28
+Local  ID_TUNEMAC_QUAD_THERMAL_R_29
+Local  ID_TUNEMAC_VAPORIZER_THER_30
+Local  ID_TUNEMAC_LEAK_DETECTED_31
+Local  ID_TUNEMAC_VACUUM_SHUTDOW_32
+Local  ID_TUNEMAC_QUAD_TIMEOUT_33
+Local  ID_TUNEMAC_QUAD_SENSOR_OP_34
+Local  ID_TUNEMAC_QUAD_SENSOR_SH_35
+Local  ID_TUNEMAC_DRYING_GAS_TIM_36
+Local  ID_TUNEMAC_DRYING_GAS_TEM_37
+Local  ID_TUNEMAC_DRYING_GAS_TEM_38
+Local  ID_TUNEMAC_VAPORIZER_TIME_39
+Local  ID_TUNEMAC_HEATER_CABLE_S_40
+Local  ID_TUNEMAC_HEATER_CABLE_S_41
+Local  ID_TUNEMAC_DRYING_GAS_FLO_42
+Local  ID_TUNEMAC_DRYING_GAS_FLO_43
+Local  ID_TUNEMAC_DRYING_GAS_FLO_44
+Local  ID_TUNEMAC_NEBULIZER_FLOW_45
+Local  ID_TUNEMAC_NEBULIZER_FLOW_46
+Local  ID_TUNEMAC_NEBULIZER_ZONE_47
+Local  ID_TUNEMAC_THIS_FUNCTION_1080
+ID_TUNEMAC_1                                       =  17001  
+ID_TUNEMAC_2                                       =  17002  
+ID_TUNEMAC_HARDWARE_REV_3                          =  17003  
+ID_TUNEMAC_5                                       =  17005  
+ID_TUNEMAC_ROUGH_PUMP_ON_6                         =  17006  
+ID_TUNEMAC_ROUGH_PUMP_OFF_7                        =  17007  
+ID_TUNEMAC_SSV_STEPPER_CL_8                        =  17008  
+ID_TUNEMAC_SSV_STEPPER_CO_9                        =  17009  
+ID_TUNEMAC_SSV_COUNTER_CL_10                       =  17010  
+ID_TUNEMAC_SSV_CLOCKWISE_11                        =  17011  
+ID_TUNEMAC_CDS_VALVE_1_ON_12                       =  17012  
+ID_TUNEMAC_CDS_VALVE_2_ON_13                       =  17013  
+ID_TUNEMAC_CDS_VALVE_3_ON_14                       =  17014  
+ID_TUNEMAC_CDS_VALVE_4_ON_15                       =  17015  
+ID_TUNEMAC_CDS_VALVE_5_ON_16                       =  17016  
+ID_TUNEMAC_MANUAL_INJECTO_17                       =  17017  
+ID_TUNEMAC_MANUAL_INJECTO_18                       =  17018  
+ID_TUNEMAC_19                                      =  17019  
+ID_TUNEMAC_110V_RELAY_DIS_20                       =  17020  
+ID_TUNEMAC_110V_RELAY_ENA_21                       =  17021  
+ID_TUNEMAC_RFPA_OVERHEAT_22                        =  17022  
+ID_TUNEMAC_28V_SUPPLY_VOL_23                       =  17023  
+ID_TUNEMAC_28V_SUPPLY_VOL_24                       =  17024  
+ID_TUNEMAC_24V_SUPPLY_VOL_25                       =  17025  
+ID_TUNEMAC_24V_SUPPLY_VOL_26                       =  17026  
+ID_TUNEMAC_110V_ZERO_CROS_27                       =  17027  
+ID_TUNEMAC_DRYING_GAS_THE_28                       =  17028  
+ID_TUNEMAC_QUAD_THERMAL_R_29                       =  17029  
+ID_TUNEMAC_VAPORIZER_THER_30                       =  17030  
+ID_TUNEMAC_LEAK_DETECTED_31                        =  17031  
+ID_TUNEMAC_VACUUM_SHUTDOW_32                       =  17032  
+ID_TUNEMAC_QUAD_TIMEOUT_33                         =  17033  
+ID_TUNEMAC_QUAD_SENSOR_OP_34                       =  17034  
+ID_TUNEMAC_QUAD_SENSOR_SH_35                       =  17035  
+ID_TUNEMAC_DRYING_GAS_TIM_36                       =  17036  
+ID_TUNEMAC_DRYING_GAS_TEM_37                       =  17037  
+ID_TUNEMAC_DRYING_GAS_TEM_38                       =  17038  
+ID_TUNEMAC_VAPORIZER_TIME_39                       =  17039  
+ID_TUNEMAC_HEATER_CABLE_S_40                       =  17040  
+ID_TUNEMAC_HEATER_CABLE_S_41                       =  17041  
+ID_TUNEMAC_DRYING_GAS_FLO_42                       =  17042  
+ID_TUNEMAC_DRYING_GAS_FLO_43                       =  17043  
+ID_TUNEMAC_DRYING_GAS_FLO_44                       =  17044  
+ID_TUNEMAC_NEBULIZER_FLOW_45                       =  17045  
+ID_TUNEMAC_NEBULIZER_FLOW_46                       =  17046  
+ID_TUNEMAC_NEBULIZER_ZONE_47                       =  17047  
+ID_TUNEMAC_THIS_FUNCTION_1080                      =  18080
+
+  if EventNumber = -1 then
+    MSSCQuery "msc:nrt:stat? pdb",s$
+    MSSCQuery "msc:nrt:nv? pdb,datetime",d$
+    state$=substring$(s$,1,,",")
+    stat$=substring$(s$,2,,",")
+    wrn$=substring$(s$,3,,",")
+    flt$=substring$(s$,4,,",")
+  else
+    MSSCQuery "msc:nrt:event? pdb,"+val$(EventNumber),s$
+    d$=substring$(s$,1,," ")+" "+substring$(s$,2,," ")
+    s$=substring$(s$,4,," ")
+    stat$=substring$(s$,1,,"/")
+    wrn$=substring$(s$,2,,"/")
+    flt$=substring$(s$,3,,"/")
+  endif
+  MSSCQuery "msc:nrt:id? tpc",nodeid$
+  
+  leak=0
+  status=val(stat$)
+  warning=val(wrn$)
+  fault=val(flt$)
+  if (fault<0) then
+    fault=fault+65536*65536
+    leak=1
+  endif
+  print
+  if EventNumber = -1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_1)
+  else
+    print ReadResource$("tunemac",ID_TUNEMAC_2)
+  endif
+  print ""
+  If ( pre6100() = 0 ) then
+    Print ReadResource$("tunemac",ID_TUNEMAC_THIS_FUNCTION_1080)
+  EndIf
+  print "--------------------------------------------------------------------"
+  if EventNumber <> -1 then
+    d$ = "Event #" + val$(EventNumber) + ": " + d$
+  endif
+  print d$ + " GMT"
+  print ReadResource$("tunemac",ID_TUNEMAC_HARDWARE_REV_3)+substring$(nodeid$,5,,",")+\
+        "     Firmware Rev - "+substring$(nodeid$,6,,",")
+  print ReadResource$("tunemac",ID_TUNEMAC_5)
+  if mod(status,2)=1 then 
+  print ReadResource$("tunemac",ID_TUNEMAC_ROUGH_PUMP_ON_6)
+  else 
+  print ReadResource$("tunemac",ID_TUNEMAC_ROUGH_PUMP_OFF_7)
+  endif
+  status=div(status,2)
+  if mod(status,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_SSV_STEPPER_CL_8)
+  else 
+    print ReadResource$("tunemac",ID_TUNEMAC_SSV_STEPPER_CO_9)
+  endif
+  status=div(status,2)
+  if mod(status,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_SSV_COUNTER_CL_10)
+  endif
+  status=div(status,2)
+  if mod(status,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_SSV_CLOCKWISE_11)
+  endif
+  status=div(status,2)
+  if mod(status,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_CDS_VALVE_1_ON_12)
+  endif
+  status=div(status,2)
+  if mod(status,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_CDS_VALVE_2_ON_13)
+  endif
+  status=div(status,2)
+  if mod(status,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_CDS_VALVE_3_ON_14)
+  endif
+  status=div(status,2)
+  if mod(status,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_CDS_VALVE_4_ON_15)
+  endif
+  status=div(status,2)
+  if mod(status,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_CDS_VALVE_5_ON_16)
+  endif
+  status=div(status,2)
+  if mod(status,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_MANUAL_INJECTO_17)
+  else
+    print ReadResource$("tunemac",ID_TUNEMAC_MANUAL_INJECTO_18)
+  endif
+  print ReadResource$("tunemac",ID_TUNEMAC_19)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_110V_RELAY_DIS_20)
+  else
+    PRINT ReadResource$("tunemac",ID_TUNEMAC_110V_RELAY_ENA_21)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_RFPA_OVERHEAT_22)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_28V_SUPPLY_VOL_23)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_28V_SUPPLY_VOL_24)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_24V_SUPPLY_VOL_25)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_24V_SUPPLY_VOL_26)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_110V_ZERO_CROS_27)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_THE_28)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_QUAD_THERMAL_R_29)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_VAPORIZER_THER_30)
+  endif
+  fault=div(fault,2)
+  fault=div(fault,2)
+  fault=div(fault,2)
+  fault=div(fault,2)
+  fault=div(fault,2)
+  !if mod(fault,2)=1 then
+  if (leak=1) then
+    print ReadResource$("tunemac",ID_TUNEMAC_LEAK_DETECTED_31)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_VACUUM_SHUTDOW_32)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_QUAD_TIMEOUT_33)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_QUAD_SENSOR_OP_34)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_QUAD_SENSOR_SH_35)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TIM_36)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TEM_37)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TEM_38)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_VAPORIZER_TIME_39)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_HEATER_CABLE_S_40)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_HEATER_CABLE_S_41)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_FLO_42)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_FLO_43)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_FLO_44)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_NEBULIZER_FLOW_45)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_NEBULIZER_FLOW_46)
+  endif
+  fault=div(fault,2)
+  if mod(fault,2)=1 then
+    print ReadResource$("tunemac",ID_TUNEMAC_NEBULIZER_ZONE_47)
+  endif
+  print "--------------------------------------------------------------------"
+  print ""
+
+endmacro
+
+!******************************************************************************
+!******************************************************************************
+NAME pdblog
+PARAMETER overwrite default 0
+! Macro to display all entries in the power distribution board event log.
+! If overwrite = 1, the previous log is overwritten.  Log is appended to 
+! by default.
+! Note: the date and time are set to GMT or Universal time.
+!******************************************************************************
+LOCAL serialNum$, fileName$, oldMS_echo, i,  i$, DateTime$
+
+   ! verify instrument communication
+Local  ID_TUNEMAC_LC_MSD_POWER_D_48
+Local  ID_TUNEMAC_END_OF_PDB_LOG_50
+Local  ID_TUNEMAC_PDBLOG_DONE_51
+Local  ID_TUNEMAC__OCCURRED_READ_52
+Local  ID_TUNEMAC_THIS_FUNCTION_1080
+ID_TUNEMAC_LC_MSD_POWER_D_48                       =  17048  
+ID_TUNEMAC_END_OF_PDB_LOG_50                       =  17050  
+ID_TUNEMAC_PDBLOG_DONE_51                          =  17051  
+ID_TUNEMAC__OCCURRED_READ_52                       =  17052 
+ID_TUNEMAC_THIS_FUNCTION_1080                      =  18080 
+
+   On Error goto PDBLogError
+   MSSCQuery "config:id:desc? serialnum", serialNum$
+   DateTime$ = Date$(1) + "     " + Time$(1)
+   
+   ! silence the echo
+   if check(variable, ms_echo) = 1 then
+      oldMS_echo = ms_Echo
+   endif
+   ms_Echo = 0
+
+   ! Generate an output filename
+   if check(macro, ProdFileName$) = 0 then
+      fileName$ = _tunePath$ + "pdblog.txt"
+   else
+      fileName$ = ProdFileName$("PL","TXT")
+   endif
+
+   ! Open the file to give it a header
+   On Error print
+   if (overwrite = 1) and FileStat(MODE, fileName$) <> -1 then
+      Delete FileName$, dontask
+   endif
+   Close #11
+   On Error goto PDBLogError
+   
+   Open fileName$ for Append as #11
+   Print #11, ""
+   If ( pre6100() = 0 ) then
+      Print #11, ReadResource$("tunemac",ID_TUNEMAC_THIS_FUNCTION_1080)
+   EndIf
+   
+   Print #11, ReadResource$("tunemac",ID_TUNEMAC_LC_MSD_POWER_D_48) + "        " + \
+              "Serial Number: " + serialNum$
+   Print #11, DateTime$
+   Print #11, ""
+   Print #11, ""
+   Close #11
+
+   ! Use the logging command to trace the information 
+   Logging 5, fileName$
+
+   Print ""
+   pdbfault
+
+   ! loop to read back through the log entries 
+   for i = 0 to 9
+      i$ = val$(i)
+      Print ""
+      evaluate "pdbfault " + i$
+   next i
+   
+   Print  ""
+   Print ReadResource$("tunemac",ID_TUNEMAC_END_OF_PDB_LOG_50) + DateTime$
+  Print  ""
+
+   ! turn logging off
+   logging 0
+
+!   execnowait "notepad.exe " + fileName$, 1
+    cmdpath$ = "notepad.exe " + chr$(34) + fileName$ + chr$(34) 
+    execnowait cmdpath$, 1
+
+   Print ReadResource$("tunemac",ID_TUNEMAC_PDBLOG_DONE_51)
+   RETURN
+
+PDBLogError:
+   On Error Print
+   Print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_READ_52)
+   Close #11
+   Logging 0
+   RETURN
+  
+endmacro              ! end pdblog
+
+!******************************************************************************
+!******************************************************************************
+NAME msZoneTimeout
+PARAMETER zone_id default -1
+PARAMETER value default -1
+PARAMETER conversion default -1
+PARAMETER dontask default 0
+! Set the timeout value for a flow or temperature control zone.  If a 
+! specified zone can't reach setpoint within the timeout period, a fault
+! is declared and the zone is shut down.  Control can be regained by 
+! reinitializing SmartCard (MSSCInit 1).
+!
+! Zone identifiers and timeout conversion formulas are outlined in 
+! the following table.  The timeout conversion to seconds is different 
+! depending on the zone.
+!
+! If conversion is set to 0, then no conversion is made
+! if conversion is set to -1, then the hardcoded defaults are used
+! Any other value for conversion is used.
+!
+!  ZONE              ZONE  Timeout Conversion (seconds per unit)
+!---------           ----  ------------------
+! Drying Gas Flow     1      0.02732
+! Nebulizer Gas       2      0.02732
+! Drying Gas Temp     3      1.366 (/60)
+! Quad Temp           4      0.820 (/60)
+! Vap Temp            7      0.820 (/60)
+!
+!  ZONE              DEFAULT TIMEOUT (PDB UNITS)     DEFAULT TIMEOUT
+!---------           --------------------------      ---------------- 
+! Drying Gas Flow     500                             13.7 seconds 
+! Nebulizer Gas       500                             13.7 seconds
+! Drying Gas Temp     540                             12.3 min
+! Quad Temp           3000                            88   min
+! Vap Temp            323                              4.4 min
+!
+! Example: change the nebulizer timeout to 1 minute.  
+! (60 seconds)/(0.02732 seconds/unit) = 2196 units
+! 2196 = 256 * 8 + 148  (high byte = 8, low byte = 148) nebulizer is zone #2:
+!
+! WARNING:  PDB diag commands can result in system damage if misused. 
+! Use with a great deal of caution.  The timeouts are stored in non-volatile
+! memory.
+!******************************************************************************
+LOCAL read_str$, command$, write_str$, state$,  resp,  msg$,  unit$
+LOCAL byte1$, byte2$, byte3$, byte4$,  cr$
+LOCAL cmd, warning, fault, hb, lb, command_value
+LOCAL Zone1$, Zone2$, Zone3$, Zone4$, Zone7$, Zone$
+LOCAL TOconv1, TOconv2, TOconv3, TOconv4, TOconv7, TOconv
+
+Local  ID_TUNEMAC_DRYING_GAS_FLO_53
+Local  ID_TUNEMAC_NEBULIZER_GAS_54
+Local  ID_TUNEMAC_DRYING_GAS_TEM_55
+Local  ID_TUNEMAC_QUAD_TEMP_56
+Local  ID_TUNEMAC_VAPORIZER_TEMP_57
+Local  ID_TUNEMAC__SEC_58
+Local  ID_TUNEMAC__MIN_59
+Local  ID_TUNEMAC_MSZONETIMEOUT_60
+Local  ID_TUNEMAC_SYNTAX__MSZONE_61
+Local  ID_TUNEMAC__ZONE_NUMBERS_62
+Local  ID_TUNEMAC__SPECIFY_TIMEO_63
+Local  ID_TUNEMAC__MINUTES_FOR_T_64
+Local  ID_TUNEMAC_SET_LC_MSD_TIM_65
+Local  ID_TUNEMAC_SET_66
+Local  ID_TUNEMAC_MSZONETIMEOUT_68
+Local  ID_TUNEMAC_SETTING_69
+Local  ID_TUNEMAC__TIMEOUT_SET_T_71
+Local  ID_TUNEMAC__OCCURRED_SETT_72
+ID_TUNEMAC_DRYING_GAS_FLO_53                       =  17053  
+ID_TUNEMAC_NEBULIZER_GAS_54                        =  17054  
+ID_TUNEMAC_DRYING_GAS_TEM_55                       =  17055  
+ID_TUNEMAC_QUAD_TEMP_56                            =  17056  
+ID_TUNEMAC_VAPORIZER_TEMP_57                       =  17057  
+ID_TUNEMAC__SEC_58                                 =  17058  
+ID_TUNEMAC__MIN_59                                 =  17059  
+ID_TUNEMAC_MSZONETIMEOUT_60                        =  17060  
+ID_TUNEMAC_SYNTAX__MSZONE_61                       =  17061  
+ID_TUNEMAC__ZONE_NUMBERS_62                        =  17062  
+ID_TUNEMAC__SPECIFY_TIMEO_63                       =  17063  
+ID_TUNEMAC__MINUTES_FOR_T_64                       =  17064  
+ID_TUNEMAC_SET_LC_MSD_TIM_65                       =  17065  
+ID_TUNEMAC_SET_66                                  =  17066  
+ID_TUNEMAC_MSZONETIMEOUT_68                        =  17068  
+ID_TUNEMAC_SETTING_69                              =  17069  
+ID_TUNEMAC__TIMEOUT_SET_T_71                       =  17071  
+ID_TUNEMAC__OCCURRED_SETT_72                       =  17072  
+  On Error goto MSZoneTimeoutErr
+
+  ! Zone labels  
+  Zone1$ = ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_FLO_53)
+  Zone2$ = ReadResource$("tunemac",ID_TUNEMAC_NEBULIZER_GAS_54)
+  Zone3$ = ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TEM_55)
+  Zone4$ = ReadResource$("tunemac",ID_TUNEMAC_QUAD_TEMP_56)
+  Zone7$ = ReadResource$("tunemac",ID_TUNEMAC_VAPORIZER_TEMP_57)
+
+  ! Zone conversion factors
+  TOconv1 = 0.02723
+  TOconv2 = TOconv1
+  TOconv3 = 1.366 / 60
+  TOconv4 = 0.820 / 60
+  TOconv7 = TOconv4
+  
+  ! Zone units  
+  if conversion = 0 then
+     unit$ = ""
+  else
+     if (zone_id = 1) or (zone_id = 2) then
+        unit$ = ReadResource$("tunemac",ID_TUNEMAC__SEC_58)
+     else
+        unit$ = ReadResource$("tunemac",ID_TUNEMAC__MIN_59)
+     endif
+  endif
+  cr$ = chr$(13)
+
+  ! Parameter checking
+  if ((zone_id < 1) or (zone_id > 4)) and (zone_id <> 7) then   
+    print ReadResource$("tunemac",ID_TUNEMAC_MSZONETIMEOUT_60)
+    if dontask = 0 then
+       resp = Alert(ReadResource$("tunemac",ID_TUNEMAC_SYNTAX__MSZONE_61) + \
+                    cr$ + cr$ + ReadResource$("tunemac",ID_TUNEMAC__ZONE_NUMBERS_62) + cr$ + \
+                    "   1: " +  Zone1$ + cr$ + \
+                    "   2: " +  Zone2$ + cr$ + \
+                    "   3: " +  Zone3$ + cr$ + \
+                    "   4: " +  Zone4$ + cr$ + \
+                    "   7: " +  Zone7$ + cr$ + cr$ + \
+                    ReadResource$("tunemac",ID_TUNEMAC__SPECIFY_TIMEO_63) + \
+                    cr$ + ReadResource$("tunemac",ID_TUNEMAC__MINUTES_FOR_T_64), 3, \
+                    ReadResource$("tunemac",ID_TUNEMAC_SET_LC_MSD_TIM_65))
+    endif
+    RETURN 
+  endif
+  
+  ! Pick the appropriate zone label and conversion factor
+  evaluate "Zone$ = Zone" + val$(zone_id) + "$"
+  if conversion = -1 then
+     evaluate "Toconv = Toconv" + val$(zone_id)
+  else 
+     if conversion = 0 then 
+        Toconv = 1
+     else
+        toconv = conversion
+     endif
+  endif
+     
+  
+  if (value>0) then     ! set the specified value
+     if dontask = 0 then
+        if (Alert(ReadResource$("tunemac",ID_TUNEMAC_SET_66) + Zone$ + SPrintF$(value, " timeout to %.1f") + \
+                     unit$ + "?", 4, "Set LC/MSD Timeouts")) = 0 then
+           print ReadResource$("tunemac",ID_TUNEMAC_MSZONETIMEOUT_68)
+           RETURN
+        endif
+     else
+        Print ReadResource$("tunemac",ID_TUNEMAC_SETTING_69) + Zone$ + " timeout to " + val$(value) + unit$
+     endif
+
+     value = value / TOconv  
+
+     hb = div(value, 256)
+     lb = mod(value, 256)
+
+     write_str$ = "msc:nrt:nv pdb, diag, '13, " + \
+                  val$(zone_id) + "," + val$(hb) + "," + \
+                  val$(lb)+",0,0,0,0,0,0,0,0,0,0,0,0'"
+
+     command_value = 13
+     command$ = write_str$
+     cmd = 255
+     MSSCWrite command$
+     while (cmd <> command_value) do
+        if (cmd <> 255) then
+          MSSCWrite command$
+        endif
+        MSSCQuery "msc:nrt:nv? pdb,diag", read_str$
+        cmd = val(substring$(read_str$, 1, , ","))
+     endwhile
+     byte1$ = substring$(read_str$, 3, , ",")
+     byte2$ = substring$(read_str$, 4, , ",")
+     rval = val(byte1$) * 256 + val(byte2$)
+  endif
+
+  print Zone$ + ReadResource$("tunemac",ID_TUNEMAC__TIMEOUT_SET_T_71) + dgMSzoneTimeout$(zone_id) + unit$
+  
+  RETURN
+  
+MSZoneTimeOutErr:
+   On Error print
+   print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_SETT_72) + zone$
+   RETURN
+
+endmacro     ! MSZoneTimeOut
+
+!******************************************************************************
+!******************************************************************************
+NAME MSZonePID
+PARAMETER zone_id default -1
+PARAMETER P default -1
+PARAMETER I default -1
+PARAMETER D default -1
+PARAMETER I_D default -1
+PARAMETER PIDstr$
+PARAMETER DONTASK default 0
+! Sets or reads the P, I, D and ID constants for the specified zone
+! Zone ID: 1-DRYING GAS FLOW
+!          2-NEBULIZER
+!          3-DRYING GAS TEMPERATURE
+!          4-QUAD TEMPERATURE
+!          7-VAPORIZER TEMP
+!
+! PIDs may also be set using a string in the format "P=%d;I=%d;D=%d;ID=%d"
+! 
+!
+!******************************************************************************
+LOCAL query_str$, read_str$, command$, state$, byte1$, byte2$, byte3$, byte4$
+LOCAL ph, pl, ih, il, dh, dl, i_dh, i_dl
+LOCAL cmd, which, newVal, tempStr$
+LOCAL Zone1$, Zone2$, Zone3$, Zone4$, Zone7$, Zone$, cr$, msg$, retStr$
+
+Local  ID_TUNEMAC_DRYING_GAS_FLO_53
+Local  ID_TUNEMAC_NEBULIZER_GAS_54
+Local  ID_TUNEMAC_DRYING_GAS_TEM_55
+Local  ID_TUNEMAC_QUAD_TEMP_56
+Local  ID_TUNEMAC_VAPORIZER_TEMP_57
+Local  ID_TUNEMAC_MSZONEPID__MUS_73
+Local  ID_TUNEMAC_SYNTAX__MSZONE_74
+Local  ID_TUNEMAC__ZONE_NUMBERS_62
+Local  ID_TUNEMAC_SET_LC_MSD_ZON_75
+Local  ID_TUNEMAC_SET_66
+
+Local  ID_TUNEMAC_MSZONEPID__ABO_77
+Local  ID_TUNEMAC_NO_P_PARAMETER_78
+Local  ID_TUNEMAC_NO_I_PARAMETER_79
+Local  ID_TUNEMAC_NO_D_PARAMETER_80
+Local  ID_TUNEMAC_NO_ID_PARAMETE_81
+Local  ID_TUNEMAC_MSZONEPID_82
+Local  ID_TUNEMAC__CONTROL_CONST_83
+Local  ID_TUNEMAC__OCCURRED_SETT_84
+ID_TUNEMAC_DRYING_GAS_FLO_53                       =  17053  
+ID_TUNEMAC_NEBULIZER_GAS_54                        =  17054  
+ID_TUNEMAC_DRYING_GAS_TEM_55                       =  17055  
+ID_TUNEMAC_QUAD_TEMP_56                            =  17056  
+ID_TUNEMAC_VAPORIZER_TEMP_57                       =  17057  
+ID_TUNEMAC_MSZONEPID__MUS_73                       =  17073  
+ID_TUNEMAC_SYNTAX__MSZONE_74                       =  17074  
+ID_TUNEMAC__ZONE_NUMBERS_62                        =  17062  
+ID_TUNEMAC_SET_LC_MSD_ZON_75                       =  17075  
+ID_TUNEMAC_SET_66                                  =  17066  
+ID_TUNEMAC_SET_LC_MSD_ZON_75                       =  17075  
+ID_TUNEMAC_MSZONEPID__ABO_77                       =  17077  
+ID_TUNEMAC_NO_P_PARAMETER_78                       =  17078  
+ID_TUNEMAC_NO_I_PARAMETER_79                       =  17079  
+ID_TUNEMAC_NO_D_PARAMETER_80                       =  17080  
+ID_TUNEMAC_NO_ID_PARAMETE_81                       =  17081  
+ID_TUNEMAC_MSZONEPID_82                            =  17082  
+ID_TUNEMAC__CONTROL_CONST_83                       =  17083  
+ID_TUNEMAC__OCCURRED_SETT_84                       =  17084  
+   on error goto MSZonePIDErr
+   ! print "PIDstr$ = ", pidstr$
+
+  ! Zone labels  
+  Zone1$ = ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_FLO_53)
+  Zone2$ = ReadResource$("tunemac",ID_TUNEMAC_NEBULIZER_GAS_54)
+  Zone3$ = ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TEM_55)
+  Zone4$ = ReadResource$("tunemac",ID_TUNEMAC_QUAD_TEMP_56)
+  Zone7$ = ReadResource$("tunemac",ID_TUNEMAC_VAPORIZER_TEMP_57)
+
+  cr$ = chr$(13)
+  newVal = 0  ! flag set if any PIDs are passed
+
+  ! Parameter checking
+  if ((zone_id < 1) or (zone_id > 4)) and (zone_id <> 7) then   
+    print ReadResource$("tunemac",ID_TUNEMAC_MSZONEPID__MUS_73) 
+    if dontask = 0 then
+       resp = Alert(ReadResource$("tunemac",ID_TUNEMAC_SYNTAX__MSZONE_74) + \
+                    cr$ + cr$ + ReadResource$("tunemac",ID_TUNEMAC__ZONE_NUMBERS_62) + cr$ + \
+                    "   1: " +  Zone1$ + cr$ + \
+                    "   2: " +  Zone2$ + cr$ + \
+                    "   3: " +  Zone3$ + cr$ + \
+                    "   4: " +  Zone4$ + cr$ + \
+                    "   7: " +  Zone7$ + cr$ + cr$, 3, \
+                    ReadResource$("tunemac",ID_TUNEMAC_SET_LC_MSD_ZON_75))
+    endif
+    RETURN 
+  endif
+  
+  ! Pick the appropriate zone label
+  evaluate "Zone$ = Zone" + val$(zone_id) + "$"
+
+  ! if any constant is specified, set its values
+  if len(PIDStr$) > 0 then
+     msg$ = PIDStr$
+     newVal = 1
+  else
+     if (p <> -1) or (i <> -1) or (d <> -1) or (i_d <> - 1) then
+        msg$ = ""
+        if (p <> -1) then
+           msg$ = msg$ + "P= " + val$(p) + "; "
+        endif
+        if (i <> -1) then
+           msg$ = msg$ + "I= " + val$(i) + "; "
+        endif
+        if (d <> -1) then
+           msg$ = msg$ + "D= " + val$(d) + "; "
+        endif
+        if (i_d <> -1) then
+           msg$ = msg$ + "ID= " + val$(i_d) + "; "
+        endif
+        ! Strip trailing "; "
+        if len(msg$) > 2 then
+           msg$ = msg$[1:len(msg$)-2]
+        endif
+        newVal = 1
+     endif
+   endif
+   
+   if newVal = 1 then 
+     ! Get confirmation
+     if dontask = 0 then
+        if (Alert(ReadResource$("tunemac",ID_TUNEMAC_SET_66) + Zone$ + " control constants to "  + \
+                     msg$ + "?", 4, \
+                     ReadResource$("tunemac",ID_TUNEMAC_SET_LC_MSD_ZON_75))) = 0 then
+           print ReadResource$("tunemac",ID_TUNEMAC_MSZONEPID__ABO_77)
+           RETURN
+        endif
+     endif
+     
+     ! Parse the PIDStr$ if present
+     if len(PIDstr$) > 0 then
+        msg$ = ""
+        PIDstr$ = ConvertText$(lower, PIDstr$)
+        ! print pidstr$
+        tempStr$ = SubString$(PIDstr$, 1,, ";")
+        ! print tempStr$
+        pos = Instr(tempStr$, "p=")
+        if pos > 0 then
+           p = val(tempStr$[pos + 2:len(tempStr$)])
+        else
+           msg$ = ReadResource$("tunemac",ID_TUNEMAC_NO_P_PARAMETER_78)
+           p = -1
+        endif
+        
+        ! I 
+        tempStr$ = SubString$(PIDstr$, 2,, ";")
+        ! print tempStr$
+        pos = Instr(tempStr$, "i=")
+        if pos > 0 then
+           i = val(tempStr$[pos + 2:len(tempStr$)])
+        else
+           msg$ = msg$ + ReadResource$("tunemac",ID_TUNEMAC_NO_I_PARAMETER_79)
+           i = -1
+        endif
+        
+        ! D
+        tempStr$ = SubString$(PIDstr$, 3,, ";")
+        ! print tempStr$
+        pos = Instr(tempStr$, "d=")
+        if pos > 0 then
+           d = val(tempStr$[pos + 2:len(tempStr$)])
+        else
+           msg$ = msg$ + ReadResource$("tunemac",ID_TUNEMAC_NO_D_PARAMETER_80)
+           d = -1
+        endif
+        
+        ! ID
+        tempStr$ = SubString$(PIDstr$, 4,, ";")
+        ! print tempStr$
+        pos = Instr(tempStr$, "id=")
+        if pos > 0 then
+           i_d = val(tempStr$[pos + 3:len(tempStr$)])
+        else
+           msg$ = msg$ + ReadResource$("tunemac",ID_TUNEMAC_NO_ID_PARAMETE_81)
+           i_d = -1
+        endif
+
+        ! Strip trailing "; "
+        if len(msg$) > 2 then
+           msg$ = msg$[1:len(msg$)-2]
+        endif
+        
+        if len(msg$) > 0 then
+           print ReadResource$("tunemac",ID_TUNEMAC_MSZONEPID_82) + msg$
+        endif
+        ! print p, i, d, i_d
+     endif
+
+     if (p>=0) and (i>=0) and (d>=0) and (i_d>=1) then
+         ph=div(p, 256)
+         pl=mod(p, 256)
+         ih=div(i, 256)
+         il=mod(i, 256)
+         dh=div(d, 256)
+         dl=mod(d, 256)
+         i_dh=div(i_d, 256)
+         i_dl=mod(i_d, 256)
+         query_str$ = "msc:nrt:nv pdb, diag, '3, " + val$(zone_id) + \
+                      ", " + val$(ph) + ", " + val$(pl) + ", "
+         query_str$ = query_str$ + val$(ih) + ", " + val$(il) + ", " + \
+                      val$(dh) + ", " + val$(dl) + ", "
+         query_str$ = query_str$ + val$(i_dh) + ", " + val$(i_dl) + \
+                      ",0,0,0,0,0,0'"
+         ! print query_str$
+         MSSCWrite query_str$
+      endif
+      query_str$="msc:nrt:nv pdb, diag, '11, " + \
+                 val$(zone_id)+",0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+      ! print query_str$
+      MSSCWrite query_str$
+      cmd=255
+      while (cmd<>11) do
+         if (cmd<>255) then
+             MSSCWrite query_str$
+         endif
+         MSSCQuery "msc:nrt:nv? pdb,diag",  read_str$
+         ! print substring$(read_str$, 1, , ",")
+         cmd=val(substring$(read_str$, 1, , ","))
+      endwhile
+      which=3
+      while (which<>0) do
+         byte1$=substring$(read_str$, which, , ",")
+         byte2$=substring$(read_str$, which+1, , ",")
+         rval=val(byte1$)*256+val(byte2$)
+         if (which=3) then 
+            RetStr$ = "P=" + val$(rval)
+         endif
+         if (which=5) then 
+            RetStr$ = RetStr$ + ";I=" + val$(rval)
+         endif
+         if (which=7) then
+            RetStr$ = RetStr$ + ";D=" + val$(rval)
+         endif
+         if (which=9) then
+            RetStr$ = RetStr$ + ";ID="+val$(rval)
+            which=-2
+         endif
+         which=which+2
+      endwhile
+   else
+      RetStr$ = PID$(zone_id)   ! PID$ in mstnNVR.mac
+   endif
+   
+   Print Zone$ + ReadResource$("tunemac",ID_TUNEMAC__CONTROL_CONST_83) + RetStr$
+
+   RETURN
+
+MSZonePIDerr:
+   On Error Print
+   print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_SETT_84) + Zone$ + " in MSZonePID"
+   RETURN
+
+endmacro     ! end MSZonePID
+
+!******************************************************************************
+! B. Vacuum system control
+!******************************************************************************
+NAME vacinfo
+PARAMETER press_option default -1
+! Displays vacuum system status and fault info as well as foreline pressure
+! and high vacuum pressure.  Set listmessages on to view output.
+!******************************************************************************
+
+   tpcfault
+   forepres
+   if press_option <> -1
+     s2pres
+     s3pres
+   endif
+   highpres
+   
+endmacro   !vacinfo
+!******************************************************************************
+
+!******************************************************************************
+!******************************************************************************
+!******************************************************************************
+NAME TPCfault
+PARAMETER EventNumber default -1
+! Retrieves the specified entry from the turbo controller interface event log.
+! If no EventNumber is specified, the current state is displayed.  Previous
+! events are indexed by number, from 0 to 9, with 0 being the most recent.
+! Note: the date and time are set to GMT or Universal time.
+! Set listmessages on to view output.
+!******************************************************************************
+LOCAL shutdn$,warn$,state$,status$,datetime$,nodeid$,event$,t1$,t2$,fp$
+LOCAL warning,shutdown,spd1,spd2,pwr1,pwr2
+
+Local  ID_TUNEMAC______________T_86
+Local  ID_TUNEMAC__GMT_87
+Local  ID_TUNEMAC_HARDWARE_REV_3
+Local  ID_TUNEMAC_88
+Local  ID_TUNEMAC_VACUUM_STATE_I_89
+Local  ID_TUNEMAC_TURBO_1_STATE_90
+Local  ID_TUNEMAC_TURBO_1_STATE_91
+Local  ID_TUNEMAC_TURBO_1_STATE_92
+Local  ID_TUNEMAC_TURBO_1_STATE_93
+Local  ID_TUNEMAC_TURBO_1_STATE_94
+Local  ID_TUNEMAC_TURBO_2_STATE_95
+Local  ID_TUNEMAC_TURBO_2_STATE_96
+Local  ID_TUNEMAC_TURBO_2_STATE_97
+Local  ID_TUNEMAC_TURBO_2_STATE_98
+Local  ID_TUNEMAC_TURBO_2_STATE_99
+Local  ID_TUNEMAC_TURBO_SUPPLY_V_100
+Local  ID_TUNEMAC_TURBO_SUPPLY_V_101
+Local  ID_TUNEMAC_TURBO_CONTROLL_102
+Local  ID_TUNEMAC_TURBO_PUMP_1_I_103
+Local  ID_TUNEMAC_TURBO_PUMP_2_I_104
+Local  ID_TUNEMAC_NO_COMMUNICATI_105
+Local  ID_TUNEMAC_106
+Local  ID_TUNEMAC_NO_FAULTS_DETE_107
+Local  ID_TUNEMAC_FORELINE_PRESS_108
+Local  ID_TUNEMAC_NO_COMMUNICATI_109
+Local  ID_TUNEMAC_TURBO_LON_INTE_110
+Local  ID_TUNEMAC_TURBO_PUMP_2_F_111
+Local  ID_TUNEMAC_TURBO_PUMP_1_F_112
+Local  ID_TUNEMAC_TURBO_PUMP_2_P_113
+Local  ID_TUNEMAC_TURBO_PUMP_1_P_114
+Local  ID_TUNEMAC_FORELINE_PRESS_115
+Local  ID_TUNEMAC_116
+Local  ID_TUNEMAC_EVENT_117
+Local  ID_TUNEMAC_FAULT_INFORMAT_119
+Local  ID_TUNEMAC__FORELINE_PRES_120
+Local  ID_TUNEMAC__NO_COMMUNICAT_121
+Local  ID_TUNEMAC__TURBO_LON_INT_122
+Local  ID_TUNEMAC__TURBO_PUMP_2_123
+Local  ID_TUNEMAC__TURBO_PUMP_1_124
+Local  ID_TUNEMAC__TURBO_PUMP_2_125
+Local  ID_TUNEMAC__TURBO_PUMP_1_126
+Local  ID_TUNEMAC_TURBO_1_SPEED_127
+Local  ID_TUNEMAC_TURBO_1_POWER_129
+Local  ID_TUNEMAC_TURBO_2_SPEED_130
+Local  ID_TUNEMAC_TURBO_2_POWER_131
+Local  ID_TUNEMAC_THIS_FUNCTION_1080
+
+ID_TUNEMAC______________T_86                       =  17086  
+ID_TUNEMAC__GMT_87                                 =  17087  
+ID_TUNEMAC_HARDWARE_REV_3                          =  17003  
+ID_TUNEMAC_88                                      =  17088  
+ID_TUNEMAC_VACUUM_STATE_I_89                       =  17089  
+ID_TUNEMAC_TURBO_1_STATE_90                        =  17090  
+ID_TUNEMAC_TURBO_1_STATE_91                        =  17091  
+ID_TUNEMAC_TURBO_1_STATE_92                        =  17092  
+ID_TUNEMAC_TURBO_1_STATE_93                        =  17093  
+ID_TUNEMAC_TURBO_1_STATE_94                        =  17094  
+ID_TUNEMAC_TURBO_2_STATE_95                        =  17095  
+ID_TUNEMAC_TURBO_2_STATE_96                        =  17096  
+ID_TUNEMAC_TURBO_2_STATE_97                        =  17097  
+ID_TUNEMAC_TURBO_2_STATE_98                        =  17098  
+ID_TUNEMAC_TURBO_2_STATE_99                        =  17099  
+ID_TUNEMAC_TURBO_SUPPLY_V_100                      =  17100  
+ID_TUNEMAC_TURBO_SUPPLY_V_101                      =  17101  
+ID_TUNEMAC_TURBO_CONTROLL_102                      =  17102  
+ID_TUNEMAC_TURBO_PUMP_1_I_103                      =  17103  
+ID_TUNEMAC_TURBO_PUMP_2_I_104                      =  17104  
+ID_TUNEMAC_NO_COMMUNICATI_105                      =  17105  
+ID_TUNEMAC_106                                     =  17106  
+ID_TUNEMAC_NO_FAULTS_DETE_107                      =  17107  
+ID_TUNEMAC_FORELINE_PRESS_108                      =  17108  
+ID_TUNEMAC_NO_COMMUNICATI_109                      =  17109  
+ID_TUNEMAC_TURBO_LON_INTE_110                      =  17110  
+ID_TUNEMAC_TURBO_PUMP_2_F_111                      =  17111  
+ID_TUNEMAC_TURBO_PUMP_1_F_112                      =  17112  
+ID_TUNEMAC_TURBO_PUMP_2_P_113                      =  17113  
+ID_TUNEMAC_TURBO_PUMP_1_P_114                      =  17114  
+ID_TUNEMAC_FORELINE_PRESS_115                      =  17115  
+ID_TUNEMAC_116                                     =  17116  
+ID_TUNEMAC_EVENT_117                               =  17117  
+ID_TUNEMAC_HARDWARE_REV_3                          =  17003  
+ID_TUNEMAC_106                                     =  17106  
+ID_TUNEMAC_NO_FAULTS_DETE_107                      =  17107  
+ID_TUNEMAC_FAULT_INFORMAT_119                      =  17119  
+ID_TUNEMAC__FORELINE_PRES_120                      =  17120  
+ID_TUNEMAC__NO_COMMUNICAT_121                      =  17121  
+ID_TUNEMAC__TURBO_LON_INT_122                      =  17122  
+ID_TUNEMAC__TURBO_PUMP_2_123                       =  17123  
+ID_TUNEMAC__TURBO_PUMP_1_124                       =  17124  
+ID_TUNEMAC__TURBO_PUMP_2_125                       =  17125  
+ID_TUNEMAC__TURBO_PUMP_1_126                       =  17126  
+ID_TUNEMAC_TURBO_1_SPEED_127                       =  17127  
+ID_TUNEMAC_TURBO_1_POWER_129                       =  17129  
+ID_TUNEMAC_TURBO_2_SPEED_130                       =  17130  
+ID_TUNEMAC_TURBO_2_POWER_131                       =  17131  
+ID_TUNEMAC_THIS_FUNCTION_1080                      =  18080 
+
+print ""
+
+  MSSCQuery "msc:nrt:id? tpc",nodeid$
+  MSSCQuery "msc:nrt:nv? pdb,datetime",datetime$
+  
+  if EventNumber = -1 then
+    print ReadResource$("tunemac",ID_TUNEMAC______________T_86)
+    print ""
+    If ( pre6100() = 0 ) then
+      datetime$ = Time$(2,,"HH:mm:ss")
+      Print ReadResource$("tunemac",ID_TUNEMAC_THIS_FUNCTION_1080)
+    EndIf
+    print "--------------------------------------------------------------------"
+    MSSCQuery "msc:nrt:stat? tpc",status$
+    state$=substring$(status$,1,,",")
+    warn$=substring$(status$,3,,",")
+    shutdn$=substring$(status$,4,,",")
+    warning=val(warn$)
+    shutdown=val(shutdn$)
+    print datetime$  + ReadResource$("tunemac",ID_TUNEMAC__GMT_87)
+    print ReadResource$("tunemac",ID_TUNEMAC_HARDWARE_REV_3)+substring$(nodeid$,5,,",")+\
+        "      Firmware Rev - "+substring$(nodeid$,6,,",")
+    print ReadResource$("tunemac",ID_TUNEMAC_88)
+    print ReadResource$("tunemac",ID_TUNEMAC_VACUUM_STATE_I_89) + ConvertText$(upper, state$)
+    if (div(warning,32768)=1) then !print out turbo 1 state
+      print ReadResource$("tunemac",ID_TUNEMAC_TURBO_1_STATE_90)
+      warning=warning-32768
+    else
+      if (div(warning,16384)=1) then
+        print ReadResource$("tunemac",ID_TUNEMAC_TURBO_1_STATE_91)
+        warning=warning-16384
+      else
+        if (div(warning,8192)=1) then
+          print ReadResource$("tunemac",ID_TUNEMAC_TURBO_1_STATE_92)
+          warning=warning-8192
+        else
+          if (div(warning,4096)=1) then
+            print ReadResource$("tunemac",ID_TUNEMAC_TURBO_1_STATE_93)
+            warning=warning-4096
+          else
+            if (div(warning,2048)=1) then
+              print ReadResource$("tunemac",ID_TUNEMAC_TURBO_1_STATE_94)
+              warning=warning-2048
+            endif   !state ON
+          endif  !state HIGH
+        endif    !state MED
+      endif      !state LOW
+    endif     !state OFF
+  
+    if (div(warning,1024)=1) then  !print out turbo 2 state
+      print ReadResource$("tunemac",ID_TUNEMAC_TURBO_2_STATE_95)
+      warning=warning-1024
+    else
+      if (div(warning,512)=1) then
+        print ReadResource$("tunemac",ID_TUNEMAC_TURBO_2_STATE_96)
+        warning=warning-512
+      else
+        if (div(warning,256)=1) then
+          print ReadResource$("tunemac",ID_TUNEMAC_TURBO_2_STATE_97)
+          warning=warning-256
+        else
+          if (div(warning,128)=1) then
+            print ReadResource$("tunemac",ID_TUNEMAC_TURBO_2_STATE_98)
+            warning=warning-128
+          else
+            if (div(warning,64)=1) then
+              print ReadResource$("tunemac",ID_TUNEMAC_TURBO_2_STATE_99)
+              warning=warning-64
+            endif   !state ON
+          endif  !state HIGH
+        endif    !state MED
+      endif      !state LOW
+    endif     !state OFF
+    
+    if (div(warning,32)=1) then
+      print ReadResource$("tunemac",ID_TUNEMAC_TURBO_SUPPLY_V_100)
+      warning=warning-32
+    else
+      print ReadResource$("tunemac",ID_TUNEMAC_TURBO_SUPPLY_V_101)
+    endif
+  
+    if (div(warning,16)=1) then
+      print ReadResource$("tunemac",ID_TUNEMAC_TURBO_CONTROLL_102)
+      warning=warning-16
+    endif
+  
+    if (div(warning,8)=1) then
+      print ReadResource$("tunemac",ID_TUNEMAC_TURBO_PUMP_1_I_103)
+      warning=warning-8
+    endif
+  
+    if (div(warning,4)=1) then
+      print ReadResource$("tunemac",ID_TUNEMAC_TURBO_PUMP_2_I_104)
+      warning=warning-4
+    endif
+  
+    if (div(warning,2)=1) then
+      print ReadResource$("tunemac",ID_TUNEMAC_NO_COMMUNICATI_105)
+      warning=warning-2
+    endif
+  
+    !SO.warn.bit15 is undefined
+  
+    print ReadResource$("tunemac",ID_TUNEMAC_106)
+    if shutdown=0 then
+      print ReadResource$("tunemac",ID_TUNEMAC_NO_FAULTS_DETE_107)
+    else
+      if mod(shutdown,2)=1 then             !SO.shutdown.bit15
+        print ReadResource$("tunemac",ID_TUNEMAC_FORELINE_PRESS_108)
+      endif
+      shutdown=div(shutdown,2)              !SO.shutdown.bit14
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC_NO_COMMUNICATI_109)
+      endif
+      shutdown=div(shutdown,2)              !SO.shutdown.bit13 is not defined
+      shutdown=div(shutdown,2)              !SO.shutdown.bit12
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC_TURBO_LON_INTE_110)
+      endif
+      shutdown=div(shutdown,2)              !SO.shutdown.bit11
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC_TURBO_PUMP_2_F_111)
+      endif
+      shutdown=div(shutdown,2)              !SO.shutdown.bit10
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC_TURBO_PUMP_1_F_112)
+      endif
+      shutdown=div(shutdown,2)              !SO.shutdown.bit9
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC_TURBO_PUMP_2_P_113)
+      endif
+      shutdown=div(shutdown,2)              !SO.shutdown.bit8
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC_TURBO_PUMP_1_P_114)
+      endif
+    endif                       !shutdown=0
+    ! end of printing out status word
+    
+    tpcinfo
+  
+  else
+    MSSCQuery "msc:nrt:event? tpc,"+val$(EventNumber),event$
+  
+    ! print out event log entry
+    datetime$=substring$(event$,1,," ")+" "+substring$(event$,2,," ")
+    shutdn$=substring$(event$,4,," ")
+    t1$=substring$(event$,5,," ")
+    if MSD_46 = 1 then              ! Only G1946 MSD's have turbo2
+      t2$=substring$(event$,6,," ")
+    endif
+    fp$=substring$(event$,7,," ")
+    fp$ = SPrintF$(val(fp$)* 0.76,ReadResource$("tunemac",ID_TUNEMAC_FORELINE_PRESS_115))
+    shutdown=val(shutdn$)
+    ! Time and date
+    print ReadResource$("tunemac",ID_TUNEMAC_116)
+    print ""
+    print "--------------------------------------------------------------------"
+    print ReadResource$("tunemac",ID_TUNEMAC_EVENT_117) + val$(EventNumber) + ": " + \
+          substring$(event$,1,," ") + " " + substring$(event$,2,," ") + " GMT"
+    print ReadResource$("tunemac",ID_TUNEMAC_HARDWARE_REV_3)+substring$(nodeid$,5,,",")+\
+        "      Firmware Rev - "+substring$(nodeid$,6,,",")
+    print ReadResource$("tunemac",ID_TUNEMAC_106)
+    if shutdown=0 then
+      print ReadResource$("tunemac",ID_TUNEMAC_NO_FAULTS_DETE_107)
+    else
+      Print ReadResource$("tunemac",ID_TUNEMAC_FAULT_INFORMAT_119)
+      if mod(shutdown,2)=1 then            !SO.shutdown.bit15
+        print ReadResource$("tunemac",ID_TUNEMAC__FORELINE_PRES_120)
+      endif
+      shutdown=div(shutdown,2)             !SO.shutdown.bit14
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC__NO_COMMUNICAT_121)
+      endif
+      shutdown=div(shutdown,2)             !SO.shutdown.bit13 is not defined
+      shutdown=div(shutdown,2)             !SO.shutdown.bit12
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC__TURBO_LON_INT_122)
+      endif
+      shutdown=div(shutdown,2)             !SO.shutdown.bit11
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC__TURBO_PUMP_2_123)
+      endif
+      shutdown=div(shutdown,2)             !SO.shutdown.bit10
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC__TURBO_PUMP_1_124)
+      endif
+      shutdown=div(shutdown,2)             !SO.shutdown.bit9
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC__TURBO_PUMP_2_125)
+      endif
+      shutdown=div(shutdown,2)             !SO.shutdown.bit8
+      if mod(shutdown,2)=1 then
+        print ReadResource$("tunemac",ID_TUNEMAC__TURBO_PUMP_1_126)
+      endif
+    endif
+  
+    print "********************************************************************"
+    spd1 = val(substring$(t1$,1,,"/"))
+    pwr1 = val(substring$(t1$,2,,"/"))
+    Print SPrintF$(spd1,ReadResource$("tunemac",ID_TUNEMAC_TURBO_1_SPEED_127)) + "%          " + \
+          SPrintF$(pwr1,ReadResource$("tunemac",ID_TUNEMAC_TURBO_1_POWER_129))
+    if MSD_46 = 1 then              ! Only G1946 MSD's have turbo2
+      spd2 = val(substring$(t2$,1,,"/"))
+      pwr2 = val(substring$(t2$,2,,"/"))
+      Print SPrintF$(spd2,ReadResource$("tunemac",ID_TUNEMAC_TURBO_2_SPEED_130)) + "%          " + \
+          SPrintF$(pwr2,ReadResource$("tunemac",ID_TUNEMAC_TURBO_2_POWER_131))
+    endif
+    
+    print fp$
+    
+  endif       !status word and event log printout
+  
+  print ""
+  print "--------------------------------------------------------------------"
+
+endmacro    !tpcfault
+
+!******************************************************************************
+!******************************************************************************
+NAME tpclog
+PARAMETER OverWrite default 0
+! Macro to read the turbo controller interface log 
+! If overwrite = 1, the previous log is overwritten.  Log is appended to 
+! by default.
+! Note: the date and time are set to GMT or Universal time.
+!******************************************************************************
+LOCAL serialNum$, fileName$, oldMS_echo, i,  i$, DateTime$
+
+Local  ID_TUNEMAC_LC_MSD_TURBO_C_132
+Local  ID_TUNEMAC_END_OF_TPC_LOG_133
+Local  ID_TUNEMAC_TPC_LOG_DONE_134
+Local  ID_TUNEMAC_ERROR_READING_135
+Local  ID_TUNEMAC_THIS_FUNCTION_1080
+
+ID_TUNEMAC_LC_MSD_TURBO_C_132                      =  17132  
+ID_TUNEMAC_END_OF_TPC_LOG_133                      =  17133  
+ID_TUNEMAC_TPC_LOG_DONE_134                        =  17134  
+ID_TUNEMAC_ERROR_READING_135                       =  17135 
+ID_TUNEMAC_THIS_FUNCTION_1080                      =  18080 
+
+   ! verify instrument communication
+    On Error TPCLogError
+   MSSCQuery "config:id:desc? serialnum", serialNum$
+   DateTime$ = Date$(1) + "  " + Time$(1)
+   
+   ! silence the echo
+   if check(variable, ms_echo) = 1 then
+      oldMS_echo = ms_Echo
+   endif
+   ms_Echo = 0
+
+   ! Generate an output filename
+   if check(macro, ProdFileName$) = 0 then
+      fileName$ = _tunePath$ + "tpclog.txt"
+   else
+      fileName$ = ProdFileName$("TL","TXT")
+   endif
+
+   ! Open the file to give it a header
+   On Error print
+   if (overwrite = 1) and FileStat(MODE, fileName$) <> -1 then
+      Delete fileName$, dontask
+   endif
+   Close #11
+   On Error TPCLogError
+   
+   Open fileName$ for Append as #11
+   Print #11, ""
+   If ( pre6100() = 0 ) then
+     Print #11, ReadResource$("tunemac",ID_TUNEMAC_THIS_FUNCTION_1080)
+   EndIf
+   Print #11, ReadResource$("tunemac",ID_TUNEMAC_LC_MSD_TURBO_C_132) + "        " + \
+              "Serial Number: " + serialNum$
+   Print #11,  DateTime$
+   Print #11, ""
+   Print #11, ""
+   Close #11
+
+   ! Use the logging command to trace the information 
+   Logging 5, fileName$
+
+   Print ""
+   tpcfault
+
+   ! loop to read back through the log entries 
+   for i = 0 to 9
+      i$ = val$(i)
+      Print ""
+      evaluate "tpcfault " + i$
+   next i
+   
+   Print  ""
+   Print ReadResource$("tunemac",ID_TUNEMAC_END_OF_TPC_LOG_133) + DateTime$
+   Print  ""
+
+   ! turn logging off
+   logging 0
+
+!   execnowait "notepad.exe " + fileName$, 1
+    
+	cmdpath$ = "notepad.exe " + chr$(34) + fileName$ + chr$(34) 
+    execnowait cmdpath$, 1
+
+   Print  ReadResource$("tunemac",ID_TUNEMAC_TPC_LOG_DONE_134)
+   RETURN
+
+TPCLogError:
+   On Error Print
+   Print ReadResource$("tunemac",ID_TUNEMAC_ERROR_READING_135)
+   Close #11
+   Logging 0
+   RETURN
+
+endmacro              ! end tpclog
+
+!******************************************************************************
+!******************************************************************************
+NAME tpcinfo
+! Display sensors and id information from turbo pump controller interface
+!******************************************************************************
+LOCAL spd1$,spd2$,pwr1$,pwr2$,nodeid$
+
+Local  ID_TUNEMAC_136
+Local  ID_TUNEMAC_TURBO_1_SPEED_127
+Local  ID_TUNEMAC_TURBO_1_POWER_129
+Local  ID_TUNEMAC_TURBO_2_SPEED_130
+Local  ID_TUNEMAC_TURBO_2_POWER_131
+ID_TUNEMAC_136                                     =  17136  
+ID_TUNEMAC_TURBO_1_SPEED_127                       =  17127  
+ID_TUNEMAC_TURBO_1_POWER_129                       =  17129  
+ID_TUNEMAC_TURBO_2_SPEED_130                       =  17130  
+ID_TUNEMAC_TURBO_2_POWER_131                       =  17131  
+   MSSCQuery "sens? turbo1sp",spd1$
+   MSSCQuery "sens? turbo1pw",pwr1$
+   if MSD_46 = 1 then                ! Only G1946 MSD's have turbo2
+     MSSCQuery "sens? turbo2sp",spd2$
+     MSSCQuery "sens? turbo2pw",pwr2$
+   endif
+   MSSCQuery "msc:nrt:id? tpc",nodeid$
+   print "--------------------------------------------------------------------"
+   print ReadResource$("tunemac",ID_TUNEMAC_136)
+   Print SPrintF$(val(spd1$),ReadResource$("tunemac",ID_TUNEMAC_TURBO_1_SPEED_127)) + "%          " + \
+         SPrintF$(val(pwr1$),ReadResource$("tunemac",ID_TUNEMAC_TURBO_1_POWER_129))
+   if MSD_46 = 1 then 
+     Print SPrintF$(val(spd2$),ReadResource$("tunemac",ID_TUNEMAC_TURBO_2_SPEED_130)) + "%          " + \
+           SPrintF$(val(pwr2$),ReadResource$("tunemac",ID_TUNEMAC_TURBO_2_POWER_131))
+   endif
+
+   RETURN
+   
+endmacro          !tpcinfo
+
+!******************************************************************************
+!******************************************************************************
+NAME turboson
+! Set turbo pump state to on.  Note that the pumps will only turn on if
+! the foreline pressure is below the threshold.
+! Use only for diagnostic purposes.
+!******************************************************************************
+Local  ID_TUNEMAC_THE_TURBO_PUMP_137
+ID_TUNEMAC_THE_TURBO_PUMP_137                      =  17137
+If ( pre6100() = 0 ) then
+  MSSCWrite "msdc:mse 1154,15"
+Else  
+  MSSCWrite "msc:nrt:nv tpc,state,on"
+EndIf
+  print ReadResource$("tunemac",ID_TUNEMAC_THE_TURBO_PUMP_137)
+
+endmacro    !turboson
+
+!******************************************************************************
+!******************************************************************************
+NAME turbosoff
+! Set turbo pump state to off. 
+! Use only for diagnostic purposes.
+!******************************************************************************
+
+Local  ID_TUNEMAC_THE_TURBO_PUMP_138
+ID_TUNEMAC_THE_TURBO_PUMP_138                      =  17138
+If ( pre6100() = 0 ) then
+  MSSCWrite "msdc:mse 1154,13"
+Else
+  MSSCWrite "msc:nrt:nv tpc,state,off"
+Endif
+  print ReadResource$("tunemac",ID_TUNEMAC_THE_TURBO_PUMP_138)
+
+endmacro    !turbosoff
+
+!******************************************************************************
+!******************************************************************************
+NAME rpon
+! Set rough pump state to on.  
+! Use only for diagnostic purposes.
+!******************************************************************************
+
+Local  ID_TUNEMAC_THE_ROUGH_PUMP_139
+ID_TUNEMAC_THE_ROUGH_PUMP_139                      =  17139
+If ( pre6100() = 0 ) then
+  MSSCWrite "msdc:mse 1154,5"
+Else
+   MSSCWrite "msc:nrt:nv pdb,roughpump,on"
+Endif
+   print ReadResource$("tunemac",ID_TUNEMAC_THE_ROUGH_PUMP_139)
+
+endmacro    !rpon
+
+!******************************************************************************
+!******************************************************************************
+NAME rpoff
+! Set rough pump state to on.  
+! Use only for diagnostic purposes.
+!******************************************************************************
+
+Local  ID_TUNEMAC_THE_ROUGH_PUMP_140
+ID_TUNEMAC_THE_ROUGH_PUMP_140                      =  17140
+If ( pre6100() = 0 ) then
+  MSSCWrite "msdc:mse 1154,0"
+Else
+   MSSCWrite "msc:nrt:nv pdb,roughpump,off"
+Endif
+   print ReadResource$("tunemac",ID_TUNEMAC_THE_ROUGH_PUMP_140)
+
+endmacro    !rpoff
+
+!******************************************************************************
+!******************************************************************************
+NAME autopumpdown
+PARAMETER option default -1
+! Read or set the autopumpdown state for the LC/MSD.  If option is 0, the 
+! MSD will no longer pump down automatically.  This may be useful in some
+! service situations or to prevent unwanted pumpdown in a remote diagnostic 
+! session.
+! NOTE: this value is stored in non-volatile memory and will persist after
+! the instrument power is turned off.
+! Output is to the status line.  Set listmessages on to view full output.
+!******************************************************************************
+LOCAL on$, OnState$
+
+Local  ID_TUNEMAC_THE_AUTOPUMPDO_141
+Local  ID_TUNEMAC_CAUTION___THE_142
+Local  ID_TUNEMAC___________THE_143
+Local  ID_TUNEMAC___________USE_144
+Local  ID_TUNEMAC_THE_AUTOPUMPDO_147
+Local  ID_TUNEMAC_THIS_FUNCTION_1080
+
+ID_TUNEMAC_THE_AUTOPUMPDO_141                      =  17141  
+ID_TUNEMAC_CAUTION___THE_142                       =  17142  
+ID_TUNEMAC___________THE_143                       =  17143  
+ID_TUNEMAC___________USE_144                       =  17144  
+ID_TUNEMAC_THE_AUTOPUMPDO_147                      =  17147 
+ID_TUNEMAC_THIS_FUNCTION_1080                      =  18080 
+
+If ( pre6100() = 0 ) then
+  Print ReadResource$("tunemac",ID_TUNEMAC_THIS_FUNCTION_1080)
+EndIf
+
+   if option = -1 then
+     MSSCQuery "msc:nrt:nv? tpc,ponstate",on$
+     if on$ = "0" then
+        OnState$ = "On"
+     else
+        OnState$ = "Off"
+     endif
+     Print ReadResource$("tunemac",ID_TUNEMAC_THE_AUTOPUMPDO_141) + \
+           OnState$
+   else
+     if option = 0 then
+       MSSCWrite "msc:nrt:nv tpc,ponstate,0"
+       print ReadResource$("tunemac",ID_TUNEMAC_CAUTION___THE_142)
+       print ReadResource$("tunemac",ID_TUNEMAC___________THE_143) + \
+                       "during power up."
+       print ReadResource$("tunemac",ID_TUNEMAC___________USE_144)
+     else
+       MSSCWrite "msc:nrt:nv tpc,ponstate,1"
+       print ReadResource$("tunemac",ID_TUNEMAC_THE_AUTOPUMPDO_147)
+     endif        !option = 0
+   endif          !option = -1
+
+endmacro       !autopumpdown
+
+!******************************************************************************
+!******************************************************************************
+NAME forepres
+! Prints foreline pressure to the status line.
+!******************************************************************************
+LOCAL fore$
+
+Local  ID_TUNEMAC_THE_PRESSURE_I_148
+ID_TUNEMAC_THE_PRESSURE_I_148                      =  17148  
+   MSSCQuery "sens? forepres",fore$
+   print ReadResource$("tunemac",ID_TUNEMAC_THE_PRESSURE_I_148)+fore$+" Torr"
+
+endmacro    !forepres
+
+!******************************************************************************
+!******************************************************************************
+NAME s2pres
+! Note: a special convectron gauge is required to read Stage 2 pressure.
+!******************************************************************************
+LOCAL s2p$, cg2stat$
+
+Local  ID_TUNEMAC_STAGE_2_CONVEC_150
+Local  ID_TUNEMAC_THE_PRESSURE_I_151
+ID_TUNEMAC_STAGE_2_CONVEC_150                      =  17150  
+ID_TUNEMAC_THE_PRESSURE_I_151                      =  17151  
+   On Error RETURN
+   
+   MSSCQuery "msc:nrt:stat? ig2", cg2stat$
+   cg2stat$ = SubString$(cg2stat$, 1,, ",")
+   if cg2stat$ <> "on" then    ! assume it's not there
+      Print ReadResource$("tunemac",ID_TUNEMAC_STAGE_2_CONVEC_150)
+      RETURN
+   endif
+   MSSCQuery "sens? s2pres",s2p$
+   Print ReadResource$("tunemac",ID_TUNEMAC_THE_PRESSURE_I_151)+s2p$+" Torr"
+
+endmacro          !s2pres
+
+!******************************************************************************
+!******************************************************************************
+NAME s3pres
+! Note: a special ion gauge is required to read Stage 3 pressure.
+!******************************************************************************
+LOCAL s3p$, dummy
+
+Local  ID_TUNEMAC_STAGE_3_ION_GA_152
+Local  ID_TUNEMAC_THE_PRESSURE_I_153
+ID_TUNEMAC_STAGE_3_ION_GA_152                      =  17152  
+ID_TUNEMAC_THE_PRESSURE_I_153                      =  17153  
+   On Error RETURN
+   
+   MSSCQuery "msc:nrt:stat? ig2", ig2stat$
+   ig2stat$ = SubString$(ig2stat$, 1,, ",")
+   if ig2stat$ <> "on" then       ! try to turn it on
+      MSSCWrite "msc:nrt:nv ig2,state,on"
+      sleep 10
+      MSSCQuery "msc:nrt:stat? ig2", ig2stat$
+      ig2stat$ = SubString$(ig2stat$, 1,, ",")
+      ! assume it's not there
+      if ig2stat$ <> "on" then
+         Print ReadResource$("tunemac",ID_TUNEMAC_STAGE_3_ION_GA_152)
+         RETURN
+      endif
+   endif
+   MSSCQuery "sens? s3pres",s3p$
+   Print ReadResource$("tunemac",ID_TUNEMAC_THE_PRESSURE_I_153)+s3p$+" Torr"
+   
+   RETURN
+   
+endmacro          !s3pres
+
+!******************************************************************************
+!******************************************************************************
+NAME highpres
+! Prints ion gauge pressure to the status line.
+!******************************************************************************
+LOCAL high$
+Local  ID_TUNEMAC_THE_PRESSURE_I_154
+ID_TUNEMAC_THE_PRESSURE_I_154                      =  17154  
+   MSSCQuery "sens? highpres",high$
+   print ReadResource$("tunemac",ID_TUNEMAC_THE_PRESSURE_I_154)+high$+" Torr"
+   
+endmacro    !highpres
+
+!******************************************************************************
+! C. CDS (calibrant delivery system) control
+!******************************************************************************
+NAME LeakCal
+! Calibrates LC/MSD leak sensor.  This should be done if either of the sensors
+! are changed or the Power Distribution Board is changed.
+! NOTE: the leak sensors must be properly mounted, dry and not exposed to 
+! external air flows during calibration.
+!******************************************************************************
+
+Local  ID_TUNEMAC__OCCURRED_IN_L_155
+ID_TUNEMAC__OCCURRED_IN_L_155                      =  17155  
+
+   On Error Print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_IN_L_155)
+  
+   MSSCWrite "msc:nrt:nv pdb,diag,'23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+   GetLeakCal
+      
+   RETURN
+  
+endmacro
+
+!******************************************************************************
+!******************************************************************************
+NAME ClearLeakCal
+! Clears the leak sensor calibration value.  This effectively disables the 
+! LC/MSD leak sensor.
+!******************************************************************************
+Local  ID_TUNEMAC__OCCURRED_IN_C_156
+ID_TUNEMAC__OCCURRED_IN_C_156                      =  17156 
+
+   On Error Print _ErrMsg$ + ReadResource$("tunemac",ID_TUNEMAC__OCCURRED_IN_C_156)
+      
+   MSSCWrite "msc:nrt:nv pdb,diag,'22,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+   GetLeakCal
+   
+   RETURN
+   
+endmacro    ! ClearLeakCal
+
+!******************************************************************************
+!******************************************************************************
+NAME GetLeakCal
+! Reads and displays the leak sensor calibration value.
+!******************************************************************************
+LOCAL cmd,lb,hb,result
+LOCAL read_str$, cmd_str$
+Local ID_TUNEMAC_THIS_FUNCTION_1080
+
+Local  ID_TUNEMAC_HB_157
+Local  ID_TUNEMAC_LEAK_SENSOR_CA_159
+Local  ID_TUNEMAC_LEAK_SENSOR_CA_160
+ID_TUNEMAC_HB_157                                  =  17157  
+ID_TUNEMAC_LEAK_SENSOR_CA_159                      =  17159  
+ID_TUNEMAC_LEAK_SENSOR_CA_160                      =  17160  
+ID_TUNEMAC_THIS_FUNCTION_1080                      =  18080 
+
+  cmd_str$="msc:nrt:nv pdb,diag,'24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'"
+  MSSCWrite cmd_str$ 
+  cmd=0
+  while (cmd<>24) do
+    if (cmd<>255) then
+      MSSCWrite cmd_str$
+    endif
+    MSSCQuery "msc:nrt:nv? pdb,diag",read_str$
+    cmd=val(substring$(read_str$,1,,","))
+  endwhile
+  
+  hb=val(substring$(read_str$,2,,","))
+  lb=val(substring$(read_str$,3,,","))
+  result = lb + hb * 256
+  ! print ReadResource$("tunemac",ID_TUNEMAC_HB_157), hb, "; lb = ", lb
+  
+  If ( pre6100() = 0 ) then
+    Print ReadResource$("tunemac",ID_TUNEMAC_THIS_FUNCTION_1080)
+  EndIf
+  
+  if (result = 0) then
+     print ReadResource$("tunemac",ID_TUNEMAC_LEAK_SENSOR_CA_159)
+  else
+     print ReadResource$("tunemac",ID_TUNEMAC_LEAK_SENSOR_CA_160) + val$(result)
+  endif
+  
+  RETURN
+
+endmacro
+
+!******************************************************************************
+!******************************************************************************
+NAME nrthelp
+Local  ID_TUNEMAC_161
+Local  ID_TUNEMAC_THIS_FILE_CONT_162
+Local  ID_TUNEMAC_THE_NON_REAL_T_163
+Local  ID_TUNEMAC__PDBFAULT_164
+Local  ID_TUNEMAC__PDBLOG_165
+Local  ID_TUNEMAC__MSZONETIMEOUT_166
+Local  ID_TUNEMAC__MSZONEPID_167
+Local  ID_TUNEMAC__VACINFO_168
+Local  ID_TUNEMAC__TPCFAULT_169
+Local  ID_TUNEMAC__TPCLOG_170
+Local  ID_TUNEMAC__TPCINFO_171
+Local  ID_TUNEMAC__TURBOSON_172
+Local  ID_TUNEMAC__TURBOSOFF_173
+Local  ID_TUNEMAC__RPON_174
+Local  ID_TUNEMAC__RPOFF_175
+Local  ID_TUNEMAC__AUTOPUMPDOWN_176
+Local  ID_TUNEMAC__FOREPRES_177
+Local  ID_TUNEMAC__HIGHPRES_178
+Local  ID_TUNEMAC__LEAKCAL_179
+Local  ID_TUNEMAC__GETLEAKCAL_180
+Local  ID_TUNEMAC__CLEARLEAKCAL_181
+ID_TUNEMAC_161                                     =  17161  
+ID_TUNEMAC_THIS_FILE_CONT_162                      =  17162  
+ID_TUNEMAC_THE_NON_REAL_T_163                      =  17163  
+ID_TUNEMAC__PDBFAULT_164                           =  17164  
+ID_TUNEMAC__PDBLOG_165                             =  17165  
+ID_TUNEMAC__MSZONETIMEOUT_166                      =  17166  
+ID_TUNEMAC__MSZONEPID_167                          =  17167  
+ID_TUNEMAC__VACINFO_168                            =  17168  
+ID_TUNEMAC__TPCFAULT_169                           =  17169  
+ID_TUNEMAC__TPCLOG_170                             =  17170  
+ID_TUNEMAC__TPCINFO_171                            =  17171  
+ID_TUNEMAC__TURBOSON_172                           =  17172  
+ID_TUNEMAC__TURBOSOFF_173                          =  17173  
+ID_TUNEMAC__RPON_174                               =  17174  
+ID_TUNEMAC__RPOFF_175                              =  17175  
+ID_TUNEMAC__AUTOPUMPDOWN_176                       =  17176  
+ID_TUNEMAC__FOREPRES_177                           =  17177  
+ID_TUNEMAC__HIGHPRES_178                           =  17178  
+ID_TUNEMAC__LEAKCAL_179                            =  17179  
+ID_TUNEMAC__GETLEAKCAL_180                         =  17180  
+ID_TUNEMAC__CLEARLEAKCAL_181                       =  17181  
+print
+print ReadResource$("tunemac",ID_TUNEMAC_161)
+print ReadResource$("tunemac",ID_TUNEMAC_THIS_FILE_CONT_162)
+print ReadResource$("tunemac",ID_TUNEMAC_THE_NON_REAL_T_163)
+print
+print ReadResource$("tunemac",ID_TUNEMAC__PDBFAULT_164)
+print ReadResource$("tunemac",ID_TUNEMAC__PDBLOG_165)
+print ReadResource$("tunemac",ID_TUNEMAC__MSZONETIMEOUT_166)
+print ReadResource$("tunemac",ID_TUNEMAC__MSZONEPID_167)
+print
+print ReadResource$("tunemac",ID_TUNEMAC__VACINFO_168)
+print ReadResource$("tunemac",ID_TUNEMAC__TPCFAULT_169)
+print ReadResource$("tunemac",ID_TUNEMAC__TPCLOG_170)
+print ReadResource$("tunemac",ID_TUNEMAC__TPCINFO_171)
+print ReadResource$("tunemac",ID_TUNEMAC__TURBOSON_172)
+print ReadResource$("tunemac",ID_TUNEMAC__TURBOSOFF_173)
+print ReadResource$("tunemac",ID_TUNEMAC__RPON_174)
+print ReadResource$("tunemac",ID_TUNEMAC__RPOFF_175)
+print ReadResource$("tunemac",ID_TUNEMAC__AUTOPUMPDOWN_176) 
+print ReadResource$("tunemac",ID_TUNEMAC__FOREPRES_177)
+print ReadResource$("tunemac",ID_TUNEMAC__HIGHPRES_178)
+print
+print ReadResource$("tunemac",ID_TUNEMAC__LEAKCAL_179)
+print ReadResource$("tunemac",ID_TUNEMAC__GETLEAKCAL_180)
+print ReadResource$("tunemac",ID_TUNEMAC__CLEARLEAKCAL_181)
+print 
+
+RETURN
+
+endmacro       ! NRThelp
+
+!******************************************************************************
+!****************** end of file ***********************************************
+if Check(Variable, PRTestVer$) = 1 or Check(Variable, mstnUtilVer$) = 1 then
+   print "mstnNRT.mac v. " + NRTver$ + " loaded."
+endif
+
+!****************** end of file ***********************************************

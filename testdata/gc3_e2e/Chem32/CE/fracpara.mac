@@ -1,0 +1,649 @@
+!******************************************************************************
+!
+!   FILE
+!       fracpara.mac
+!
+!   DESCRIPTION
+!       this file contains macros edit fraction collection parameter
+!
+!   RCS
+!       $Header: /cag/DRIVERS/leodef/ce/misc/fracpara.mac 1.11 2000-02-28 03:29:22-08 fkremser Exp $
+!
+!******************************************************************************
+
+
+
+!******************************************************************************
+NAME FC_EditParameter
+!******************************************************************************
+LOCAL nReturn, ParamError, Pos, HelpPathFile$, HelpID, bReadOnly
+! ------ pseudo constants
+LOCAL OFF,PressMode,VoltMode,IEFmode
+OFF       = 1
+PressMode = 2
+VoltMode  = 3
+IEFmode   = 4
+
+! identify the Help-ID for Fraction Collection Parameter
+!-------------------------------------------------------
+Pos =Instr(_PRODUCTPATH$, "CE")
+HelpPathFile$ = _PRODUCTPATH$[1:Pos-1] + "drivers\helpenu\hpce.hlp"
+HelpID = HelpSubSystemTopic(HelpPathFile$, 404061)
+
+! Define the Fraction Collection Dialog Box 
+!------------------------------------------
+FC_DefineParamDlgBox HelpID
+
+!Get parameter from register into CP variables
+!---------------------------------------------
+FC_GetParamFromReg
+
+! Define visible/active controls of dialog
+!-----------------------------------------
+FC_SetDlgControls 
+
+! ---  set event macros for dynamic dialog layout ------
+CpRequest "CP2", "OnEvent FC_Mode,     FC_SetDlgControls, , CP" 
+CpRequest "CP2", "OnEvent FC_PeakList, FC_SetDlgControls, , CP" 
+CpRequest "CP2", "OnEvent FC_VoltRamp, FC_SetDlgControls, , CP" 
+
+If AS_IsPermitted_InstrumentSetupEdit=0 then
+  bReadOnly = 1
+Else
+  bReadOnly = 0
+Endif
+
+! Show the Fraction Collection Dialog Box
+!----------------------------------------
+ParamError = 0
+REPEAT
+  nReturn = ShowDialog("FractColParam", HelpID,,bReadOnly)
+  IF (nReturn > 0) AND FC_MethodChanged() = 1 AND (bReadOnly=0)
+    ! check for valid parameter
+    !--------------------------
+    IF FC_ParamConsistent() = 1
+      ! Store parameter from CP variables into register
+      !------------------------------------------------
+      FC_StoreParamToReg
+      _MethodChanged = 1
+      ! Control timetable access
+      !-------------------------
+      IF   (ObjHdrVal(FRACTCOL[1],"Mode") = PressMode) OR (ObjHdrVal(FRACTCOL[1],"Mode") = VoltMode)
+        FC_LockTimeTable
+      ELSE
+        FC_UnLockTimeTable
+      ENDIF
+      !-------------------------
+      ParamError = 0
+    ELSE
+      ParamError = 1
+    ENDIF
+  ELSE
+    ParamError = 0
+  ENDIF
+UNTIL ParamError = 0
+ 
+! clear event macros for dynamic dialog layout
+!---------------------------------------------
+OnEvent FC_Mode,     , , CP
+OnEvent FC_PeakList, , , CP
+OnEvent FC_VoltRamp, , , CP
+
+! remove CP variables and dialog
+!-------------------------------
+RemoveDialog "FractColParam"
+FC_RemoveParamVars
+FC_RemoveDlgControls
+
+IF RegSize(FRACTCOL) > 0 AND (bReadOnly=0)
+  IF (ObjHdrVal(FRACTCOL[1],"Mode") <> OFF) AND (FC_CapInfoAvailable() = 0) AND (_OffLine = 0) 
+    Ret = Alert("No capillary information for fraction collection" +CHR$(10)+CHR$(13)+\
+                "Enter capillary information !", 3, "WARNING")
+    EditSysColumnParms
+  ENDIF
+ENDIF
+
+RETURN
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_DefineParamDlgBox
+
+PARAMETER HelpID
+!
+!   DESCRIPTIION
+! --- Define the Fraction Collection Dialog Box ------
+!
+!******************************************************************************
+
+RemoveDialog "FractColParam"
+BeginDialog "FractColParam", 102, 22, 191, 224, "CE: Fraction Collection",8,"MS Sans Serif"
+
+  GroupBox       10,10,165,25,"Collection Mode"
+  OptionGroup    FC_Mode
+  OptionButton    20,20,25,10,"OFF"     
+  OptionButton    55,20,40,10,"Pressure"
+  OptionButton   100,20,40,10,"Voltage" 
+  OptionButton   140,20,25,10,"IEF"     
+
+  GroupBox       10,40,165,120,"Collect",          FC_AnyEnabled
+  OptionGroup    FC_PeakList
+  OptionButton   20,55,45,10, "All Peaks",         FC_AnyEnabled
+  StaticText     65,56,20, 8, "from:","L",      FC_PeakAllEnabled
+  NumberBox      85,55,25,12, FC_MigtFrom,0,,,, FC_PeakAllEnabled
+  StaticText    112,56,10, 8, "to:","R",        FC_PeakAllEnabled
+  NumberBox     124,55,25,12, FC_MigtTo,0,,,,   FC_PeakAllEnabled
+  StaticText    153,56,13, 8, "min", ,          FC_PeakAllEnabled
+
+  OptionButton   20,70,80,10, "Selected Peaks at", FC_AnyEnabled
+  NumberBox      28,85,25,12, FC_Migt1,,,0,, FC_PeakListEnabled
+  NumberBox      60,85,25,12, FC_Migt2,,,0,, FC_PeakListEnabled
+  NumberBox      92,85,25,12, FC_Migt3,,,0,, FC_PeakListEnabled
+  NumberBox     124,85,25,12, FC_Migt4,,,0,, FC_PeakListEnabled
+  StaticText    153,87,13, 8, "min", ,       FC_PeakListEnabled
+
+  StaticText     20,112,65, 8, "First Vial:",,        FC_AnyEnabled
+  NumberBox     100,110,40,12, FC_FirstVial,0,48,,3,  FC_AnyEnabled
+
+  StaticText     20,127,65, 8, "Collection Width:",,  FC_AnyEnabled
+  NumberBox     100,125,40,12, FC_CollectWidth,0,,,3, FC_AnyEnabled
+  StaticText    146,127,14, 8, "%"   ,,               FC_WidthPercentEnabled
+  StaticText    146,127,14, 8, "min" ,,               FC_WidthMinEnabled
+
+  StaticText     20,142,80, 8, "Migr.Time with 50 mbar:" ,, FC_MT50mbarEnabled
+  StaticText     20,142,80, 8, "Migr.Time with Pressure:",, FC_MTPressEnabled
+  NumberBox     100,140,40,12, FC_MTpressure,0,,,3,         FC_MTvalEnabled
+  StaticText    146,142,19, 8, "min"                     ,, FC_MTminEnabled
+
+
+  CheckBox       15,170,105,10, "Voltage Ramp for Separation:", FC_VoltRamp, FC_VoltRampEnabled
+  NumberBox     124,168, 25,12, FC_VoltRampTime,0,,,3,                       FC_VoltRampValEnabled
+  StaticText    153,170, 14, 8, "min", ,                                     FC_VoltRampMinEnabled
+
+  OKButton        10,197,45,14, "OK"
+  CancelButton    67,197,45,14, "Cancel"
+  ExecPushButton 124,197,45,14, "Help","CP2","HELP " + SPRINTF$(HelpID,"%ld"),,9
+
+EndDialog
+
+RETURN
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_GetParamFromReg
+!******************************************************************************
+
+FC_Mode         = ObjHdrVal(FRACTCOL[1],"Mode")
+FC_PeakList     = ObjHdrVal(FRACTCOL[1],"PeakList")
+FC_MigtFrom     = ObjHdrVal(FRACTCOL[1],"MigtFrom")
+FC_MigtTo       = ObjHdrVal(FRACTCOL[1],"MigtTo")
+FC_Migt1        = ObjHdrVal(FRACTCOL[1],"Migt1")
+FC_Migt2        = ObjHdrVal(FRACTCOL[1],"Migt2")
+FC_Migt3        = ObjHdrVal(FRACTCOL[1],"Migt3")
+FC_Migt4        = ObjHdrVal(FRACTCOL[1],"Migt4")
+FC_FirstVial    = ObjHdrVal(FRACTCOL[1],"FirstVial")
+FC_CollectWidth = ObjHdrVal(FRACTCOL[1],"CollectWidth")
+FC_MTpressure   = ObjHdrVal(FRACTCOL[1],"MTpressure")
+FC_VoltRamp     = ObjHdrVal(FRACTCOL[1],"VoltRamp")
+FC_VoltRampTime = ObjHdrVal(FRACTCOL[1],"VoltRampTime")
+
+RETURN
+ENDMACRO
+
+
+!******************************************************************************
+NAME FC_StoreParamToReg
+!******************************************************************************
+
+SetObjHdrVal FRACTCOL[1],"Mode"        , FC_Mode        
+SetObjHdrVal FRACTCOL[1],"PeakList"    , FC_PeakList
+SetObjHdrVal FRACTCOL[1],"MigtFrom"    , FC_MigtFrom    
+SetObjHdrVal FRACTCOL[1],"MigtTo"      , FC_MigtTo
+SetObjHdrVal FRACTCOL[1],"Migt1"       , FC_Migt1       
+SetObjHdrVal FRACTCOL[1],"Migt2"       , FC_Migt2       
+SetObjHdrVal FRACTCOL[1],"Migt3"       , FC_Migt3       
+SetObjHdrVal FRACTCOL[1],"Migt4"       , FC_Migt4       
+SetObjHdrVal FRACTCOL[1],"FirstVial"   , Trunc(FC_FirstVial)
+SetObjHdrVal FRACTCOL[1],"CollectWidth", FC_CollectWidth
+SetObjHdrVal FRACTCOL[1],"MTpressure"  , FC_MTpressure  
+SetObjHdrVal FRACTCOL[1],"VoltRamp"    , FC_VoltRamp    
+SetObjHdrVal FRACTCOL[1],"VoltRampTime", FC_VoltRampTime
+
+RETURN
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_MethodChanged
+!******************************************************************************
+
+IF (FC_Mode         <> ObjHdrVal(FRACTCOL[1],"Mode")        ); RETURN 1; ENDIF
+IF (FC_PeakList     <> ObjHdrVal(FRACTCOL[1],"PeakList")    ); RETURN 1; ENDIF
+IF (FC_MigtFrom     <> ObjHdrVal(FRACTCOL[1],"MigtFrom")    ); RETURN 1; ENDIF
+IF (FC_MigtTo       <> ObjHdrVal(FRACTCOL[1],"MigtTo")      ); RETURN 1; ENDIF
+IF (FC_Migt1        <> ObjHdrVal(FRACTCOL[1],"Migt1")       ); RETURN 1; ENDIF
+IF (FC_Migt2        <> ObjHdrVal(FRACTCOL[1],"Migt2")       ); RETURN 1; ENDIF
+IF (FC_Migt3        <> ObjHdrVal(FRACTCOL[1],"Migt3")       ); RETURN 1; ENDIF
+IF (FC_Migt4        <> ObjHdrVal(FRACTCOL[1],"Migt4")       ); RETURN 1; ENDIF
+IF (FC_FirstVial    <> ObjHdrVal(FRACTCOL[1],"FirstVial")   ); RETURN 1; ENDIF
+IF (FC_CollectWidth <> ObjHdrVal(FRACTCOL[1],"CollectWidth")); RETURN 1; ENDIF
+IF (FC_MTpressure   <> ObjHdrVal(FRACTCOL[1],"MTpressure")  ); RETURN 1; ENDIF
+IF (FC_VoltRamp     <> ObjHdrVal(FRACTCOL[1],"VoltRamp")    ); RETURN 1; ENDIF
+IF (FC_VoltRampTime <> ObjHdrVal(FRACTCOL[1],"VoltRampTime")); RETURN 1; ENDIF
+
+RETURN 0
+ENDMACRO
+
+
+!******************************************************************************
+NAME FC_DefaultParamReg
+!******************************************************************************
+
+NewObj FRACTCOL[1],1, 0,0
+SetObjHdrText FRACTCOL[1],"Title","Fraction Collection Parameter"
+SetObjHdrText FRACTCOL[1],"Version","01.01"
+
+SetObjHdrVal FRACTCOL[1],"Mode"        ,  1  ! OFF        
+SetObjHdrVal FRACTCOL[1],"PeakList"    ,  1  ! All Peaks
+SetObjHdrVal FRACTCOL[1],"MigtFrom"    ,  0       
+SetObjHdrVal FRACTCOL[1],"MigtTo"      , 60           
+SetObjHdrVal FRACTCOL[1],"Migt1"       ,  0       
+SetObjHdrVal FRACTCOL[1],"Migt2"       ,  0       
+SetObjHdrVal FRACTCOL[1],"Migt3"       ,  0       
+SetObjHdrVal FRACTCOL[1],"Migt4"       ,  0       
+SetObjHdrVal FRACTCOL[1],"FirstVial"   , 40
+SetObjHdrVal FRACTCOL[1],"CollectWidth",  5
+SetObjHdrVal FRACTCOL[1],"MTpressure"  , 10  
+SetObjHdrVal FRACTCOL[1],"VoltRamp"    ,  0    
+SetObjHdrVal FRACTCOL[1],"VoltRampTime",  0.1
+
+RETURN
+ENDMACRO
+
+
+!******************************************************************************
+NAME FC_RemoveParamVars
+!******************************************************************************
+ON ERROR Print
+remove  FC_Mode        
+remove  FC_PeakList
+remove  FC_MigtFrom
+remove  FC_MigtTo    
+remove  FC_Migt1       
+remove  FC_Migt2       
+remove  FC_Migt3       
+remove  FC_Migt4       
+remove  FC_FirstVial
+remove  FC_CollectWidth
+remove  FC_MTpressure  
+remove  FC_VoltRamp    
+remove  FC_VoltRampTime
+RETURN
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_RemoveDlgControls
+!******************************************************************************
+ON ERROR Print
+remove  FC_AnyEnabled        
+remove  FC_PeakListEnabled
+remove  FC_PeakAllEnabled     
+remove  FC_WidthPercentEnabled 
+remove  FC_WidthMinEnabled     
+remove  FC_MT50mbarEnabled     
+remove  FC_MTPressEnabled      
+remove  FC_MTvalEnabled        
+remove  FC_MTminEnabled        
+remove  FC_VoltRampEnabled     
+remove  FC_VoltRampValEnabled  
+remove  FC_VoltRampMinEnabled  
+RETURN
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_SetDlgControls
+
+  PARAMETER EventCause$    DEFAULT ""
+  PARAMETER EventLevel$    DEFAULT ""
+  PARAMETER EventSubjName$ DEFAULT ""
+  PARAMETER EventCP$       DEFAULT ""
+!******************************************************************************
+
+! ------- pseudo constants -------------------------------
+LOCAL OFF,PressMode,VoltMode,IEFmode,Grayed,Enabled,Hidden
+OFF       = 1
+PressMode = 2
+VoltMode  = 3
+IEFmode   = 4
+Grayed    = 0
+Enabled   = 1
+Hidden    = 2
+
+!---- this is to handle a race condition of CP and CP2 if the Cancel button is pressed ----
+IF Check(VARIABLE, FC_Mode) = 0
+  RETURN
+ENDIF
+
+ON ERROR Print
+
+IF FC_Mode = OFF
+  FC_AnyEnabled          = Grayed
+  FC_PeakListEnabled     = Grayed
+  FC_PeakAllEnabled      = Grayed
+  FC_WidthPercentEnabled = Grayed
+  FC_WidthMinEnabled     = Hidden
+  FC_MT50mbarEnabled     = Grayed
+  FC_MTPressEnabled      = Hidden
+  FC_MTvalEnabled        = Grayed
+  FC_MTminEnabled        = Grayed
+  FC_VoltRampEnabled     = Grayed
+  FC_VoltRampValEnabled  = Grayed
+  FC_VoltRampMinEnabled  = Grayed
+ELSE
+  
+  FC_AnyEnabled            = Enabled
+  IF FC_PeakList = 1
+    FC_PeakListEnabled     = Grayed
+    FC_PeakAllEnabled      = Enabled
+  ELSE 
+    FC_PeakListEnabled     = Enabled
+    FC_PeakAllEnabled      = Grayed
+  ENDIF
+
+  IF FC_Mode = PressMode
+    FC_WidthPercentEnabled = Enabled
+    FC_WidthMinEnabled     = Hidden
+    FC_MT50mbarEnabled     = Enabled
+    FC_MTPressEnabled      = Hidden
+    FC_MTvalEnabled        = Enabled
+    FC_MTminEnabled        = Enabled
+    FC_VoltRampEnabled     = Enabled
+    IF FC_VoltRamp = 1 
+      FC_VoltRampValEnabled  = Enabled
+      FC_VoltRampMinEnabled  = Enabled
+    ELSE
+      FC_VoltRampValEnabled  = Grayed
+      FC_VoltRampMinEnabled  = Grayed
+    ENDIF
+  ENDIF
+  
+  IF FC_Mode = VoltMode
+    FC_WidthPercentEnabled = Enabled
+    FC_WidthMinEnabled     = Hidden
+    FC_MT50mbarEnabled     = Hidden
+    FC_MTPressEnabled      = Hidden
+    FC_MTvalEnabled        = Hidden
+    FC_MTminEnabled        = Hidden
+    FC_VoltRampEnabled     = Enabled
+    IF FC_VoltRamp = 1 
+      FC_VoltRampValEnabled  = Enabled
+      FC_VoltRampMinEnabled  = Enabled
+    ELSE
+      FC_VoltRampValEnabled  = Grayed
+      FC_VoltRampMinEnabled  = Grayed
+    ENDIF
+  ENDIF
+    
+  IF FC_Mode = IEFmode
+    FC_WidthPercentEnabled = Hidden
+    FC_WidthMinEnabled     = Enabled
+    FC_MT50mbarEnabled     = Hidden
+    FC_MTPressEnabled      = Enabled
+    FC_MTvalEnabled        = Enabled
+    FC_MTminEnabled        = Enabled
+    FC_VoltRampEnabled     = Hidden
+    FC_VoltRampValEnabled  = Hidden
+    FC_VoltRampMinEnabled  = Hidden
+  ENDIF
+  
+ENDIF                      
+
+RETURN
+ENDMACRO
+
+
+!******************************************************************************
+NAME FC_ParamConsistent
+!******************************************************************************
+LOCAL MaxMigt,Ret,ErrorText$
+MaxMigt =  65536
+
+! ------ pseudo constants
+LOCAL OFF,PressMode,VoltMode,IEFmode
+OFF       = 1
+PressMode = 2
+VoltMode  = 3
+IEFmode   = 4
+
+
+
+IF FC_PeakList = 1
+  ! "to" must be greater than "from"
+  !------------------------------------------
+  IF FC_MigtFrom >= FC_MigtTo
+    ErrorText$ = "Time value for ""from"" must before ""to"" " 
+    Ret = Alert(ErrorText$,3,"Fraction Collection")
+    RETURN 0
+  ENDIF
+ELSE
+  !  check for overlapping peak windows 
+  !  sort the peak list 
+  !------------------------------------------
+  IF FC_Migt1 = 0; FC_Migt1 = MaxMigt; ENDIF
+  IF FC_Migt2 = 0; FC_Migt2 = MaxMigt; ENDIF
+  IF FC_Migt3 = 0; FC_Migt3 = MaxMigt; ENDIF
+  IF FC_Migt4 = 0; FC_Migt4 = MaxMigt; ENDIF
+
+  IF FC_Migt1 > FC_Migt2; Temp = FC_Migt1; FC_Migt1 = FC_Migt2; FC_Migt2 = Temp; ENDIF
+  IF FC_Migt2 > FC_Migt3; Temp = FC_Migt2; FC_Migt2 = FC_Migt3; FC_Migt3 = Temp; ENDIF
+  IF FC_Migt3 > FC_Migt4; Temp = FC_Migt3; FC_Migt3 = FC_Migt4; FC_Migt4 = Temp; ENDIF
+
+  IF FC_Migt1 > FC_Migt2; Temp = FC_Migt1; FC_Migt1 = FC_Migt2; FC_Migt2 = Temp; ENDIF
+  IF FC_Migt2 > FC_Migt3; Temp = FC_Migt2; FC_Migt2 = FC_Migt3; FC_Migt3 = Temp; ENDIF
+
+  IF FC_Migt1 > FC_Migt2; Temp = FC_Migt1; FC_Migt1 = FC_Migt2; FC_Migt2 = Temp; ENDIF
+
+  IF FC_Migt1 = MaxMigt; FC_Migt1 = 0; ENDIF
+  IF FC_Migt2 = MaxMigt; FC_Migt2 = 0; ENDIF
+  IF FC_Migt3 = MaxMigt; FC_Migt3 = 0; ENDIF
+  IF FC_Migt4 = MaxMigt; FC_Migt4 = 0; ENDIF
+
+  IF FC_Migt1 + FC_Migt2 + FC_Migt3 + FC_Migt4 = 0
+    Ret = Alert("You must specify at least one peak to be collected",3,"Fraction Collection")
+    RETURN 0
+  ENDIF
+
+  IF FC_TimeOverlap(FC_Migt1,FC_Migt2) = 1
+    ErrorText$ = "Time window overlap for peaks at " + Val$(FC_Migt1) + " and " + Val$(FC_Migt2) + " min"
+    Ret = Alert(ErrorText$,3,"Fraction Collection")
+    RETURN 0
+  ENDIF
+
+  IF FC_TimeOverlap(FC_Migt2,FC_Migt3) = 1
+    ErrorText$ = "Time window overlap for peaks at " + Val$(FC_Migt2) + " and " + Val$(FC_Migt3) + " min"
+    Ret = Alert(ErrorText$,3,"Fraction Collection")
+    RETURN 0
+  ENDIF
+
+  IF FC_TimeOverlap(FC_Migt3,FC_Migt4) = 1
+    ErrorText$ = "Time window overlap for peaks at " + Val$(FC_Migt3) + " and " + Val$(FC_Migt4) + " min"
+    Ret = Alert(ErrorText$,3,"Fraction Collection")
+    RETURN 0
+  ENDIF
+ENDIF
+
+IF (FC_Mode <> OFF) AND (FC_Allowed() = 0)
+  ErrorText$ = "Fraction collection not possible. The current CE-Mode"+CHR$(10)+CHR$(13)+ \
+               "indicates that a Mass Spectrometer is attched."+CHR$(10)+CHR$(13)+ \
+               "Switch to CE-Mode CE, CEC or CEP !" 
+  Ret = Alert(ErrorText$,3,"Fraction Collection")
+  RETURN 0
+ENDIF
+
+RETURN 1
+
+ENDMACRO
+
+
+!******************************************************************************
+NAME FC_TimeOverlap
+
+  PARAMETER MT1
+  PARAMETER MT2
+!******************************************************************************
+LOCAL OFF,PressMode,VoltMode,IEFmode
+OFF       = 1
+PressMode = 2
+VoltMode  = 3
+IEFmode   = 4
+
+IF (MT1 = 0) OR (MT2 = 0)
+  RETURN 0
+ENDIF
+
+IF FC_Mode = IEFmode
+  ! ---- CollectWidth entered in minutes ----
+  T_EndCollect_1   = MT1 + FC_CollectWidth/2 
+  T_BeginCollect_2 = MT2 - FC_CollectWidth/2
+ELSE
+  ! ---- CollectWidth entered in percent ----
+  T_EndCollect_1   = MT1 * (1 + FC_CollectWidth/200) 
+  T_BeginCollect_2 = MT2 * (1 - FC_CollectWidth/200)
+ENDIF
+ 
+IF T_EndCollect_1 > T_BeginCollect_2
+  ! time windows do overlap -----
+  RETURN 1
+ELSE
+  RETURN 0
+ENDIF
+
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_LockTimeTable
+!
+! NOTE: --------  This also disables the DAD-PeakDetector ------------
+!******************************************************************************
+IF Check(COMMAND, _LoadServiceFractionMode) = 1   ! added for DA-Only
+  _LoadServiceFractionMode ON,OFF                 ! <LockTT>=ON, <PeakDet>=OFF
+ENDIF
+RETURN
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_UnLockTimeTable
+!
+! NOTE: --------  This also disables the DAD-PeakDetector ------------
+!******************************************************************************
+IF Check(COMMAND, _LoadServiceFractionMode) = 1   ! added for DA-Only
+  _LoadServiceFractionMode OFF,OFF                ! <LockTT>=OFF, <PeakDet>=OFF
+ENDIF
+RETURN
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_EnablePeakDetector
+
+  PARAMETER Mode
+!******************************************************************************
+LOCAL PressMode,VoltMode
+PressMode = 2
+VoltMode  = 3
+
+IF Check(COMMAND, _LoadServiceFractionMode) = 1   ! added for DA-Only
+  IF (Mode = PressMode) OR (Mode = VoltMode)
+    _LoadServiceFractionMode ON ,ON  ! <<<<<<<<<<<<< keep TT locked
+  ELSE
+    _LoadServiceFractionMode OFF,ON  ! <<<<<<<<<<<<< keep TT unlocked
+  ENDIF
+ENDIF
+RETURN
+ENDMACRO
+
+
+!******************************************************************************
+NAME FC_DisablePeakDetector
+
+  PARAMETER Mode
+!******************************************************************************
+LOCAL PressMode,VoltMode
+PressMode = 2
+VoltMode  = 3
+
+IF Check(COMMAND, _LoadServiceFractionMode) = 1   ! added for DA-Only
+  IF (Mode = PressMode) OR (Mode = VoltMode)
+    _LoadServiceFractionMode ON ,OFF ! <<<<<<<<<<<<< keep TT locked
+  ELSE
+    _LoadServiceFractionMode OFF,OFF ! <<<<<<<<<<<<< keep TT unlocked
+  ENDIF
+ENDIF
+RETURN
+ENDMACRO
+
+
+
+
+
+!******************************************************************************
+NAME FC_CapInfoAvailable
+!******************************************************************************
+LOCAL l_effective, l_capillary
+
+ON ERROR Return 0
+
+IF ObjHdrType(_CONFIG[1],"BuiltInColumns") = 99
+  RETURN 0
+ELSE
+  IF TabHdrVal(_CONFIG[1], "BuiltInColumns", "NumberOfRows") = 0
+    RETURN 0
+  ELSE
+    l_effective = TabVal (_CONFIG[1],"BuiltInColumns",1,"effLength")
+    l_capillary = TabVal (_CONFIG[1],"BuiltInColumns",1,"colLength")
+
+    IF (l_capillary - l_effective) > 0
+      RETURN 1
+    ELSE
+      RETURN 0
+    ENDIF
+  ENDIF
+ENDIF
+
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_Allowed
+!******************************************************************************
+! -------- no fraction collection possible if an MS is attached --------------
+  IF Instr(HPCEMode$("?"),"MS") > 0
+    RETURN 0
+  ELSE
+    RETURN 1
+  ENDIF
+ENDMACRO
+
+
+
+!******************************************************************************
+!                       A U T O E X E C U T E
+!******************************************************************************
+
+
+! **************************< end of file >************************************

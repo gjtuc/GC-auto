@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="SpecF" PosStyle="TOP" DockRow="1" DockCol="0" Caption="Spectrum" PanelName="Chem">
+		<PushButton Name="Options" Help="Edit Spectra Display and Processing Options" Command="SPC_TLBFunction Options" NewGroup="1" ImageName="Spec_Options20" ImageNameDisabled="Spec_Options20_d"/>
+		<PushButton Name="LabelIons" Help="Label Ions in current Mass Spectra" Command="LDMS_IntegrateSpectraforLabelIons" Visible="0" ImageName="Spec_LabelIons20" ImageNameDisabled="Spec_LabelIons20_d"/>
+		<PushButton Name="EditIonLabelOptions" Help="Edit options for Ion Labels" Command="LDMS_EditSpIntegParms" Visible="0" ImageName="Spec_EditIons20" ImageNameDisabled="Spec_EditIons20_d"/>
+		<PushButton Name="Deconvolution" Help="Enter Deconvolution Tool" Command="DEC_DeconvUIMenuSel" Visible="0" ImageName="Spec_Deconvolution20" ImageNameDisabled="Spec_Deconvolution20_d"/>
+		<PushButton Name="LoadLibFile" Help="Load a Library File" Command="SPC_TLBFunction LoadLibFile" ImageName="UVLib_Load20" ImageNameDisabled="UVLib_Load20_d"/>
+		<PushButton Name="SaveLibFile" Help="Save current Library File" Command="SPC_TLBFunction SaveLibFile" ImageName="UVLib_Save20" ImageNameDisabled="UVLib_Save20_d"/>
+		<NonEditCombobox Name="LibraryFile" Help="Select from most previously loaded Library Files" Enable="1" Table="_Config,1,SpecLibFile" Selection="1" Width="200"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="InfoLib" Help="Edit general Information of the current Library" Command="SPC_TLBFunction InfoLib" NewGroup="1" Enable="0" ImageName="UVLib_LibraryInfo20" ImageNameDisabled="UVLib_LibraryInfo20_d"/>
+		<PushButton Name="PrintLib" Help="Print selected Library Entries" Command="SPC_TLBFunction PrintLib" Enable="0" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="CloseLib" Help="Close current Spectra Library" Command="SPC_TLBFunction CloseLib" Enable="0" ImageName="Exit20" ImageNameDisabled="Exit20_d"/>
+		<PushButton Name="EditEntry" Help="Change Spectra Entries of the current Library" Command="SPC_TLBFunction EditEntry" Enable="0" ImageName="UVLib_LibManager20" ImageNameDisabled="UVLib_LibManager20_d"/>
+		<PushButton Name="AddEntry" Help="Add Spectra Entries to the current Library" Command="SPC_TLBFunction AddEntry" Enable="0" ImageName="UVLib_AddSpectra20" ImageNameDisabled="UVLib_AddSpectra20_d"/>
+		<PushButton Name="SearchSpec" Help="Search the Spectrum in current Library" Command="SPC_TLBFunction SearchSpec" Enable="0" ImageName="UVLib_SearchSpectrum20" ImageNameDisabled="UVLib_SearchSpectrum20_d"/>
+		<PushButton Name="EditSearch" Help="Edit the Search Template to be used in a Library Search" Command="SPC_TLBFunction EditSearch" Enable="0" ImageName="UVLib_SearchTemplate20" ImageNameDisabled="UVLib_SearchTemplate20_d"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="NISTCreateFile" Help="Create/Append MS NIST File" Command='MSSrchExport MSReg[1];print "One spectrum was added to the NIST file."' Enable="1" Visible="0" ImageName="NIST_CreateFile20" ImageNameDisabled="NIST_CreateFile20_d"/>
+		<PushButton Name="NISTStartSearch" Help="Close MS NIST file and go to NIST program" Command='MSSrchGotoNist' Enable="1" Visible="0" ImageName="NIST_StartSearch20" ImageNameDisabled="NIST_StartSearch20_d"/>
+	</toolbar>
+</graphical_object>

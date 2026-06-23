@@ -1,0 +1,225 @@
+<?xml version="1.0"?>
+<ModuleRegistration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="file://RCNetRegistrationScheme.xsd">
+  <Instruments>
+    <Instrument UniqueInstID="Agilent.GC.6820System">
+      <Module UniqueModuleID="GC6820" OldUniqueModuleID="Agilent.GC.68XXSystem.GC6820" IsInstalled="false" ConfigurationMode="eConventional">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6820ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6820ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6820ControlIF</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6820MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6820ProcessIF</Class>
+          </ProcessIF>
+          <StatusUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6820StatusUI</Class>
+          </StatusUI>
+          <SoftConfigUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6820ConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>GC6820</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>Agilent 6820 GC</NLSFullModuleName>
+        <ModuleType>eIntegratedGC</ModuleType>
+        <ModuleToken>GC</ModuleToken>
+        <ChromFileType>e181_GC6890A</ChromFileType>
+        <InjectorMapping>
+          <Injector ID="GC_FRONT">
+            <FixedInjectorPort>eFirstPort</FixedInjectorPort>
+          </Injector>
+          <Injector ID="GC_BACK">
+            <FixedInjectorPort>eSecondPort</FixedInjectorPort>
+          </Injector>
+        </InjectorMapping>
+        <WantUploadSettingsSupport>true</WantUploadSettingsSupport>
+        <Customization>
+          <TrayUI ShowControlPanel="true" BackColor="White"/>
+          <MethodResolution ShowInconsistencyReport="false" CancelAction="eAcceptUnresolvedSettings"/>
+          <MethodUI ShowUploadMethodButton="true"/>
+          <Reporting WantReportHeader="false"/>
+		  <PretreatUI AllowImportExport="true" AllowPretreatAvoidance="true" AllowPrintPretreatment="true"/>
+        </Customization>
+      </Module>
+      <NLSInstrumentName>Agilent 6820 GC システム</NLSInstrumentName>
+      <AppFilter>
+        <GC>true</GC>
+        <InstTypeFilter>6820GC</InstTypeFilter>
+      </AppFilter>
+    </Instrument>
+    <Instrument UniqueInstID="Agilent.GC.6850System">
+      <Module UniqueModuleID="GC6850" OldUniqueModuleID="Agilent.GC.68XXSystem.GC6850" ConfigurationMode="eConventional">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6850ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6850ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6850ControlIF</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6850MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6850ProcessIF</Class>
+          </ProcessIF>
+          <StatusUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6850StatusUI</Class>
+          </StatusUI>
+          <AutosamplerTrayUI>
+            <Assembly>AgGCAlsTrayUI.dll</Assembly>
+            <Class>Agilent.Analytical.Als.SamplingDiagram.AgGC6850AlsUI</Class>
+          </AutosamplerTrayUI>
+          <SoftConfigUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6850ConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>GC6850</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>Agilent 6850 GC</NLSFullModuleName>
+        <ModuleType>eIntegratedGC</ModuleType>
+        <ModuleToken>GC</ModuleToken>
+        <ChromFileType>e181_GC6890A</ChromFileType>
+        <InjectorMapping>
+          <Injector ID="GC_FRONT">
+            <FixedInjectorPort>eFirstPort</FixedInjectorPort>
+          </Injector>
+          <Injector ID="GC_BACK">
+            <FixedInjectorPort>eSecondPort</FixedInjectorPort>
+          </Injector>
+        </InjectorMapping>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemGC68xxMethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodConverter.GC68xx.GC6850ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemGC68xxMethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodConverter.GC68xx.GC6850ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+        </MethodConversion>
+        <WantUploadSettingsSupport>true</WantUploadSettingsSupport>
+        <Customization>
+          <TrayUI ShowControlPanel="true" BackColor="White"/>
+          <MethodResolution ShowInconsistencyReport="false" CancelAction="eAcceptUnresolvedSettings"/>
+          <MethodUI ShowUploadMethodButton="true"/>
+          <Reporting WantReportHeader="false"/>
+		  <PretreatUI AllowImportExport="true" AllowPretreatAvoidance="true" AllowPrintPretreatment="true"/>
+        </Customization>
+      </Module>
+      <NLSInstrumentName>Agilent 6850 GC システム</NLSInstrumentName>
+      <AppFilter>
+        <GC>true</GC>
+        <InstTypeFilter>6850GC</InstTypeFilter>
+      </AppFilter>
+    </Instrument>
+    <Instrument UniqueInstID="Agilent.GC.6890System">
+      <Module UniqueModuleID="GC6890" OldUniqueModuleID="Agilent.GC.68XXSystem.GC6890" ConfigurationMode="eConventional">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6890ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6890ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6890ControlIF</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6890MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6890ProcessIF</Class>
+          </ProcessIF>
+          <StatusUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6890StatusUI</Class>
+          </StatusUI>
+          <AutosamplerTrayUI>
+            <Assembly>AgGCAlsTrayUI.dll</Assembly>
+            <Class>Agilent.Analytical.Als.SamplingDiagram.AgGC6890AlsUI</Class>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly>AG68xx.Method.dll</Assembly>
+            <Class>Agilent.AG68xx.Method.RCPretreatmentEditor</Class>
+          </PretreatmentUI>
+          <GenericIF>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.RCGenericIF</Class>
+          </GenericIF>
+          <SoftConfigUI>
+            <Assembly>AgGC68XXWrapper.dll</Assembly>
+            <Class>Agilent.Analytical.GC68xx.RCWrapper.GC6890ConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>GC6890</NLSModuleName>
+	    <NLSVendorName>Agilent</NLSVendorName>
+    	<NLSFullModuleName>Agilent 6890 GC</NLSFullModuleName>
+        <ModuleType>eIntegratedGC</ModuleType>
+        <ModuleToken>GC</ModuleToken>
+        <ChromFileType>e181_GC6890A</ChromFileType>
+        <InjectorMapping>
+          <Injector ID="GC_FRONT">
+            <FixedInjectorPort>eFirstPort</FixedInjectorPort>
+          </Injector>
+          <Injector ID="GC_BACK">
+            <FixedInjectorPort>eSecondPort</FixedInjectorPort>
+          </Injector>
+        </InjectorMapping>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemGC68xxMethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodConverter.GC68xx.GC6890ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemGC68xxMethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodConverter.GC68xx.GC6890ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+        </MethodConversion>
+        <WantUploadSettingsSupport>true</WantUploadSettingsSupport>
+        <Customization>
+          <TrayUI ShowControlPanel="true" BackColor="White"/>
+          <MethodResolution ShowInconsistencyReport="false" CancelAction="eAcceptUnresolvedSettings"/>
+          <MethodUI ShowUploadMethodButton="true"/>
+          <Reporting WantReportHeader="false"/>
+		  <PretreatUI AllowImportExport="true" AllowPretreatAvoidance="true" AllowPrintPretreatment="true"/>
+        </Customization>
+      </Module>
+      <NLSInstrumentName>Agilent 6890 GC システム</NLSInstrumentName>
+      <AppFilter>
+        <GC>true</GC>
+        <InstTypeFilter>68GC</InstTypeFilter>
+      </AppFilter>
+    </Instrument>
+  </Instruments>
+  <MergeOrderID>1</MergeOrderID>
+</ModuleRegistration>

@@ -1,0 +1,1216 @@
+! EnuTnAcq.MAC:  Macro to support data acquisition from MSDTune View  **-Oct-96
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+! File:   EnuTnAcq.mac
+!
+! Macros:	MSTN_OpenFile			MSTN_SaveAcqCond
+!			MSTN_AcqOpenFile$		MSTN_ErrSaveAcq
+!			MSTN_ErrAcqOpenFile		MSTN_CloseAcq$
+!			MSTN_Acquire			MSTN_RepeatScan
+!			MSTN_RunAcq$			MSTN_ErrRepeatScan
+!			MSTN_DoAcqErr			MSTN_ScanLoop
+!			MSTN_DoScanWrite		MSTN_Clock$
+!			MSTN_WriteLastScan		MSTN_DoMSParm$
+!			MSTN_ErrWriteLastScan	MSTN_DoMSWrite
+!
+!		-- Dummy macros for users extenstion --
+!			MSTN_AcqUserInit		MSTN_AcqUserPreScan
+!			MSTN_AcqUserErr			MSTN_AcqUserPostScan
+!			MSTN_AcqUserErrMust		MSTN_AcqUserDone
+!
+! GLOBAL VARIABLES:
+!	_datapath$			MSTN_ACQINPROG
+!	_errmsg$			MSTN_StopScan
+!	FreeDiskLimit		SCANAUTO
+!	MSDATAFILES$		SCAN_NO_PEAKS
+!	MSDATAPATH$			SCANNUMON
+!	MSFILEINSTRUMNUM	SNAPSHOT
+!	MSFILENUM			TRUN_DURATION
+!	MSManCalCloseF		TRUN_NSCANS
+!	MSTOCLOSEF			MSManCalOpenF
+
+!=========================================================================
+NAME MSTN_OpenFile
+  parameter do_run DEFAULT 0
+!
+! GLOBALS:
+!   MSTN_ACQINPROG
+!
+! Wrapper around MSTN_AcqOpenFile$!
+!=========================================================================
+  local RetStr$, init_time$, run_time$
+    init_time$ = "0"
+    run_time$  = "0"
+    MSTN_ACQINPROG = 0
+    RetStr$ = MSTN_AcqOpenFile$(do_run,init_time$, run_time$)
+
+ENDMACRO !OpenFile
+
+!=========================================================================
+NAME MSTN_AcqOpenFile$
+  parameter do_run default 0, init_time$, run_time$
+!
+!Modifies several global variables:
+!  MSManCalOpenF       MSFILENUM
+!  MSManCalCloseF      SCANNUMON
+!  MSDATAFILES$        SNAPSHOT
+!
+!if file is opened, MSManCalOpenF is set to "insensitive" because we can 
+!only open one file at a time
+!
+! Pre-conditions:
+!  The global variable MSDataFile$ is assumed to be an empty string
+!  ready to be re-initialized.
+!
+! Known Problems:
+!  User interface strings are hard-coded.
+!  The global variable MSDataFile$ is over-written with _datafile1$,
+!   but MSDataPath$ may potentially be set to a path that does not
+!   contain this file/subdir.
+!=========================================================================
+  local init_time, run_time,RetStr$,title$,type,checkfile$,MsgStr$
+
+  SNAPSHOT = 0                  !* global used by the tune commands
+
+  !* default to _datapath$ and _datafile1$
+Local  ID_TUNEMAC_ACQUISITION_FI_487
+Local  ID_TUNEMAC_OPENING_OF_DAT_488
+Local  ID_TUNEMAC_THE_DATA_FILE_489
+
+ID_TUNEMAC_ACQUISITION_FI_487                      =  17487  
+ID_TUNEMAC_OPENING_OF_DAT_488                      =  17488  
+ID_TUNEMAC_THE_DATA_FILE_489                       =  17489  
+ID_TUNEMAC_OPENING_OF_DAT_488                      =  17488  
+  if ObjHdrType(_Config[1],"View_MSDC") = 4 then
+    if TabHdrType (_Config[1],"View_MSDC","MSDataFile") = 99 then
+      NewTabHdrText _Config[1], "View_MSDC", "MSDataFile",_datafile1$
+    endif
+    if TabHdrType (_Config[1],"View_MSDC","MSDataPath") = 99 then
+      NewTabHdrText _Config[1], "View_MSDC", "MSDataPath",_datapath$
+    endif
+    MSDataPath$ =  TabHdrText$(_Config[1],"View_MSDC","MSDataPath")
+    MSDataFile$ = TabHdrText$(_Config[1],"View_MSDC","MSDataFile")
+  else
+    MSDataFile$ = _datafile1$
+    MSDataPath$ = _datapath$
+  endif
+
+  !* no MsgStr$
+  MsgStr$ = ""
+
+  !* Put up the file selection box
+  title$ = ReadResource$("tunemac",ID_TUNEMAC_ACQUISITION_FI_487)
+  if SelectFile(4,title$,"*.D", MSDataPath$, MSDataFile$, type)=0 then
+    MsgStr$ = ReadResource$("tunemac",ID_TUNEMAC_OPENING_OF_DAT_488)
+    message MsgStr$
+    MSDataFile$ = ""
+  else
+    MSCreate MSDataPath$+MSDataFile$
+    SetTabHdrText _Config[1],"View_MSDC","MSDataPath",MSDataPath$
+    SetTabHdrText _Config[1],"View_MSDC","MSDataFile",MSDataFile$
+    if filestat(mode,MSDataPath$+MSDataFile$) <> 2 then
+      !* MSCreate failed.
+      MSDataFile$ = ""
+      generate error 1, ReadResource$("tunemac",ID_TUNEMAC_THE_DATA_FILE_489)
+      !* Drop through to return
+    else
+      on error mstn_ErrAcqOpenFile                    !* Set error trap
+      !* Set routine to call on abort
+      MSTN_AddAbortHandler "MSTN_ErrAcqOpenFile"
+      MSEditFileInfo do_run                      !* Prompt user for info
+      if _button=1  then
+        !* Continue open data acq file
+        if ScanNumOn <> 1 then
+          init_time = val(init_time$)            !* convert string param to value
+          RetStr$ = mstn_clock$(1, init_time)    !* resets run_time, init_time
+
+          !* Parse out the numbers
+          init_time$ = substring$(RetStr$,1,0)
+          run_time$ = substring$(RetStr$,2,0)
+
+          !* convert to numbers
+          init_time = val(init_time$)
+          run_time = val(run_time$)
+        endif
+
+        MSOpen MSDataPath$+MSDataFile$
+
+        MSManCalOpenF=0                          !* Unchecked, insensitive
+        if do_run = 0 then
+          MSManCalCloseF = 1                     !* Make close menu item checked, sensitive
+        endif
+      else
+        !* User cancelled file open
+        MsgStr$ = ReadResource$("tunemac",ID_TUNEMAC_OPENING_OF_DAT_488)
+        message MsgStr$
+      endif
+      on error                                 !* Clear the error trap
+      !* Clear the abort handler
+      MSTN_RemoveAbortHandler "MSTN_ErrAcqOpenFile"
+    endif
+  endif
+  mstn_ChangeTitle
+  RetStr$ = init_time$+"|"+run_time$+"|"""+MsgStr$+""""
+  return RetStr$
+
+ENDMACRO !MSTN_AcqOpenFile$
+
+!=========================================================================
+NAME MSTN_ErrAcqOpenFile
+
+!Globals used:
+!  MSDATAFILE$
+!  MSManCalOpenF
+!  MCTOCLOSEF
+! _errmsg$
+!=========================================================================
+  local _button, cause$
+Local  ID_TUNEMAC_USER_ABORTED_O_490
+Local  ID_TUNEMAC_FILE_NOT_OPENE_491
+ID_TUNEMAC_USER_ABORTED_O_490                      =  17490  
+ID_TUNEMAC_FILE_NOT_OPENE_491                      =  17491  
+    on error print
+!    _abort$ =""                !* Reset the abort routine
+    MSTN_RemoveAbortHandler "MSTN_ErrAcqOpenFile"
+    if _error = 0
+      cause$ = ReadResource$("tunemac",ID_TUNEMAC_USER_ABORTED_O_490)
+    else
+      cause$=_errmsg$
+    endif
+
+    MSDataFile$=""
+    MSManCalOpenF  = 1          !* make "open file" menu available
+    MSManCalCloseF = 0          !* make "close file" menu not available
+    _button = alert (ReadResource$("tunemac",ID_TUNEMAC_FILE_NOT_OPENE_491) +cause$, 3)
+    stop                           ! stop parent macro
+
+ENDMACRO     !MSTN_ErrAcqOpenFile
+
+!=========================================================================
+NAME MSTN_SaveAcqCond
+  parameter path$ default MSDataPath$+MSDataFile$
+!
+! Saves the instrument parameters to msparms.tmp of the data directory.
+! If successful, copy to msparms.txt and delete msparms.tmp.
+!
+! Global variables:
+! MSDATAPATH$
+! MSDATAFILE$
+! MSFILEINSTRUMNUM
+!
+! Pre-conditions:
+!  The tune commands DLL must be loaded, and the system must be
+!  able to talk to the instrument.
+!  Global variables MSDataPath$, MSDataFile$, and MSFileInstrumNum must
+!  be predefined.
+!
+! Post-conditions:
+! Known problems:
+!   The routine does not check the validity of the MSDataPath$ and MSDataFile$
+!   before trying to write to it.
+!   The user interface strings are hard-coded.
+!   The format of the data has not been thoroughly checked.
+!
+! history
+! 24 jul 96  Changed ES_API to API_ES
+!=========================================================================
+  local value, name$, type$, value$, ion_src$, ion_mode$
+  local polarity, mstn_polarity$, tmp
+
+    !* Initialize name of temporary file
+Local  ID_TUNEMAC_FILE_492
+Local  ID_TUNEMAC_OPERATOR_493
+Local  ID_TUNEMAC_DATE_ACQUIRED_494
+Local  ID_TUNEMAC_INSTRUMENT_495
+Local  ID_TUNEMAC_SAMPLE_INFORMA_496
+Local  ID_TUNEMAC_SAMPLE_NAME_497
+Local  ID_TUNEMAC_MISC_INFO_498
+Local  ID_TUNEMAC_INSTALLED_SOUR_499
+Local  ID_TUNEMAC_IONIZATION_MOD_500
+Local  ID_TUNEMAC_POLARITY_501
+Local  ID_TUNEMAC_SCAN_RANGE_502
+Local  ID_TUNEMAC__TO________AMU_503
+Local  ID_TUNEMAC_SCAN_TYPE_504
+Local  ID_TUNEMAC_FILTER_505
+Local  ID_TUNEMAC_FILTER_506
+Local  ID_TUNEMAC_SAMPLES_507
+Local  ID_TUNEMAC_AVERAGES_508
+Local  ID_TUNEMAC_STEPSIZE_509
+Local  ID_TUNEMAC_FRAGMENT_510
+Local  ID_TUNEMAC_SKIM1_511
+Local  ID_TUNEMAC_LENS2DC_512
+Local  ID_TUNEMAC_FRAGMENTOR_513
+
+Local  ID_TUNEMAC_SKIM2_514
+Local  ID_TUNEMAC_LENS2_515
+Local  ID_TUNEMAC_LENS1_516
+Local  ID_TUNEMAC_IRIS_517
+Local  ID_TUNEMAC_GAIN_518
+Local  ID_TUNEMAC_WIDTH_GAIN_519
+Local  ID_TUNEMAC_WIDTH_OFFSET_520
+Local  ID_TUNEMAC_MASS_GAIN_521
+Local  ID_TUNEMAC_MASS_OFFS_522
+Local  ID_TUNEMAC_ENERGY_523
+Local  ID_TUNEMAC_OPOLPEAK_524
+Local  ID_TUNEMAC_OPOLKNEE_525
+Local  ID_TUNEMAC_QUAD_DC_526
+Local  ID_TUNEMAC_DRYING_GAS_FLO_527
+Local  ID_TUNEMAC_DRYING_GAS_TEM_528
+Local  ID_TUNEMAC_VAPORIZER_TEMP_529
+Local  ID_TUNEMAC_NEBULIZING_GAS_530
+Local  ID_TUNEMAC_CAPILLARY_CURR_531
+Local  ID_TUNEMAC_CHAMBER_CURREN_532
+Local  ID_TUNEMAC_QUAD_TEMP_533
+Local  ID_TUNEMAC_CORONA_CURRENT_534
+Local  ID_TUNEMAC_VCAP_535
+ID_TUNEMAC_FILE_492                                =  17492  
+ID_TUNEMAC_OPERATOR_493                            =  17493  
+ID_TUNEMAC_DATE_ACQUIRED_494                       =  17494  
+ID_TUNEMAC_INSTRUMENT_495                          =  17495  
+ID_TUNEMAC_SAMPLE_INFORMA_496                      =  17496  
+ID_TUNEMAC_SAMPLE_NAME_497                         =  17497  
+ID_TUNEMAC_MISC_INFO_498                           =  17498  
+ID_TUNEMAC_INSTALLED_SOUR_499                      =  17499  
+ID_TUNEMAC_IONIZATION_MOD_500                      =  17500  
+ID_TUNEMAC_POLARITY_501                            =  17501  
+ID_TUNEMAC_SCAN_RANGE_502                          =  17502  
+ID_TUNEMAC__TO________AMU_503                      =  17503  
+ID_TUNEMAC_SCAN_TYPE_504                           =  17504  
+ID_TUNEMAC_FILTER_505                              =  17505  
+ID_TUNEMAC_FILTER_506                              =  17506  
+ID_TUNEMAC_SAMPLES_507                             =  17507  
+ID_TUNEMAC_AVERAGES_508                            =  17508  
+ID_TUNEMAC_STEPSIZE_509                            =  17509  
+ID_TUNEMAC_FRAGMENT_510                            =  17510  
+ID_TUNEMAC_SKIM1_511                               =  17511  
+ID_TUNEMAC_LENS2DC_512                             =  17512  
+ID_TUNEMAC_FRAGMENTOR_513                          =  17513  
+ID_TUNEMAC_FRAGMENT_510                            =  17510  
+ID_TUNEMAC_SKIM2_514                               =  17514  
+ID_TUNEMAC_LENS2_515                               =  17515  
+ID_TUNEMAC_LENS1_516                               =  17516  
+ID_TUNEMAC_IRIS_517                                =  17517  
+ID_TUNEMAC_GAIN_518                                =  17518  
+ID_TUNEMAC_WIDTH_GAIN_519                          =  17519  
+ID_TUNEMAC_WIDTH_OFFSET_520                        =  17520  
+ID_TUNEMAC_MASS_GAIN_521                           =  17521  
+ID_TUNEMAC_MASS_OFFS_522                           =  17522  
+ID_TUNEMAC_ENERGY_523                              =  17523  
+ID_TUNEMAC_OPOLPEAK_524                            =  17524  
+ID_TUNEMAC_OPOLKNEE_525                            =  17525  
+ID_TUNEMAC_QUAD_DC_526                             =  17526  
+ID_TUNEMAC_DRYING_GAS_FLO_527                      =  17527  
+ID_TUNEMAC_DRYING_GAS_TEM_528                      =  17528  
+ID_TUNEMAC_VAPORIZER_TEMP_529                      =  17529  
+ID_TUNEMAC_NEBULIZING_GAS_530                      =  17530  
+ID_TUNEMAC_CAPILLARY_CURR_531                      =  17531  
+ID_TUNEMAC_CHAMBER_CURREN_532                      =  17532  
+ID_TUNEMAC_QUAD_TEMP_533                           =  17533  
+ID_TUNEMAC_CORONA_CURRENT_534                      =  17534  
+ID_TUNEMAC_VCAP_535                                =  17535  
+    name$ = path$+"\msparms.tmp"
+
+    ion_src$ = MSGetIonSrc$()
+    MSGetMode ion_mode$
+    open name$ for output as #MSFILEINSTRNUM
+    on error MSTN_ErrSaveAcq name$
+
+    MSTN_AddAbortHandler  "MSTN_ErrSaveAcq "+ """ + name$ + """
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_FILE_492),msdatafile$
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_OPERATOR_493),_TNOPERATOR$  !Entered from tune file
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_DATE_ACQUIRED_494),time$()
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_INSTRUMENT_495),_INSTname$
+    print using #MSFILEINSTRNUM," /"
+    print using #MSFILEINSTRNUM," /"
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_SAMPLE_INFORMA_496)
+    print using #MSFILEINSTRNUM,"----------------------------------/"
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_SAMPLE_NAME_497),_TNDATAname$
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_MISC_INFO_498),_TNMISCINFO$
+    print using #MSFILEINSTRNUM," /"
+    print using #MSFILEINSTRNUM," /"
+    print using #msfileinstrnum,"MS parameters/"
+    print using #msfileinstrnum,"----------------------------------/"
+    !**
+    MSParm ionpolarity, polarity
+    if polarity = 0 then
+      MSTN_Polarity$ = "POS - std scan"       !* positive - Standard scan mode
+    endif
+    if polarity = 1 then
+         MSTN_Polarity$ = "NEG - std scan"    !* negative - Standard scan mode
+    endif
+    if polarity = 2 then
+      MSTN_Polarity$ = "FASTPOS - fast scan"       !* positive - Fast scan mode
+    endif
+    if polarity = 3 then
+         MSTN_Polarity$ = "FASTNEG - fast scan"    !* negative - Fast scan mode
+    endif
+
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_INSTALLED_SOUR_499),ion_src$
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_IONIZATION_MOD_500),ion_mode$
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_POLARITY_501),mstn_polarity$
+
+    MSscanparm lowmass,value
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_SCAN_RANGE_502),value
+    MSscanparm himass,value
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC__TO________AMU_503),value
+
+    !* Get scan type
+    MSscanparm scantype,value
+    if value = 0 then
+         type$ = "condensed data"
+    else
+         if value = 1 then
+              type$ = "full data"
+         else
+              type$ = "unknown"
+         endif
+    endif
+
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_SCAN_TYPE_504),type$
+
+    MSFilterMass value$,,value                     ! get MS data filter type
+
+    if instr("std",value$) = 0 then
+         print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_FILTER_505),value$,value
+    else
+         print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_FILTER_506),value$
+    endif
+    MSSamples value
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_SAMPLES_507),value
+    MSAverages value
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_AVERAGES_508),value
+    MSScanparm stepsize,value
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_STEPSIZE_509),value
+
+    print using #MSFILEINSTRNUM," /"
+
+    if (MSD_SL = 1) or (MSD_HT = 1) then                     ! SL model - Skim1 not linked to fragmentor
+      ! Use "Fragmentor" if MS parameters are linked,
+      ! and "Fragment" if MS parameters are unlinked.
+      ! Requesting the value of skim1 will raise an error if linked.
+      value$ = mstn_DoMSParm$ ("Fragment", "%6.d",0)
+      print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_FRAGMENT_510),value$
+      value$ = mstn_DoMSParm$("Skim1", "%6.d",1)
+      print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_SKIM1_511),value$
+      value$ = mstn_DoMSParm$("Lens2DC", "%6.d",1)
+      print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_LENS2DC_512),value$
+    else                                   ! All other models - Skim1 is linked to fragmentor
+      ON ERROR GOTO MSTN_SaveAcqCondLinked
+      MSParm Skim1, tmp
+      GOTO MSTN_SaveAcqCondUnlinked
+MSTN_SaveAcqCondLinked:
+      value$ = mstn_DoMSParm$ ("Fragmentor", "%6.d",0)
+      print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_FRAGMENTOR_513),value$
+      GOTO MSTN_SaveAcqCondFragDone
+MSTN_SaveAcqCondUnlinked:
+      value$ = mstn_DoMSParm$ ("Fragment", "%6.d",0)
+      print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_FRAGMENT_510),value$
+MSTN_SaveAcqCondFragDone:
+      ON ERROR
+      value$ = mstn_DoMSParm$("Skim2", "%6.1f",1)
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_SKIM2_514),value$
+      value$ = mstn_DoMSParm$("Lens2", "%6.d",1)
+      print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_LENS2_515),value$
+    endif
+    value$ = mstn_DoMSParm$("Lens1", "%6.1f",1)
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_LENS1_516),value$
+    msparm iris,value
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_IRIS_517),value
+    msparm gain,value
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_GAIN_518),value
+    msparm widthgain,value
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_WIDTH_GAIN_519),value
+!*  Use mstn_DoMsParm with Width Offset because this lens is rampable
+    value$ = mstn_DoMSParm$("widthoffset", "%6.2d",1)
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_WIDTH_OFFSET_520),value$
+!*  Use mstn_DoMsParm with mass gain because this lens is rampable
+    value$ = mstn_DoMSParm$("massgain", "%6.2d",1)
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_MASS_GAIN_521),value$
+!*  Use mstn_DoMsParm with mass offset because this lens is rampable
+    value$ = mstn_DoMSParm$("massoffset", "%6.2d",1)
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_MASS_OFFS_522),value$
+    value$ = mstn_DoMSParm$("IonEnergy", "%6.1d",1)
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_ENERGY_523),value$
+    msparm OpolPeak,value
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_OPOLPEAK_524),value
+	if MSD_46 = 1 then              ! Only G1946 MSD's have OpolKnee
+      msparm OpolKnee,value
+      print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_OPOLKNEE_525),value
+	endif
+!*  Use mstn_DoMsParm with Width Offset because this lens is rampable
+    value$ = mstn_DoMSParm$("QuadDC", "%6.2f",1)
+    print using #msfileinstrnum,ReadResource$("tunemac",ID_TUNEMAC_QUAD_DC_526),value$
+    print using #MSFILEINSTRNUM," /"
+    print using #MSFILEINSTRNUM," /"
+    print using #MSFILEINSTRNUM,"SPRAY CHAMBER PARAMETERS/"
+    print using #MSFILEINSTRNUM,"----------------------------------/"
+    !* Zones
+    MSzone DRYINGGAS,value
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_FLO_527),value
+    MSzone GASTEMP,value
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_DRYING_GAS_TEM_528),value
+    if (ion_src$= "APCI") or (ion_src$= "APPI") or (ion_src$= "MM-ES+APCI") then
+         !* Access to vapor allowed only in apci or appi, or multimode sources:
+         MSzone VAPOR,value
+         print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_VAPORIZER_TEMP_529),value
+    endif
+    MSzone NEB_PRES,value
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_NEBULIZING_GAS_530),value
+    MSzone CAPCUR,value
+    PRINT USING #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_CAPILLARY_CURR_531),value
+    MSzone CHAMCUR,value
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_CHAMBER_CURREN_532),value
+    MSzone QUAD,value
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_QUAD_TEMP_533),value
+    !* msparms
+    if (ion_src$= "APCI") or (ion_src$= "MM-ES+APCI") then
+         value$ = MSTN_DoMSParm$ ("Corona", "%6.2f",1)
+         print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_CORONA_CURRENT_534),value$
+    endif
+    value$ = MSTN_DoMSParm$ ("VCap", "%6.0d",0)
+    print using #MSFILEINSTRNUM,ReadResource$("tunemac",ID_TUNEMAC_VCAP_535),value$
+
+
+    on error                              !* Reset the error trap
+    MSTN_RemoveAbortHandler   "MSTN_PrintAbort"
+    MSTN_RemoveAbortHandler   "MSTN_ErrSaveAcq"
+    close #MSFILEINSTRNUM
+    copy name$, path$+"\MSPARMS.txt", DONTASK
+    delete name$, DONTASK
+
+ENDMACRO !MSTN_SaveAcqCond
+
+!=========================================================================
+NAME MSTN_ErrSaveAcq
+  parameter name$ default MSDataPath$+MSDataFile$+"\msparms.tmp"
+!
+! Pre-conditions:
+!   The file #MSFILEINSTRUM must be open
+! Post-conditions:
+!   The file #MSFILEINSTRUM will be closed
+!
+! Known problems:
+!   User interface strings are hard-coded.
+!
+!=========================================================================
+  local _button
+    on error print                   !* Reset the error trap
+Local  ID_TUNEMAC_PARAM_FILE_NOT_536
+ID_TUNEMAC_PARAM_FILE_NOT_536                      =  17536  
+    MSTN_RemoveAbortHandler "MSTN_ErrSaveAcq"
+    close #MSFILEINSTRNUM
+    delete name$, DONTASK
+    _button = alert (ReadResource$("tunemac",ID_TUNEMAC_PARAM_FILE_NOT_536) +_errmsg$, 3)
+    MSManCalOpenF  = 1       !* enable open file menu item
+    MSManCalCloseF = 0       !* disable close file menu item
+    stop
+
+ENDMACRO !MSTN_ErrSaveAcq
+
+!=========================================================================
+NAME MSTN_CloseAcq$
+  parameter file$
+!
+! Globals:
+! MSDATAPATH$
+! MSDATAFILE$
+! mstn_ACQINPROG
+! MSManCalOpenF
+! MSManCalCloseF
+!
+! Pre-conditions:
+!  Tune commands DLL must be loaded, and system must be able to talk to MSD.
+!
+! Known problems:
+!  This routine does not use the parameter file$ in a meaningful way.
+!  Comment contains name of source file.
+!=========================================================================
+  local isAPI
+    msclose                     !* Stop acquiring data
+    MSTN_ACQINPROG = 0
+    isAPI= MSTN_ChkIonAP()      !* Check if ES
+    if isAPI=1 and len(MSDataFile$) > 0 then
+         !* An empty string in MSDataFile$ means that no data file is open
+         !* for acquisition.
+         !* Save to tune data path.
+         MSTN_SaveAcqCond MSDATAPATH$+MSDATAFILE$
+    endif
+    MSManCalOpenF  = 1       !* enable open file menu item
+    MSManCalCloseF = 0       !* disable close file menu item
+
+    return file$             !* Reset MSDataFile$ to empty string
+                             !* to indicate that no file is open
+                             !* for writing or acquiring data.
+
+ENDMACRO !MSTN_CloseAcq$
+
+!=========================================================================
+NAME MSTN_Acquire
+  parameter InitTimeStr$, RunTimeStr$
+!
+!Globals used:
+!  MSTN_ACQINPROG
+!  MSManCalOpenF
+!  SCANAUTO - to tell MSScan to keep graphics on screen (and skip MSOn?)
+!=========================================================================
+  local init_time, run_time, AcqOpenStatus$
+
+Local  ID_TUNEMAC_FINISHED_SCANN_537
+ID_TUNEMAC_FINISHED_SCANN_537                      =  17537  
+    RunTimeStr$ = MSTN_AcqOpenFile$(1,InitTimeStr$, RunTimeStr$)
+
+    !* Parse out any cancel status messages
+    AcqOpenStatus$ = SubString$(RunTimeStr$,3,1)
+    !* Parse out the modified init time and run time
+    InitTimeStr$   = SubString$(RunTimeStr$,1,0)
+    RunTimeStr$    = SubString$(RunTimeStr$,2,0)
+
+
+    !* convert strings to values
+    init_time = val(InitTimeStr$)
+    run_time = val(RunTimeStr$)
+
+    ON ERROR MSTN_DoAcqErr           !* Set error trap
+
+    if check(variable, mstn_viewWinNum) = 1 then
+    !* Call should return window number
+      MSTN_AddAbortHandler "MSTN_DoAcqErr """ + TabText$(_config[1],"Window",mstn_viewWinNum,"WinTitle") +""""
+    else
+      MSTN_AddAbortHandler "MSTN_DoAcqErr ""MSD Tune"""
+    endif
+
+    AcqUserInit                      !* dummy macro
+
+    if MSManCalOpenF = 0 then        !* MSManCalOpenF = 0 when an acquisition file is open
+         MSTN_ACQINPROG = 1          !* indicate continuous acq.
+
+          SCANAUTO = 0               !* Tell MSScan not to call MSOn
+
+         RunTimeStr$ = mstn_RunAcq$(init_time, run_time)
+
+         !* Parse out the modified init time and run time
+         InitTimeStr$ = SubString$(RunTimeStr$,1,0)
+         RunTimeStr$  = SubString$(RunTimeStr$,2,0)
+
+         !* convert strings to values
+         init_time = val(InitTimeStr$)
+         run_time = val(RunTimeStr$)
+
+         SCANAUTO = 1                !* Tell MSScan to wipe graphics
+
+         !* MSDataFile$ will be set to an empty string.  Will reset MSManCalOpenF to 1
+         MSDataFile$ = mstn_CloseAcq$ (MSDATAPATH$+MSDATAFILE$)
+
+         AcqUserDone                 !* dummy macro
+    endif
+
+    MSTN_RemoveAbortHandler "MSTN_doAcqErr"
+    if len(AcqOpenStatus$) = 0 then
+         print ReadResource$("tunemac",ID_TUNEMAC_FINISHED_SCANN_537)
+    else
+         print AcqOpenStatus$
+    endif
+
+ENDMACRO !MSTN_Acquire
+
+!=========================================================================
+name MSTN_RunAcq$
+  parameter init_time, run_time
+!
+! Globals:
+! SCAN_NO_PEAKS
+! SCANNUMON      : assumed set by MSEditFileInfo
+! TRUN_DURATION  : assumed set by MSEditFileInfo
+! TRUN_NSCANS    : assumed set by MSEditFileInfo
+! MSDataPath$
+! MSDataFile$
+! _datapath$
+! FreeDiskLimit  : Used by sequence and method as part  of data acq
+!
+! Pre-conditions:
+!   TRUN_DURATION is defined by MSEditFileInfo when
+!    ScanNumOn = 0 and set to the number of minutes
+!    a run should last
+!   TRUNNSCANS is defined by MSEditFileInfo when
+!    ScanNumOn = 1 and set to the number of scans
+!   Assumes that it can acquire into MSDataFile$, which is
+!    assumed to be a non-empty string.
+!   Assumes the abort handling routine mstn_DoAcqErr is already added to _abort$
+!
+! Known Problems:
+!   Assumes that first character of _datapath$ is the drive letter.
+!   This is not true for network drives.
+!   User interface strings are hard-coded.
+!   The code is slightly different than the original to
+!   reduce one if comparison of ScanNumOn.  It should be functionally
+!   the same unless something in the first while loop changed
+!   the value of ScanNumOn in the original.  I don't anticipate this.
+!
+!=========================================================================
+  local current_scan, a, clockRet$
+  local RunAcqRet$, ok
+  local OldTuneWinTitle$, newTuneWinTitle$, run_status$
+
+  !* Save name of tune window because we'll use the title for status
+Local  ID_TUNEMAC_FREE_DISKSPACE_538
+Local  ID_TUNEMAC__MB_539
+Local  ID_TUNEMAC_ACQUIRE_DATA_540
+Local  ID_TUNEMAC_DATA_ACQUISITI_541
+Local  ID_TUNEMAC____RUN_TIME_542
+ID_TUNEMAC_FREE_DISKSPACE_538                      =  17538  
+ID_TUNEMAC__MB_539                                 =  17539  
+ID_TUNEMAC_ACQUIRE_DATA_540                        =  17540  
+ID_TUNEMAC_DATA_ACQUISITI_541                      =  17541  
+ID_TUNEMAC____RUN_TIME_542                         =  17542  
+  if Check(variable, mstn_viewWinNum) = 1 then
+    OldTuneWinTitle$ = TABTEXT$( _config[1],"window",mstn_viewWinNum,"wintitle")
+  else
+    OldTuneWinTitle$ = "MSD Tune"
+    mstn_viewWinNum = abs(WIN_InstallNewAddonWindows("MSDTune",1))
+  endif
+
+  RunAcqRet$ = ""
+  !* check free diskspace, if less than FreeDiskLimit inform user
+  if Check (Variable, FreeDiskLimit) = 0
+       FreeDiskLimit = 5000000   ! set to default value
+  endif
+
+  if FreeDiskSpace (_datapath$) < FreeDiskLimit
+       ok = alert (ReadResource$("tunemac",ID_TUNEMAC_FREE_DISKSPACE_538)\
+                   + val$(FreeDiskLimit/1000000) + ReadResource$("tunemac",ID_TUNEMAC__MB_539)\
+                   + chr$(13) + chr$(10) + chr$(10) + \
+                   ReadResource$("tunemac",ID_TUNEMAC_ACQUIRE_DATA_540), 4)
+       if ok = 0 then
+            print ReadResource$("tunemac",ID_TUNEMAC_DATA_ACQUISITI_541)
+            return   RunAcqRet$
+       endif
+  endif
+
+  on error mstn_DoAcqErr OldTuneWinTitle$   !* Set the error handler
+                                            !* The abort handler is assumed set by caller
+  SCANAUTO = 0                              !* keep scan on screen
+
+  !* ScanNumOn is a global variable set by MSEditFileInfo
+  !* Assume that the value of ScanNumOn does not change in this routine
+  if ScanNumOn=0 then                    !* acquire data by time in seconds
+       MSOn                                 !* turn MSD on
+       MSSCWrite ":MSC:FLT:RVR ON"          !* turn on fault recovery
+
+       while run_time<TRun_Duration do
+            !* Since ScanNumOn = 0, TRun_Duration should be defined.
+            !* Loop until complete run time in TRun_Duration minutes
+            AcqUserPreScan                     !* dummy macro
+            SCAN_NO_PEAKS = 0                  !* initialize scan return variable
+            MSScan ,,,,0                       !* Obtain and display mass spectrum
+                                              !* Don't clear screen between scans
+
+            !* set run_time, using init_time as an offset; do not reset clock
+            clockRet$ = mstn_clock$ (0, init_time)
+            init_time = val(substring$(clockRet$,1,0)) !* Parse out the values
+            run_time =  val(substring$(clockRet$,2,0))
+
+            if (SCAN_NO_PEAKS=0) then
+                 MSTN_DoMSWrite MSDataPath$+MSDataFile$  !* successful scan; macro
+                 AcqUserPostScan                         !* dummy macro
+
+                 run_status$ = ReadResource$("tunemac",ID_TUNEMAC____RUN_TIME_542)+sprintf$(run_time,"%2.2f") + " min., time remaining: "+ \
+                 sprintf$(TRun_Duration-run_time, "%2.2f") + " min."
+            else
+                 !* no peaks were scanned.
+                 run_status$ = "   Scan: no peaks, time remaining: "+ \
+                 sprintf$(TRun_Duration-run_time,"%2.2f") + " min."
+            endif
+
+            !* Put status in title of tune window
+            newTuneWinTitle$ = OldTuneWinTitle$ + "  " + run_status$
+            SetWinTitle  mstn_viewWinNum, newTuneWinTitle$
+       endwhile
+  else
+       if (ScanNumOn=1) then                  !* acquire data by number of scans
+            current_scan=0                       !* initialize scan count
+            MSOn                                 !* turn on the MSD
+            MSSCWrite ":MSC:FLT:RVR ON"          !* turn on fault recovery
+            while current_scan<TRun_NScans do
+                 !* Since ScanNumOn = 1, TRun_NScans should be defined.
+                 !* Loop until complete TRun__NScans number of scans
+
+                 AcqUserPreScan                     !* dummy macro
+                 SCAN_NO_PEAKS=0                    !* initialize scan return variable
+                 MSScan ,,,,0                       !* Obtain and display mass spectrum
+                                           !* Don't clear screens between scans
+
+                 if (SCAN_NO_PEAKS=0) then
+                      MSTN_DoMSWrite MSDataPath$+MSDataFile$  !* successful scan
+                      AcqUserPostScan                         !* dummy macro
+                      current_scan = current_scan+1
+                      a = FreeDiskSpace(_datapath$[1:1])      !* get disk free space
+                      run_status$ = "Current scan : "+val$(current_scan)+", scans remaining: "+val$(TRun_NScans-current_scan)
+                 else
+                     !* no peaks were scanned
+                     a = FreeDiskSpace(_datapath$[1:1])      !* get disk free space
+                     run_status$ = "Scan: no peaks, scans remaining: "+val$(TRun_NScans-current_scan)
+                 endif
+
+                 !* Put run_status in title of tune window
+                 newTuneWinTitle$ = OldTuneWinTitle$ + "  " + run_status$
+                 SetWinTitle  mstn_viewWinNum, newTuneWinTitle$
+            endwhile
+       else
+            !* ScanNumOn was not 0 or 1
+            generate error 1, "Unknown scan type : ScanNumOn = "+val$(ScanNumOn)
+       endif
+  endif
+
+  SetWinTitle  mstn_viewWinNum, OldTuneWinTitle$                !* Put back original window title
+
+  !* if ScanNumOn = 0, then init_time and run_time may have changed
+  !* otherwise, they will be the same values passed in.
+  RunAcqRet$ = val$(init_time)+"|"+val$(run_time)
+  return   RunAcqRet$
+
+ENDMACRO !MSTN_RunAcq$
+
+!=========================================================================
+NAME MSTN_DoAcqErr
+  parameter WinTitle$ default "MSD Tune"
+!
+! Error trap for data acquisition during tune
+! Global variables:
+!  MSDataFile$
+!  MSDataPath$
+!  SCANAUTO
+!
+!  Pre-conditions:
+!    Globals for errors must exist.
+!
+!  Post-conditions:
+!    Set SCANAUTO to 1 and closes MSDATAPATH$+MSDATAFILE$
+!
+!  Known problems:
+!   User interface strings are hard-coded.
+!=========================================================================
+  local _button, cause$
+  on error print           !* reset error trap
+Local  ID_TUNEMAC_ACQUISITION_ST_545
+ID_TUNEMAC_ACQUISITION_ST_545                      =  17545  
+  if check(variable, mstn_ViewWinNum) = 1 then
+    SetWinTitle  mstn_ViewWinNum,WinTitle$
+  endif
+
+  SCANAUTO = 1           !* Tell MSScan not to keep graphics on screen
+  if _error = 0
+       cause$ = "User aborted operation."
+  else
+       cause$=_errmsg$
+  endif
+
+  MSTN_RemoveAbortHandler "MSTN_DoAcqErr"
+
+  AcqUserErrMust           !* dummy macro
+
+  !* Makes MSDataFile$ into an empty string to indicate
+  !* that no file is open for data acquisition.
+  MSDataFile$=""
+  MSDataFile$ = mstn_CloseAcq$ (MSDATAPATH$+MSDATAFILE$)
+  AcqUserErr               !* dummy macro
+  _button = alert (ReadResource$("tunemac",ID_TUNEMAC_ACQUISITION_ST_545) +cause$, 3)
+  stop                     !* Stop parent macro
+
+ENDMACRO !MSTN_DoAcqErr
+
+!=========================================================================
+NAME MSTN_RepeatScan
+!=========================================================================
+  local HelpIndex, title$
+
+Local  ID_TUNEMAC_PRESS_STOP_TO_546
+Local  ID_TUNEMAC__HELP_283
+Local  ID_TUNEMAC_TRYING_TO_TERM_547
+ID_TUNEMAC_PRESS_STOP_TO_546                       =  17546  
+ID_TUNEMAC__HELP_283                               =  17283  
+ID_TUNEMAC_TRYING_TO_TERM_547                      =  17547  
+   if DialogExists("DlgScan")<>0 then
+        !* Need new dialog box to show new values
+        RemoveDialog "DlgScan"
+   endif
+
+   !===== Create Dialog Box ======
+   mstn_ScanState$ = "Scan in progress."
+   title$ = "Repeat Scan"                   !*The title must match the menu item
+   HelpIndex = HelpSubSystemTopic("msd") + 9091
+
+   BeginDialog "DlgScan", 6, 40, 220, 120,title$
+        ! Standard button was dx 32, dy 16
+        ! Standard button is dx 50, dy 14
+        StaticText  10,10,200,24, mstn_ScanState$
+        StaticText  10,30,200,24, ReadResource$("tunemac",ID_TUNEMAC_PRESS_STOP_TO_546)
+        PushButton 10, 100, 50, 14, "Stop",4
+        ExecPushButton 68, 100, 50, 14, ReadResource$("tunemac",ID_TUNEMAC__HELP_283),CP2,"Help " + sprintf$(HelpIndex,"%f")
+   EndDialog
+
+
+   MSTN_StopScan = 0                         !* Declare a new CP variable
+   MSTN_CPSafeStart CPScan
+
+   on error mstn_ErrRepeatScan
+
+   repeat
+     _button = ShowDialog("DlgScan")
+     !Currently, help button is not visible. Check line:759 under CodeW...
+     if _button = 4
+         MSTN_StopScan = 1
+         sleep 1             !* Sleep long enough to ensure CP has
+                            !* stopped before we try to terminate it
+     endif
+   until MSTN_StopScan <> 0
+
+   MSTN_CPSafeTerminate CPScan
+!* while CPScan is still defined
+   while mstn_CPStillActive() > 0
+     message ReadResource$("tunemac",ID_TUNEMAC_TRYING_TO_TERM_547)
+   endwhile
+
+   RemoveDialog "DlgScan"
+   return
+
+ENDMACRO !MSTN_RepeatScan
+
+!============================================
+NAME MSTN_CPStillActive
+  parameter name$
+!============================================
+  local i, tmpname$, done
+
+   i = 1
+   tmpname$ = CPName$(i)
+   while done = 0 AND len(tmpname$) > 0  do
+        if ConvertText$(upper,tmpname$) = ConvertText$(upper,name$) then
+             done = 1
+        else
+             i = i + 1
+             tmpname$ = CPName$(i)
+        endif
+   endwhile
+   if len(tmpname$) = 0 then
+      return 0
+   endif
+   return len(CPName$(i))
+
+ENDMACRO  !MSTN_CPStillActive
+
+!=========================================================================
+NAME MSTN_ErrRepeatScan
+!=========================================================================
+on error print
+  if Check(Variable, MSTN_StopScan) = 1 then
+       !* Stop the repeat loop
+       MSTN_StopScan = 2
+       sleep 4
+       MSTN_CPSafeTerminate CPScan
+  endif
+
+  if DialogExists("DlgScan")<>0 then
+       !* Need new dialog box to show new values
+       RemoveDialog "DlgScan"
+  endif
+
+ENDMACRO !MSTN_ErrRepeatScan
+
+!=========================================================================
+NAME MSTN_ScanLoopErr
+!=========================================================================
+on error print
+  mstn_StopScan = 2
+  mstn_ScanState$ = _errmsg$
+  stop
+ENDMACRO
+
+!=========================================================================
+NAME MSTN_ScanLoop
+!
+! Uses global variabe MSTN_StopScan  0 = keep scanning
+!                                    1 = stop scanning
+!                                    2 = terminate CPScan
+!
+! This macro is designed to run in the background.
+! It expects mstn_StopScan to exist, and will prompt the user
+! for a fixed number of loops if mstn_StopScan does not exist.
+!=========================================================================
+  local i, _button
+Local  ID_TUNEMAC_ENTER_THE_NUMB_548
+ID_TUNEMAC_ENTER_THE_NUMB_548                      =  17548  
+  if Check(variable, mstn_StopScan) = 1 then
+       ON ERROR MSTN_ScanLoopErr
+       i = 0
+       mstn_ScanState$ = "Starting Scan..."
+       while mstn_StopScan = 0
+            MSScan ,,,,0
+            sleep 1
+            mstn_ScanState$ = "Completing scan " + val$(i)
+            i = i + 1
+       endwhile
+       mstn_StopScan = 2
+  else
+       local nScans
+       _button = Input( ReadResource$("tunemac",ID_TUNEMAC_ENTER_THE_NUMB_548), nScans )
+       if _button = 1 then
+            for i = 1 to nScans
+               MSScan ,,,,0
+            next i
+       endif
+  endif
+
+ENDMACRO !MSTN_ScanLoop
+
+!=========================================================================
+NAME MSTN_DoScanWrite
+!
+! Combine a scan and the write
+!
+! Global variables:
+! MSDataFile$
+!
+! Pre-conditions:
+!  The Tune commands DLL is assumed loaded, and the system must be
+!   able to talk to the MSD.
+!  MSDataFile$ is assumed to exist.
+!=========================================================================
+  MSScan
+  MSTN_DoMSWrite MSDataFile$
+  return
+
+ENDMACRO !MSTN_DoScanWrite
+
+!=========================================================================
+NAME MSTN_WriteLastScan
+! Opens a user specified data file, writes the last scan into it
+! and closes the file
+!=========================================================================
+!* Open a data file
+   MSTN_OpenFile
+!* Write the last scan
+   on error  MSTN_ErrWriteLastScan
+   MSTN_DoMSWrite MSDataFile$
+!* Close the data file
+   MSDATAFILE$=MSTN_CloseAcq$(MSDATAFILE$)
+
+ENDMACRO !MSTN_WriteLastScan
+
+!=========================================================================
+NAME MSTN_ErrWriteLastScan
+!=========================================================================
+   MSTN_ReportError
+   MSClose
+   MSManCalOpenF  = 1       !* enable open file menu item
+   MSManCalCloseF = 0       !* disable close file menu item
+   stop
+
+ENDMACRO !ErrWriteLastScan
+
+!=========================================================================
+NAME MSTN_Clock$
+  parameter reset default 0, offset_time
+! parameter: reset - flag which indicates whether to reset the clock to 0
+!                    1 = reset
+!                    otherwise, don't reset
+!Note: In mustang, this offset_time and cruntime were call by name
+! offset_time is in seconds; cruntime is in minutes
+!
+! Pre-conditions:
+!   The offset time must be less than the current time
+!
+! Post-conditions:
+!   Will return values in a string that must be parsed.
+!
+!=========================================================================
+  local cruntime              !* in minutes
+  local RetStr$               !* return both offset and run time
+  if reset=1 then
+       !* Reset the offset time to the current time and the runtime to 0
+       offset_time = time()
+       cruntime = 0
+  else
+       !* Calculate new run time; remember to convert to seconds
+       cruntime=(time()-offset_time)/60
+  endif
+
+  !* Concatenate the two values to return
+  !* "|" is the default delimiter for SubString
+  RetStr$ = sprintf$(offset_time,"%.0f") + "|" + sprintf$(cruntime,"%.2f")
+
+  return (RetStr$)
+
+ENDMACRO !MSTN_Clock$
+
+!=========================================================================
+NAME MSTN_DoMSParm$
+  parameter name$ default "fragmentor", format$, digit default 0
+!
+! name$ - gives the name of the desired lens to check for to see
+!         if that lens is enabled
+! values$ -
+! digit   -
+!
+!Find ms parameter value.  Supports up to 6 dynamically ramped parameters.
+!Returns the value in value$ as a 5 character string.
+!
+!Pre-conditions:
+! Tune command DLL must be loaded, and the system must be able to
+! talk to the MSD.
+!
+!Known problems:
+! The return value is not exactly the same as the original
+! ChemStation version.  It does not restrict itself to a
+! certain number of digits.
+!=========================================================================
+  local a$,b$,c$,d$,e$,f$,value,value$
+
+    !* Initialize the string variables to hold the
+    !* names of the enabled lens.
+    a$=" "
+    b$=" "
+    c$=" "
+    d$=" "
+    e$=" "
+    f$=" "
+
+    !* Call the tune command to read the enabled lens
+    MSDynamic list,a$,b$,c$,d$,e$,f$
+
+    !* Create one big string with all the lens' names
+    a$    = a$+","+b$+","+c$+","+d$+","+e$+","+f$
+
+    !* Convert the big string to upper case and search for
+    !* the desired lens
+    a$    = ConvertText$(Upper,a$)
+    name$ = ConvertText$(Upper,name$)
+
+    if instr(a$,name$) = 0 THEN
+         !* Desired lens not found: not dynamically ramped
+         evaluate "msparm "+name$+",value"
+         if digit = 0
+              !* print with no decimal places
+              value$ = sprintf$(value,format$)
+         else
+              !* print with decimal places
+              value$ = sprintf$(value,format$)
+        endif
+    else
+        value$="   VAR"
+    endif
+
+    return value$
+
+ENDMACRO !MSTN_DoMSParm$
+
+!=========================================================================
+NAME MSTN_DoMSWrite
+  parameter file$ default MSDataFile$
+!  file$ gives the name of the data file into which to write
+!
+!Global variables:
+!  MSDatafile$
+!
+!Pre-conditions:
+!  The Tune commands DLL is assumed loaded, and the system must be
+!    able to talk to the MSD.
+!  MSDataFile$ must be predefined.
+!
+!Post-conditions:
+!
+!Known problems:
+!  The parameter file$ is used to see if a file is open for writing.
+!
+!=========================================================================
+  local _button
+
+Local  ID_TUNEMAC_NO_DATA_FILE_I_549
+ID_TUNEMAC_NO_DATA_FILE_I_549                      =  17549  
+  if len(file$) > 0 then
+       !* Write acquired data into file opened by MSCreate
+       MSWrite
+  else
+      !* an empty string in file$ means that no file is open
+      _button = alert (ReadResource$("tunemac",ID_TUNEMAC_NO_DATA_FILE_I_549), 3)
+  endif
+
+ENDMACRO !MSTN_DoMSWrite
+
+
+!=========================================================================
+!  Dummy macros for user's extension
+!=========================================================================
+
+!=========================================================================
+NAME AcqUserInit
+!  Dummy macros for user's extension
+!=========================================================================
+     return
+
+ENDMACRO !AcqUserInit
+
+!=========================================================================
+NAME AcqUserErr
+!  Dummy macros for user's extension
+!=========================================================================
+     return
+
+ENDMACRO !AcqUserErr
+
+!=========================================================================
+NAME AcqUserErrMust
+!  Dummy macros for user's extension
+!=========================================================================
+     return
+
+ENDMACRO !AcqUserErrMust
+
+!=========================================================================
+NAME AcqUserPreScan
+!  Dummy macros for user's extension
+!=========================================================================
+     return
+
+ENDMACRO !AcqUserPreScan
+
+!=========================================================================
+NAME AcqUserPostScan
+!  Dummy macros for user's extension
+!=========================================================================
+     return
+
+ENDMACRO !AcqUserPostScan
+
+!=========================================================================
+NAME AcqUserDone
+!  Dummy macros for user's extension
+!=========================================================================
+     return
+
+ENDMACRO !AcqUserDone
+
+
+!============================END MACRO FILE ==============================

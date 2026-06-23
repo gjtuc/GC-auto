@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="CalibT" PosStyle="TOP" DockRow="2" DockCol="0" Caption="校正游标工具栏" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="信号显示" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals " DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="显示图形工具栏" CmdList="ANN_CloseTask|ANN_InitTask" Group="0" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="放大窗口" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="缩小活动窗口" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="从色谱图中选择一个峰并使其在校正表中突出显示" Command="CalTabMain.CAL_SetCalibMenuSelection &quot;NoSel&quot;,1" Group="2" NewGroup="1" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="DeletePeak" Help="从色谱图中选择已校正的峰并将其从校正表中删除" Command="CalTabMain.CAL_SetCalibMenuSelection &quot;DeletePeak&quot;,1" Group="2" ImageName="Int_RemovePeak20" ImageNameDisabled="Int_RemovePeak20_d"/>
+		<RadioButton Name="AddPeak" Help="从色谱图中选择未知峰并将其添加到校正表" Command="CalTabMain.CAL_SetCalibMenuSelection &quot;AddPeak&quot;,1" Group="2" ImageName="Calib_AddPeak20" ImageNameDisabled="Calib_AddPeak20_d"/>
+		<RadioButton Name="RecalComp" Help="从色谱图中选择化合物 (即主峰) 并重新校正" Command="CalTabMain.CAL_SetCalibMenuSelection &quot;RecalComp&quot;,1" Group="2" ImageName="Calib_SelectCompound20" ImageNameDisabled="Calib_SelectCompound20_d"/>
+		<NonEditCombobox Name="SelLevel" Help="选择用于添加峰或重新校正峰的级别" NewGroup="0" Enable="1" DefCmdParNumber="1" DefCommand="CalTabMain.CAL_OnLevelCombo" Width="100"/>
+		<Static Name="RecalMode" Text="" Help="" Width="100" Enable="1"/>
+		<NonEditCombobox Name="SelOptionSet" Help="选择校正表选项设置" NewGroup="0" Enable="1" DefCmdParNumber="1" DefCommand="CalTabMain.CAL_OnOptionsCombo" Width="100"/>
+		<PushButton Name="Options" Help="编辑校正表的当前选项设置" Command="CalTabMain.CAL_TLBFunction Options,1" ImageName="Calib_CalibTableOptions20" ImageNameDisabled="Calib_CalibTableOptions20_d"/>
+		<StickyButton Name="ToggleChrom" State="1" Help="显示/隐藏当前色谱图" CmdList="CalTabMain.CAL_TLBFunction ShowChrom,1|CalTabMain.CAL_TLBFunction HideChrom,1" ImageName="Calib_HideSignals20" ImageNameDisabled="Calib_HideSignals20_d" Enable="1"/>
+		<PushButton Name="ZoomInMS" Help="放大 MS 窗口" Command="MSD_SetCalibIonSelection &quot;&quot;" NewGroup="1" Visible="0" ImageName="Spec_ZoominMS20" ImageNameDisabled="Spec_ZoominMS20_d"/>
+		<PushButton Name="ExtractIon" Help="提取离子色谱图" Command="MSD_SetCalibIonSelection &quot;CalibSelectIon&quot;" Visible="0" ImageName="Spec_ExtractIons20" ImageNameDisabled="Spec_ExtractIons20_d"/>
+		<PushButton Name="RemoveExtracedIons" Help="从显示窗口中删除已提取的离子色谱图" Command="MS_RemoveEICs" Visible="0" ImageName="Calib_RemoveExtIons20" ImageNameDisabled="Calib_RemoveExtIons20_d"/>
+	</toolbar>
+</graphical_object>

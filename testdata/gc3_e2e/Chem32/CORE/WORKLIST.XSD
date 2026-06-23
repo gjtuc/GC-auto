@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSPY v5 rel. 4 U (http://www.xmlspy.com) by Reiner Lange (Agilent Technologies) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:element name="Samples">
+		<xs:annotation>
+			<xs:documentation>worklist for ChemStation sequence import</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Sample" maxOccurs="unbounded">
+					<xs:complexType>
+						<xs:sequence>
+							<xs:element name="Number" type="xs:integer"/>
+							<xs:element name="Location" type="xs:string"/>
+							<xs:element name="Name" type="xs:string"/>
+							<xs:element name="CDSMethod" type="xs:string"/>
+							<xs:element name="numberOfInj" type="xs:string"/>
+							<xs:element name="sampleType">
+								<xs:simpleType>
+									<xs:restriction base="xs:string">
+										<xs:enumeration value="CONTROLSAMPLE"/>
+										<xs:enumeration value="SAMPLE"/>
+										<xs:enumeration value="CALIBRATION"/>
+										<xs:enumeration value="UNKNOWN"/>
+										<xs:enumeration value="STANDARD"/>
+										<xs:enumeration value="QUALITYCONTROL"/>
+										<xs:enumeration value="BLANK"/>
+										<xs:enumeration value="DOUBLEBLANK"/>
+										<xs:enumeration value="SOLVENT"/>
+										<xs:enumeration value=""/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:element>
+							<xs:element name="CalLevel" type="xs:string"/>
+							<xs:element name="calibration">
+								<xs:simpleType>
+									<xs:restriction base="xs:string">
+										<xs:enumeration value="NO UPDATE"/>
+										<xs:enumeration value="REPLACE"/>
+										<xs:enumeration value="BRACKET"/>
+										<xs:enumeration value="DELTA%"/>
+										<xs:enumeration value="AVERAGE"/>
+										<xs:enumeration value=""/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:element>
+							<xs:element name="UpdateRT">
+								<xs:simpleType>
+									<xs:restriction base="xs:string">
+										<xs:enumeration value="NO UPDATE"/>
+										<xs:enumeration value="REPLACE"/>
+										<xs:enumeration value="BRACKET"/>
+										<xs:enumeration value="DELTA%"/>
+										<xs:enumeration value="AVERAGE"/>
+										<xs:enumeration value=""/>
+									</xs:restriction>
+								</xs:simpleType>
+							</xs:element>
+							<xs:element name="Interval" type="xs:string"/>
+							<xs:element name="sampleAmount" type="xs:string"/>
+							<xs:element name="ISTDAmount" type="xs:string"/>
+							<xs:element name="Multipliers" type="xs:string"/>
+							<xs:element name="Dilution" type="xs:string"/>
+							<xs:element name="DataFilename" type="xs:string"/>
+							<xs:element name="InjectionVolume" type="xs:string"/>
+							<xs:element name="description" type="xs:string"/>
+							<xs:element name="StudyName" type="xs:string"/>
+							<xs:element name="LimsID" type="xs:string"/>
+							<xs:element name="LimsKField2" type="xs:string"/>
+							<xs:element name="LimsKField3" type="xs:string"/>
+							<xs:element name="CustomField" minOccurs="0" maxOccurs="unbounded">
+								<xs:complexType>
+									<xs:sequence>
+										<xs:element name="Name" type="xs:string"/>
+										<xs:element name="Value" type="xs:string"/>
+									</xs:sequence>
+								</xs:complexType>
+							</xs:element>
+						</xs:sequence>
+					</xs:complexType>
+				</xs:element>
+				<xs:element name="CommonInformation" minOccurs="0" maxOccurs="unbounded">
+					<xs:complexType>
+						<xs:complexContent>
+							<xs:extension base="CustomFieldType">
+								<xs:attribute name="Type" use="optional" default="ROW">
+									<xs:simpleType>
+										<xs:restriction base="xs:string">
+											<xs:enumeration value="ROW"/>
+											<xs:enumeration value="HEADER"/>
+										</xs:restriction>
+									</xs:simpleType>
+								</xs:attribute>
+							</xs:extension>
+						</xs:complexContent>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="CustomFieldType">
+		<xs:sequence>
+			<xs:element name="Name" type="xs:string"/>
+			<xs:element name="Value" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+</xs:schema>

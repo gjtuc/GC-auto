@@ -1,0 +1,9 @@
+ld < /flash/BLINK.O
+ld < /flash/MSSC.O
+ld < /flash/httpd.o
+ld < /flash/wdsmall_run.o
+mssc_start
+ramdisk
+sp SmallWeb
+sp blink
+

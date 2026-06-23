@@ -1,0 +1,1000 @@
+﻿5/15/2010   04:54:00.125   11:  Call                    => Uninitialize()
+5/23/2010   03:10:23.243    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+5/23/2010   03:10:23.368    1:  CONFIG CHANGED (LoadedFromFile)
+5/23/2010   03:10:23.368    1:  Call                    => IsBarcodeReaderSupported()
+5/23/2010   03:10:23.368    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/23/2010   03:10:23.368    1:  Call                    => IsBarcodeReaderSupported()
+5/23/2010   03:10:23.368    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/23/2010   03:10:23.368    1:  Call                    => GetNumberOfInjectionSources
+5/23/2010   03:10:23.383    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+5/23/2010   03:10:23.383    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+5/23/2010   03:10:23.383    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+5/23/2010   03:10:23.383    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+5/23/2010   03:10:23.383    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+5/23/2010   03:10:23.383    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+5/23/2010   03:10:23.383    1:  Call                    => DoOperation (nOpCode=13)
+5/23/2010   03:10:23.399    1:  Call Result             => DoOperation()   RetVal: 0
+5/23/2010   03:10:25.255    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+5/23/2010   03:10:25.333   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\DATA\250227 NI(10WT) 0.1G DRE 600C 1_2\REACTION_TCD-FID 297 CYCLE 2010-05-23 01-32-27\221026_REACTION_ONLY TCD.M\Agilent\)
+5/23/2010   03:10:25.661   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\DATA\250227 NI(10WT) 0.1G DRE 600C 1_2\REACTION_TCD-FID 297 CYCLE 2010-05-23 01-32-27\221026_REACTION_ONLY TCD.M\Agilent\)
+5/23/2010   03:10:25.676    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+5/23/2010   03:10:25.676    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+5/23/2010   03:10:25.708    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+5/23/2010   03:10:25.708    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+5/23/2010   03:10:25.708    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+5/23/2010   03:10:25.708   11:  METHOD CHANGED (LoadedFromFile)
+5/23/2010   03:10:25.708    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+5/23/2010   03:10:25.723    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/23/2010   03:10:25.723    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/23/2010   03:10:25.723    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/23/2010   03:10:25.723    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/23/2010   03:10:25.723    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/23/2010   03:10:25.723    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/23/2010   03:10:26.800    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/23/2010   03:10:26.800    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/23/2010   03:10:26.800    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/23/2010   03:10:26.800    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/23/2010   03:10:26.800    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/23/2010   03:10:26.815    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/23/2010   03:10:26.815    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+5/23/2010   03:10:26.815    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+5/25/2010   02:43:17.199   11:  Call                    => Uninitialize()
+6/24/2010   20:22:24.579    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+6/24/2010   20:22:24.689    1:  CONFIG CHANGED (LoadedFromFile)
+6/24/2010   20:22:24.704    1:  Call                    => IsBarcodeReaderSupported()
+6/24/2010   20:22:24.704    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+6/24/2010   20:22:24.704    1:  Call                    => IsBarcodeReaderSupported()
+6/24/2010   20:22:24.704    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+6/24/2010   20:22:24.704    1:  Call                    => GetNumberOfInjectionSources
+6/24/2010   20:22:24.704    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+6/24/2010   20:22:24.704    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+6/24/2010   20:22:24.720    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+6/24/2010   20:22:24.720    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+6/24/2010   20:22:24.720    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+6/24/2010   20:22:24.720    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+6/24/2010   20:22:24.720    1:  Call                    => DoOperation (nOpCode=13)
+6/24/2010   20:22:24.735    1:  Call Result             => DoOperation()   RetVal: 0
+6/24/2010   20:22:26.327    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+6/24/2010   20:22:26.358   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+6/24/2010   20:22:26.701   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+6/24/2010   20:22:26.732    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+6/24/2010   20:22:26.732    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+6/24/2010   20:22:26.732    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+6/24/2010   20:22:26.748    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+6/24/2010   20:22:26.748    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+6/24/2010   20:22:26.748   11:  METHOD CHANGED (LoadedFromFile)
+6/24/2010   20:22:26.748    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+6/24/2010   20:22:26.763    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+6/24/2010   20:22:26.763    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+6/24/2010   20:22:26.763    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+6/24/2010   20:22:26.763    1:  Call Result             => GetInjectorName()   Out Params: strName=
+6/24/2010   20:22:26.763    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+6/24/2010   20:22:26.763    1:  Call Result             => GetInjectorName()   Out Params: strName=
+6/24/2010   20:22:27.715    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+6/24/2010   20:22:27.715    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+6/24/2010   20:22:27.715    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+6/24/2010   20:22:27.715    1:  Call Result             => GetInjectorName()   Out Params: strName=
+6/24/2010   20:22:27.715    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+6/24/2010   20:22:27.715    1:  Call Result             => GetInjectorName()   Out Params: strName=
+6/24/2010   20:22:27.731    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+6/24/2010   20:22:27.731    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+6/30/2010   20:19:52.468   11:  Call                    => Uninitialize()
+7/1/2010    03:15:17.142    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+7/1/2010    03:15:17.251    1:  CONFIG CHANGED (LoadedFromFile)
+7/1/2010    03:15:17.282    1:  Call                    => IsBarcodeReaderSupported()
+7/1/2010    03:15:17.282    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+7/1/2010    03:15:17.282    1:  Call                    => IsBarcodeReaderSupported()
+7/1/2010    03:15:17.282    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+7/1/2010    03:15:17.298    1:  Call                    => GetNumberOfInjectionSources
+7/1/2010    03:15:17.298    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+7/1/2010    03:15:17.298    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+7/1/2010    03:15:17.313    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+7/1/2010    03:15:17.313    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+7/1/2010    03:15:17.313    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+7/1/2010    03:15:17.313    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+7/1/2010    03:15:17.329    1:  Call                    => DoOperation (nOpCode=13)
+7/1/2010    03:15:17.344    1:  Call Result             => DoOperation()   RetVal: 0
+7/1/2010    03:15:19.575    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+7/1/2010    03:15:19.606   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+7/1/2010    03:15:19.934   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+7/1/2010    03:15:19.965    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+7/1/2010    03:15:19.965    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+7/1/2010    03:15:20.012    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+7/1/2010    03:15:20.012    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+7/1/2010    03:15:20.012    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+7/1/2010    03:15:20.012    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+7/1/2010    03:15:20.012   11:  METHOD CHANGED (LoadedFromFile)
+7/1/2010    03:15:20.028    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+7/1/2010    03:15:20.028    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+7/1/2010    03:15:20.043    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+7/1/2010    03:15:20.043    1:  Call Result             => GetInjectorName()   Out Params: strName=
+7/1/2010    03:15:20.043    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+7/1/2010    03:15:20.043    1:  Call Result             => GetInjectorName()   Out Params: strName=
+7/1/2010    03:15:20.870    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+7/1/2010    03:15:20.870    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+7/1/2010    03:15:20.870    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+7/1/2010    03:15:20.870    1:  Call Result             => GetInjectorName()   Out Params: strName=
+7/1/2010    03:15:20.870    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+7/1/2010    03:15:20.870    1:  Call Result             => GetInjectorName()   Out Params: strName=
+7/1/2010    03:15:20.870    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+7/1/2010    03:15:20.870    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+7/1/2010    21:16:05.599   11:  Call                    => Uninitialize()
+7/2/2010    01:09:45.292    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+7/2/2010    01:09:45.401    1:  CONFIG CHANGED (LoadedFromFile)
+7/2/2010    01:09:45.401    1:  Call                    => IsBarcodeReaderSupported()
+7/2/2010    01:09:45.401    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+7/2/2010    01:09:45.417    1:  Call                    => IsBarcodeReaderSupported()
+7/2/2010    01:09:45.417    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+7/2/2010    01:09:45.433    1:  Call                    => GetNumberOfInjectionSources
+7/2/2010    01:09:45.433    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+7/2/2010    01:09:45.433    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+7/2/2010    01:09:45.448    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+7/2/2010    01:09:45.448    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+7/2/2010    01:09:45.448    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+7/2/2010    01:09:45.448    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+7/2/2010    01:09:45.464    1:  Call                    => DoOperation (nOpCode=13)
+7/2/2010    01:09:45.479    1:  Call Result             => DoOperation()   RetVal: 0
+7/2/2010    01:09:47.351    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+7/2/2010    01:09:47.414   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+7/2/2010    01:09:47.710   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+7/2/2010    01:09:47.741    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+7/2/2010    01:09:47.741    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+7/2/2010    01:09:47.757    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+7/2/2010    01:09:47.757    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+7/2/2010    01:09:47.757    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+7/2/2010    01:09:47.757   11:  METHOD CHANGED (LoadedFromFile)
+7/2/2010    01:09:47.757    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+7/2/2010    01:09:47.773    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+7/2/2010    01:09:47.773    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+7/2/2010    01:09:47.773    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+7/2/2010    01:09:47.773    1:  Call Result             => GetInjectorName()   Out Params: strName=
+7/2/2010    01:09:47.773    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+7/2/2010    01:09:47.773    1:  Call Result             => GetInjectorName()   Out Params: strName=
+7/2/2010    01:09:48.615    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+7/2/2010    01:09:48.615    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+7/2/2010    01:09:48.615    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+7/2/2010    01:09:48.615    1:  Call Result             => GetInjectorName()   Out Params: strName=
+7/2/2010    01:09:48.615    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+7/2/2010    01:09:48.615    1:  Call Result             => GetInjectorName()   Out Params: strName=
+7/2/2010    01:09:48.615    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+7/2/2010    01:09:48.631    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+8/3/2010    03:58:01.894   11:  Call                    => Uninitialize()
+8/3/2010    04:00:27.099    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+8/3/2010    04:00:27.208    1:  CONFIG CHANGED (LoadedFromFile)
+8/3/2010    04:00:27.208    1:  Call                    => IsBarcodeReaderSupported()
+8/3/2010    04:00:27.224    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+8/3/2010    04:00:27.224    1:  Call                    => IsBarcodeReaderSupported()
+8/3/2010    04:00:27.224    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+8/3/2010    04:00:27.240    1:  Call                    => GetNumberOfInjectionSources
+8/3/2010    04:00:27.240    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+8/3/2010    04:00:27.240    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+8/3/2010    04:00:27.240    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+8/3/2010    04:00:27.240    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+8/3/2010    04:00:27.240    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+8/3/2010    04:00:27.240    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+8/3/2010    04:00:27.255    1:  Call                    => DoOperation (nOpCode=13)
+8/3/2010    04:00:27.255    1:  Call Result             => DoOperation()   RetVal: 0
+8/3/2010    04:00:29.143    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+8/3/2010    04:00:29.174   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+8/3/2010    04:00:29.502   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+8/3/2010    04:00:29.517    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+8/3/2010    04:00:29.564    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+8/3/2010    04:00:29.564    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+8/3/2010    04:00:29.564    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+8/3/2010    04:00:29.564    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+8/3/2010    04:00:29.564    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+8/3/2010    04:00:29.564   11:  METHOD CHANGED (LoadedFromFile)
+8/3/2010    04:00:29.595    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+8/3/2010    04:00:29.595    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+8/3/2010    04:00:29.595    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+8/3/2010    04:00:29.595    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/3/2010    04:00:29.595    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+8/3/2010    04:00:29.595    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/3/2010    04:00:30.406    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+8/3/2010    04:00:30.406    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+8/3/2010    04:00:30.406    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+8/3/2010    04:00:30.422    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/3/2010    04:00:30.422    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+8/3/2010    04:00:30.422    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/3/2010    04:00:30.422    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+8/3/2010    04:00:30.422    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+8/3/2010    04:01:56.780   11:  Call                    => Uninitialize()
+8/12/2010   02:04:37.040    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+8/12/2010   02:04:37.165    1:  CONFIG CHANGED (LoadedFromFile)
+8/12/2010   02:04:37.181    1:  Call                    => IsBarcodeReaderSupported()
+8/12/2010   02:04:37.181    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+8/12/2010   02:04:37.181    1:  Call                    => IsBarcodeReaderSupported()
+8/12/2010   02:04:37.181    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+8/12/2010   02:04:37.212    1:  Call                    => GetNumberOfInjectionSources
+8/12/2010   02:04:37.212    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+8/12/2010   02:04:37.228    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+8/12/2010   02:04:37.228    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+8/12/2010   02:04:37.228    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+8/12/2010   02:04:37.228    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+8/12/2010   02:04:37.228    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+8/12/2010   02:04:37.228    1:  Call                    => DoOperation (nOpCode=13)
+8/12/2010   02:04:37.243    1:  Call Result             => DoOperation()   RetVal: 0
+8/12/2010   02:04:39.692    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+8/12/2010   02:04:39.724   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+8/12/2010   02:04:40.036   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+8/12/2010   02:04:40.051    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+8/12/2010   02:04:40.051    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+8/12/2010   02:04:40.067    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+8/12/2010   02:04:40.067    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+8/12/2010   02:04:40.067    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+8/12/2010   02:04:40.067   11:  METHOD CHANGED (LoadedFromFile)
+8/12/2010   02:04:40.067    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+8/12/2010   02:04:40.114    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+8/12/2010   02:04:40.114    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+8/12/2010   02:04:40.114    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+8/12/2010   02:04:40.114    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/12/2010   02:04:40.114    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+8/12/2010   02:04:40.129    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/12/2010   02:04:41.034    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+8/12/2010   02:04:41.034    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+8/12/2010   02:04:41.034    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+8/12/2010   02:04:41.034    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/12/2010   02:04:41.034    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+8/12/2010   02:04:41.034    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/12/2010   02:04:41.050    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+8/12/2010   02:04:41.050    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+8/20/2010   00:41:46.351   11:  Call                    => Uninitialize()
+8/25/2010   20:20:40.290    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+8/25/2010   20:20:40.400    1:  CONFIG CHANGED (LoadedFromFile)
+8/25/2010   20:20:40.400    1:  Call                    => IsBarcodeReaderSupported()
+8/25/2010   20:20:40.400    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+8/25/2010   20:20:40.400    1:  Call                    => IsBarcodeReaderSupported()
+8/25/2010   20:20:40.415    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+8/25/2010   20:20:40.415    1:  Call                    => GetNumberOfInjectionSources
+8/25/2010   20:20:40.415    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+8/25/2010   20:20:40.415    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+8/25/2010   20:20:40.415    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+8/25/2010   20:20:40.415    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+8/25/2010   20:20:40.415    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+8/25/2010   20:20:40.431    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+8/25/2010   20:20:40.446    1:  Call                    => DoOperation (nOpCode=13)
+8/25/2010   20:20:40.446    1:  Call Result             => DoOperation()   RetVal: 0
+8/25/2010   20:20:41.991    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+8/25/2010   20:20:42.053   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+8/25/2010   20:20:42.381   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+8/25/2010   20:20:42.396    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+8/25/2010   20:20:42.396    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+8/25/2010   20:20:42.412    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+8/25/2010   20:20:42.412    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+8/25/2010   20:20:42.412    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+8/25/2010   20:20:42.412    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+8/25/2010   20:20:42.412   11:  METHOD CHANGED (LoadedFromFile)
+8/25/2010   20:20:42.459    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+8/25/2010   20:20:42.459    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+8/25/2010   20:20:42.459    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+8/25/2010   20:20:42.459    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/25/2010   20:20:42.459    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+8/25/2010   20:20:42.459    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/25/2010   20:20:43.317    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+8/25/2010   20:20:43.317    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+8/25/2010   20:20:43.317    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+8/25/2010   20:20:43.317    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/25/2010   20:20:43.317    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+8/25/2010   20:20:43.317    1:  Call Result             => GetInjectorName()   Out Params: strName=
+8/25/2010   20:20:43.332    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+8/25/2010   20:20:43.332    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+11/1/2010   20:20:56.631   11:  Call                    => Uninitialize()
+11/1/2010   20:55:14.205    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+11/1/2010   20:55:14.314    1:  CONFIG CHANGED (LoadedFromFile)
+11/1/2010   20:55:14.330    1:  Call                    => IsBarcodeReaderSupported()
+11/1/2010   20:55:14.330    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+11/1/2010   20:55:14.330    1:  Call                    => IsBarcodeReaderSupported()
+11/1/2010   20:55:14.330    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+11/1/2010   20:55:14.361    1:  Call                    => GetNumberOfInjectionSources
+11/1/2010   20:55:14.361    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+11/1/2010   20:55:14.361    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+11/1/2010   20:55:14.361    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+11/1/2010   20:55:14.361    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+11/1/2010   20:55:14.361    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+11/1/2010   20:55:14.361    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+11/1/2010   20:55:14.361    1:  Call                    => DoOperation (nOpCode=13)
+11/1/2010   20:55:14.376    1:  Call Result             => DoOperation()   RetVal: 0
+11/1/2010   20:55:16.124    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+11/1/2010   20:55:16.155   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+11/1/2010   20:55:16.482   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+11/1/2010   20:55:16.514    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+11/1/2010   20:55:16.529    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+11/1/2010   20:55:16.545    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+11/1/2010   20:55:16.545    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+11/1/2010   20:55:16.545    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+11/1/2010   20:55:16.545   11:  METHOD CHANGED (LoadedFromFile)
+11/1/2010   20:55:16.545    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+11/1/2010   20:55:16.560    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+11/1/2010   20:55:16.560    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+11/1/2010   20:55:16.576    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+11/1/2010   20:55:16.576    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/1/2010   20:55:16.576    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+11/1/2010   20:55:16.576    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/1/2010   20:55:17.372    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+11/1/2010   20:55:17.372    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+11/1/2010   20:55:17.372    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+11/1/2010   20:55:17.372    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/1/2010   20:55:17.387    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+11/1/2010   20:55:17.387    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/1/2010   20:55:17.403    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+11/1/2010   20:55:17.403    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+11/10/2010  01:47:59.607    1:  Call                    => GetDriverItem (strKey=Als.tray.capacity)
+11/10/2010  01:47:59.607    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+11/10/2010  01:47:59.607    1:  Call                    => GetDriverItem (strKey=Als.tray.capacity)
+11/10/2010  01:47:59.607    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+11/10/2010  01:47:59.607    1:  Call                    => GetDriverItem (strKey=ALS.tray.Model)
+11/10/2010  01:47:59.607    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+11/10/2010  01:47:59.622    1:  Call                    => GetDriverItem (strKey=ALS.tray.Model)
+11/10/2010  01:47:59.622    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+11/10/2010  01:47:59.622    1:  Call                    => GetDriverItem (strKey=Als.fr.capacity)
+11/10/2010  01:47:59.622    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+11/10/2010  01:47:59.622    1:  Call                    => GetDriverItem (strKey=Als.fr.capacity)
+11/10/2010  01:47:59.622    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+11/10/2010  01:47:59.622    1:  Call                    => GetDriverItem (strKey=ALS.fr.Model)
+11/10/2010  01:47:59.622    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+11/10/2010  01:47:59.638    1:  Call                    => GetDriverItem (strKey=ALS.fr.Model)
+11/10/2010  01:47:59.638    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+11/10/2010  01:47:59.638    1:  Call                    => GetDriverItem (strKey=ALS.fr.Model)
+11/10/2010  01:47:59.638    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+11/10/2010  01:47:59.638    1:  Call                    => GetDriverItem (strKey=ALS.fr.Model)
+11/10/2010  01:47:59.638    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+11/10/2010  01:47:59.638    1:  Call                    => GetDriverItem (strKey=Als.bk.capacity)
+11/10/2010  01:47:59.638    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+11/10/2010  01:47:59.638    1:  Call                    => GetDriverItem (strKey=Als.bk.capacity)
+11/10/2010  01:47:59.638    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+11/10/2010  01:47:59.654    1:  Call                    => GetDriverItem (strKey=ALS.bk.Model)
+11/10/2010  01:47:59.654    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+11/10/2010  01:47:59.654    1:  Call                    => GetDriverItem (strKey=ALS.bk.Model)
+11/10/2010  01:47:59.654    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+11/10/2010  01:47:59.654    1:  Call                    => GetDriverItem (strKey=ALS.bk.Model)
+11/10/2010  01:47:59.654    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+11/10/2010  01:47:59.654    1:  Call                    => GetDriverItem (strKey=ALS.bk.Model)
+11/10/2010  01:47:59.654    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+11/10/2010  01:47:59.654    1:  Call                    => GetDriverItem (strKey=Als.fr.capacity)
+11/10/2010  01:47:59.654    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+11/10/2010  01:47:59.654    1:  Call                    => GetDriverItem (strKey=Als.fr.capacity)
+11/10/2010  01:47:59.654    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+11/10/2010  01:47:59.669    1:  Call                    => GetDriverItem (strKey=Als.bk.capacity)
+11/10/2010  01:47:59.669    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+11/10/2010  01:47:59.669    1:  Call                    => GetDriverItem (strKey=Als.bk.capacity)
+11/10/2010  01:47:59.669    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+11/10/2010  01:47:59.841    1:  Call                    => InstrumentViewChanged (bMethodAndRunControlActive=True)
+11/10/2010  01:48:03.725    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+11/10/2010  01:48:03.725    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+11/10/2010  01:48:03.725    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+11/10/2010  01:48:03.725    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/10/2010  01:48:03.741    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+11/10/2010  01:48:03.741    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/10/2010  01:48:03.741    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+11/10/2010  01:48:03.741    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+11/10/2010  01:48:03.741    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+11/10/2010  01:48:03.741    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+11/10/2010  01:48:03.741    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+11/10/2010  01:48:03.741    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/10/2010  01:48:03.741    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+11/10/2010  01:48:03.741    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/10/2010  01:48:03.756    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+11/10/2010  01:48:03.756    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+11/10/2010  01:48:05.270    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+11/10/2010  01:48:05.270    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+11/10/2010  01:48:05.270    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+11/10/2010  01:48:05.285    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/10/2010  01:48:05.285    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+11/10/2010  01:48:05.285    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/10/2010  01:48:05.285    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+11/10/2010  01:48:05.285    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+11/10/2010  01:48:05.301    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+11/10/2010  01:48:05.301    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+11/10/2010  01:48:05.301    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+11/10/2010  01:48:05.301    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/10/2010  01:48:05.301    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+11/10/2010  01:48:05.301    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/10/2010  01:48:05.301    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+11/10/2010  01:48:05.316    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+11/10/2010  01:48:13.756    1:  Call                    => InstrumentViewChanged (bMethodAndRunControlActive=False)
+9/17/2025   23:54:49.438    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+9/17/2025   23:54:49.438    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+9/17/2025   23:54:49.438    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+9/17/2025   23:54:49.438    1:  Call Result             => GetInjectorName()   Out Params: strName=
+9/17/2025   23:54:49.438    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+9/17/2025   23:54:49.438    1:  Call Result             => GetInjectorName()   Out Params: strName=
+9/26/2025   15:55:28.276   11:  Call                    => Uninitialize()
+9/27/2025   12:42:03.846    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+9/27/2025   12:42:03.955    1:  CONFIG CHANGED (LoadedFromFile)
+9/27/2025   12:42:03.971    1:  Call                    => IsBarcodeReaderSupported()
+9/27/2025   12:42:03.971    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+9/27/2025   12:42:03.971    1:  Call                    => IsBarcodeReaderSupported()
+9/27/2025   12:42:03.971    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+9/27/2025   12:42:03.971    1:  Call                    => GetNumberOfInjectionSources
+9/27/2025   12:42:03.971    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+9/27/2025   12:42:03.971    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+9/27/2025   12:42:03.971    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+9/27/2025   12:42:03.971    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+9/27/2025   12:42:03.971    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+9/27/2025   12:42:03.971    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+9/27/2025   12:42:03.971    1:  Call                    => DoOperation (nOpCode=13)
+9/27/2025   12:42:03.986    1:  Call Result             => DoOperation()   RetVal: 0
+9/27/2025   12:42:05.437    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+9/27/2025   12:42:05.453   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+9/27/2025   12:42:05.687   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+9/27/2025   12:42:05.718    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+9/27/2025   12:42:05.718    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+9/27/2025   12:42:05.718    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+9/27/2025   12:42:05.718    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+9/27/2025   12:42:05.718    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+9/27/2025   12:42:05.718    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+9/27/2025   12:42:05.718   11:  METHOD CHANGED (LoadedFromFile)
+9/27/2025   12:42:05.734    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+9/27/2025   12:42:05.734    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+9/27/2025   12:42:05.734    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+9/27/2025   12:42:05.734    1:  Call Result             => GetInjectorName()   Out Params: strName=
+9/27/2025   12:42:05.734    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+9/27/2025   12:42:05.734    1:  Call Result             => GetInjectorName()   Out Params: strName=
+9/27/2025   12:42:06.498    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+9/27/2025   12:42:06.498    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+9/27/2025   12:42:06.498    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+9/27/2025   12:42:06.498    1:  Call Result             => GetInjectorName()   Out Params: strName=
+9/27/2025   12:42:06.498    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+9/27/2025   12:42:06.498    1:  Call Result             => GetInjectorName()   Out Params: strName=
+9/27/2025   12:42:06.498    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+9/27/2025   12:42:06.498    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+11/17/2025  14:18:09.921   11:  Call                    => Uninitialize()
+11/17/2025  15:39:06.096    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+11/17/2025  15:39:06.190    1:  CONFIG CHANGED (LoadedFromFile)
+11/17/2025  15:39:06.221    1:  Call                    => IsBarcodeReaderSupported()
+11/17/2025  15:39:06.221    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+11/17/2025  15:39:06.221    1:  Call                    => IsBarcodeReaderSupported()
+11/17/2025  15:39:06.221    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+11/17/2025  15:39:06.237    1:  Call                    => GetNumberOfInjectionSources
+11/17/2025  15:39:06.237    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+11/17/2025  15:39:06.237    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+11/17/2025  15:39:06.237    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+11/17/2025  15:39:06.237    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+11/17/2025  15:39:06.237    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+11/17/2025  15:39:06.237    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+11/17/2025  15:39:06.237    1:  Call                    => DoOperation (nOpCode=13)
+11/17/2025  15:39:06.252    1:  Call Result             => DoOperation()   RetVal: 0
+11/17/2025  15:39:07.719    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+11/17/2025  15:39:07.734   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+11/17/2025  15:39:07.968   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+11/17/2025  15:39:08.000    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+11/17/2025  15:39:08.000    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+11/17/2025  15:39:08.000    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+11/17/2025  15:39:08.000    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+11/17/2025  15:39:08.015    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+11/17/2025  15:39:08.015    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+11/17/2025  15:39:08.015   11:  METHOD CHANGED (LoadedFromFile)
+11/17/2025  15:39:08.015    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+11/17/2025  15:39:08.015    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+11/17/2025  15:39:08.015    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+11/17/2025  15:39:08.015    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/17/2025  15:39:08.015    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+11/17/2025  15:39:08.031    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/17/2025  15:39:08.811    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+11/17/2025  15:39:08.811    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+11/17/2025  15:39:08.811    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+11/17/2025  15:39:08.811    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/17/2025  15:39:08.811    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+11/17/2025  15:39:08.811    1:  Call Result             => GetInjectorName()   Out Params: strName=
+11/17/2025  15:39:08.826    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+11/17/2025  15:39:08.826    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+2/4/2026    20:07:46.709   11:  Call                    => SaveMethod (C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+2/4/2026    20:07:48.878   11:  Call                    => Uninitialize()
+2/4/2026    20:08:04.150    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+2/4/2026    20:08:04.275    1:  CONFIG CHANGED (LoadedFromFile)
+2/4/2026    20:08:04.291    1:  Call                    => IsBarcodeReaderSupported()
+2/4/2026    20:08:04.291    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+2/4/2026    20:08:04.291    1:  Call                    => IsBarcodeReaderSupported()
+2/4/2026    20:08:04.291    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+2/4/2026    20:08:04.306    1:  Call                    => GetNumberOfInjectionSources
+2/4/2026    20:08:04.306    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+2/4/2026    20:08:04.306    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+2/4/2026    20:08:04.306    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+2/4/2026    20:08:04.306    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+2/4/2026    20:08:04.306    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+2/4/2026    20:08:04.306    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+2/4/2026    20:08:04.306    1:  Call                    => DoOperation (nOpCode=13)
+2/4/2026    20:08:04.322    1:  Call Result             => DoOperation()   RetVal: 0
+2/4/2026    20:08:06.693    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+2/4/2026    20:08:06.709   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+2/4/2026    20:08:06.943   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+2/4/2026    20:08:06.974    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+2/4/2026    20:08:06.974    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+2/4/2026    20:08:06.974    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+2/4/2026    20:08:06.974    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+2/4/2026    20:08:06.974    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+2/4/2026    20:08:06.974    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+2/4/2026    20:08:06.989   11:  METHOD CHANGED (LoadedFromFile)
+2/4/2026    20:08:06.989    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+2/4/2026    20:08:06.989    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+2/4/2026    20:08:06.989    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+2/4/2026    20:08:06.989    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/4/2026    20:08:06.989    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+2/4/2026    20:08:06.989    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/4/2026    20:08:07.925    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+2/4/2026    20:08:07.925    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+2/4/2026    20:08:07.925    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+2/4/2026    20:08:07.925    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/4/2026    20:08:07.925    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+2/4/2026    20:08:07.925    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/4/2026    20:08:07.925    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+2/4/2026    20:08:07.925    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+2/4/2026    20:21:53.584    1:  Call                    => GetDriverItem (strKey=Als.tray.capacity)
+2/4/2026    20:21:53.584    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+2/4/2026    20:21:53.615    1:  Call                    => GetDriverItem (strKey=Als.tray.capacity)
+2/4/2026    20:21:53.615    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+2/4/2026    20:21:53.615    1:  Call                    => GetDriverItem (strKey=ALS.tray.Model)
+2/4/2026    20:21:53.615    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+2/4/2026    20:21:53.615    1:  Call                    => GetDriverItem (strKey=ALS.tray.Model)
+2/4/2026    20:21:53.615    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+2/4/2026    20:21:53.615    1:  Call                    => GetDriverItem (strKey=Als.fr.capacity)
+2/4/2026    20:21:53.615    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+2/4/2026    20:21:53.615    1:  Call                    => GetDriverItem (strKey=Als.fr.capacity)
+2/4/2026    20:21:53.615    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+2/4/2026    20:21:53.615    1:  Call                    => GetDriverItem (strKey=ALS.fr.Model)
+2/4/2026    20:21:53.615    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=ALS.fr.Model)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=ALS.fr.Model)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=ALS.fr.Model)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=Als.bk.capacity)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=Als.bk.capacity)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=ALS.bk.Model)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=ALS.bk.Model)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=ALS.bk.Model)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=ALS.bk.Model)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=Als.fr.capacity)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+2/4/2026    20:21:53.631    1:  Call                    => GetDriverItem (strKey=Als.fr.capacity)
+2/4/2026    20:21:53.631    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+2/4/2026    20:21:53.647    1:  Call                    => GetDriverItem (strKey=Als.bk.capacity)
+2/4/2026    20:21:53.647    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+2/4/2026    20:21:53.647    1:  Call                    => GetDriverItem (strKey=Als.bk.capacity)
+2/4/2026    20:21:53.647    1:  Call Result             => GetDriverItem()   Out Params: objVal=0
+2/4/2026    20:21:53.818    1:  Call                    => InstrumentViewChanged (bMethodAndRunControlActive=True)
+2/4/2026    20:21:55.768    1:  Call                    => InstrumentViewChanged (bMethodAndRunControlActive=False)
+2/4/2026    20:35:16.700   11:  Call                    => Uninitialize()
+2/4/2026    20:35:27.842    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+2/4/2026    20:35:27.951    1:  CONFIG CHANGED (LoadedFromFile)
+2/4/2026    20:35:27.967    1:  Call                    => IsBarcodeReaderSupported()
+2/4/2026    20:35:27.967    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+2/4/2026    20:35:27.967    1:  Call                    => IsBarcodeReaderSupported()
+2/4/2026    20:35:27.967    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+2/4/2026    20:35:27.983    1:  Call                    => GetNumberOfInjectionSources
+2/4/2026    20:35:27.983    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+2/4/2026    20:35:27.983    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+2/4/2026    20:35:27.983    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+2/4/2026    20:35:27.983    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+2/4/2026    20:35:27.983    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+2/4/2026    20:35:27.983    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+2/4/2026    20:35:27.983    1:  Call                    => DoOperation (nOpCode=13)
+2/4/2026    20:35:27.998    1:  Call Result             => DoOperation()   RetVal: 0
+2/4/2026    20:35:29.543    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+2/4/2026    20:35:29.558   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\DATA\260204_DRME_NI-CVD 18H N5CE5_RE\REACTION_TCD-FID 297 CYCLE 2026-02-04 20-33-34\221026_REACTION_ONLY TCD.M\Agilent\)
+2/4/2026    20:35:29.792   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\DATA\260204_DRME_NI-CVD 18H N5CE5_RE\REACTION_TCD-FID 297 CYCLE 2026-02-04 20-33-34\221026_REACTION_ONLY TCD.M\Agilent\)
+2/4/2026    20:35:29.823    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+2/4/2026    20:35:29.823    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+2/4/2026    20:35:29.823    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+2/4/2026    20:35:29.823    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+2/4/2026    20:35:29.823    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+2/4/2026    20:35:29.823    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+2/4/2026    20:35:29.839   11:  METHOD CHANGED (LoadedFromFile)
+2/4/2026    20:35:29.839    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+2/4/2026    20:35:29.839    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+2/4/2026    20:35:29.839    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+2/4/2026    20:35:29.839    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/4/2026    20:35:29.839    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+2/4/2026    20:35:29.839    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/4/2026    20:35:30.510    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+2/4/2026    20:35:30.510    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+2/4/2026    20:35:30.510    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+2/4/2026    20:35:30.510    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/4/2026    20:35:30.510    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+2/4/2026    20:35:30.510    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/4/2026    20:35:30.510    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+2/4/2026    20:35:30.510    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+2/26/2026   18:44:35.746    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+2/26/2026   18:44:35.855    1:  CONFIG CHANGED (LoadedFromFile)
+2/26/2026   18:44:35.871    1:  Call                    => IsBarcodeReaderSupported()
+2/26/2026   18:44:35.871    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+2/26/2026   18:44:35.871    1:  Call                    => IsBarcodeReaderSupported()
+2/26/2026   18:44:35.871    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+2/26/2026   18:44:35.886    1:  Call                    => GetNumberOfInjectionSources
+2/26/2026   18:44:35.886    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+2/26/2026   18:44:35.886    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+2/26/2026   18:44:35.886    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+2/26/2026   18:44:35.886    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+2/26/2026   18:44:35.886    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+2/26/2026   18:44:35.886    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+2/26/2026   18:44:35.886    1:  Call                    => DoOperation (nOpCode=13)
+2/26/2026   18:44:35.902    1:  Call Result             => DoOperation()   RetVal: 0
+2/26/2026   18:44:37.790    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+2/26/2026   18:44:37.805   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+2/26/2026   18:44:38.039   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+2/26/2026   18:44:38.070    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+2/26/2026   18:44:38.070    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+2/26/2026   18:44:38.070    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+2/26/2026   18:44:38.070    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+2/26/2026   18:44:38.070    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+2/26/2026   18:44:38.070    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+2/26/2026   18:44:38.070   11:  METHOD CHANGED (LoadedFromFile)
+2/26/2026   18:44:38.086    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+2/26/2026   18:44:38.086    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+2/26/2026   18:44:38.086    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+2/26/2026   18:44:38.086    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/26/2026   18:44:38.086    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+2/26/2026   18:44:38.086    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/26/2026   18:44:38.866    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+2/26/2026   18:44:38.882    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+2/26/2026   18:44:38.882    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+2/26/2026   18:44:38.882    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/26/2026   18:44:38.882    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+2/26/2026   18:44:38.882    1:  Call Result             => GetInjectorName()   Out Params: strName=
+2/26/2026   18:44:38.882    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+2/26/2026   18:44:38.882    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+2/28/2026   06:40:42.499   11:  Call                    => Uninitialize()
+3/2/2026    20:27:52.674    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+3/2/2026    20:27:52.784    1:  CONFIG CHANGED (LoadedFromFile)
+3/2/2026    20:27:52.799    1:  Call                    => IsBarcodeReaderSupported()
+3/2/2026    20:27:52.799    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+3/2/2026    20:27:52.799    1:  Call                    => IsBarcodeReaderSupported()
+3/2/2026    20:27:52.799    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+3/2/2026    20:27:52.815    1:  Call                    => GetNumberOfInjectionSources
+3/2/2026    20:27:52.815    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+3/2/2026    20:27:52.815    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+3/2/2026    20:27:52.815    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+3/2/2026    20:27:52.815    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+3/2/2026    20:27:52.815    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+3/2/2026    20:27:52.815    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+3/2/2026    20:27:52.815    1:  Call                    => DoOperation (nOpCode=13)
+3/2/2026    20:27:52.830    1:  Call Result             => DoOperation()   RetVal: 0
+3/2/2026    20:27:54.281    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+3/2/2026    20:27:54.312   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+3/2/2026    20:27:54.546   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+3/2/2026    20:27:54.562    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+3/2/2026    20:27:54.562    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+3/2/2026    20:27:54.578    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+3/2/2026    20:27:54.578    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+3/2/2026    20:27:54.578    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+3/2/2026    20:27:54.578    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+3/2/2026    20:27:54.578   11:  METHOD CHANGED (LoadedFromFile)
+3/2/2026    20:27:54.593    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+3/2/2026    20:27:54.593    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+3/2/2026    20:27:54.593    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+3/2/2026    20:27:54.593    1:  Call Result             => GetInjectorName()   Out Params: strName=
+3/2/2026    20:27:54.593    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+3/2/2026    20:27:54.593    1:  Call Result             => GetInjectorName()   Out Params: strName=
+3/2/2026    20:27:55.373    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+3/2/2026    20:27:55.373    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+3/2/2026    20:27:55.373    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+3/2/2026    20:27:55.373    1:  Call Result             => GetInjectorName()   Out Params: strName=
+3/2/2026    20:27:55.373    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+3/2/2026    20:27:55.373    1:  Call Result             => GetInjectorName()   Out Params: strName=
+3/2/2026    20:27:55.373    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+3/2/2026    20:27:55.373    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+4/7/2026    08:53:45.208   11:  Call                    => Uninitialize()
+4/7/2026    11:58:14.946    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+4/7/2026    11:58:15.055    1:  CONFIG CHANGED (LoadedFromFile)
+4/7/2026    11:58:15.071    1:  Call                    => IsBarcodeReaderSupported()
+4/7/2026    11:58:15.071    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+4/7/2026    11:58:15.071    1:  Call                    => IsBarcodeReaderSupported()
+4/7/2026    11:58:15.071    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+4/7/2026    11:58:15.086    1:  Call                    => GetNumberOfInjectionSources
+4/7/2026    11:58:15.086    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+4/7/2026    11:58:15.086    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+4/7/2026    11:58:15.086    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+4/7/2026    11:58:15.086    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+4/7/2026    11:58:15.086    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+4/7/2026    11:58:15.086    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+4/7/2026    11:58:15.086    1:  Call                    => DoOperation (nOpCode=13)
+4/7/2026    11:58:15.102    1:  Call Result             => DoOperation()   RetVal: 0
+4/7/2026    11:58:16.584    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+4/7/2026    11:58:16.615   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+4/7/2026    11:58:16.849   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+4/7/2026    11:58:16.865    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+4/7/2026    11:58:16.880    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+4/7/2026    11:58:16.880    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+4/7/2026    11:58:16.880    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+4/7/2026    11:58:16.880    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+4/7/2026    11:58:16.880    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+4/7/2026    11:58:16.880   11:  METHOD CHANGED (LoadedFromFile)
+4/7/2026    11:58:16.896    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+4/7/2026    11:58:16.896    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+4/7/2026    11:58:16.896    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+4/7/2026    11:58:16.896    1:  Call Result             => GetInjectorName()   Out Params: strName=
+4/7/2026    11:58:16.896    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+4/7/2026    11:58:16.896    1:  Call Result             => GetInjectorName()   Out Params: strName=
+4/7/2026    11:58:17.676    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+4/7/2026    11:58:17.676    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+4/7/2026    11:58:17.676    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+4/7/2026    11:58:17.676    1:  Call Result             => GetInjectorName()   Out Params: strName=
+4/7/2026    11:58:17.676    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+4/7/2026    11:58:17.676    1:  Call Result             => GetInjectorName()   Out Params: strName=
+4/7/2026    11:58:17.676    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+4/7/2026    11:58:17.692    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+4/16/2026   10:47:58.614   11:  Call                    => Uninitialize()
+4/16/2026   10:48:06.414    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+4/16/2026   10:48:06.523    1:  CONFIG CHANGED (LoadedFromFile)
+4/16/2026   10:48:06.538    1:  Call                    => IsBarcodeReaderSupported()
+4/16/2026   10:48:06.538    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+4/16/2026   10:48:06.538    1:  Call                    => IsBarcodeReaderSupported()
+4/16/2026   10:48:06.538    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+4/16/2026   10:48:06.554    1:  Call                    => GetNumberOfInjectionSources
+4/16/2026   10:48:06.554    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+4/16/2026   10:48:06.554    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+4/16/2026   10:48:06.554    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+4/16/2026   10:48:06.554    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+4/16/2026   10:48:06.554    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+4/16/2026   10:48:06.554    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+4/16/2026   10:48:06.554    1:  Call                    => DoOperation (nOpCode=13)
+4/16/2026   10:48:06.570    1:  Call Result             => DoOperation()   RetVal: 0
+4/16/2026   10:48:08.332    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+4/16/2026   10:48:08.348   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+4/16/2026   10:48:08.582   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+4/16/2026   10:48:08.613    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+4/16/2026   10:48:08.613    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+4/16/2026   10:48:08.613    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+4/16/2026   10:48:08.613    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+4/16/2026   10:48:08.613    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+4/16/2026   10:48:08.613    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+4/16/2026   10:48:08.629   11:  METHOD CHANGED (LoadedFromFile)
+4/16/2026   10:48:08.629    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+4/16/2026   10:48:08.629    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+4/16/2026   10:48:08.629    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+4/16/2026   10:48:08.629    1:  Call Result             => GetInjectorName()   Out Params: strName=
+4/16/2026   10:48:08.629    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+4/16/2026   10:48:08.629    1:  Call Result             => GetInjectorName()   Out Params: strName=
+4/16/2026   10:48:09.331    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+4/16/2026   10:48:09.331    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+4/16/2026   10:48:09.331    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+4/16/2026   10:48:09.331    1:  Call Result             => GetInjectorName()   Out Params: strName=
+4/16/2026   10:48:09.331    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+4/16/2026   10:48:09.331    1:  Call Result             => GetInjectorName()   Out Params: strName=
+4/16/2026   10:48:09.346    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+4/16/2026   10:48:09.346    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+5/11/2026   09:39:03.250   11:  Call                    => Uninitialize()
+5/11/2026   09:39:10.723    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+5/11/2026   09:39:10.832    1:  CONFIG CHANGED (LoadedFromFile)
+5/11/2026   09:39:10.848    1:  Call                    => IsBarcodeReaderSupported()
+5/11/2026   09:39:10.848    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/11/2026   09:39:10.848    1:  Call                    => IsBarcodeReaderSupported()
+5/11/2026   09:39:10.848    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/11/2026   09:39:10.863    1:  Call                    => GetNumberOfInjectionSources
+5/11/2026   09:39:10.863    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+5/11/2026   09:39:10.863    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+5/11/2026   09:39:10.863    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+5/11/2026   09:39:10.863    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+5/11/2026   09:39:10.863    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+5/11/2026   09:39:10.863    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+5/11/2026   09:39:10.863    1:  Call                    => DoOperation (nOpCode=13)
+5/11/2026   09:39:10.879    1:  Call Result             => DoOperation()   RetVal: 0
+5/11/2026   09:39:12.626    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+5/11/2026   09:39:12.657   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+5/11/2026   09:39:12.891   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+5/11/2026   09:39:12.922    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+5/11/2026   09:39:12.922    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+5/11/2026   09:39:12.922    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+5/11/2026   09:39:12.922    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+5/11/2026   09:39:12.922    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+5/11/2026   09:39:12.922    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+5/11/2026   09:39:12.938   11:  METHOD CHANGED (LoadedFromFile)
+5/11/2026   09:39:12.938    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/11/2026   09:39:12.938    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/11/2026   09:39:12.938    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/11/2026   09:39:12.938    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/11/2026   09:39:12.938    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/11/2026   09:39:12.938    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/11/2026   09:39:13.609    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/11/2026   09:39:13.609    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/11/2026   09:39:13.609    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/11/2026   09:39:13.609    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/11/2026   09:39:13.609    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/11/2026   09:39:13.609    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/11/2026   09:39:13.609    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+5/11/2026   09:39:13.609    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+5/15/2026   21:52:23.278    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+5/15/2026   21:52:24.043    1:  CONFIG CHANGED (LoadedFromFile)
+5/15/2026   21:52:24.043    1:  Call                    => IsBarcodeReaderSupported()
+5/15/2026   21:52:24.043    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/15/2026   21:52:24.043    1:  Call                    => IsBarcodeReaderSupported()
+5/15/2026   21:52:24.043    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/15/2026   21:52:24.043    1:  Call                    => GetNumberOfInjectionSources
+5/15/2026   21:52:24.043    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+5/15/2026   21:52:24.043    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+5/15/2026   21:52:24.043    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+5/15/2026   21:52:24.043    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+5/15/2026   21:52:24.043    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+5/15/2026   21:52:24.043    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+5/15/2026   21:52:24.058    1:  Call                    => DoOperation (nOpCode=13)
+5/15/2026   21:52:24.074    1:  Call Result             => DoOperation()   RetVal: 0
+5/15/2026   21:52:31.921    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+5/15/2026   21:52:31.936   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+5/15/2026   21:52:33.091   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+5/15/2026   21:52:33.138    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+5/15/2026   21:52:33.138    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+5/15/2026   21:52:33.138    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+5/15/2026   21:52:33.138    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+5/15/2026   21:52:33.138    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+5/15/2026   21:52:33.138    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+5/15/2026   21:52:33.138   11:  METHOD CHANGED (LoadedFromFile)
+5/15/2026   21:52:33.153    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/15/2026   21:52:33.153    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/15/2026   21:52:33.153    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/15/2026   21:52:33.153    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/15/2026   21:52:33.153    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/15/2026   21:52:33.153    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/15/2026   21:52:34.573    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/15/2026   21:52:34.573    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/15/2026   21:52:34.573    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/15/2026   21:52:34.573    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/15/2026   21:52:34.573    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/15/2026   21:52:34.573    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/15/2026   21:52:34.573    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+5/15/2026   21:52:34.573    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+5/15/2026   22:13:51.845    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+5/15/2026   22:13:51.938    1:  CONFIG CHANGED (LoadedFromFile)
+5/15/2026   22:13:51.954    1:  Call                    => IsBarcodeReaderSupported()
+5/15/2026   22:13:51.954    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/15/2026   22:13:51.954    1:  Call                    => IsBarcodeReaderSupported()
+5/15/2026   22:13:51.954    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/15/2026   22:13:51.970    1:  Call                    => GetNumberOfInjectionSources
+5/15/2026   22:13:51.970    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+5/15/2026   22:13:51.970    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+5/15/2026   22:13:51.970    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+5/15/2026   22:13:51.970    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+5/15/2026   22:13:51.970    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+5/15/2026   22:13:51.970    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+5/15/2026   22:13:51.970    1:  Call                    => DoOperation (nOpCode=13)
+5/15/2026   22:13:51.985    1:  Call Result             => DoOperation()   RetVal: 0
+5/15/2026   22:13:53.498    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+5/15/2026   22:13:53.514   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+5/15/2026   22:13:53.748   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+5/15/2026   22:13:53.779    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+5/15/2026   22:13:53.779    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+5/15/2026   22:13:53.779    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+5/15/2026   22:13:53.795    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+5/15/2026   22:13:53.795    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+5/15/2026   22:13:53.795    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+5/15/2026   22:13:53.795   11:  METHOD CHANGED (LoadedFromFile)
+5/15/2026   22:13:53.795    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/15/2026   22:13:53.795    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/15/2026   22:13:53.795    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/15/2026   22:13:53.795    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/15/2026   22:13:53.810    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/15/2026   22:13:53.810    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/15/2026   22:13:54.746    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/15/2026   22:13:54.746    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/15/2026   22:13:54.746    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/15/2026   22:13:54.746    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/15/2026   22:13:54.746    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/15/2026   22:13:54.746    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/15/2026   22:13:54.762    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+5/15/2026   22:13:54.762    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+5/22/2026   11:39:05.716   11:  Call                    => Uninitialize()
+5/22/2026   17:16:39.038    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+5/22/2026   17:16:39.148    1:  CONFIG CHANGED (LoadedFromFile)
+5/22/2026   17:16:39.163    1:  Call                    => IsBarcodeReaderSupported()
+5/22/2026   17:16:39.163    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/22/2026   17:16:39.163    1:  Call                    => IsBarcodeReaderSupported()
+5/22/2026   17:16:39.163    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/22/2026   17:16:39.179    1:  Call                    => GetNumberOfInjectionSources
+5/22/2026   17:16:39.179    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+5/22/2026   17:16:39.179    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+5/22/2026   17:16:39.179    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+5/22/2026   17:16:39.179    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+5/22/2026   17:16:39.179    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+5/22/2026   17:16:39.179    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+5/22/2026   17:16:39.179    1:  Call                    => DoOperation (nOpCode=13)
+5/22/2026   17:16:39.194    1:  Call Result             => DoOperation()   RetVal: 0
+5/22/2026   17:16:40.801    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+5/22/2026   17:16:40.817   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+5/22/2026   17:16:41.051   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+5/22/2026   17:16:41.082    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+5/22/2026   17:16:41.082    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+5/22/2026   17:16:41.082    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+5/22/2026   17:16:41.082    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+5/22/2026   17:16:41.082    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+5/22/2026   17:16:41.082    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+5/22/2026   17:16:41.082   11:  METHOD CHANGED (LoadedFromFile)
+5/22/2026   17:16:41.098    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/22/2026   17:16:41.098    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/22/2026   17:16:41.098    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/22/2026   17:16:41.098    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/22/2026   17:16:41.098    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/22/2026   17:16:41.098    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/22/2026   17:16:41.893    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/22/2026   17:16:41.893    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/22/2026   17:16:41.893    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/22/2026   17:16:41.893    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/22/2026   17:16:41.893    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/22/2026   17:16:41.893    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/22/2026   17:16:41.893    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+5/22/2026   17:16:41.893    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+5/25/2026   13:44:46.903   11:  Call                    => Uninitialize()
+5/25/2026   13:44:56.638    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+5/25/2026   13:44:56.731    1:  CONFIG CHANGED (LoadedFromFile)
+5/25/2026   13:44:56.747    1:  Call                    => IsBarcodeReaderSupported()
+5/25/2026   13:44:56.747    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/25/2026   13:44:56.747    1:  Call                    => IsBarcodeReaderSupported()
+5/25/2026   13:44:56.747    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+5/25/2026   13:44:56.762    1:  Call                    => GetNumberOfInjectionSources
+5/25/2026   13:44:56.762    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+5/25/2026   13:44:56.762    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+5/25/2026   13:44:56.762    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+5/25/2026   13:44:56.762    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+5/25/2026   13:44:56.762    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+5/25/2026   13:44:56.762    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+5/25/2026   13:44:56.762    1:  Call                    => DoOperation (nOpCode=13)
+5/25/2026   13:44:56.778    1:  Call Result             => DoOperation()   RetVal: 0
+5/25/2026   13:44:58.572    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+5/25/2026   13:44:58.603   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+5/25/2026   13:44:58.837   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+5/25/2026   13:44:58.868    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+5/25/2026   13:44:58.868    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+5/25/2026   13:44:58.868    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+5/25/2026   13:44:58.868    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+5/25/2026   13:44:58.868    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+5/25/2026   13:44:58.868    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+5/25/2026   13:44:58.868   11:  METHOD CHANGED (LoadedFromFile)
+5/25/2026   13:44:58.884    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/25/2026   13:44:58.884    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/25/2026   13:44:58.884    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/25/2026   13:44:58.884    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/25/2026   13:44:58.884    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/25/2026   13:44:58.884    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/25/2026   13:44:59.570    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+5/25/2026   13:44:59.570    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+5/25/2026   13:44:59.570    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+5/25/2026   13:44:59.570    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/25/2026   13:44:59.570    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+5/25/2026   13:44:59.570    1:  Call Result             => GetInjectorName()   Out Params: strName=
+5/25/2026   13:44:59.570    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+5/25/2026   13:44:59.570    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100
+6/15/2026   19:44:50.672   11:  Call                    => SaveMethod (C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+6/19/2026   06:13:26.433    1:  Call                    => Initialize (Mode=OFFLINE, nDeviceID=1, nInstrumentID=1, strProductID=7890A, strExtendedParam=Agilent.GC.7890System.GC7890, strConnectionInfo=ModuleID={8d3b5ad0-bd79-4f61-bcff-d6b3adf7ce52};ClusterID=RapidControl)
+6/19/2026   06:13:26.542    1:  CONFIG CHANGED (LoadedFromFile)
+6/19/2026   06:13:26.558    1:  Call                    => IsBarcodeReaderSupported()
+6/19/2026   06:13:26.558    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+6/19/2026   06:13:26.558    1:  Call                    => IsBarcodeReaderSupported()
+6/19/2026   06:13:26.558    1:  Call Result             => IsBarcodeReaderSupported()   RetVal: False
+6/19/2026   06:13:26.574    1:  Call                    => GetNumberOfInjectionSources
+6/19/2026   06:13:26.574    1:  Call Result             => GetNumberOfInjectionSources()   RetVal: 2
+6/19/2026   06:13:26.574    1:  Call                    => GetInjectionSourceInfo (nIdx=0)
+6/19/2026   06:13:26.574    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Injector, nInjectionSourceID=0
+6/19/2026   06:13:26.574    1:  Call                    => GetInjectionSourceInfo (nIdx=1)
+6/19/2026   06:13:26.574    1:  Call Result             => GetInjectionSourceInfo()   Out Params: strInjectorName=GC Valve, nInjectionSourceID=1
+6/19/2026   06:13:26.574    1:  Call                    => ChemStationReadyStateChanged(bReadyForRun=True)
+6/19/2026   06:13:26.574    1:  Call                    => DoOperation (nOpCode=13)
+6/19/2026   06:13:26.589    1:  Call Result             => DoOperation()   RetVal: 0
+6/19/2026   06:13:28.056    1:  Call                    => SwitchInjectionSource (bIsManualInjectionSource=False, nInjectionSourceID=1, vbActive=True)
+6/19/2026   06:13:28.071   11:  Call                    => LoadMethod (bPreLoadCheck=True, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+6/19/2026   06:13:28.305   11:  Call                    => LoadMethod (bPreLoadCheck=False, strPath=C:\CHEM32\1\METHODS\221026_REACTION_ONLY TCD.M\Agilent\)
+6/19/2026   06:13:28.321    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=0, bEnable=False)
+6/19/2026   06:13:28.321    7:  Event                   => DevEnableInjectionSource (nInjectionSourceID=1, bEnable=True)
+6/19/2026   06:13:28.336    7:  Event                   => RawdataRegisterSignal (Signal: #0 TCD, TCD1A, Front Signal)
+6/19/2026   06:13:28.336    7:  Event                   => RawdataRegisterSignal (Signal: #1 TST, TST2A, Test Plot)
+6/19/2026   06:13:28.336    7:  Event                   => RawdataRegisterSignal (Signal: #2 FID, FID3B, Back Signal)
+6/19/2026   06:13:28.336    7:  Event                   => RawdataRegisterSignal (Signal: #3 TST, TST4A, Test Plot)
+6/19/2026   06:13:28.336   11:  METHOD CHANGED (LoadedFromFile)
+6/19/2026   06:13:28.352    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+6/19/2026   06:13:28.352    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+6/19/2026   06:13:28.352    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+6/19/2026   06:13:28.352    1:  Call Result             => GetInjectorName()   Out Params: strName=
+6/19/2026   06:13:28.352    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+6/19/2026   06:13:28.352    1:  Call Result             => GetInjectorName()   Out Params: strName=
+6/19/2026   06:13:29.148    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=0)
+6/19/2026   06:13:29.148    1:  Call Result             => GetInjectorName()   Out Params: strName=Valve 1
+6/19/2026   06:13:29.148    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=1)
+6/19/2026   06:13:29.148    1:  Call Result             => GetInjectorName()   Out Params: strName=
+6/19/2026   06:13:29.148    1:  Call                    => GetInjectorName (nInjectionSourceID=1, nInjectorID=2)
+6/19/2026   06:13:29.148    1:  Call Result             => GetInjectorName()   Out Params: strName=
+6/19/2026   06:13:29.148    1:  Call                    => VialNumberToName (nInjectorID=0, nNumber=100)
+6/19/2026   06:13:29.148    1:  Call Result             => VialNumberToName()   Out Params: strVialName=100

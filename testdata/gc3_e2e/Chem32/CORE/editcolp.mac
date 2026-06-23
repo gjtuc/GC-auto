@@ -1,0 +1,1369 @@
+! $Header: /cag/PHX3D/parts/macros/editcolp.mac 4.7 2002-05-24 01:24:31-07 fkremser Exp $
+
+! Column parameter handling    
+
+
+!==============================================================================
+Name printColumnParms
+!------------------------------------------------------------------------------
+
+! Print column parameters
+  
+parameter columnNum
+parameter columns$ default "columns"
+
+local value, Length, Diameter
+local colDeadUnit, deadValue, particleSize, ColumnType
+!..............................................................................
+Local   ID_PHX3DSUPPORTFILES_DESCRIPTION_61
+Local   ID_PHX3DSUPPORTFILES_COLUMN_ID_MODU_62
+Local   ID_PHX3DSUPPORTFILES_COLUMN_ID_MODU_63
+Local   ID_PHX3DSUPPORTFILES_INSTALLED_64
+Local   ID_PHX3DSUPPORTFILES_INSTALLED_65
+Local   ID_PHX3DSUPPORTFILES_PRODUCT_NO_66
+Local   ID_PHX3DSUPPORTFILES_BATCH_NO_67
+Local   ID_PHX3DSUPPORTFILES_SERIAL_NO_68
+Local   ID_PHX3DSUPPORTFILES_DIAMETER_69
+Local   ID_PHX3DSUPPORTFILES_LENGTH_70
+Local   ID_PHX3DSUPPORTFILES_DIAMETER_71
+Local   ID_PHX3DSUPPORTFILES_LENGTH_72
+Local   ID_PHX3DSUPPORTFILES_DIAMETER_73
+Local   ID_PHX3DSUPPORTFILES_LENGTH_74
+Local   ID_PHX3DSUPPORTFILES_CELL_TYPE_75
+Local   ID_PHX3DSUPPORTFILES_CELL_TYPE_76
+Local   ID_PHX3DSUPPORTFILES_CELL_TYPE_77
+Local   ID_PHX3DSUPPORTFILES_EFF__LENGTH_78
+Local   ID_PHX3DSUPPORTFILES_FILM_THICKNESS_79
+Local   ID_PHX3DSUPPORTFILES_PARTICLE_SIZE_80
+Local   ID_PHX3DSUPPORTFILES_VOID_VOLUME_81
+Local   ID_PHX3DSUPPORTFILES_VOID_VOLUME_82
+Local   ID_PHX3DSUPPORTFILES_DEAD_TIME_83
+Local   ID_PHX3DSUPPORTFILES____INJECTIONS_84
+Local   ID_PHX3DSUPPORTFILES_MAX__PRESSURE_85
+Local   ID_PHX3DSUPPORTFILES_MAX__PRESSURE_86
+Local   ID_PHX3DSUPPORTFILES_MAX__PH_87
+Local   ID_PHX3DSUPPORTFILES_MIN__PH_401
+Local   ID_PHX3DSUPPORTFILES_MAX__TEMPERATU_88
+Local   ID_PHX3DSUPPORTFILES_COMMENT_89
+Local   NLSFileName_phx3dsupport$
+Local   ID_PHX3DSUPPORTFILES_PRNT_DEVICE_SERIAL_404
+Local   rcStr$
+
+Local  ID_PHX3DSUPPORTFILES_MODEL_NO_406          
+Local  ID_PHX3DSUPPORTFILES_INVENTORY_NO_407      
+Local  ID_PHX3DSUPPORTFILES_MANUFACUTER_408       
+
+
+
+  ID_PHX3DSUPPORTFILES_DESCRIPTION_61                =  17061  
+  ID_PHX3DSUPPORTFILES_COLUMN_ID_MODU_62             =  17062  
+  ID_PHX3DSUPPORTFILES_COLUMN_ID_MODU_63             =  17063  
+  ID_PHX3DSUPPORTFILES_INSTALLED_64                  =  17064  
+  ID_PHX3DSUPPORTFILES_INSTALLED_65                  =  17065  
+  ID_PHX3DSUPPORTFILES_PRODUCT_NO_66                 =  17066  
+  ID_PHX3DSUPPORTFILES_BATCH_NO_67                   =  17067  
+  ID_PHX3DSUPPORTFILES_SERIAL_NO_68                  =  17068  
+  ID_PHX3DSUPPORTFILES_DIAMETER_69                   =  17069  
+  ID_PHX3DSUPPORTFILES_LENGTH_70                     =  17070  
+  ID_PHX3DSUPPORTFILES_DIAMETER_71                   =  17071  
+  ID_PHX3DSUPPORTFILES_LENGTH_72                     =  17072  
+  ID_PHX3DSUPPORTFILES_DIAMETER_73                   =  17073  
+  ID_PHX3DSUPPORTFILES_LENGTH_74                     =  17074  
+  ID_PHX3DSUPPORTFILES_CELL_TYPE_75                  =  17075  
+  ID_PHX3DSUPPORTFILES_CELL_TYPE_76                  =  17076  
+  ID_PHX3DSUPPORTFILES_CELL_TYPE_77                  =  17077  
+  ID_PHX3DSUPPORTFILES_EFF__LENGTH_78                =  17078  
+  ID_PHX3DSUPPORTFILES_FILM_THICKNESS_79             =  17079  
+  ID_PHX3DSUPPORTFILES_PARTICLE_SIZE_80              =  17080  
+  ID_PHX3DSUPPORTFILES_VOID_VOLUME_81                =  17081  
+  ID_PHX3DSUPPORTFILES_VOID_VOLUME_82                =  17082  
+  ID_PHX3DSUPPORTFILES_DEAD_TIME_83                  =  17083  
+  ID_PHX3DSUPPORTFILES____INJECTIONS_84              =  17084  
+  ID_PHX3DSUPPORTFILES_MAX__PRESSURE_85              =  17085  
+  ID_PHX3DSUPPORTFILES_MAX__PRESSURE_86              =  17086  
+  ID_PHX3DSUPPORTFILES_MAX__PH_87                    =  17087  
+  ID_PHX3DSUPPORTFILES_MIN__PH_401                   =  17401
+  ID_PHX3DSUPPORTFILES_MAX__TEMPERATU_88             =  17088  
+  ID_PHX3DSUPPORTFILES_COMMENT_89                    =  17089  
+  ID_PHX3DSUPPORTFILES_PRNT_DEVICE_SERIAL_404        =  17404
+
+  ID_PHX3DSUPPORTFILES_MODEL_NO_406                  =  17406
+  ID_PHX3DSUPPORTFILES_INVENTORY_NO_407              =  17407
+  ID_PHX3DSUPPORTFILES_MANUFACUTER_408               =  17408
+
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  
+  ColumnType = TabHdrVal (_Config[1], "Features", "ColumnType")
+  print using #5, "//"
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DESCRIPTION_61), \
+                  tabText$(_Config[1], columns$, columnNum, colDescription)
+
+  if tabVal(_Config[1], columns$, columnNum, IsHW) = 1 then
+      if tabVal(_Config[1], columns$, columnNum, ColumnPosition) = 1 then
+          print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_COLUMN_ID_MODU_62)
+      endif
+      if tabVal(_Config[1], columns$, columnNum, ColumnPosition) = 2 then
+          print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_COLUMN_ID_MODU_63)
+      endif
+  else
+    if tabVal(_Config[1], columns$, columnNum, colInstalled) = 1 then
+      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_INSTALLED_64)
+    else
+      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_INSTALLED_65)
+    endif
+  endIf
+
+  if (ColumnType <> 3) then
+     print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PRODUCT_NO_66), \
+                       tabText$(_Config[1], columns$, columnNum, productNum)
+     print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_BATCH_NO_67), \
+                       tabText$(_Config[1], columns$, columnNum, batchNum)
+     print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SERIAL_NO_68), \
+                       tabText$(_Config[1], columns$, columnNum, serialNum)
+  else
+     ! GC
+     print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MODEL_NO_406), \
+                       tabText$(_Config[1], columns$, columnNum, productNum)
+     print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MANUFACUTER_408), \
+                       tabText$(_Config[1], columns$, columnNum, batchNum)
+     print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_INVENTORY_NO_407), \
+                       tabText$(_Config[1], columns$, columnNum, serialNum)
+  endif
+  
+  ! switch on ColumnType for Length and Diameter
+  Length = tabVal(_Config[1], columns$, columnNum, colLength)
+  Diameter = tabVal(_Config[1], columns$, columnNum, colDiameter)
+  evaluate "goto LD" + val$(ColumnType)
+LD1:
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIAMETER_69), Diameter
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LENGTH_70), Length
+  goto EndSwitchLD
+LD2:
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIAMETER_71), Diameter
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LENGTH_72), Length
+  goto EndSwitchLD
+LD3:
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIAMETER_73), Diameter
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LENGTH_74), Length
+  goto EndSwitchLD
+EndSwitchLD:
+
+  if ColumnType = 2 then
+    value = tabVal(_Config[1], columns$, columnNum, bubbleCapillary)
+    if value = 0 then
+      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CELL_TYPE_75)
+    else; if value=1
+      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CELL_TYPE_76);
+    else;
+      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CELL_TYPE_77); 
+    endIf; endif
+    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_EFF__LENGTH_78), \
+                    tabVal(_Config[1], columns$, columnNum, effLength)
+  else
+    particleSize = tabVal(_Config[1], columns$, columnNum, particleSize)
+    if ColumnType = 3 then
+      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_FILM_THICKNESS_79), particleSize
+    else
+      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PARTICLE_SIZE_80), particleSize
+    endif
+    colDeadUnit = tabVal(_Config[1], columns$, columnNum, colDeadUnit)
+    deadValue = tabVal(_Config[1], columns$, columnNum, colDead)
+    if colDeadUnit = 0 then 
+      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_VOID_VOLUME_81), deadValue
+    else
+      if colDeadUnit = 1 then
+        print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_VOID_VOLUME_82), deadValue
+      else
+        print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DEAD_TIME_83), deadValue
+      endIf
+    endIf
+  endIf
+
+  !if tabVal(_Config[1], columns$, columnNum, IsHW) = 1 then
+  !do now for all columns
+     value = tabVal(_Config[1], columns$, columnNum, NumInjections)
+     if value > 0
+        print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES____INJECTIONS_84), value
+     endif   
+  !endif
+
+  if ColumnType <> 3 then
+     if _PumpUseBar = 1
+       print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MAX__PRESSURE_85), tabVal(_Config[1], columns$, columnNum, MaxPressure)
+     else
+       print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MAX__PRESSURE_86), tabVal(_Config[1], columns$, columnNum, MaxPressure)
+     endif
+  endif
+  
+  ! use ASCII(176) for degree char
+  if ColumnType <> 3 then
+    !move to here since only relevant for liquid phases
+    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MAX__PH_87), tabVal(_Config[1], columns$, columnNum, MaxPh)
+    on Error rcStr$ = "Min. pH:            #.#/"   !new resource
+    rcStr$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MIN__PH_401)
+    on Error 
+    print using #5, rcStr$, tabVal(_Config[1], columns$, columnNum, "MinPh")
+  endif
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MAX__TEMPERATU_88), tabVal(_Config[1], columns$, columnNum, MaxTemp)
+  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_COMMENT_89), tabText$(_Config[1], columns$, columnNum, Comment)
+  
+  if ShowDeviceSerial_for_LCRCNet_THM_CCC() = 1
+     on Error rcStr$ = "TCC Serial No.:     % /"   !new resource
+     rcStr$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PRNT_DEVICE_SERIAL_404)
+     on Error 
+     print using #5, rcStr$, tabText$(_Config[1], columns$, columnNum, "DeviceSerial")
+  endif
+
+  print using #5, "/"
+  return
+
+endMacro ! printColumnParms
+
+!==============================================================================
+Name ShowDeviceSerial_for_LCRCNet_THM_CCC
+!------------------------------------------------------------------------------
+local bShowDeviceSerial 
+
+  bShowDeviceSerial = 0
+  if Check (Variable, DevRCnet) = 1 then
+     if DevRCnet > 0 then
+        if Check (Variable, DevRCCCC) > 0
+           bShowDeviceSerial = 1
+        endif   
+     else   
+        if Check (Variable, DevRCTHM) = 1 then
+           if DevRCTHM > 1  then 
+              !show only when there is more than one TCC there.
+              bShowDeviceSerial = 1
+           endif
+        endif   
+     endif   
+  endif   
+
+  return bShowDeviceSerial
+endmacro
+
+!==============================================================================
+Name printAllMethColumns
+!------------------------------------------------------------------------------
+
+! Print all columns of a method
+
+! JD 6-Jun-94:
+! This should be changed such that the listing contains only the type of
+! the required column(s) but not the characteristics of the actually
+! installed column (like serial number).
+  
+local colDeadUnit, deadValue
+local columnNum
+local maxColumnNum
+!..............................................................................
+Local  ID_PHX3DSUPPORTFILES___COLUMN_PARAM_90
+Local  ID_PHX3DSUPPORTFILES_____COLUMN__NO_91        
+Local  ID_PHX3DSUPPORTFILES_______DESCRIPT_92        
+Local  ID_PHX3DSUPPORTFILES_______PRODUCT_93         
+Local  ID_PHX3DSUPPORTFILES_______BATCH_NO_94        
+Local  ID_PHX3DSUPPORTFILES_______SERIAL_N_95        
+Local  ID_PHX3DSUPPORTFILES_______DIAMETER_96        
+Local  ID_PHX3DSUPPORTFILES_______LENGTH_97          
+Local  ID_PHX3DSUPPORTFILES_______PARTICLE_98        
+Local  ID_PHX3DSUPPORTFILES_______VOID_VOL_99
+Local  ID_PHX3DSUPPORTFILES_______VOID_VOL_100       
+Local  ID_PHX3DSUPPORTFILES_______VOID_TIM_101       
+Local  ID_PHX3DSUPPORTFILES_______BUBBLE_C_102       
+Local  ID_PHX3DSUPPORTFILES_______HIGH_SEN_103       
+Local  ID_PHX3DSUPPORTFILES_______EFF__LEN_104       
+Local  ID_PHX3DSUPPORTFILES_VOID_VOLUME_81           
+Local  NLSFileName_phx3dsupport$
+
+
+  ID_PHX3DSUPPORTFILES___COLUMN_PARAM_90             =  17090  
+  ID_PHX3DSUPPORTFILES_____COLUMN__NO_91             =  17091  
+  ID_PHX3DSUPPORTFILES_______DESCRIPT_92             =  17092  
+  ID_PHX3DSUPPORTFILES_______PRODUCT_93              =  17093  
+  ID_PHX3DSUPPORTFILES_______BATCH_NO_94             =  17094  
+  ID_PHX3DSUPPORTFILES_______SERIAL_N_95             =  17095  
+  ID_PHX3DSUPPORTFILES_______DIAMETER_96             =  17096  
+  ID_PHX3DSUPPORTFILES_______LENGTH_97               =  17097  
+  ID_PHX3DSUPPORTFILES_______PARTICLE_98             =  17098  
+  ID_PHX3DSUPPORTFILES_______VOID_VOL_99             =  17099  
+  ID_PHX3DSUPPORTFILES_______VOID_VOL_100            =  17100  
+  ID_PHX3DSUPPORTFILES_______VOID_TIM_101            =  17101  
+  ID_PHX3DSUPPORTFILES_______BUBBLE_C_102            =  17102  
+  ID_PHX3DSUPPORTFILES_______HIGH_SEN_103            =  17103  
+  ID_PHX3DSUPPORTFILES_______EFF__LEN_104            =  17104  
+  ID_PHX3DSUPPORTFILES_VOID_VOLUME_81                =  17081
+  
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  return       ! JD 6-Jun-94: needs to be adapted !
+
+!  if objHdrType(_DAMethod, "columns") <> 4 then
+!    copyTab _config[2], "columns", _DAMethod, "columns"; endIf
+!  maxColumnNum = tabHdrVal(_DAMethod, "columns", "numberOfRows")
+!  print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES___COLUMN_PARAM_90)
+!  for columnNum = 1 to maxColumnNum
+!    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_____COLUMN__NO_91), columnNum
+!    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______DESCRIPT_92), tabText$(_DAMethod[1], "columns", columnNum, "colDescription")
+!    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______PRODUCT_93), tabText$(_DAMethod[1], "columns", columnNum, "productNum")
+!    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______BATCH_NO_94), tabText$(_DAMethod[1], "columns", columnNum, "batchNum")
+!    if TabHdrVal (_Config[1],"Features","ColumnType") = 1 then
+!      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______SERIAL_N_95), tabText$(_DAMethod[1], "columns", columnNum, "serialNum")
+!    endIf
+!    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______DIAMETER_96), tabVal(_DAMethod[1], "columns", columnNum, "colDiameter")
+!    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______LENGTH_97), tabVal(_DAMethod[1], "columns", columnNum, "colLength")
+!    if TabHdrVal (_Config[1], "Features", "ColumnType") = 1 then
+!      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______PARTICLE_98), tabVal(_DAMethod[1], "columns", columnNum, "particleSize")
+!      colDeadUnit = tabVal(_DAMethod[1], "columns", columnNum, "colDeadUnit") + 1
+!      deadValue = tabVal(_DAMethod[1], "columns", columnNum, "colDead")
+!      if colDeadUnit = 1 then 
+!        print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_VOID_VOLUME_81), deadValue
+!      else
+!        if colDeadUnit = 2 then
+!          print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______VOID_VOL_100), deadValue
+!        else 
+!          print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______VOID_TIM_101), deadValue
+!        endIf
+!      endIf
+!    else
+!      bubble = tabVal(_DAMethod[1], "columns", columnNum, bubbleCapillary)
+!      if bubble = 1 then
+!        print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______BUBBLE_C_102)
+!      else
+!        if bubble = 2
+!          print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______HIGH_SEN_103)
+!        endif
+!      endIf
+!      print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_______EFF__LEN_104), tabVal(_DAMethod[1], "columns", columnNum, effLength)
+!    endIf
+!  next columnNum
+!  return
+
+endMacro ! printAllMethColumns
+
+
+!==============================================================================
+Name SetDescRowEditState
+PARAMETER Tab$
+PARAMETER SourceCol$
+PARAMETER control 
+!------------------------------------------------------------------------------
+local  RowNbr
+
+  RowNbr = RowByText( _config[3],tab$,, "Source" , "i=" , SourceCol$ )
+  if RowNbr > 0
+     settabval  _config[3],tab$,RowNbr,"Control",control
+  endif   
+EndMacro
+
+
+
+!==============================================================================
+Name GenColumnDesc1_CellEditState_RowButtonState
+! Define display description table for column parameters
+!------------------------------------------------------------------------------
+
+local ColumnType
+Local CellEditable
+Local InjEditable
+Local ComboEditable
+Local bRestrictColTabEditing  !since driver UI does a lot by itself
+
+  bRestrictColTabEditing = 0
+
+  ColumnType = TabHdrVal (_Config[1], "Features", "ColumnType")
+
+  bRestrictColTabEditing = Is_GC_WithOwnColumnUI()
+  !bRestrictColTabEditing = 1 ! for testing
+
+  if _Offline = 1
+     SetTabHdrVal  _Config[3],columnDesc1,DeleteProtected, 1
+     SetTabHdrVal  _Config[3],columnDesc1,InsertProtected, 1
+     CellEditable = 0
+     InjEditable = 0
+     ComboEditable = 3  !not editable combobox
+  else
+     if bRestrictColTabEditing = 1
+        SetTabHdrVal  _Config[3],columnDesc1,DeleteProtected, 0
+        SetTabHdrVal  _Config[3],columnDesc1,InsertProtected, 1
+        CellEditable = 1
+        InjEditable = 2
+        ComboEditable = 3  !not editable combobox
+     else   
+        SetTabHdrVal  _Config[3],columnDesc1,DeleteProtected, 0
+        SetTabHdrVal  _Config[3],columnDesc1,InsertProtected, 0
+        CellEditable = 2
+        InjEditable = 2
+        ComboEditable = 4  !editable combobox
+     endif
+  endif
+  
+  
+  ! make the table
+
+  SetDescRowEditState "columnDesc1", "colInstalled", ComboEditable
+  SetDescRowEditState "columnDesc1", "colDescription", CellEditable
+  SetDescRowEditState "columnDesc1", "BatchNum", CellEditable
+  !if (ColumnType = 1) or (ColumnType = 3) then
+  !now for all types
+  SetDescRowEditState "columnDesc1", "SerialNum", CellEditable
+  !endIf
+  SetDescRowEditState "columnDesc1", "ProductNum", CellEditable
+  ! "NumInjections" - this we want to have editable !!!
+  SetDescRowEditState "columnDesc1", "NumInjections", InjEditable
+  SetDescRowEditState "columnDesc1", "MaxPressure", CellEditable
+  SetDescRowEditState "columnDesc1", "MaxTemp", CellEditable
+  if ColumnType <> 3 then
+    SetDescRowEditState "columnDesc1", "MaxPh", CellEditable
+    SetDescRowEditState "columnDesc1", "MinPh", CellEditable
+  endif  
+  SetDescRowEditState "columnDesc1", "colLength", CellEditable
+  if ColumnType = 2 then
+    !CE
+    SetDescRowEditState "columnDesc1", "colDiameter", CellEditable
+    SetDescRowEditState "columnDesc1", "bubbleCapillary", ComboEditable
+    SetDescRowEditState "columnDesc1", "effLength", CellEditable
+  else
+    if ColumnType = 3 then
+      !GC
+      SetDescRowEditState "columnDesc1", "colDiameter", CellEditable
+      SetDescRowEditState "columnDesc1", "particleSize", CellEditable
+      SetDescRowEditState "columnDesc1", "colDead", CellEditable
+    else
+      !LC
+      SetDescRowEditState "columnDesc1", "colDiameter", CellEditable
+      SetDescRowEditState "columnDesc1", "particleSize", CellEditable
+      SetDescRowEditState "columnDesc1", "colDead", CellEditable
+      !don't now right, know how to make combobox not editable 
+      !SetDescRowEditState "columnDesc1", "colDeadUnit", CellEditable
+      SetDescRowEditState "columnDesc1", "colDeadUnit", ComboEditable
+    endif
+  endIf
+  SetDescRowEditState "columnDesc1", "Comment", CellEditable
+  
+EndMacro
+
+
+
+!==============================================================================
+Name GenColumnDesc1
+! Define display description table for column parameters
+!------------------------------------------------------------------------------
+
+local ColumnType
+Local  NLSFileName_phx3dsupport$
+Local  ID_PHX3DSUPPORTFILES_INSERT__40_3_3_105
+Local  ID_PHX3DSUPPORTFILES_APPEND__73_3_3_106  
+Local  ID_PHX3DSUPPORTFILES_DELETE_106_3_3_107  
+Local  ID_PHX3DSUPPORTFILES_PRINT_______15_108  
+Local  ID_PHX3DSUPPORTFILES_OK__________18_109  
+Local  ID_PHX3DSUPPORTFILES_CANCEL______22_110  
+Local  ID_PHX3DSUPPORTFILES_HELP______25_399   
+Local  ID_PHX3DSUPPORTFILES_INSTALLED_111       
+Local  ID_PHX3DSUPPORTFILES_NO_YES_112          
+Local  ID_PHX3DSUPPORTFILES_DESCRIPTION_113     
+Local  ID_PHX3DSUPPORTFILES_BATCH_114           
+Local  ID_PHX3DSUPPORTFILES_SERIAL_115          
+Local  ID_PHX3DSUPPORTFILES_PRODUCT_116         
+Local  ID_PHX3DSUPPORTFILES_LENGTH_117          
+Local  ID_PHX3DSUPPORTFILES_DIAMETER_118        
+Local  ID_PHX3DSUPPORTFILES_CELL_119            
+Local  ID_PHX3DSUPPORTFILES_EFF__LENGTH_120     
+Local  ID_PHX3DSUPPORTFILES_DIAMETER_121        
+Local  ID_PHX3DSUPPORTFILES_THICKNESS_122       
+Local  ID_PHX3DSUPPORTFILES_DEADTIME_123        
+Local  ID_PHX3DSUPPORTFILES_DIAMETER_124        
+Local  ID_PHX3DSUPPORTFILES_SIZE_125            
+Local  ID_PHX3DSUPPORTFILES_VOID_126            
+Local  ID_PHX3DSUPPORTFILES_UNIT_127            
+Local  ID_PHX3DSUPPORTFILES_COMMENT_128         
+Local  ID_PHX3DSUPPORTFILES__MAX_P_BAR_211      
+Local  ID_PHX3DSUPPORTFILES__MAX_P_10_5_PA_212  
+Local  ID_PHX3DSUPPORTFILES__MAX_T_C_213        
+Local  ID_PHX3DSUPPORTFILES__MAX_PH_214    
+Local  ID_PHX3DSUPPORTFILES__MIN_PH_402
+Local  ID_PHX3DSUPPORTFILES___INJECTIONS_130 
+
+Local  ID_G11N_ADD_WHITESPACE_BTW_COLUMN_20003  
+Local  ID_G11N_ADD_WIDTH_COLHEADER_20004        
+Local  ID_G11N_ADD_WIDTH_COLHEADER_UNIT_20005   
+
+Local  G11N_SPECIALWIDTH_BTW_3 
+Local  G11N_SPECIALWIDTH_4 
+Local  G11N_SPECIALWIDTH_DEADUNIT_5 
+Local  ID_G11N_JPN_LATINF_STRETCH_FACTOR_20007
+
+Local  CellEditable
+Local  JPN_LatinFontStretchFactor
+Local  rcStr$
+Local  ID_PHX3DSUPPORTFILES_MANUFACT_409               
+Local  ID_PHX3DSUPPORTFILES_INVENTORY_410              
+Local  ID_PHX3DSUPPORTFILES_MODEL_411                  
+
+
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  ID_PHX3DSUPPORTFILES_INSERT__40_3_3_105            =  17105  
+  ID_PHX3DSUPPORTFILES_APPEND__73_3_3_106            =  17106  
+  ID_PHX3DSUPPORTFILES_DELETE_106_3_3_107            =  17107  
+  ID_PHX3DSUPPORTFILES_PRINT_______15_108            =  17108  
+  ID_PHX3DSUPPORTFILES_OK__________18_109            =  17109  
+  ID_PHX3DSUPPORTFILES_CANCEL______22_110            =  17110  
+  ID_PHX3DSUPPORTFILES_HELP______25_399              =  17399  
+  ID_PHX3DSUPPORTFILES_INSTALLED_111                 =  17111  
+  ID_PHX3DSUPPORTFILES_NO_YES_112                    =  17112  
+  ID_PHX3DSUPPORTFILES_DESCRIPTION_113               =  17113  
+  ID_PHX3DSUPPORTFILES_BATCH_114                     =  17114  
+  ID_PHX3DSUPPORTFILES_SERIAL_115                    =  17115  
+  ID_PHX3DSUPPORTFILES_PRODUCT_116                   =  17116  
+  ID_PHX3DSUPPORTFILES_LENGTH_117                    =  17117  
+  ID_PHX3DSUPPORTFILES_DIAMETER_118                  =  17118  
+  ID_PHX3DSUPPORTFILES_CELL_119                      =  17119  
+  ID_PHX3DSUPPORTFILES_EFF__LENGTH_120               =  17120  
+  ID_PHX3DSUPPORTFILES_DIAMETER_121                  =  17121  
+  ID_PHX3DSUPPORTFILES_THICKNESS_122                 =  17122  
+  ID_PHX3DSUPPORTFILES_DEADTIME_123                  =  17123  
+  ID_PHX3DSUPPORTFILES_DIAMETER_124                  =  17124  
+  ID_PHX3DSUPPORTFILES_SIZE_125                      =  17125  
+  ID_PHX3DSUPPORTFILES_VOID_126                      =  17126  
+  ID_PHX3DSUPPORTFILES_UNIT_127                      =  17127  
+  ID_PHX3DSUPPORTFILES_COMMENT_128                   =  17128  
+  ID_PHX3DSUPPORTFILES__MAX_P_BAR_211                =  17211
+  ID_PHX3DSUPPORTFILES__MAX_P_10_5_PA_212            =  17212 
+  ID_PHX3DSUPPORTFILES__MAX_T_C_213                  =  17213
+  ID_PHX3DSUPPORTFILES__MAX_PH_214                   =  17214
+  ID_PHX3DSUPPORTFILES__MIN_PH_402                   =  17402
+  ID_PHX3DSUPPORTFILES___INJECTIONS_130              =  17130  
+
+  ID_PHX3DSUPPORTFILES_MANUFACT_409                   =  17409
+  ID_PHX3DSUPPORTFILES_INVENTORY_410                  =  17410
+  ID_PHX3DSUPPORTFILES_MODEL_411                      =  17411
+
+
+  ID_G11N_ADD_WHITESPACE_BTW_COLUMN_20003             =  20003
+  ID_G11N_ADD_WIDTH_COLHEADER_20004                   =  20004
+  ID_G11N_ADD_WIDTH_COLHEADER_UNIT_20005              =  20005
+  ID_G11N_JPN_LATINF_STRETCH_FACTOR_20007             =  20007
+   
+  G11N_SPECIALWIDTH_BTW_3 = Val(ReadResource$(NLSFileName_phx3dsupport$,ID_G11N_ADD_WHITESPACE_BTW_COLUMN_20003))
+  G11N_SPECIALWIDTH_4 = Val(ReadResource$(NLSFileName_phx3dsupport$,ID_G11N_ADD_WIDTH_COLHEADER_20004))
+  G11N_SPECIALWIDTH_DEADUNIT_5 = Val(ReadResource$(NLSFileName_phx3dsupport$,ID_G11N_ADD_WIDTH_COLHEADER_UNIT_20005))
+  !maybe have some percentage value to correct for JPN wider fonts for numbers and latin letters ??
+  on Error JPN_LatinFontStretchFactor = 1  !new resource
+  JPN_LatinFontStretchFactor = Val(ReadResource$(NLSFileName_phx3dsupport$,ID_G11N_JPN_LATINF_STRETCH_FACTOR_20007))
+  on Error
+  
+  !override for JPN testing
+  !if Check(VARIABLE, DDT_WIDTH_COLHEADER_20004 ) = 1
+  !   G11N_SPECIALWIDTH_4 = DDT_WIDTH_COLHEADER_20004
+  !endif
+  if Check(VARIABLE, DDT_WIDTH_FontStretchFactor ) = 1
+     JPN_LatinFontStretchFactor = DDT_WIDTH_FontStretchFactor
+  endif
+
+  ColumnType = TabHdrVal (_Config[1], "Features", "ColumnType")
+  DelTab _config[3], "columnDesc1"
+  NewDescTable columnDesc1
+  SetTabHdrText _config[3],columnDesc1,RowNumTitle,"#"
+  SetTabHdrVal  _config[3],columnDesc1,RowNumWidth,3
+  SetTabHdrVal  _Config[3],columnDesc1,FixedCols, 0
+
+  if _Offline = 1
+    CellEditable = 0
+  else
+    CellEditable = 2
+  endif
+    
+  ! set events
+  if TabHdrVal (_Config[1], "Features", "ColumnSwitch") = 0 then
+    SetTabHdrText _CONFIG[3],columnDesc1,EvUpdCell,Btn_UpdateMethColumn
+  endif
+  ! add buttons
+  SetTabHdrText _CONFIG[3],columnDesc1,BtnInsRow,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_INSERT__40_3_3_105)
+  SetTabHdrText _CONFIG[3],columnDesc1,BtnAppRow,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_APPEND__73_3_3_106)
+  SetTabHdrText _CONFIG[3],columnDesc1,BtnDelRow,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DELETE_106_3_3_107)
+  SetTabHdrText _CONFIG[3],columnDesc1,Btn1,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PRINT_______15_108)
+  SetTabHdrText _CONFIG[3],columnDesc1,Btn2,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OK__________18_109)
+  SetTabHdrText _CONFIG[3],columnDesc1,Btn3,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CANCEL______22_110)
+  SetTabHdrText _CONFIG[3],columnDesc1,Btn4,ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_HELP______25_399)\
+                                                    +"Btn_ShowColumnDialogHelp" 
+  
+  ! Shift table down
+  SetTabHdrText _CONFIG[3],columnDesc1,TableRect, "0, 20, 0, 0"
+  ! make the table
+  AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_INSTALLED_111),ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_NO_YES_112),4, \
+                           8+G11N_SPECIALWIDTH_4,"%s",1,"colInstalled"! added for defect 7357
+                           !//JPNTEST  make the number 8+ above higher to be wider until you can see the full text in the dialog
+  AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DESCRIPTION_113),,CellEditable, \
+                           14*JPN_LatinFontStretchFactor,"%s",0,"colDescription"
+  !if (ColumnType = 1) or (ColumnType = 3) then
+  !now for all types
+  if (ColumnType <> 3) then
+     AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SERIAL_115),,CellEditable, \
+                             13*JPN_LatinFontStretchFactor,"%s",0,"SerialNum"
+     AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_BATCH_114),,CellEditable, \
+                              9*JPN_LatinFontStretchFactor,"%s",0,"BatchNum"
+     AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PRODUCT_116),,CellEditable, \
+                              (11+G11N_SPECIALWIDTH_4)*JPN_LatinFontStretchFactor,"%s",0,"ProductNum"
+                              !//JPNTEST  make the number 11+ above higher to be wider until you can see the full text in the dialog
+  else                             
+     AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_INVENTORY_410),,CellEditable, \
+                             13*JPN_LatinFontStretchFactor,"%s",0,"SerialNum"
+     AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MANUFACT_409),,CellEditable, \
+                              9*JPN_LatinFontStretchFactor,"%s",0,"BatchNum"
+     AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_MODEL_411),,CellEditable, \
+                              (11+G11N_SPECIALWIDTH_4)*JPN_LatinFontStretchFactor,"%s",0,"ProductNum"
+                              !//JPNTEST  make the number 11+ above higher to be wider until you can see the full text in the dialog
+  endIf
+  AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES___INJECTIONS_130),,CellEditable, \
+                           0,"%4.0f",2,"NumInjections"
+  if (ColumnType <> 3) then
+     if _PumpUseBar = 1
+       AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__MAX_P_BAR_211),,CellEditable,\
+                                0,"%7.0f",2,"MaxPressure"
+     else
+       AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__MAX_P_10_5_PA_212),,CellEditable,\ 
+                                0,"%7.0f",2,"MaxPressure"
+     endif
+  endif
+  AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__MAX_T_C_213),,CellEditable, \
+                           0,"%7.1f",2,"MaxTemp"
+  if ColumnType <> 3 then
+     !makes sense only for liquid phases
+     !maxPH should also not be visible for GC
+     AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__MAX_PH_214),,CellEditable,\
+                              8,"%7.1f",2,"MaxPh"
+                              
+     on Error rcStr$ = "Min. pH"  !new resource
+     rcStr$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__MIN_PH_402)
+     on Error 
+     AddDescRow "columnDesc1",rcStr$,,CellEditable,8,"%7.1f",2,"MinPh"
+  endif
+  AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LENGTH_117),,CellEditable,\
+                           7,"%7.1f",2,"colLength"
+  if ColumnType = 2 then
+    !CE
+    AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIAMETER_118),, \ 
+                             2,9,"%9.1f",2,"colDiameter"
+    AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CELL_119), \
+                             "Capillary|Bubble|High Sens.",4, 9,"%s",0,"bubbleCapillary"
+                             !maybe not needed since text is not localized 9+G11N_SPECIALWIDTH_DEADUNIT_5,"%s",0,"bubbleCapillary"
+                             !//JPNTEST  make the number 9+ above higher to be wider until you can see the full text in the dialog
+    AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_EFF__LENGTH_120),, \
+                             2, 12,"%12.1f",2,"effLength"
+  else
+    if ColumnType = 3 then
+      !GC
+      AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIAMETER_121),,CellEditable,\
+                               9,"%9.2f",2,"colDiameter"
+      AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_THICKNESS_122),,CellEditable, \
+                               10,"%5.2f",2,"particleSize"
+      AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DEADTIME_123),,CellEditable, \
+                               10,"%5.2f",2,"colDead"
+    else
+      !LC
+      AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIAMETER_124),,CellEditable, \
+                               9,"%9.1f",2,"colDiameter"
+      !Defect Fixing id-548[truncation defect],modified on 2-9-04 
+      !AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SIZE_125),,2, 4,"%4.0f",2,"particleSize"
+      AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SIZE_125),,CellEditable, \
+                               6+G11N_SPECIALWIDTH_BTW_3,"%5.1f",2,"particleSize"   !PVCS 9172
+      
+      AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_VOID_126),,CellEditable, \
+                           5+G11N_SPECIALWIDTH_4,"%5.2f",2,"colDead"
+                           !//JPNTEST  make the number 5+ above higher to be wider until you can see the full text in the dialog
+      AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_UNIT_127),"%|ml|min",4, \
+                           4+G11N_SPECIALWIDTH_DEADUNIT_5,"%s",0,"colDeadUnit"
+                           !//JPNTEST  make the number 4+ above higher to be wider until you can see the full text in the dialog
+    endif
+  endIf
+  AddDescRow "columnDesc1",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_COMMENT_128),,CellEditable, \
+                           20*JPN_LatinFontStretchFactor,"%s",0,"Comment"
+  
+  GenColumnDesc1_CellEditState_RowButtonState    
+  
+EndMacro
+
+!==============================================================================
+Name GenColumnDesc2
+!------------------------------------------------------------------------------
+
+local ColumnType
+
+Local  ID_PHX3DSUPPORTFILES_DESCRIPTION_113
+Local  ID_PHX3DSUPPORTFILES_BATCH_114                    
+Local  ID_PHX3DSUPPORTFILES_SERIAL_115                   
+Local  ID_PHX3DSUPPORTFILES_PRODUCT_116                  
+Local  ID_PHX3DSUPPORTFILES_LENGTH_117                   
+Local  ID_PHX3DSUPPORTFILES_DIAMETER_118                 
+Local  ID_PHX3DSUPPORTFILES_CELL_119                     
+Local  ID_PHX3DSUPPORTFILES_EFF__LENGTH_120              
+Local  ID_PHX3DSUPPORTFILES_POSITION_129                 
+Local  ID_PHX3DSUPPORTFILES___INJECTIONS_130             
+Local  ID_PHX3DSUPPORTFILES_THICKNESS_131                
+Local  ID_PHX3DSUPPORTFILES_VOID__ML_132                 
+Local  ID_PHX3DSUPPORTFILES_SIZE_133                     
+Local  ID_PHX3DSUPPORTFILES_VOID__ML_134                 
+Local  ID_PHX3DSUPPORTFILES_COMMENT_135                  
+
+Local  ID_PHX3DSUPPORTFILES__MAX_P_BAR_211               
+Local  ID_PHX3DSUPPORTFILES__MAX_P_10_5_PA_212           
+Local  ID_PHX3DSUPPORTFILES__MAX_T_C_213                 
+Local  ID_PHX3DSUPPORTFILES__MAX_PH_214                  
+Local  ID_PHX3DSUPPORTFILES__MIN_PH_402
+
+Local  ID_G11N_ADD_WHITESPACE_BTW_COLUMN_20003
+Local  ID_G11N_JPN_LATINF_STRETCH_FACTOR_20007  
+Local  NLSFileName_phx3dsupport$
+Local  ID_PHX3DSUPPORTFILES_DEVICE_SERIAL_403
+
+Local  G11N_SPECIALWIDTH_3
+Local  CellEditable
+Local  JPN_LatinFontStretchFactor
+Local  rcStr$
+
+  ID_PHX3DSUPPORTFILES_DESCRIPTION_113               =  17113
+  ID_PHX3DSUPPORTFILES_BATCH_114                     =  17114  
+  ID_PHX3DSUPPORTFILES_SERIAL_115                    =  17115  
+  ID_PHX3DSUPPORTFILES_PRODUCT_116                   =  17116  
+  ID_PHX3DSUPPORTFILES_LENGTH_117                    =  17117  
+  ID_PHX3DSUPPORTFILES_DIAMETER_118                  =  17118  
+  ID_PHX3DSUPPORTFILES_CELL_119                      =  17119  
+  ID_PHX3DSUPPORTFILES_EFF__LENGTH_120               =  17120  
+  ID_PHX3DSUPPORTFILES_POSITION_129                  =  17129  
+  ID_PHX3DSUPPORTFILES___INJECTIONS_130              =  17130  
+  ID_PHX3DSUPPORTFILES_THICKNESS_131                 =  17131  
+  ID_PHX3DSUPPORTFILES_VOID__ML_132                  =  17132  
+  ID_PHX3DSUPPORTFILES_SIZE_133                      =  17133  
+  ID_PHX3DSUPPORTFILES_VOID__ML_134                  =  17134  
+  ID_PHX3DSUPPORTFILES_COMMENT_135                   =  17135  
+  
+  ID_PHX3DSUPPORTFILES__MAX_P_BAR_211                =  17211
+  ID_PHX3DSUPPORTFILES__MAX_P_10_5_PA_212            =  17212 
+  ID_PHX3DSUPPORTFILES__MAX_T_C_213                  =  17213
+  ID_PHX3DSUPPORTFILES__MAX_PH_214                   =  17214
+  ID_PHX3DSUPPORTFILES__MIN_PH_402                   =  17402
+  ID_PHX3DSUPPORTFILES_DEVICE_SERIAL_403             =  17403
+
+  ID_G11N_ADD_WHITESPACE_BTW_COLUMN_20003            =  20003
+  ID_G11N_JPN_LATINF_STRETCH_FACTOR_20007            =  20007
+  
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  
+  G11N_SPECIALWIDTH_3 = Val(ReadResource$(NLSFileName_phx3dsupport$,ID_G11N_ADD_WHITESPACE_BTW_COLUMN_20003))
+
+   
+  !maybe have some percentage value to correct for JPN wider fonts for numbers and latin letters ??
+  on Error JPN_LatinFontStretchFactor = 1  !new resource
+  JPN_LatinFontStretchFactor = Val(ReadResource$(NLSFileName_phx3dsupport$,ID_G11N_JPN_LATINF_STRETCH_FACTOR_20007))
+  on Error 
+  
+  !override for JPN testing
+  if Check(VARIABLE, DDT_WIDTH_FontStretchFactor ) = 1
+     JPN_LatinFontStretchFactor = DDT_WIDTH_FontStretchFactor
+  endif
+
+  if _Offline = 1
+    CellEditable = 0
+  else
+    CellEditable = 2
+  endif
+
+  ColumnType = TabHdrVal (_Config[1], "Features", "ColumnType")
+  DelTab _config[3], "columnDesc2"
+  NewDescTable columnDesc2
+  SetTabHdrText _config[3],columnDesc2,RowNumTitle,"#"
+  SetTabHdrVal  _config[3],columnDesc2,RowNumWidth,3
+  SetTabHdrVal  _Config[3],columnDesc2,FixedCols, 0
+  SetTabHdrVal  _Config[3],columnDesc2,DeleteProtected, 1
+  SetTabHdrVal  _Config[3],columnDesc2,InsertProtected, 1
+  ! set events
+  ! add buttons
+  ! Shift table down
+  ! make the table
+
+  if (ColumnType = 1) or (ColumnType = 3) then
+    if ShowDeviceSerial_for_LCRCNet_THM_CCC() = 1
+       on Error rcStr$ = "TCC Serial#"  !new resource
+       rcStr$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DEVICE_SERIAL_403)
+       on Error 
+       AddDescRow "columnDesc2",rcStr$,,0, 15*JPN_LatinFontStretchFactor,"%s",0,"DeviceSerial"
+    endif
+  endIf
+
+  AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_POSITION_129),"|Left|Right",\
+                           3,0,"%s",1,"ColumnPosition"
+  AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DESCRIPTION_113),,CellEditable, \
+                           14*JPN_LatinFontStretchFactor,"%s",0,"colDescription"
+  !if (ColumnType = 1) or (ColumnType = 3) then
+  !now for all types
+  AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SERIAL_115),,CellEditable, \
+                           13*JPN_LatinFontStretchFactor,"%s",0,"SerialNum"
+  !endIf
+  AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_BATCH_114),,CellEditable, \
+                           9*JPN_LatinFontStretchFactor,"%s",0,"BatchNum"
+  AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PRODUCT_116),,CellEditable, \
+                           11*JPN_LatinFontStretchFactor,"%s",0,"ProductNum"
+  AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES___INJECTIONS_130),,CellEditable,0,"%4.0f",2,"NumInjections"
+  if _PumpUseBar = 1
+    AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__MAX_P_BAR_211),,CellEditable,0,"%7.0f",2,"MaxPressure"
+  else
+    AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__MAX_P_10_5_PA_212),,CellEditable,0,"%7.0f",2,"MaxPressure"
+  endif
+  AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__MAX_T_C_213),,CellEditable,0,"%7.1f",2,"MaxTemp"
+  if ColumnType <> 3 then
+     ! not GC
+     !makes sense only for liquid phases
+     AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__MAX_PH_214),,CellEditable,8,"%7.1f",2,"MaxPh"
+     !found out that this is not supported by firmware, therefor must take it out
+     !AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__MIN_PH_402),,CellEditable,8,"%7.1f",2,"MinPh"
+  endif
+  AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LENGTH_117),,CellEditable,7,"%7.1f",2,"colLength"
+  if ColumnType = 2 then
+    ! CE
+    AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIAMETER_118),,CellEditable,9,"%9.1f",2,"colDiameter"
+    AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CELL_119),"Capillary|Bubble|High Sens.",4, 9,"%s",0,"bubbleCapillary"
+    AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_EFF__LENGTH_120),,CellEditable, 12,"%12.1f",2,"effLength"
+  else
+    if ColumnType = 3 then
+      ! GC
+      AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIAMETER_118),,CellEditable,9,"%9.2f",2,"colDiameter"
+      AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_THICKNESS_131),,CellEditable, 10,"%5.2f",2,"particleSize"
+      AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_VOID__ML_132),,CellEditable, 10,"%5.2f",2,"colDead"
+    else
+      ! LC
+      AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIAMETER_118),,CellEditable,9,"%9.1f",2,"colDiameter"
+      AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SIZE_133),,CellEditable, 6+G11N_SPECIALWIDTH_3,"%5.1f",2,"particleSize"   !PVCS 9172
+      AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_VOID__ML_134),,CellEditable, 10,"%5.2f",2,"colDead"
+    endif
+  endIf
+  AddDescRow "columnDesc2",ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_COMMENT_135),,CellEditable, \
+                           20*JPN_LatinFontStretchFactor,"%s",0,"Comment"
+                           
+                           
+                           
+EndMacro
+
+
+!==============================================================================
+Name Btn_UpdateMethColumn
+!------------------------------------------------------------------------------
+
+parameter regObj$, tabName$, row, col, colName$, OldVal$, NewVal$
+
+local i
+
+  ! called only if TabHdrVal (_Config[1], "Features", "ColumnSwitch") = 0 !!
+
+  if colName$ = "colInstalled" then   ! spelling must be same as in AddDescRow
+    if tabVal(_Config[1], "EditCols", row, "ColInstalled") = 1 then
+
+      ! find the old row that had "ColInstalled" = 1
+      i = RowByVal(_Config[1], "EditCols", , "ColInstalled", "=", 1)
+      if i = row then
+        ! search from the back end to find the old row
+        i = RowByVal(_Config[1], "EditCols", -1:1, "ColInstalled", "=", 1)
+      endif
+
+      if (i > 0) and (i <> row) then
+        setTabVal _Config[1], "EditCols", i, "ColInstalled", 0
+      endIf
+    endIf
+  endIf
+  return
+
+endMacro ! Btn_UpdateMethColumn
+
+
+!==============================================================================
+Name Btn_PrintColumnParms
+!------------------------------------------------------------------------------
+
+parameter regObj$, tabName$, row, col, colName$
+local i, maxRow, error, ColumnType, Header$
+local ID_PHX3DSUPPORTFILES_COLUMN_PARAMET_136            
+local ID_PHX3DSUPPORTFILES_CAPILLARY_PARA_137, ID_PHX3DSUPPORTFILES_PRINTTOFILE_412            
+local NLSFileName_phx3dsupport$
+local PrintOutput$, iUserChoiceRet
+
+  ID_PHX3DSUPPORTFILES_COLUMN_PARAMET_136            =  17136  
+  ID_PHX3DSUPPORTFILES_CAPILLARY_PARA_137            =  17137  
+  ID_PHX3DSUPPORTFILES_PRINTTOFILE_412               =  17412
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  
+  ColumnType = TabHdrVal (_Config[1], "Features", "ColumnType")
+  if (ColumnType = 1) or (ColumnType = 3) then
+    Header$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_COLUMN_PARAMET_136)
+  else
+    Header$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CAPILLARY_PARA_137)
+  endif
+
+  PrintOutput$=_TempPath$+"columnslist.txt"
+
+  !iUserChoiceRet = ALERT(printf$(ReadResource$(ID_PHX3DSUPPORTFILES_PRINTTOFILE_412), "columnslist.txt"), 4)
+  iUserChoiceRet = ALERT(printf$("Do you want to print to Printer [Yes]  or  [No] to File ( %s ) ? ", PrintOutput$), 4)
+  if iUserChoiceRet = 1
+     !selected: Yes
+     PrintOutput$="PRINTER"
+  endif   
+
+  if PrintOutput$="PRINTER"
+     PBegin "PRINTER", Header$
+  else
+     Open PrintOutput$ For OUTPUT As #5
+  endif  
+  error = 0
+  on error error = _Error
+
+  if ColumnType <> 2
+    maxRow = tabHdrVal(_Config[1], "EditColumns", "numberOfRows")
+    for i = 1 to maxRow
+      if CompareTabRow$("_Config[1]", "EditColumns", i,,,0) <> "" then
+        printColumnParms i, "EditColumns"
+      endif
+    next i
+  endif
+
+  maxRow = tabHdrVal(_Config[1], "EditCols", "numberOfRows")
+  for i = 1 to maxRow
+    if CompareTabRow$("_Config[1]", "EditCols", i,,,0) <> "" then
+      printColumnParms i, "EditCols"
+    endif
+  next i
+
+  on error
+  if error <> 0 then
+    PrintError "PRINTER"
+  endif
+  if PrintOutput$="PRINTER"
+     PEnd "PRINTER", ""
+  else
+    close #5
+  endif  
+
+endMacro ! Btn_PrintColumnParms
+
+
+!==============================================================================
+Name Btn_CancelColumnParms
+!------------------------------------------------------------------------------
+
+parameter regObj$, tabName$, row, col, colName$
+
+    On Error Print ""
+
+    SetTabVal _Config[1], "Window", 68, "HelpContext", 0
+    clearWin 68
+    DelTab _Config[1], "EditCols"
+
+    SetTabVal _Config[1], "Window", 19, "HelpContext", 0
+    clearWin 19
+    DelTab _Config[1], "EditColumns"
+    
+endMacro ! Btn_CancelColumnParms
+
+
+
+
+!==============================================================================
+Name ResortEditColsTable_InstalledAtTop
+!------------------------------------------------------------------------------
+local Position, HWTagsSupported, iRowsResorted
+
+Local bGC_HasOwnUI_DontResort !since driver UI does a lot by itself
+
+  bGC_HasOwnUI_DontResort = Is_GC_WithOwnColumnUI()
+
+  if bGC_HasOwnUI_DontResort = 0
+     !resort so that Installed (non HW) cols are at top AND in same order as before 
+     ! this way making it easy to bring a col up to top, when this is the first (left) one and not the right one
+     Position = TabHdrVal(_config[1], "EditCols", "NumberOfRows")
+     iRowsResorted = 0
+     While (Position > iRowsResorted) Do
+         !print "DBG: Position=", Position
+         If (Position > 0 and TabVal(_config[1], "EditCols", Position, "ColInstalled") <> 0) Then
+            InsTabRow _config[1], "EditCols", 1
+            CopyTabRow _config[1], "EditCols", Position+1, 1
+            DelTabRow _config[1], "EditCols", Position+1
+            iRowsResorted = iRowsResorted+1
+         else   
+            Position = Position - 1
+         EndIf
+     EndWhile
+  !else for GC with own column UI leave the order as it is ( only append old, formerly used columns at end )   
+  endif
+  
+endMacro 
+
+
+
+
+
+!==============================================================================
+Name Btn_OKColumnParms
+!------------------------------------------------------------------------------
+
+parameter regObj$, tabName$, row, col, colName$
+
+local i
+Local CountOfRows
+Local NumOfRowsColumns
+Local NumOfCols
+Local NumOfRowsEditColumns
+Local Loop
+Local Loop2
+Local Loop3
+Local Position
+Local Col$
+Local ColType
+Local Val1
+Local Val2
+Local Text1$
+Local Text2$
+Local ColIDChanged
+
+
+Local ID_PHX3DSUPPORTFILES_THE_COLUMN_IDE_138    
+Local ID_PHX3DSUPPORTFILES_WARNING_139           
+Local NLSFileName_phx3dsupport$ 
+
+
+ ID_PHX3DSUPPORTFILES_THE_COLUMN_IDE_138            =  17138  
+ ID_PHX3DSUPPORTFILES_WARNING_139                   =  17139  
+ NLSFileName_phx3dsupport$="phx3dsupport"
+	
+	On Error Print ""
+
+    winUpdate off
+
+    LockColumnsTable = 1  ! must this be public ? I just leave it for now
+    ColIDChanged = 0
+    NumOfRowsColumns = TabHdrVal(_config[1], "Columns", "NumberOfRows")
+    NumOfCols = TabHdrVal(_config[1], "Columns", "NumberOfCol")
+    NumOfRowsEditColumns = TabHdrVal(_config[1], "EditColumns", "NumberOfRows")
+    For Loop = 1 To NumOfRowsColumns
+        If (TabVal(_config[1], "Columns", Loop, "IsHW") = 1) Then
+            For Loop2 = 1 To NumOfRowsEditColumns
+                If ((TabText$(_config[1], "Columns", Loop, "DeviceSerial") = TabText$(_config[1], "EditColumns", Loop2, "DeviceSerial")) \
+                    And (TabVal(_config[1], "Columns", Loop, "ColumnPosition") = TabVal(_config[1], "EditColumns", Loop2, "ColumnPosition"))) Then
+                    For Loop3 = 1 To NumOfCols
+                        Col$ = TabColName$(_config[1], "Columns", Loop3)
+                        Evaluate "ColType = TabColType(_config[1], Columns, " + Col$ + ")"
+                        If ColType > 0 Then
+                            Evaluate "Val1 = TabVal(_config[1], Columns, Loop, " + Col$ + ")"
+                            Evaluate "Val2 = TabVal(_config[1], EditColumns, Loop2, " + Col$ + ")"
+                            If Val1 <> Val2 Then
+                                SetTabVal _config[1], "EditColumns", Loop2, "WriteColID", 1
+                                ColIDChanged = 1
+                            EndIf
+                        Else
+                            Evaluate "Text1$ = TabText$(_config[1], Columns, Loop, " + Col$ + ")"
+                            Evaluate "Text2$ = TabText$(_config[1], EditColumns, Loop2, " + Col$ + ")"
+                            If Text1$ <> Text2$ Then
+                                SetTabVal _config[1], "EditColumns", Loop2, "WriteColID", 1
+                                ColIDChanged = 1
+                            EndIf
+                        EndIf
+                    Next Loop3
+                EndIf
+            Next Loop2    
+        EndIf
+    Next Loop
+
+    If ColIDChanged = 1 Then
+        i = Alert(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_THE_COLUMN_IDE_138,1), 5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_WARNING_139))
+
+        If i = 0 Then
+            SetTabVal _Config[1], "Window", 68, "HelpContext", 0
+            clearWin 68
+
+            SetTabVal _Config[1], "Window", 19, "HelpContext", 0
+            clearWin 19
+
+            DelTab _Config[1], "EditColumns"
+            DelTab _Config[1], "EditCols"
+            winUpdate on
+            LockColumnsTable = 0
+            Return
+        EndIf
+
+        If i = -1 Then
+            winUpdate on
+            LockColumnsTable = 0
+            Return
+        EndIf
+    EndIf
+
+    ResortEditColsTable_InstalledAtTop
+    
+    DelTab _Config[1], "Columns"
+    RenTab _Config[1], "EditCols", "Columns"
+    !Position = TabHdrVal(_config[1], "Columns", "NumberOfRows")
+
+    !merge the two UI tables again to one columns table
+    !in order to get all code to do the IsHW first logic, change order that IsHW cols are first rows in table
+    Position = 1
+    For Loop = 1 To TabHdrVal(_config[1], "EditColumns", "NumberOfRows")
+        If (TabVal(_config[1], "EditColumns", Loop, "IsHW") = 1) Then
+            !insert the tagged cols at front, in correct same order as in EditColumns table
+            InsTabRow _config[1], "Columns", Position
+            CopyRowFromTabToTab "_config[1]", "EditColumns", Loop, "_config[1]", "Columns", Position
+            Position = Position + 1
+        EndIf
+    Next Loop
+
+    if Is_GC_WithOwnColumnUI() = 0
+       !only do this for non GC column tables
+       SupplyPotentiallyMissingColumnSerialNumbers "Columns"
+       CheckMakeColumnSerialNumbersUnique "Columns"
+    endif   
+    
+    RCUpdateColumnInformation 1  !writes new infos to col tags
+    
+    !This was my first investigation: this call to UpdateBuiltInColumns is really not needed 
+    !according to new concept this table BuiltInColumns is only 
+    !assembled at the time of PostAcq (all done in postacq.mac)
+    !BUT it turns out now that the CE method checks something agains this table at "METHOD SAVE"
+    !in CE, this macro UpdateBuiltInColumns is then also executed cheeply,
+    !for non CE this is more time consuming, therefore do it only in CE
+    !BUT maybe some addon relies on the table "BuiltInColumns",
+    !so do it now again for all producttypes
+    !if _ProductType$ = "CE"
+       UpdateBuiltInColumns  0
+    !endif   
+
+    SetTabVal _Config[1], "Window", 68, "HelpContext", 0
+    clearWin 68
+
+    SetTabVal _Config[1], "Window", 19, "HelpContext", 0
+    clearWin 19
+    DelTab _Config[1], "EditColumns"
+
+    winUpdate on
+    LockColumnsTable = 0
+    !print "DBG: 9 tab rows columns =", TabHdrVal(_config[1], "Columns", "NumberOfRows")
+    !print "DBG:
+    !cprequest CP, "sleep 1;print  NUMBER_OF_ROWS_IN_COLUMS_TAB, TabHdrVal(_config[1],Columns, NumberOfRows)"
+
+endMacro ! Btn_OKColumnParms
+
+!==============================================================================
+Name Btn_ShowColumnDialogHelp
+parameter regObj$, tabName$, row, col, colName$
+!------------------------------------------------------------------------------
+  help ColumnDialogDefineHelpID(),1
+endMacro 
+
+!==============================================================================
+Name ColumnDialogDefineHelpID
+!------------------------------------------------------------------------------
+local HelpID
+
+  if _ProductType$ = "LC" then
+    HelpID = HELPSUBSYSTEMTOPIC("HPLC")+7006
+  else
+      if _ProductType$ = "CE" then
+        HelpID = HELPSUBSYSTEMTOPIC("HPCE")+4085
+      else
+          ! It must be GC, and the help context id differs depending on 35900.
+          if adcdevice > 0 then
+             HelpID = HELPSUBSYSTEMTOPIC("35900")+10447
+          else
+            HelpID = HELPSUBSYSTEMTOPIC("5890")+10050
+          endif
+      endif
+  endif
+  
+  return HelpID
+endMacro 
+
+!==============================================================================
+Name DisplayColumnParms
+! Initialize and display column parameters (main program)
+!------------------------------------------------------------------------------
+
+  
+local win, win2, i, maxRow, ColumnType, Position, HWTagsSupported, devices$, iRowsResorted
+
+local ID_PHX3DSUPPORTFILES_EDIT_COLUMN_ID_140           
+local ID_PHX3DSUPPORTFILES__EDIT_COLUMNS_215            
+local ID_PHX3DSUPPORTFILES_EDIT_CAPILLARIES_216           
+
+local NLSFileName_phx3dsupport$
+
+ ID_PHX3DSUPPORTFILES_EDIT_COLUMN_ID_140            =  17140  
+	ID_PHX3DSUPPORTFILES__EDIT_COLUMNS_215             =  17215
+ ID_PHX3DSUPPORTFILES_EDIT_CAPILLARIES_216           =  17216   
+
+ NLSFileName_phx3dsupport$="phx3dsupport"
+!    SetTabHdrVal _Config[1], "Columns", "ColumnsChanged", 0
+ ColumnType = TabHdrVal (_Config[1], "Features", "ColumnType")
+
+
+    win = 68
+    SetTabVal _Config[1], "Window", win, "DefWxlow", 0.0
+    SetTabVal _Config[1], "Window", win, "DefWxHigh", 1.0
+    SetTabVal _Config[1], "Window", win, "DefWylow", 0.0
+    SetTabVal _Config[1], "Window", win, "DefWyHigh", 0.65
+    SetTabVal _Config[1], "Window", win, "LineStylesOn", 1
+    SetTabVal _Config[1], "Window", win, "HelpContext", ColumnDialogDefineHelpID()
+    SetTabVal _Config[1], "Window", win, "DefWinStyle", 7
+
+    if ColumnType = 2 then
+        SetWinTitle win, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_EDIT_CAPILLARIES_216)+_instName$
+    else
+        SetWinTitle win, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__EDIT_COLUMNS_215)+_instName$
+    endIf
+
+    ! see if tables available
+    if objhdrtype(_config[3],"ColumnDesc1") <> 4
+        GenColumnDesc1
+        SetTabHdrVal  _Config[3],columnDesc1,"ForColumnType", ColumnType
+    else    
+       if TabHdrType ( _Config[3],columnDesc1,"ForColumnType") = 99
+          SetTabHdrVal  _Config[3],columnDesc1,"ForColumnType", -1
+       endif
+       
+       if ColumnType <> TabHdrVal (_Config[3],columnDesc1,"ForColumnType")  \
+          OR ( ColumnType <> 3 \
+               AND RowByText(_Config[3],columnDesc1, , "Source" , "i=" , "MinPh" ) < 1 \
+             )  
+          !since instrument is reconfigured in HPconfiged - must also update the DDT
+          !or latest change in DSP2 : for non GC to show also min.pH column
+          DelTab _config[3], "columnDesc1"
+          GenColumnDesc1
+          SetTabHdrVal  _Config[3],columnDesc1,"ForColumnType", ColumnType
+       else
+       !then this is no longer necessary
+       !however always update the editability states of each cell for different GCs
+       !if TestForDevice ( "7890",1,"")
+       !   if TestForDevice ( "RC6890",1,"")
+       !      if TestForDevice ( "RC6850",1,"")
+       !         if TestForDevice ( "RC7820",1,"")
+       !GenColumnDesc1_CellEditState_RowButtonState    
+       endif
+    endif
+
+    if ObjHdrType(_Config[1], "EditCols") = 4 then
+        DelTab _Config[1], "EditCols"
+    endif
+
+    RCnet_ColumnTag_ReFreshReadIn
+
+    copyTab _config[1], "columns", _Config[1], "EditCols"
+
+    Position = TabHdrVal(_config[1], "EditCols", "NumberOfRows")
+    While (Position > 0) Do
+        If (TabVal(_config[1], "EditCols", Position, "IsHW") = 1) Then
+            DelTabRow _config[1], "EditCols", Position
+        EndIf
+        Position = Position - 1
+    EndWhile
+
+    ! delete obsolete table-columns
+    if TabColType (_Config[1], "EditCols", "ColRef") <> 99 then
+        DelTabCol _Config[1], "EditCols", "ColRef"
+    endif
+    if TabColType (_Config[1], "EditCols", "TimeRef") <> 99 then
+        DelTabCol _Config[1], "EditCols", "TimeRef"
+    endif
+
+    ! Change all "ColInstalled=2" (old tables) to 0
+    repeat
+        i = RowByVal (_Config[1], "EditCols",, "ColInstalled", ">", 1)
+        if i > 0 then
+            SetTabVal _Config[1], "EditCols", i, "ColInstalled", 0
+        endIf
+    until i = -1
+
+    ResortEditColsTable_InstalledAtTop
+
+    if ColumnType <> 2 then
+        !not CE
+        win2 = 19
+        SetTabVal _Config[1], "Window", win2, "DefWxlow", 0.0
+        SetTabVal _Config[1], "Window", win2, "DefWxHigh", 1.0
+        SetTabVal _Config[1], "Window", win2, "DefWylow", 0.65
+        SetTabVal _Config[1], "Window", win2, "DefWyHigh", 1.0
+        SetTabVal _Config[1], "Window", win2, "LineStylesOn", 1
+        SetTabVal _Config[1], "Window", win2, "DefWinStyle", 128
+
+        if _ProductType$ = "LC" then
+            SetTabVal _Config[1], "Window", win2, "HelpContext", \
+                HELPSUBSYSTEMTOPIC("HPLC1100")+7006
+        else
+            if _ProductType$ = "CE" then
+                SetTabVal _Config[1], "Window", win2, "HelpContext", \
+            		HELPSUBSYSTEMTOPIC("HPCE")+4085
+            else
+                ! It must be GC, and the help context id differs depending on 35900.
+                if adcdevice > 0 then
+                    SetTabVal _Config[1], "Window", win2, "HelpContext", \
+                		HELPSUBSYSTEMTOPIC("35900")+10447
+                else
+                    SetTabVal _Config[1], "Window", win2, "HelpContext", \
+                		HELPSUBSYSTEMTOPIC("5890")+10050
+                endif
+            endif
+        endif
+        SetTabVal _Config[1], "Window", win2, "DefWinStyle", 7
+          
+        SetWinTitle win2, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_EDIT_COLUMN_ID_140)+_instName$
+
+        ! see if tables available
+        if objhdrtype(_config[3],"ColumnDesc2") <> 4
+            GenColumnDesc2
+            SetTabHdrVal  _Config[3],ColumnDesc2,"ForColumnType", ColumnType
+        else    
+           if TabHdrType ( _Config[3],ColumnDesc2,"ForColumnType") = 99
+              SetTabHdrVal  _Config[3],ColumnDesc2,"ForColumnType", -1
+           endif
+           
+           if ColumnType <> TabHdrVal (_Config[3],ColumnDesc2,"ForColumnType")  \
+              OR ( ColumnType <> 3  AND  ShowDeviceSerial_for_LCRCNet_THM_CCC() = 1  \
+                   AND RowByText(_Config[3],ColumnDesc2, , "Source" , "i=" , "DeviceSerial" ) < 1 \
+                 )  
+              !since instrument is reconfigured in HPconfiged - must also update the DDT
+              !or latest change in DSP2 : GenColumnDesc2 non GC to show also min.pH column
+              DelTab _config[3], "ColumnDesc2"
+              GenColumnDesc2
+              SetTabHdrVal  _Config[3],ColumnDesc2,"ForColumnType", ColumnType
+           endif
+        endif
+
+        if ObjHdrType(_Config[1], "EditColumns") = 4 then
+            DelTab _Config[1], "EditColumns"
+        endif
+        copyTab _config[1], "columns", _Config[1], "EditColumns"
+
+        Position = TabHdrVal(_config[1], "EditColumns", "NumberOfRows")
+        While (Position > 0) Do
+            If (TabVal(_config[1], "EditColumns", Position, "IsHW") <> 1) Then
+                DelTabRow _config[1], "EditColumns", Position
+            EndIf
+            Position = Position - 1
+        EndWhile
+
+        HWTagsSupported = 0
+        If DevLeoThm > 0 Then
+          HWTagsSupported = 1
+        Else
+          If Check(Function, RCListDevices$) > 0 Then
+            devices$ = RCListDevices$()
+            If (Instr(devices$, "THM") > 0) Or (Instr(devices$, "CCC") > 0) Then
+              HWTagsSupported = 1
+            EndIf
+          EndIf
+        EndIf 
+
+        If HWTagsSupported = 1 Then
+            EdTab win2, _Config[1], "EditColumns", "ColumnDesc2"
+        Else
+            SetTabVal _Config[1], "Window", win, "DefWyHigh", 1.0
+        EndIf
+    EndIf
+
+    EdTab win, _Config[1], "EditCols", "ColumnDesc1"
+
+    Print ""
+
+EndMacro ! displayColumnParms
+

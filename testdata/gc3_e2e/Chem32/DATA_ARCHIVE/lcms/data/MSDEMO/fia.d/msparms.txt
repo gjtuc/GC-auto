@@ -1,0 +1,58 @@
+This data was acquired in Method&Run Control.
+The MSD parameters were saved in the msdiag register file.
+This msparms.txt file was built using the values from the msdiag register.
+Some parameters normally reported under MSData acquisition in Tune 
+may be missing from this msparms.txt file.  You may be able to read these 
+values from Data Analysis.  These items are marked with an asterisk (*).
+ 
+ 
+ 
+File                     :   C:\HPCHEM\1\DATA\FIA.D
+Operator                 :   Apps Chemist
+Date acquired            :   Wed Apr 09 17:50:26 1997
+Instrument               :   Appsprite2
+ 
+ 
+Sample information
+----------------------------------
+Sample name              :   50 ng caffeine
+Misc info                :   50 ng Caffeine run in condensed mode varying fragmentor
+ 
+ 
+MS parameters
+----------------------------------
+Tune File                   :    C:\HPCHEM\1\1946TUNE\atunes.tun
+Skim1                       :    Not Applicable
+Skim2                       :    8.0 V     
+Ion Energy                  :    5.0 V     
+Lens1                       :    1.4 V     
+Lens2                       :    27 V      
+Iris                        :    350 V     
+HED                         :    10000 V   
+Width Gain                  :    -70       
+Width Offset                :    Variable  
+                                 Mass         :   Value    
+                                 --------------------------
+                                 118.10       :   -11      
+                                 622.03       :   -14      
+                                 922.01       :   -2       
+                                 1521.97      :   -8       
+                                 2121.93      :   -13      
+                                 2721.89      :   -12      
+                                 --------------------------
+Mass Gain                   :    4.40      
+Mass Offset                 :    Variable  
+                                 Mass         :   Value    
+                                 --------------------------
+                                 118.10       :   0        
+                                 622.03       :   0        
+                                 922.01       :   0        
+                                 1521.97      :   0        
+                                 2121.93      :   0        
+                                 2721.89      :   0        
+                                 --------------------------
+Quad DC                     :    0.00 V    
+Octopole Peak               :    300 V     
+Octopole Knee               :    307 Da    
+Mass Filter                 :    Gaussian  
+Mass Filter Width           :    0.30 Da   

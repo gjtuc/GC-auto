@@ -1,0 +1,1977 @@
+
+! $Header: /PHX3D/parts/macros/postacq.mac 4.3 2000-08-17 11:21:33-04 NWALESON Exp $
+!
+
+
+
+!==============================================================================
+name  FireAntFindColumnInBuildInColTableStr
+parameter  TaggedCol     ! =0 not tagged , =1 tagged (HW)
+parameter  ColumnID$
+!------------------------------------------------------------------------------
+
+local  i
+local  iMax
+local  iFoundRow
+
+  i = 0
+  iMax = 0
+  iFoundRow = 0
+
+  if ColumnID$ = ""
+     return iFoundRow
+  endif
+  
+  iMax = TabHdrVal(_Config[1], "BuiltInColumns", "NumberOfRows")
+  if TaggedCol = 1
+     For i = 1 To iMax
+       if TabVal (_Config[1], "BuiltInColumns", i, "IsHW") = 1  then 
+          if ColumnID$ = TabText$ (_Config[1], "BuiltInColumns", i, "SerialNum") then
+             iFoundRow = i
+             goto break
+          endif   
+       endif
+     next i
+  else
+     For i = 1 To iMax
+       if TabVal (_Config[1], "BuiltInColumns", i, "IsHW") = 0  then 
+          if ColumnID$ = TabText$ (_Config[1], "BuiltInColumns", i, "SerialNum") then
+             iFoundRow = i
+             goto break
+          endif   
+       endif
+     next i
+  endif
+
+break:  
+  !print "DBG: iFoundRow = " , iFoundRow
+  return iFoundRow
+  
+endmacro
+
+
+
+!==============================================================================
+name  FindColumnInBuildInColTable
+parameter  TaggedCol     ! =0 not tagged , =1 tagged (HW)
+parameter  RequestColPos 
+!------------------------------------------------------------------------------
+
+local  i
+local  iMax
+local  iFoundRow
+local  iInstalledNonTaggedColCount
+
+  i = 0
+  iMax = 0
+  iFoundRow = 0
+  iInstalledNonTaggedColCount = 0
+
+  !print "DBG: TaggedCol = ",TaggedCol , "  RequestColPos = ", RequestColPos
+  !"ColumnPosition"  1 left, 2 right, 0 unspecified
+  !"IsHW"  if it is a tagged column, overrides "ColInstalled"
+
+  if RequestColPos = 0 
+     return iFoundRow
+  endif
+  
+  iMax = TabHdrVal(_Config[1], "BuiltInColumns", "NumberOfRows")
+  if TaggedCol = 1
+     For i = 1 To iMax
+       if TabVal (_Config[1], "BuiltInColumns", i, "IsHW") = 1  then 
+          if RequestColPos = TabVal (_Config[1], "BuiltInColumns", i, "ColumnPosition") then
+             iFoundRow = i
+             goto break
+          endif   
+       endif
+     next i
+  else
+     For i = 1 To iMax
+       if TabVal (_Config[1], "BuiltInColumns", i, "IsHW") = 0  then 
+          if TabVal (_Config[1], "BuiltInColumns", i,  "ColInstalled") = 1 then
+             iInstalledNonTaggedColCount = iInstalledNonTaggedColCount + 1
+          endif
+          if RequestColPos = iInstalledNonTaggedColCount then
+             iFoundRow = i
+             goto break
+          else 
+             if RequestColPos < iInstalledNonTaggedColCount then  
+                goto break
+             endif
+          endif   
+       endif
+     next i
+  endif
+
+break:  
+  !print "DBG: iFoundRow = " , iFoundRow
+  return iFoundRow
+  
+endmacro
+
+
+
+!==============================================================================
+name  DeleteAllButThisColumnInBuildInColTable
+parameter  ColRowToKeep
+!------------------------------------------------------------------------------
+
+local  i
+
+!  print "DBG: ColRowToKeep = ", ColRowToKeep
+
+  if ColRowToKeep < 1
+     return
+  endif
+  
+  i = TabHdrVal(_Config[1], "BuiltInColumns", "NumberOfRows")
+  if ColRowToKeep < i 
+     DelTabRow _Config[1], "BuiltInColumns", (ColRowToKeep+1):i
+  endif   
+  if ColRowToKeep > 1 
+     DelTabRow _Config[1], "BuiltInColumns", 1:(ColRowToKeep-1)
+  endif   
+  
+  !while i >= 1 do
+  !  if i <> ColRowToKeep then
+  !     DelTabRow _Config[1], "BuiltInColumns", i
+  !  endif
+  !  i = i - 1
+  !endwhile
+
+endmacro
+
+
+!==============================================================================
+name  KeepMostLikelyUsedColumnInBuiltInColsTab
+parameter  iUseColCase       default  0   ! =1 use 1. col (left) , 2 use 2. col (right)  0 carry over all cols, 
+                                          !extend to mean position even in multi port valves
+                                          !for FireAnt:  =-1 use ColumnID$ to search
+                                          !for FireAnt:  =-2 no column used at all ( bypass, waste )
+parameter  iUseColSwitchVlv  default  0   ! =1 is YES, = 0 is NO
+parameter  ColumnID$         default  ""
+!------------------------------------------------------------------------------
+
+local  iFoundRow
+local  iLeftColFoundRow
+local  iNonTaggedColNbr
+local  iFoundTaggedCols
+
+  iFoundRow = 0
+  iLeftColFoundRow = 0
+  iNonTaggedColNbr = 0
+  iFoundTaggedCols = 0
+
+  !print "DBG: iUseColCase = ", iUseColCase , " iUseColSwitchVlv = ", iUseColSwitchVlv 
+
+  if iUseColCase = 0  OR  TabHdrVal(_Config[1], "BuiltInColumns", "NumberOfRows") < 1
+     !keep them all, all with installed = YES or IsHW  are copied over
+     return iFoundRow
+  endif
+
+  if iUseColCase = -2
+     !FireAnt case of waste or bypass
+     !leave no column in the "BuiltInColumns" table, since none used at all
+     DelTabRow _Config[1], "BuiltInColumns", -1
+  else 
+     if iUseColCase = -1
+        iFoundRow = FireAntFindColumnInBuildInColTableStr(1, ColumnID$)
+        if iFoundRow = 0
+           iFoundRow = FireAntFindColumnInBuildInColTableStr(0, ColumnID$)
+        endif   
+     else
+        if iUseColSwitchVlv = 0
+           !try tagged col first: left , then right, at last non HW 1. col with installed in col table
+           iFoundRow = FindColumnInBuildInColTable(1,1)
+           if iFoundRow = 0
+              iFoundRow = FindColumnInBuildInColTable(1,2)
+           endif   
+           if iFoundRow = 0
+              iFoundRow = FindColumnInBuildInColTable(0,1)
+           endif   
+        else
+           ! with 2 pos column switching valve
+           if iUseColCase = 1
+              iFoundRow = FindColumnInBuildInColTable(1,1)
+              if iFoundRow = 0
+                 iNonTaggedColNbr = 1
+                 iFoundRow = FindColumnInBuildInColTable(0,iNonTaggedColNbr)
+              endif   
+           else
+              if iUseColCase = 2
+                 !try tagged col first: on right reader,
+                 ! if read something this is the one
+                 !  if not then check if left tag reader finds something
+                 !   if 1. col in tag reader then look for 1. col set to installed=Yes 
+                 !   if nothing in tag left read then look for 2. col set to installed=Yes
+                 iFoundRow = FindColumnInBuildInColTable(1,2)
+                 if iFoundRow = 0
+                    iLeftColFoundRow = FindColumnInBuildInColTable(1,1)
+                 endif   
+                 if iFoundRow = 0
+                    if iLeftColFoundRow = 0 
+                       iNonTaggedColNbr = 2
+                    else
+                       iNonTaggedColNbr = 1
+                    endif
+                    iFoundRow = FindColumnInBuildInColTable(0,iNonTaggedColNbr)
+                 endif   
+              else
+                 !here it can be easily be extended to 6 and 12 position valves
+                 !technically must have 2 of them to funnel all to the same detector for detection
+                 if FindColumnInBuildInColTable(1,1) > 0
+                    iFoundTaggedCols = 1
+                 endif   
+                 if FindColumnInBuildInColTable(1,2) > 0
+                    iFoundTaggedCols = iFoundTaggedCols +1
+                 endif 
+                 iNonTaggedColNbr = iUseColCase - iFoundTaggedCols           
+                 iFoundRow = FindColumnInBuildInColTable(0,iNonTaggedColNbr)
+              endif
+           endif
+        endif
+     endif
+     DeleteAllButThisColumnInBuildInColTable iFoundRow
+  endif
+  
+  
+  return iFoundRow
+  
+endmacro
+
+
+
+
+
+!==============================================================================
+name  IsColumnSwitchedInTimeTable
+!------------------------------------------------------------------------------
+
+local bTTSwitch
+local iFoundRow
+
+  bTTSwitch = 0
+  iFoundRow = 0
+
+  ! check that there is no timetable used to switch valves, if so then dump all columns
+
+  !only called when THM is actually there
+  
+  if DevRCnet > 0 then
+     if Check (Variable, DevRCTHM) = 1 then
+        if DevRCTHM = 1  then 
+           if ObjHdrVal (RCTHM1Config, ColumnSwitchingValve_IsInstalled) <> 0
+              iFoundRow = RowByText( RCTHM1Method, "TimeTable", , "Function" , "=" , "ColumnSwitchingValve" )
+              if iFoundRow > 0
+                 bTTSwitch = 1
+                 !print "DBG: RCnet: iFoundRow =", iFoundRow  
+              endif
+           endif
+        else
+           if DevRCTHM = 0
+              if Check (Variable, DevRCVLV) = 1 then
+                 if DevRCVLV = 1  then 
+                    !this branch is not tested only based on docu
+                    iFoundRow = RowByText( RCVLV1Method, "TimeTable", , "Function" , "=" , "Position" )
+                    if iFoundRow > 0
+                       bTTSwitch = 1
+                       !print "DBG: RCnetVlv: iFoundRow =", iFoundRow  
+                    endif
+                 endif
+              endif        
+           endif        
+        endif
+     endif
+  else
+     if DevLeoThm = 1 then
+        if ObjHdrVal (LeoThermostatStatus1, OptColumnValve) <> 0
+           iFoundRow = RowByVal( LeoThermostatMethod1, "TimeTable", , "ColumnValve" , "<>" , 0 )
+           if iFoundRow > 0
+              bTTSwitch = 1
+              !print "DBG: LeoD: iFoundRow =", iFoundRow  
+           endif
+        endif
+     endif
+  endif  
+
+  return bTTSwitch
+  
+endmacro
+
+
+
+!==============================================================================
+name FireAntGetMostLikelyColumnFor_RCnetCCC$
+
+!it is the case that only one CCC is used
+!------------------------------------------------------------------------------
+
+  if RegSize(RCCCC1Method) > 0 then 
+    if ObjHdrType(RCCCC1Method, "ColumnSelection_ColumnId") = 0 then
+      return ObjHdrText$(RCCCC1Method, "ColumnSelection_ColumnId") 
+    endif
+  endif
+
+  return ""
+
+endmacro
+
+
+
+!==============================================================================
+name FireAntGetColumnUsageCode_RCnetCCC$
+
+!returns something like : "Waste"  "Bypass"
+!------------------------------------------------------------------------------
+
+  if RegSize(RCCCC1Method) > 0 then 
+    if ObjHdrType(RCCCC1Method, "ColumnSelection_Usage") = 0 then
+      return ObjHdrText$(RCCCC1Method, "ColumnSelection_Usage") 
+    endif
+  endif
+
+  return ""
+
+endmacro
+
+
+!==============================================================================
+name KeepMostLikelyColumnFor_RCnetTHM
+
+!it is the case that only one THM and no valve TT is used
+! code only does something useful when it is a 2 position valve
+!------------------------------------------------------------------------------
+
+
+local sValveType$
+local sValvePos$
+local sValvePosActual$
+local iValvePos
+local iMaxValvePos
+local iUseColCase          ! =1 use 1. col (left) , 2 use 2. col (right)  0 carry over all cols, other number multi pos vlv
+local iUseColSwitchVlv     ! =1 is YES, = 0 is NO
+
+  sValveType$ = ""
+  sValvePos$ = ""
+  sValvePosActual$ = ""
+  iValvePos = 0
+  iMaxValvePos = 0
+  iUseColCase = 1  !until otherwise
+  iUseColSwitchVlv = 1
+
+  !actually there is never a guarantee that the method seting for the valves is still the same at time of PostACQHook
+  !NOTE: column hardware is such:  1->6 is left THM compartment  1->2 is right THM compartment
+
+  iUseColCase = 1  !until otherwise
+  sValveType$ = ObjHdrText$(RCTHM1Config, "ColumnSwitchingValve_Type") 
+  if sValveType$ = "Valve6Port2Positions" OR sValveType$ = "Valve10Port2Positions"  then
+     sValvePos$ = ObjHdrText$ (RCTHM1Method, "ColumnSwitchingValve_Position")
+     !print "DBG: sValveType$ =",sValveType$, " sValvePos$ = ", sValvePos$  
+     !"Position1" = 1->2   "Position2" = 1->6/10
+     if sValvePos$ = ""
+        !sValvePos$ = "" is for bug right now for "NextAfterRun"
+        sValvePos$ ="NextAfterRun" 
+     endif
+     if sValvePos$ = "DontChange" or sValvePos$ ="NextAfterRun" 
+        !must get actuals pos 
+        !  but remember at time of this macro the run is no longer ongoing, 
+        !  there is no guarantee for the correctnes of the actual value
+        sValvePosActual$ = ObjHdrText$ (RCTHM1Status, "ColumnSwitchingValve_Position")
+     else
+        sValvePosActual$ = sValvePos$
+     endif   
+     !print "DBG: sValvePosActual$ =",sValvePosActual$
+     if sValvePosActual$ = "Position1"  ! 1->2
+        iUseColCase = 2
+     else
+        iUseColCase = 1
+     endif
+     if sValvePos$ ="NextAfterRun"
+        ! must take the last pos as it was for this past run at its beginning
+        if iUseColCase = 2
+           iUseColCase = 1
+        else   
+           iUseColCase = 2
+        endif 
+     endif
+  else   
+     if sValveType$ <> ""  !like "Valve9Port8Positions"
+        !multi port valve: try this concept 
+        sValvePos$ = ObjHdrText$ (RCTHM1Method, ColumnSwitchingValve_Position)
+        !print "DBG: sValveType$ =",sValveType$, " sValvePos$ = ", sValvePos$  
+        if sValvePos$ = "DontChange" or sValvePos$ ="NextAfterRun" 
+           !must get actuals pos 
+           !  but remember at time of this macro the run is no longer ongoing, 
+           !  there is no guarantee for the correctnes of the actual value
+           sValvePosActual$ = ObjHdrText$ (RCTHM1Status, "ColumnSwitchingValve_Position")
+           !print "DBG: sValvePosActual$ =",sValvePosActual$
+           !CP return 0 if no useful number conversion is possible
+           iUseColCase = val(sValvePosActual$[9:15])
+           if sValvePos$ ="NextAfterRun"
+              if iUseColCase <= 1
+                 !must wrap around, since already ++ at this point in time
+                 iMaxValvePos = ObjHdrVal (RCTHM1Config, "ColumnSwitchingValve_NumberOfPositions" )
+                 iUseColCase = iMaxValvePos
+              else  
+                 iUseColCase = iUseColCase - 1
+              endif
+           endif   
+        else   
+           on error iUseColCase = 0
+           !very narrow error trap in case some strange new string comes here
+           iUseColCase = val(sValvePos$[9:15])
+           on error
+        endif   
+     endif
+  endif
+
+  !print "DBG: iUseColCase =",iUseColCase
+  return  iUseColCase
+
+endmacro
+
+
+!==============================================================================
+name KeepMostLikelyColumnFor_RCnetValve
+
+!it is the case that only one valve and no valve TT is used
+! code only does something useful when it is a 2 position valve
+!was not able to test this
+!------------------------------------------------------------------------------
+
+local iUseColCase          ! =1 use 1. col (left) , 2 use 2. col (right)  0 carry over all cols, other number multi pos vlv
+local iUseColSwitchVlv     ! =1 is YES, = 0 is NO
+
+  iUseColCase = 1  !until otherwise
+  iUseColSwitchVlv = 1
+                      
+  iUseColCase = 1  !until otherwise
+  if ObjHdrVal (RCVLV1Config, "Capabilities_NumberOfPositions") > 1
+     !take actual value, always
+     iUseColCase = ObjHdrVal(RCVLV1Status, "Position_Number") 
+  else   
+     !multi col valve only have concept to report all
+     iUseColCase = 0
+  endif
+
+  return  iUseColCase
+
+endmacro
+
+
+
+!==============================================================================
+name KeepMostLikelyColumnFor_LeoTHM
+
+!it is the case that only one THM and no valve TT is used
+! code only does something useful when it is a 2 position valve
+!------------------------------------------------------------------------------
+                       
+
+local iLeoColPos
+local sValvePos$
+local iUseColCase          ! =1 use 1. col (left) , 2 use 2. col (right)  0 carry over all cols, other number multi pos vlv
+local iUseColSwitchVlv     ! =1 is YES, = 0 is NO
+
+  iLeoColPos = 0
+  sValvePos$ = ""
+  iUseColCase = 1  !until otherwise
+  iUseColSwitchVlv = 1
+  
+
+  iLeoColPos = ObjHdrVal (LeoThermostatMethod1, ColumnValve) 
+
+  !0=Col1 1->6 , 1 =Col2 1->2  2= backflush off , 3 B.Flush ON , 4 Pre_col , 5 Per+analytical Col, 6 current pos, 7 next pos
+  !behave like a 1 col system for: 2,3 
+  !report all columns on 4,5
+  !WARNING:  LeoChem Valve DOP SP values (1,0) are reverse to the driver instruction (0,1)
+  
+  !print "DBG: iLeoColPos =",iLeoColPos
+  
+  if iLeoColPos = 0
+     iUseColCase = 1
+  else   
+     if iLeoColPos = 1
+        iUseColCase = 2
+     else   
+        if iLeoColPos = 2 or iLeoColPos = 3
+           iUseColCase = 1
+        else   
+           if iLeoColPos = 4 or iLeoColPos = 5
+              !4,5
+              iUseColCase = 0
+           else   
+              !current , next pos;
+              !6=curr  7=next
+              !must use SendModule$(LTHM1,"act:valv?")   since LeoDirvers don't have this in statusreg
+              on error iUseColCase = 0
+              !!error trap only around SendModule$
+              sValvePos$ = substring$( sendmodule$("LTHM1","act:valv?"),4,," ")
+              if sValvePos$ = "0"
+                 iUseColCase = 2
+              else
+                 iUseColCase = 1
+              endif
+              if iLeoColPos = 7
+                 if iUseColCase = 2
+                    iUseColCase = 1
+                 else
+                    iUseColCase = 2
+                 endif
+              endif
+              on error
+           endif   
+        endif   
+     endif
+  endif
+
+  return  iUseColCase
+
+endmacro
+
+
+!==============================================================================
+Name KeepMostLikelyUsed_GC7890ColumnPerInletInBuiltInColsTab
+Parameter  TabKey$              !like Front, Back
+Parameter  GC_CMDKey$           !like fr, bk
+Parameter  ColPosNbr            !like 1 for Front , 2 for Back
+
+!this is for GC, with front, back, dual
+!it is only a list of installable columns
+!what counts only is the 1.one on the front inlet and the 1. one on the back inlet
+!columns table is only populates since GC-7890 not of any one of the older ones
+!find this out via commands: value returns are only > -1 so the range is usually 0..5
+! it might also be possible that the driver inquiry returns that the user has nothing setup as columns
+
+!this is only for normal GC operation, one column fron and one in back position
+
+!mark the front  with ColumPosition=1 , the back with ColumPosition=2
+!now create 2 more column tables  "BuiltInColumns_Front"  "BuiltInColumns_Back"
+!------------------------------------------------------------------------------
+
+local  iFoundRow
+local  GCQueryCmd$
+local  iGCSaysColPosUsed
+local  ColumnConfigSetupXml$
+local  iTokenPos
+local  iTokenPosOutlet
+local  Tab$
+local  iMax
+
+
+  !coding algorithm: 
+  !simple case only when it goes from Inlet to Detector straight ! 
+  !1. find col for inlet fr then bk
+  !2. for this col number, get the xml description, which contains where IN and OUT of column is hooked up to
+  !3. find out if there are the infos in the xml attribute ( just simple text search for now )
+  !       InletConnection="FRONT_INLET" 
+  !       OutletConnection="FRONT_DETECTOR" 
+  !now only for a simple system: OutletConnection="FRONT_DETECTOR" or "BACK_DETECTOR" I assume column is definitely identified
+  
+  !note: inlet splitter means something completely different than going to two columns, it lets out stuff in the air !
+
+  Tab$ = "BuiltInColumns_" + TabKey$
+  
+  !get column number (1 based index) where inlets is connected to 
+
+  GCQueryCmd$ = "inlet." + GC_CMDKey$ + ".column"
+  On Error iGCSaysColPosUsed = -1
+  iGCSaysColPosUsed  = GetHardwareItemDouble(1,GCQueryCmd$)
+  On Error 
+  
+  iFoundRow = -1
+  if iGCSaysColPosUsed > -1 
+     !only then really set
+     !now also get the outlet for this column, in the description xml
+     GCQueryCmd$ = "column."+val$(iGCSaysColPosUsed)+".description"
+     ColumnConfigSetupXml$ = GetHardwareItem$(1,GCQueryCmd$)
+     !now search in this string the attribute value for OutletConnection="FRONT_DETECTOR" 
+     !make this very simple now
+     iTokenPosOutlet = instr(ColumnConfigSetupXml$,"OutletConnection")
+     iTokenPos = instr(ColumnConfigSetupXml$,"FRONT_DETECTOR")
+     if iTokenPos < 1 
+        iTokenPos = instr(ColumnConfigSetupXml$,"BACK_DETECTOR")
+     endif
+     if iTokenPos < 1 
+        iTokenPos = instr(ColumnConfigSetupXml$,"THIRD_DETECTOR")
+     endif
+     if iTokenPos < 1 
+        iTokenPos = instr(ColumnConfigSetupXml$,"FOURTH_DETECTOR") ! does not exist, just in case it comes
+     endif
+     if iTokenPos < 1 
+        iTokenPos = instr(ColumnConfigSetupXml$,"AED")
+     endif
+     if iTokenPos < 1 
+        iTokenPos = instr(ColumnConfigSetupXml$,"VACUUM")  !means goes to MSD
+     endif
+     if iTokenPos > 0  AND  ( iTokenPos > iTokenPosOutlet+17 AND  iTokenPos < iTokenPosOutlet+22 )
+       !then the column goes directly to a detector without a column network.   
+       !the token is near enough after the OutletConnection XML attribute
+       iFoundRow = RowByVal( _config[1], Tab$, , "ColumnPosition" , "=" , iGCSaysColPosUsed )
+     else  
+       iFoundRow = -1
+     endif
+  else
+     !inlet not connected to any column  
+     !delete all rows
+     DelTabRow _Config[1], Tab$, -1
+  endif   
+  
+  ! only if could identify exactly one column to be used delete not used columns in table
+  if iFoundRow > 0 
+     SetTabVal  _config[1], Tab$, iFoundRow, "ColumnPosition", ColPosNbr
+     !now delete all not relevant rows
+     iMax = TabHdrVal(_Config[1], Tab$, "NumberOfRows")
+     !delete all other rows in the table now
+     if iFoundRow < iMax
+        DelTabRow _Config[1], Tab$, (iFoundRow+1):-1
+     endif   
+     if 1 < iFoundRow
+        DelTabRow _Config[1], Tab$, 1:(iFoundRow-1)
+     endif   
+  endif
+
+endmacro
+
+
+
+!==============================================================================
+Name KeepMostLikelyUsed_GC7890ColumnInBuiltInColsTab
+
+!this is for GC, with front, back, dual
+!it is only a list of installable columns
+!what counts only is the 1.one on the front inlet and the 1. one on the back inlet
+!columns table is only populates since GC-7890 not of any one of the older ones
+!find this out via commands: value returns are only > -1 so the range is usually 0..5
+! it might also be possible that the driver inquiry returns that the user has nothing setup as columns
+
+!this is only for normal GC operation, one column fron and one in back position
+
+!mark the front  with ColumPosition=1 , the back with ColumPosition=2
+!now create 2 more column tables  "BuiltInColumns_Front"  "BuiltInColumns_Back"
+!------------------------------------------------------------------------------
+
+  KeepMostLikelyUsed_GC7890ColumnPerInletInBuiltInColsTab "Front", "fr" , 1
+  KeepMostLikelyUsed_GC7890ColumnPerInletInBuiltInColsTab "Back",  "bk" , 2
+  
+   
+endmacro
+
+
+
+!==============================================================================
+Name KeepMostLikelyUsed_GC6890_ColumnPerInletInBuiltInColsTab
+Parameter  TabKey$              !like Front, Back
+Parameter  ColPosNbr            !like 1 for Front , 2 for Back
+
+!only for RCnet GC 6890
+!------------------------------------------------------------------------------
+
+local  iFoundRow
+local  GCQueryCmd$
+local  iGCSaysInletUsed
+local  iGCSaysOutletUsed
+local  Tab$
+local  iMax
+local  bDbgTesting
+local  Module$, XmlNode$
+
+  Module$ = "GC1"
+  XmlNode$	 = "Control"
+
+  bDbgTesting = 0  !since don't have a GC 6890RCnet here
+  
+  !coding algorithm: same algorithm as for GC 7890
+  !simple case only when it goes from Inlet to Detector straight ! 
+  !1. find col for inlet Position 1(fr), 2(bk)
+  !2. for this col number, get the DetConn
+  !3. only if DetConn = <0,1> then goes directly to a detector
+
+  Tab$ = "BuiltInColumns_" + TabKey$
+
+  !get column number (1 based index) where inlets is connected to 
+  !GC6890 does not support GetHardwareItem() must use RCGetResourceVal()
+  !tested working commands:  (note bug in "..2.InletConn" must use text$() - Val() gives CP error
+  !print "Front:";print RCGetResourceVal("GC1", "Control","Column.1.InletConn");print RCGetResourceVal("GC1", "Control","Column.1.DetConn");print "Back:";print RCGetResourceText$("GC1", "Control","Column.2.InletConn");print RCGetResourceVal("GC1", "Control","Column.2.DetConn");
+  
+  !column index is 1 based !
+  !this is for column index = 1 in :  "Column.<n col index>.InletConn"
+  GCQueryCmd$ = "Column.1.InletConn"
+  On Error iGCSaysInletUsed = -1
+  if bDbgTesting = 1
+     print input(" GC command: "+GCQueryCmd$+" <0..5> ", iGCSaysInletUsed )
+  else
+     iGCSaysInletUsed = RCGetResourceVal(Module$,XmlNode$,GCQueryCmd$)
+  endif
+  !inlet index is 0 based !
+  iGCSaysInletUsed = iGCSaysInletUsed+1
+  On Error 
+  
+  iFoundRow = -1
+  if iGCSaysInletUsed = ColPosNbr
+     !this is for column index = 1,  ColPosNbr = 1
+     GCQueryCmd$ = "Column.1.DetConn"
+     On Error iGCSaysOutletUsed = -1
+     if bDbgTesting = 1
+        print input(" GC command: "+GCQueryCmd$+" <0..5> ", iGCSaysOutletUsed )
+     else
+        iGCSaysOutletUsed  = RCGetResourceVal(Module$,XmlNode$,GCQueryCmd$)
+     endif   
+     On Error 
+     if iGCSaysOutletUsed >= 0 AND  iGCSaysOutletUsed <= 3
+        !0 = fr, 1= bk, 2=msd, 3=aed
+        iFoundRow = RowByVal( _config[1], Tab$, , "ColumnPosition" , "=" , ColPosNbr )
+     else
+        !not the simple case any more, report all columns     
+     endif
+  else   
+     !this is for column index = 1,  ColPosNbr = 2
+     GCQueryCmd$ = "Column.2.InletConn"
+     On Error iGCSaysInletUsed = -1
+     if bDbgTesting = 1
+        print input(" GC command: "+GCQueryCmd$+" <0..5> ", iGCSaysInletUsed )
+     else
+        !would be correct, but there is a driver bug for this, only TExt$() responds but will be 
+        !fixed in GC driver, and then be the oposite
+        iGCSaysInletUsed = RCGetResourceVal(Module$,XmlNode$,GCQueryCmd$)
+        if iGCSaysInletUsed < 0
+           !try the other way which is workgin right now: only working like this
+           iGCSaysInletUsed = Val(RCGetResourceText$(Module$,XmlNode$,GCQueryCmd$))
+        endif   
+     endif
+     !inlet index is 0 based !
+     iGCSaysInletUsed = iGCSaysInletUsed+1
+     On Error  
+     if iGCSaysInletUsed = ColPosNbr
+        GCQueryCmd$ = "Column.2.DetConn"
+        On Error iGCSaysOutletUsed = -1
+        if bDbgTesting = 1
+           print input(" GC command: "+GCQueryCmd$+" <0..5> ", iGCSaysOutletUsed )
+        else
+           iGCSaysOutletUsed  = RCGetResourceVal(Module$,XmlNode$,GCQueryCmd$)
+        endif   
+        On Error 
+        if iGCSaysOutletUsed >= 0 AND  iGCSaysOutletUsed <= 3
+           !0 = fr, 1= bk, 2=msd, 3=aed
+           iFoundRow = RowByVal( _config[1], Tab$, , "ColumnPosition" , "=" , ColPosNbr )
+        else
+           !not the simple case any more, report all columns     
+        endif
+     else  
+        !inlet not connected to any column  
+        !not the simple case any more, report all columns     
+        
+        !don't delete all rows
+        !DelTabRow _Config[1], Tab$, -1
+     endif   
+  endif   
+  
+  ! only if could identify exactly one column to be used delete not used columns in table
+  if iFoundRow > 0 
+     SetTabVal  _config[1], Tab$, iFoundRow, "ColumnPosition", ColPosNbr
+     !now delete all not relevant rows
+     iMax = TabHdrVal(_Config[1], Tab$, "NumberOfRows")
+     !delete all other rows in the table now
+     if iFoundRow < iMax
+        DelTabRow _Config[1], Tab$, (iFoundRow+1):-1
+     endif   
+     if 1 < iFoundRow
+        DelTabRow _Config[1], Tab$, 1:(iFoundRow-1)
+     endif   
+  endif
+
+endmacro
+
+
+
+!==============================================================================
+Name KeepMostLikelyUsed_GC6890_ColumnInBuiltInColsTab
+!------------------------------------------------------------------------------
+  KeepMostLikelyUsed_GC6890_ColumnPerInletInBuiltInColsTab "Front", 1
+  KeepMostLikelyUsed_GC6890_ColumnPerInletInBuiltInColsTab "Back",  2
+  
+endmacro
+
+
+
+!==============================================================================
+name FireAntIncrementNumInjsOfColsInBuildInTab_NOTNEEDED
+parameter  SearchSerialID$
+!------------------------------------------------------------------------------
+local  Tab$
+local  i, iLastInjCnt, iMax
+
+  !for IsHW is now such :
+  !that Firmware no longer increments anything, since it does not have enough scope of all the information
+  !precedence of usage is tagged col (IsHW) first, then also check that it is an installed =YES col
+
+  !by now there is only the list of mostlikely used columns in this table
+  !so can increment them ALL !
+  Tab$ = "BuiltInColumns"
+  iMax = TabHdrVal(_Config[1], Tab$, "NumberOfRows")
+  For i = 1 to iMax
+      iLastInjCnt = TabVal(_Config[1], Tab$, i, "NumInjections") 
+!RSprint "DBG: iLastInjCnt = ", iLastInjCnt                 
+      SetTabVal _Config[1], Tab$, i, "NumInjections" , (iLastInjCnt+1)
+  Next i
+
+endmacro
+  
+
+!==============================================================================
+Name FireAntWriteInjCountToRC_CCCColumTag
+parameter ColSerialID$
+parameter iNumberOfInjections
+!------------------------------------------------------------------------------
+!it is the case that ONLY one CCC is used
+
+  Local ColTab$, iRow, iMax
+  Local Module$, TCCSerial$, ModuleNum
+  local LRColPosition, TagName$, TagNum
+  
+  ColTab$ = "Columns"
+  Module$ = "CCC1"
+
+  !On Error Print ""
+
+  if RegSize(RCCCC1Config) > 0 then 
+     iRow = 1
+     iMax = TabHdrVal( _Config[1], ColTab$, "NumberOfRows")
+     while iRow > 0 and iRow <= iMax
+        iRow =  RowByText( _Config[1], ColTab$, iRow:-1, "SerialNum" , "=" , ColSerialID$ ) 
+        if iRow > 0
+           If TabVal(_Config[1], ColTab$, iRow, "IsHW") = 1 
+              TCCSerial$ = TabText$(_Config[1], ColTab$, iRow, "DeviceSerial") 
+              iModuleRow = RowByText( RCCCC1Config, "SubModuleConfigs", , \
+                                      "SubModuleConfigSerialNumber" , "=" , TCCSerial$ ) 
+              if iModuleRow > 0
+                 ModuleIdentifier$ = TabText$(RCCCC1Config, "SubModuleConfigs", \
+                                              iModuleRow, "SubModuleConfigModuleId")
+                 ModuleNum = Val(ModuleIdentifier$[4])
+                 !build the tag token name now
+                 LRColPosition = TabVal(_Config[1], ColTab$, iRow, "ColumnPosition")
+                 TagNum = ((ModuleNum - 1) * 2) + LRColPosition
+                 If TagNum = 1 Then
+                   TagName$ = "Tag"
+                 Else
+                   TagName$ = "Tag" + Val$(TagNum)
+                 EndIf
+!RSprint "DBG: iNumberOfInjections = ", iNumberOfInjections                 
+                 WriteInjCountToRCTHMColumTag_XML  Module$, TagName$, iNumberOfInjections
+              endif
+              iRow = iMax + 1 !stop loop
+           endif
+           iRow = iRow + 1
+        endif
+     endwhile
+  endif
+           
+endmacro
+
+
+!==============================================================================
+name FireAntPersistNumInjsCntrOfUsedColsInColumnsTab
+parameter  SearchSerialID$
+!------------------------------------------------------------------------------
+local  Tab$
+local  iRow, iLastInjCnt, iMax, iLastInjCntHWTag
+
+  !for IsHW is now such :
+  !that Firmware no longer increments anything, since it does not have enough scope of all the information
+  !precedence of usage is tagged col (IsHW) first, then also check that it is an installed =YES col
+
+  !but actually this number must be the same in all rows with this serialNum,
+  !since we talk about the same physical column
+  !so read out only once
+
+  Tab$ = "Columns"
+  iMax = TabHdrVal(_Config[1], Tab$, "NumberOfRows")
+  iRow = 1
+  iLastInjCnt = -1
+  iLastInjCntHWTag = -1
+  !search inj count in HW tag
+  While iRow > 0 and iRow <= iMax and iLastInjCntHWTag = -1
+      iRow =  RowByText( _Config[1], Tab$, iRow:-1, "SerialNum" , "=" , SearchSerialID$ ) 
+      if iRow > 0
+         if iLastInjCntHWTag = -1
+            !but actually this number must be the same in all rows,
+            !since we talk about the same physical column
+            !so read out only once
+            if TabVal(_Config[1], Tab$, iRow, "IsHW") <> 0
+               !let HW col inj counter be master
+               iLastInjCntHWTag = TabVal(_Config[1], Tab$, iRow, "NumInjections") 
+               if iLastInjCntHWTag < 0
+                  iLastInjCntHWTag = 0 !this only makes sense
+               endif   
+            endif
+         endif   
+         iRow = iRow + 1
+      endif
+  EndWhile
+
+  !if no HW tag then search inj count in Installed col
+  iRow = 1
+  While iRow > 0 and iRow <= iMax and iLastInjCnt = -1 and iLastInjCntHWTag = -1
+      iRow =  RowByText( _Config[1], Tab$, iRow:-1, "SerialNum" , "=" , SearchSerialID$ ) 
+      if iRow > 0
+         if iLastInjCnt = -1
+            if TabVal(_Config[1], Tab$, iRow, "ColInstalled") <> 0
+               !let installed col inj counter be master otherwise
+               iLastInjCnt = TabVal(_Config[1], Tab$, iRow, "NumInjections") 
+               if iLastInjCnt < 0
+                  iLastInjCnt = 0 !this only makes sense
+               endif   
+            endif
+         endif   
+         iRow = iRow + 1
+      endif
+  EndWhile
+
+  if iLastInjCntHWTag <> -1
+     iLastInjCnt = iLastInjCntHWTag
+  endif   
+  if iLastInjCnt < 0
+     iLastInjCnt = 0 !this only makes sense
+  endif   
+  iLastInjCnt = iLastInjCnt + 1
+  
+!RSprint "DBG: iLastInjCnt =" , iLastInjCnt
+  
+  iRow = 1
+  While iRow > 0 and iRow <= iMax 
+      iRow =  RowByText( _Config[1], Tab$, iRow:-1, "SerialNum" , "=" , SearchSerialID$ ) 
+      if iRow > 0
+         !increment inj count for all columns found with this serial# ,
+         SetTabVal _Config[1], Tab$, iRow, "NumInjections" , iLastInjCnt
+         if TabVal(_Config[1], Tab$, iRow, "IsHW") <> 0
+            !for HW tag must also write down to tag via tag reader
+            FireAntWriteInjCountToRC_CCCColumTag SearchSerialID$, iLastInjCnt
+         endif
+         iRow = iRow + 1
+      endif
+  EndWhile
+
+endmacro
+  
+
+!==============================================================================
+name FireAntIncrAndPersistColumnInjCntr  !OLD from Frank
+parameter  ColTab$
+parameter  SearchSerialID$
+!------------------------------------------------------------------------------
+
+local  irow, iLastInjCnt
+
+   !for IsHW is now such :
+   !that Firmware no longer increments anything, since it does not have enough scope of all the information
+   !precedence of usage is tagged col (IsHW) first, then also check that it is an installed =YES col
+   
+   !the code here must check 
+
+   iRow =  RowByText( _Config[1], ColTab$, , "SerialNum" , "=" , SearchSerialID$ ) 
+   if irow > 0
+      if TabVal (_Config[1], ColTab$, irow, "IsHW") <> 1  then 
+         iLastInjCnt = TabVal(_Config[1], ColTab$, irow, "NumInjections") 
+         SetTabVal _Config[1], ColTab$, irow, "NumInjections" , (iLastInjCnt+1)
+      endif
+   endif
+   
+   if ConvertText$(UPPERColTab$) = "COLUMNS"
+      !only then write back to tag if it is a IsHW Column
+   endif
+
+endmacro
+
+
+!==============================================================================
+name  IncrementNumInjsOfColsInBuildInTab
+Parameter  ColTab$
+Parameter  bOnlyUpdateWithSerialNumbers  ! this allows that GC does not update columns with no serial numbers
+!------------------------------------------------------------------------------
+local  i, iMax, CurrNumInj, bIncrement
+
+  !assume at this point, the "BuiltInColumns" table only contains the columns that were really run 
+  !nothing more, they might be however either tagged HW columns or nontagged installed cols
+  !hardware tags are driver incremented , but with the new column table backup concept via "Columns_AtPreRun"
+  !I am undoing this HW increment and do it with CS knowledge correctly.
+  !"Columns_AtPreRun" save HW tag counts before the injection, since the logic in 
+  !TCC has many flavors depending on Model and firmware rev,
+  !and this does not fit our more clever column used model
+
+  
+  !now increment all columns which are in here, even HW ones
+  !only HW ones need to be updatd in "Columns" table as well and instruction to be sent to RCnet drivers
+  
+  !in GC not all Col tables front,back will always exist
+  if ObjHdrType (_Config[1], ColTab$) = 4 then
+     iMax = TabHdrVal(_Config[1], ColTab$, "NumberOfRows")
+     for i = 1 to iMax
+         bIncrement = 1
+         if bOnlyUpdateWithSerialNumbers = 1 AND "" = TabText$( _Config[1], ColTab$, i, "SerialNum")
+            !not for GC 
+            bIncrement = 0
+         endif   
+         if bIncrement = 1
+            CurrNumInj = TabVal(_Config[1], ColTab$, i, "NumInjections")
+            SetTabVal _Config[1], ColTab$, i, "NumInjections", (CurrNumInj + 1)
+         endif   
+     next i
+  endif
+  
+endmacro
+
+
+
+!==============================================================================
+name  WriteInjCountToRCTHMColumTag 
+parameter ColPosition
+parameter iNumberOfInjections
+!------------------------------------------------------------------------------
+Local  XmlNode$, XmlN_1$, TagName$
+
+  XmlNode$ = "Control"
+  XmlN_1$ = "columntags"
+  
+  !print "DBG: will write to col tag : ", iNumberOfInjections,  "  ColPos : " , ColPosition
+
+  !this can only be done in case of 1 THM of RCnet , LeoDrivers auto-updated themselves
+
+  !the following is now firmware dependent in the Leo - Aladdin
+  !newer firmware already has been enhanced to increment only the tag for inj# of the column on the correct side of the valve
+  !to decrement not used other tagged col in _config[1]."Columns" 
+  !                     plus send this back down to the RF-tag, since this is the master of this counter
+  
+  !old leo driver modules have a BSP link to the columns table and read out changes immediately when SetTabVal occures
+  
+  !one could add here that the correct TCC# is searched which has the requested serial number
+  !but for now define: multi TCC col counters are done by firmware
+  
+  if Check (Variable, DevRCnet) = 1 then
+     if DevRCnet > 0 then
+        if Check (Variable, DevRCTHM) = 1 then
+           if DevRCTHM = 1  then 
+              if  ColPosition = 1 ! then it is Left
+                  TagName$ = "Tag"             
+              else
+                  TagName$ = "Tag2"
+              endif
+              WriteInjCountToRCTHMColumTag_XML "THM1", TagName$, iNumberOfInjections
+           endif
+        endif
+     endif
+  endif
+
+endmacro
+
+
+!==============================================================================
+name  PersistNumInjsCntr_forGC_OfUsedColsInColumnsTab
+parameter ColTab$
+!------------------------------------------------------------------------------
+local iMax, iRow, iFoundRow
+
+  !in GC not all Col tables front,back will always exist
+  if ObjHdrType (_Config[1], ColTab$) = 4 then
+     iMax = TabHdrVal ( _Config[1], "Columns", "NumberOfRows" )
+     !PRINT "DBG: iMax = ",iMax
+     for iRow = 1 to iMax
+         SerialNum$ = 	TabText$( _Config[1], "Columns", iRow, "SerialNum")
+         !PRINT "DBG: SerialNum$ = ", SerialNum$
+         if SerialNum$ <> ""
+            iFoundRow = RowByText (_Config[1], ColTab$, , "SerialNum" , "=" , SerialNum$ )
+            !PRINT "DBG: iFoundRow = ", iFoundRow, "  iRow = ",iRow
+            if iFoundRow > 0
+               SetTabVal _Config[1], "Columns", iRow , "NumInjections" , \
+                                    TabVal(_Config[1], ColTab$, iFoundRow , "NumInjections" )
+            endif   
+         endif
+     Next iRow
+  endif
+  
+endmacro
+
+
+!==============================================================================
+name  PersistNumInjsCntrOfUsedColsInColumnsTab
+parameter iFoundRowInBuiltInColsTab
+!------------------------------------------------------------------------------
+local  i, iMax, iCntBuildInTabRows, bPossiblyIncrInjNum, CurrNumInj, ColPosition, iMaxValvePos, iIncrDecr
+
+  InstalledOrHWColsCnt = 0
+  !to persist non tagged column counts this must be done in the _config[1]."Columns" table !
+  
+  !the following is now firmware dependent in the Leo - Aladdin
+  !newer firmware already has been enhanced to increment only the tag for inj# of the 
+  !column on the correct side of the valve, BUT it does it only for a 2 pos valve at all !!
+  !otherwise both are incremented.  
+  
+  !! ISSUE MUST CHECK WITH ANDREAS WHAT STATE OF THIS IS IN FRIMWARE & in which REVISION
+  
+  !to decrement not used other tagged col in _config[1]."Columns" 
+  !                     plus send this back down to the RF-tag, since this is the master of this counter
+  
+  !do same loop as in carry over to from "Columns" to "BuildInColumns" table
+
+  iMax = TabHdrVal(_Config[1], "Columns", "NumberOfRows")
+  iCntBuildInTabRows = 0
+  for i = 1 to iMax
+     bIsHWTaggedCol = 0
+     bPossiblyIncrInjNum = 0
+     if TabVal (_Config[1], "Columns", i, "IsHW") <> 0 
+        bIsHWTaggedCol = 1
+     endif
+     if ( bIsHWTaggedCol = 0 ) AND \
+         ( TabVal (_Config[1], "Columns", i, "ColInstalled") = 0 ) then
+         !this row would be deleted in carry over to "BuiltInColumns" table
+     else  
+        ! now count since this is a row that was carried over to "BuiltInColumns"
+        iCntBuildInTabRows = iCntBuildInTabRows + 1 
+        bPossiblyIncrInjNum = 1
+     endif
+     if iFoundRowInBuiltInColsTab < 1 
+        !all non HW  AND (now) HWtags need to get incremented
+        if bPossiblyIncrInjNum = 1
+           CurrNumInj = 1 + TabVal(_Config[1], "Columns", i, "NumInjections") 
+           !no one has incremented it
+           SetTabVal _Config[1], "Columns", i, "NumInjections", CurrNumInj
+           if bIsHWTaggedCol = 1 AND DevRCnet > 0 then
+              !the Firmware automatism to increment somehow col inj count now undone 
+              !with macro UndoFirmwareColumnHWTagInjCountIncrement
+              !no more firmware and model dependent incorrect increment , or non-incr is done at all
+              if Check (Variable, DevRCTHM) = 1 then
+                 if DevRCTHM = 1  then 
+                    ColPosition = TabVal(_Config[1], "Columns", i, "ColumnPosition")
+                    WriteInjCountToRCTHMColumTag ColPosition, CurrNumInj
+                 endif      
+              endif      
+           endif      
+        endif
+     else
+        !the Firmware automatism to increment somehow col inj count now undone 
+        !with macro UndoFirmwareColumnHWTagInjCountIncrement
+        !no more firmware and model dependent incorrect increment , or non-incr is done at all
+        if bPossiblyIncrInjNum = 1
+           if iCntBuildInTabRows = iFoundRowInBuiltInColsTab
+              CurrNumInj = 1 + TabVal(_Config[1], "Columns", i, "NumInjections") 
+              !it was not incremented by now
+              SetTabVal _Config[1], "Columns", i, "NumInjections", CurrNumInj
+              if bIsHWTaggedCol = 1 AND DevRCnet > 0 then
+                 if Check (Variable, DevRCTHM) = 1 then
+                    if DevRCTHM = 1  then 
+                       ColPosition = TabVal(_Config[1], "Columns", i, "ColumnPosition")
+                       WriteInjCountToRCTHMColumTag ColPosition, CurrNumInj
+                    endif      
+                 endif      
+              endif      
+           endif
+        endif
+     endif
+  next i
+
+endmacro
+
+!==============================================================================
+name KeepOnlyMostLikelyUsedColumnForDACalc
+parameter  bInPostAcqHook  default  1  ! =1 means comes from SaveAcqRes in PostACQHook, else from UI
+!------------------------------------------------------------------------------
+
+!call this from macro: editcolp.mac :: UpdateBuiltInColumns
+
+!It is the method settings at the beginning of the run ( and no TT ) which counts here
+
+!this macro considers only systems with 1 or 2 columns
+
+!macro does nothing when following situation is not encountered
+!   hardware situation : TCC with col switch is encountered
+
+!these old cases are: that the user may only set one column as installed, 
+! prioritizing the tagged one over the column table 
+! so that user must remove the tagged col in case the code is supposed to use the 1. installed hit in columns table
+
+! precisely what is the situation handled
+! for LC only,
+! only one TCC, maximally with 2 pos col valve
+! CE only ever one columns is possible in a sequence : no automatic change of column cassett
+! for GC don't know yet
+
+!what is the _productType$  for LCMS , CEMS etc
+
+! do this code only for common cases not the exotic ones.
+
+
+!logic:  for LC
+!THM with ColSwitchValve : (and only one TCC)
+!   take 1. tagged col prioritize LEFT , but if no left then right
+!   if no tagged one found then column table: 1. installed one is left, 2. installed is right
+!define for user: 
+!   valve pos 1-2 is to placed in left tagged col pos, or Must be 1. col set with installed flag in list of cols
+!   valve pos 1-6/10 is to placed in right tagged col pos, or Must be 2. col set with installed flag in list of cols
+!no THM with ColSwitchValve : 
+!  prioritize list is:  
+!     1. left tagged col, if not found then right tagged col, 
+!        if not found take 1. col from col list with installed flag set
+
+!FireAnt 
+!FireAnt conditions are excluded here, since it has own logic implemented
+! 	  if (Check(VARIABLE,_ClusteredTcc$)=1) then !FireAnt
+!      if (_ClusteredTcc$<>"")
+
+! don't consider case of more than one module, this is then FireAnt
+
+! GC , CE, do all as before, they don't have the TCC device variables on 1
+
+local bIsOldFireAnt
+local iUseColCase          ! =1 use 1. col , 2 use 2. col  0 carry over all cols, -1 and -2 FireAnt cases
+local iUseColSwitchVlv     ! =1 is YES, = 0 is NO
+local ColumnID$            ! column ID for CCC, used in FireAnt 2.0 with ClusterTCC RC.net
+local iFoundRowInBuiltInColsTab  !=0 not found take them all
+local bIsGC !=1 GC product
+
+local ErrorVar
+local ForceReportAllColumns 
+local GCColTab$
+
+local FireAntColUsage$ 
+
+  bIsOldFireAnt = 0
+  iUseColCase = 0      ! =1 use 1. col (left) , 2 use 2. col (right)  0 carry over all cols
+  iUseColSwitchVlv = 0 ! =1 is YES, = 0 is NO
+  ColumnID$ = ""
+  iFoundRowInBuiltInColsTab = 0
+  bIsGC = 0
+
+
+!var DevRCnet is always set in Top.mac::  TOP
+
+!  if _ProductType$ = "LC" or "CE" then
+
+
+  ! exclude FireAnt
+  if (Check(VARIABLE,_ClusteredTcc$)=1) then !old FireAnt V 1.0
+      if (_ClusteredTcc$<>"")
+         !old FireAnt V 1.0:  they have own logic in place for columns
+         bIsOldFireAnt = 1
+         !old FireAnt V 1.0:  
+         return  !drop out right here
+      endif
+  endif
+  
+  if instr(_ProductType$,"GC") > 0
+     !is GC with possibly dual , front and back
+     bIsGC = 1
+  endif
+  
+  !allow a backdoor via ChemStation.ini file so that customers where columns are no used straight forward 
+  !can get back the very old way: all are reported that are tagges as used or HW
+  ForceReportAllColumns = PrivateProfileInt("PCS,"+Val$(_Instrument),"ForceReportAllColumns","chemstation.ini",0)
+      
+  if bIsGC = 0  then
+     !LC, LCMS, CE and CEMS go this way
+     !do for RC.net THM first then also for LeoChem THM , both only 1 module
+     !actually there is never a guarantee that the method seting for the valves is still the same at time of PostACQHook
+     !NOTE: column hardware is such:  1->6 is left THM compartment  1->2 is right THM compartment
+     iUseColCase = 1   !util otherwise
+
+     if ForceReportAllColumns <> 0 then
+        iUseColCase = 0
+     else   
+        if Check (Variable, DevRCnet) = 1 then
+           !is apparently always there in LC, don't know about others: GC CE
+           if DevRCnet > 0 then
+              if Check (Variable, DevRCCCC) = 1 then
+                 if Check (Variable, DevRCTHM) = 1 then
+                    if DevRCTHM > 0  then 
+                       !additional TCC together with CCC only have concept to report all
+                       iUseColCase = 0
+                    endif
+                 else
+                   if DevRCCCC = 1  then 
+                      ColumnID$ = FireAntGetMostLikelyColumnFor_RCnetCCC$()
+                      !here we must come up with new iUseColCase, which are for FireAnt Waste and Bypass
+                      if ColumnID$ = "" then
+                         FireAntColUsage$ = ConvertText$(UPPER,FireAntGetColumnUsageCode_RCnetCCC$())
+                         if FireAntColUsage$ = "WASTE" OR FireAntColUsage$ = "BYPASS"
+                            iUseColCase = -2  !special not to increment inj counter in case: no col used at all 
+                         else   
+                            iUseColCase = 0
+                         endif
+                      else
+                         iUseColCase = -1
+                      endif
+                   else
+                      if DevRCCCC > 1  then 
+                         !multi CCC only have concept to report all
+                         iUseColCase = 0
+                      endif
+                   endif
+                 endif
+              else
+                 if Check (Variable, DevRCTHM) = 1 then
+                    if DevRCTHM = 1  then 
+                       if ObjHdrVal (RCTHM1Config, ColumnSwitchingValve_IsInstalled) <> 0
+                          iUseColSwitchVlv = 1
+                          if IsColumnSwitchedInTimeTable() = 0 
+                             iUseColCase = KeepMostLikelyColumnFor_RCnetTHM()
+                          else
+                             !col switched in TT: no concept 
+                             iUseColCase = 0
+                          endif                    
+                       endif
+                    else   
+                       if DevRCTHM > 1  then 
+                          !multi TCC only have concept to report all
+                          iUseColCase = 0
+                       endif
+                    endif
+                 else 
+                    if Check (Variable, DevRCVLV) = 1 then
+                       if DevRCVLV = 1 OR DevRCVLV = 2 then 
+                          !NOTE: multi pos(>2) valves  must both be switched synchronously between the columns
+                          !2 position valves do it all in one
+                          !this branch is not tested only based on docu
+                          iUseColSwitchVlv = 1
+                          if IsColumnSwitchedInTimeTable() = 0 
+                             !put error trap around since had no hardware to test this
+                             on error print
+                             iUseColCase = KeepMostLikelyColumnFor_RCnetValve()
+                             on error 
+                          endif
+                       else   
+                          if DevRCVLV > 1  then 
+                             !multi col valve only have concept to report all
+                             iUseColCase = 0
+                          endif
+                       endif
+                    endif
+                 endif
+              endif
+           else   
+              if Check (Variable, DevLeoThm) = 1 then
+                 if DevLeoThm = 1 then
+                    !print "DBG: DevLeoThm =",DevLeoThm
+                    if ObjHdrVal (LeoThermostatStatus1, OptColumnValve) <> 0
+                       iUseColSwitchVlv = 1
+                       if IsColumnSwitchedInTimeTable() = 0 
+                          iUseColCase = KeepMostLikelyColumnFor_LeoTHM()
+                       else
+                          !col switched in TT: no concept 
+                          iUseColCase = 0
+                       endif
+                    endif
+                 else   
+                    if DevLeoThm > 1  then 
+                       !multi TCC only have concept to report all
+                       iUseColCase = 0
+                    endif
+                 endif
+              else
+                 !Leo col switched valve: no concept no docu of data found.
+                 iUseColCase = 0
+              endif  
+           endif
+        endif  
+     endif
+
+     !don't do the following for GC, but now also for FireAnt 2.0 with ClusterTCC RC.net
+     
+     !print "DBG: iUseColSwitchVlv =",iUseColSwitchVlv,"  iUseColCase =",iUseColCase
+     iFoundRowInBuiltInColsTab = KeepMostLikelyUsedColumnInBuiltInColsTab( iUseColCase , iUseColSwitchVlv , ColumnID$ )
+
+     if bInPostAcqHook = 1 then
+       !only do this when called in post run macro not from columns dialog, 
+       if _ALSBOTTLE <> -1  AND  iUseColCase <> -2
+          ! _ALSBOTTLE <> -1: don't increment inj counters when it is a blankRUN (_ALSBOTTLE = -1)
+          !        right now don't be so specific as to even check if the injvolume > 0.000
+          !iUseColCase <> -2:  special FireAnt case: no col used at all 
+          !TODO here count is incr +1
+          IncrementNumInjsOfColsInBuildInTab "BuiltInColumns" , 0
+          if iUseColCase = -1
+             !!FireAntIncrementNumInjsOfColsInBuildInTab ColumnID$  does same as IncrementNumInjsOfColsInBuildInTab
+             !the next part since in config.reg columns table will be persisted longtime
+             !TODO here count is incr +1 again so total of +2 WHY ???
+             FireAntPersistNumInjsCntrOfUsedColsInColumnsTab ColumnID$  
+          else
+             !persist the correct counts
+             PersistNumInjsCntrOfUsedColsInColumnsTab iFoundRowInBuiltInColsTab
+          endif
+       endif
+       if iUseColCase <> -2
+          !do this only very last for ACAML, always - even for blankruns
+          SupplyPotentiallyMissingColumnSerialNumbers "BuiltInColumns"
+       endif
+     endif   
+     
+  else
+  
+     !the GC branch here ties in closely with what postacq.mac does in SaveAcqRes
+     
+
+     GCColTab$ = "BuiltInColumns_Front"
+     if ObjHdrType (_Config[1], GCColTab$) <> 99 then
+        DelTab _Config[1], GCColTab$  
+     endif   
+     !make sure this is always there from this point on
+     CopyTab _Config[1], "BuiltInColumns", _Config[1], GCColTab$
+     
+     GCColTab$ = "BuiltInColumns_Back"
+     if ObjHdrType (_Config[1], GCColTab$) <> 99 then
+        DelTab _Config[1], GCColTab$  
+     endif   
+     !make sure this is always there from this point on
+     CopyTab _Config[1], "BuiltInColumns", _Config[1], GCColTab$
+     
+     if ForceReportAllColumns = 0 then
+        if TestForDevice ( "7890",1,"") = 1 
+           KeepMostLikelyUsed_GC7890ColumnInBuiltInColsTab
+        else
+           if TestForDevice ( "RC6890",1,"") = 1
+              KeepMostLikelyUsed_GC6890_ColumnInBuiltInColsTab
+           else
+              if TestForDevice ( "RC7820",1,"") = 1
+                 !so far assume it's the same as GC7890
+                 !put error trap around since had no hardware to test this
+                 on error print
+                 KeepMostLikelyUsed_GC7890ColumnInBuiltInColsTab
+                 on error
+              else
+                 if TestForDevice ( "RC6850",1,"") = 1
+                    !so far assume it's the same as GC6890
+                    !put error trap around since had no hardware to test this
+                    on error print
+                    KeepMostLikelyUsed_GC6890_ColumnInBuiltInColsTab
+                    on error
+                 endif            
+              endif            
+           endif            
+        endif            
+     endif
+
+     if bInPostAcqHook = 1 
+       
+        !first increment the inj count
+        !only then persist the correct counts
+        !may only count up injections when actuall the respective injector is used at all !
+        !only do this when called in post run macro, BUT don't increment inj counters when it is a blankRUN (_ALSBOTTLE = -1)
+        !right now don't be so specific as to even check if the injvolume > 0.000
+        if ((_MethodInjectors = 1) or (_MethodInjectors = 3)) AND _ALSBOTTLE1 <> -1 then
+           IncrementNumInjsOfColsInBuildInTab  "BuiltInColumns_Front" , 1
+           PersistNumInjsCntr_forGC_OfUsedColsInColumnsTab  "BuiltInColumns_Front" 
+        endif   
+        if ((_MethodInjectors = 2) or (_MethodInjectors = 3)) AND _ALSBOTTLE2 <> -1  then
+           IncrementNumInjsOfColsInBuildInTab  "BuiltInColumns_Back"  , 1
+           PersistNumInjsCntr_forGC_OfUsedColsInColumnsTab  "BuiltInColumns_Back" 
+        endif   
+       
+        !do this only very last for ACAML, always - even for blankruns
+        SupplyPotentiallyMissingColumnSerialNumbers  "BuiltInColumns_Front"
+        SupplyPotentiallyMissingColumnSerialNumbers  "BuiltInColumns_Back"
+     endif  
+
+  endif  
+  
+
+  !print
+
+endmacro
+
+!==============================================================================
+Name UndoFirmwareColumnHWTagInjCountIncrement
+!this undoes only for 1 TCC systems!
+!------------------------------------------------------------------------------
+Local iFoundRow, iRow2, ColPos, ColSerial$, TCCSerial$, InjCountBefore, InjCount2
+Local bRCnetTHM, bRCnetCCC, bUndoHWCount, iMax1, iMax2
+Local FromColTab$
+Local ToColTab$
+Local WriteToHWTag  
+
+
+  FromColTab$ = "Columns_AtPreRun"
+  ToColTab$   = "Columns"
+  WriteToHWTag = 1
+
+
+  !pull out original InjCountBefore of HW tags
+  !put back all the original column counters for column tags
+  !this macro does save HW tag counts before the injection, since the logic in 
+  !TCC has many flavors depending on Model and firmware rev,
+  ! and this does not fit our more clever column used model
+  !for multi TCC this undo hardware count is also not done
+
+  bUndoHWCount = 0
+  bRCnetTHM = 0
+  bRCnetCCC = 0
+  !only in the following cases will the injection count be done by macro from here at all
+  if DevRCnet > 0 then
+     if Check (Variable, DevRCCCC) = 1 then
+        if DevRCCCC = 1  then 
+           bUndoHWCount = 1
+           bRCnetCCC = 1
+        endif      
+     endif      
+     if Check (Variable, DevRCTHM) = 1 then
+        if DevRCTHM = 1  then 
+           bUndoHWCount = 1
+           bRCnetTHM = 1
+        endif      
+     endif      
+  else      
+     if Check (Variable, DevLeoThm) = 1 then
+        if DevLeoThm = 1 then
+           bUndoHWCount = 1
+        endif      
+     endif      
+  endif      
+  
+  if bUndoHWCount = 1 AND ObjHdrType (_Config[1], FromColTab$) <> 99 then
+     iMax1 = TabHdrVal(_Config[1], FromColTab$, "NumberOfRows")
+     iMax2 = TabHdrVal(_Config[1], ToColTab$, "NumberOfRows")
+     if iMax1 > 0  AND iMax2 > 0
+        iFoundRow = RowByVal( _config[1], FromColTab$, 1:-1, "IsHW" , "<>" , 0 )
+        while iFoundRow > 0
+           ColPos = TabVal( _config[1], FromColTab$, iFoundRow, "ColumnPosition" )
+           InjCountBefore = TabVal( _config[1], FromColTab$, iFoundRow, "NumInjections" )
+           TCCSerial$ = TabText$( _config[1], FromColTab$, iFoundRow, "DeviceSerial" )
+           ColSerial$ = TabText$( _config[1], FromColTab$, iFoundRow, "SerialNum" )
+           iRow2 = 1
+           iRow2  = RowByVal( _config[1], ToColTab$, iRow2:-1, "IsHW" , "<>" , 0 )
+           while iRow2 > 0
+              if  ColPos = TabVal( _config[1], ToColTab$, iRow2, "ColumnPosition" )  \
+                  AND TCCSerial$ = TabText$( _config[1], ToColTab$, iRow2, "DeviceSerial" ) \
+                  AND ColSerial$ = TabText$( _config[1], ToColTab$, iRow2, "SerialNum" ) then
+                  !put back non incremented original InjCountBefore
+                  InjCount2 = TabVal( _config[1], ToColTab$, iRow2, "NumInjections" )
+                  if InjCount2 <> InjCountBefore
+!RSprint "DBG: InjCountBefore =",InjCountBefore                  
+                     SetTabVal  _config[1], ToColTab$, iRow2, "NumInjections", InjCountBefore 
+                     if WriteToHWTag <> 0
+                        !else LeoThm does BSP triggered update of itself   
+                        if bRCnetCCC = 1
+!RSprint "DBG: ColSerial$ =",ColSerial$                  
+                           FireAntWriteInjCountToRC_CCCColumTag ColSerial$, InjCountBefore 
+                        else
+                           if bRCnetTHM = 1 
+                              WriteInjCountToRCTHMColumTag ColPos, InjCountBefore
+                           endif
+                        endif
+                     endif
+                  endif   
+              endif 
+              iRow2 = iRow2 + 1
+              if iRow2 > iMax2
+                 iRow2 = -1
+              else
+                 iRow2  = RowByVal( _config[1], ToColTab$, iRow2:-1, "IsHW" , "<>" , 0 )
+              endif   
+           endwhile
+           iFoundRow = iFoundRow + 1
+           if iFoundRow > iMax1
+              iFoundRow = -1
+           else
+              iFoundRow = RowByVal( _config[1], FromColTab$, iFoundRow:-1, "IsHW" , "<>" , 0 )
+           endif   
+        endwhile
+     endif   
+  endif   
+
+
+  
+EndMacro
+
+
+
+
+!==============================================================================
+Name UpdateBuiltInColumns
+parameter  bInPostAcqHook  default  0  ! =1 means comes from SaveAcqRes in PostACQHook, else from UI
+!may only be called in PostACQHook with param=1 , because now increments InjCounter of column
+!with default param make it behave like before for all external packages
+!------------------------------------------------------------------------------
+Local i
+
+  !pull out original InjCount of HW tags
+  !put back all the original column counters for column tags
+  !this macro does save HW tag counts before the injection, since the logic in 
+  !TCC has many flavors depending on Model and firmware rev,
+  ! and this does not fit our more clever column used model
+  
+  UndoFirmwareColumnHWTagInjCountIncrement 
+  !for offline debugging : do instead print "skipping UndoFirmwareColumnHWTagInjCountIncrement "
+
+  !not needed any more, after this
+  if ObjHdrType (_Config[1], "Columns_AtPreRun") <> 99 then
+     DelTab _Config[1], "Columns_AtPreRun"
+  endif   
+
+
+  ! Keep the table of the installed columns in "BuiltInColumns"
+  if ObjHdrType (_Config[1], "BuiltInColumns") = 4 then
+    DelTab _Config[1], "BuiltInColumns"
+  endif
+  CopyTab _Config[1], "Columns", _Config[1], "BuiltInColumns"
+  i = TabHdrVal(_Config[1], "BuiltInColumns", "NumberOfRows")
+  while i >= 1 do
+    if (TabVal (_Config[1], "BuiltInColumns", i, "IsHW") = 0) And \
+        (TabVal (_Config[1], "BuiltInColumns", i, "ColInstalled") = 0) then
+      DelTabRow _Config[1], "BuiltInColumns", i
+    endif
+    i = i - 1
+  endwhile
+  KeepOnlyMostLikelyUsedColumnForDACalc  bInPostAcqHook
+  
+  !in SaveAcqRes only the table _config[1]."BuiltInColumns" is copied to AcqRes[1]."Columns"
+  !for GC must do more tricks there for the front, back, dual, splitter cases
+  
+
+  
+EndMacro
+
+!==============================================================================
+Name UpdateBuiltInColumnsFireAnt
+!------------------------------------------------------------------------------
+Local i
+
+  ! Keep the table of the installed columns in "BuiltInColumns"
+  if ObjHdrType (_Config[1], "BuiltInColumns") = 4 then
+    DelTab _Config[1], "BuiltInColumns"
+  endif
+  CopyTab _Config[1], "Columns", _Config[1], "BuiltInColumns"
+  i = TabHdrVal(_Config[1], "BuiltInColumns", "NumberOfRows")
+  while i >= 1 do
+  ! Build Column Name
+	if ((ClusterTccColumnID$(i)<>"") AND (objhdrVal(LeoThermostatClusterMethod1[1],"CSV_Usage")=1)AND(ClusterTccColumnID$(i)=objhdrText$(LeoThermostatClusterMethod1[1],"ColumnID"))) then 
+		SetTabVal _Config[1], "BuiltInColumns", i, "ColInstalled", 1
+	else
+      DelTabRow _Config[1], "BuiltInColumns", i
+
+	endif
+    i = i - 1
+  endwhile
+  
+EndMacro
+
+
+!==============================================================================
+Name PostAcq
+!------------------------------------------------------------------------------
+  ! Called at the end of a acquisition run, after the rawdata are finished,
+  ! but not yet the post run.
+
+  on error goto ErrorReturn
+
+  SaveAcqRes    ! Customizable saving of acquisition results
+
+  ! Add other macro calls right before this line.
+  ! Things to be done here should be relevant to the end of Data Acquisition,
+  ! not the start of Data Analysis!
+
+  ExecHook "PostAcq"      ! can be used to do instrument-specific control
+
+  return
+
+ErrorReturn:
+  WriteErrorToLogbook
+
+  return
+endmacro
+
+Name UpdateRCnetFirmwareRevision
+
+Local Modules$
+Local Module$
+Local Module
+Local GCIInstance
+Local Loop
+Local FirmwareRevision$
+
+    On Error Print ""
+    If Check(Function, RCListDevices$) > 0 Then
+        Modules$ = RCListDevices$()
+        Module = 1
+        Repeat
+            Module$ = SubString$(Modules$, Module)
+            If Module$ <> "" Then
+                GCIInstance = RCGetGCIInstanceNumber(Module$)
+
+                FirmwareRevision$ = ""
+                Evaluate "FirmwareRevision$ = ObjHdrText$(RC"+Module$+"Status, ""FirmwareVersion"")"
+
+                If FirmwareRevision$ <> "" Then
+                    For Loop = 1 To TabHdrVal(_Config, "ModuleInfo", "NumberOfRows")
+                        If (TabVal(_Config, "ModuleInfo", Loop, "number") = GCIInstance) And (TabText$(_Config, "Modules", TabVal(_Config, "ModuleInfo", Loop, "nameRef"), "Var") = "GCI") Then
+                            SetTabText _Config, "ModuleInfo", Loop, "FWrevision", FirmwareRevision$
+                        EndIf
+                    Next Loop
+                EndIf
+            EndIf
+            Module = Module + 1
+        Until Module$ = ""
+    EndIf
+
+EndMacro
+
+Name ResolveModuleInfoTable
+Local StaticModules, row, nRows, gciname$, NameRef, name$
+  
+    ! Add new Name column and fill it by resolving the NameRef references.
+    ! If the module was linked in dynamically, i.e. NameRef is greater than
+    ! the number of statically linked modules, set it to zero to avoid
+    ! crashing a pre-SI104 system if it tries to read this post-SI104 data file
+    ! (because in the report it would try to access _Config[1], Modules with a
+    ! too high row number, when getting the module name).
+    StaticModules = TabHdrVal (_Config[1], "Modules", "StaticModules")
+    nRows = TabHdrVal (_Config[1], "ModuleInfo", "NumberOfRows")
+    for row = 1 to nRows
+      name$=TabText$(_Config[1], "ModuleInfo", row, "Name")
+      If name$="" Then
+        NameRef = TabVal (_Config[1], "ModuleInfo", row, "NameRef")
+        SetTabText _Config[1], "ModuleInfo", row, "Name", \
+                  TabText$ (_Config[1], "Modules", NameRef, "Name")
+        SetTabText _Config[1], "ModuleInfo", row, "PartNumber", \
+                  TabText$ (_Config[1], "Modules", NameRef, "PartNumber")
+        SetTabVal  _Config[1], "ModuleInfo", row, "DeviceType", \
+                  TabVal   (_Config[1], "Modules", NameRef, "DeviceType")
+        !if NameRef > StaticModules then
+        !  SetTabVal _Config[1], "ModuleInfo", row, "NameRef", 0
+        !endif
+        if tabText$(_config[1], "modules", NameRef, "var")="GCI" then
+          gciname$=GCIGetManufacturer$( tabVal(_Config[1], "ModuleInfo", row, "number") ) + " " + GCIGetDeviceName$( tabVal(_Config[1], "ModuleInfo", row, "number") )
+          !print "DBG: gciname$ = " , gciname$
+          SetTabText _Config[1], "ModuleInfo", row, "Name", gciname$ 
+          SetTabText _Config[1], "ModuleInfo", row, "PartNumber", GCIGetShortDeviceName$(tabVal(_Config[1], "ModuleInfo", row, "number"))
+          !SetTabVal _Config[1], "ModuleInfo", row, "number", GCIGetOrdinal(TabVal(_Config[1], "ModuleInfo", row, "number"))
+        EndIf
+      EndIf
+    Next row
+    UpdateRCnetFirmwareRevision
+EndMacro
+
+
+!==============================================================================
+Name SaveAcqRes
+!------------------------------------------------------------------------------
+  
+  ! Generate the ACQRES.REG file for additional results of Data Acquisition
+
+  local DataPath$, StaticModules, NameRef, row, nRows, gciname$, value, GCColTab$
+  local ID_PHX3DSUPPORTFILES_ACQUISITION_RE_184
+  local NLSFileName_phx3dsupport$
+
+
+  ID_PHX3DSUPPORTFILES_ACQUISITION_RE_184            =  17184  
+  NLSFileName_phx3dsupport$="phx3dsupport"
+  
+  DelReg AcqRes
+  NewObj AcqRes[1], 1, 0, 0
+  SetObjHdrText AcqRes[1], "Title", ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_ACQUISITION_RE_184)
+  SetObjHdrText AcqRes[1], "AcqVersion", _Version$
+  SetObjHdrText AcqRes[1], "AcqInstName", _InstName$
+
+  ! copy the method path
+  SetObjHdrText AcqRes[1], "AcqMethPath", _MethPath$
+
+  ! copy the method name
+  SetObjHdrText AcqRes[1], "AcqMethFile", _MethFile$
+
+  ! Copy the injection time
+  if Check (Variable, AcqInjTime) = 1 then
+    SetObjHdrVal AcqRes[1], "AcqInjTime", AcqInjTime
+  endif
+
+  ! Copy the flag for whether the vial was actually used or not
+  if Check (Variable, AcqVialUnused) = 1 then
+    SetObjHdrVal AcqRes[1], "AcqVialUnused", AcqVialUnused
+    ! remove it because it isn't guaranteed to AcqVialUnused is set properly
+    ! with each run, especially in the normal case where the vial is used
+    Remove AcqVialUnused    ! to prevent using the same value again on next run
+  endif
+  
+  if _ProductType$ = "CE" then
+	   if Check(Function, RCListDevices$) = 1 Then
+      if instr(RCListDevices$(), "CE") > 0
+	      	on error print ""
+		      value = RCGetResourceProviderVal("CE1", "Control", "method", "IsInjectionVialUsed")
+          !must clear error trap to be able to trap issues in the follow on code 
+	      	on error 
+		      if value = 1 then
+		        SetObjHdrVal AcqRes[1], "AcqVialUnused", 0
+		      else
+		        SetObjHdrVal AcqRes[1], "AcqVialUnused", 1
+		      endif
+      endif
+      if instr(RCListDevices$(), "DAD") > 0
+		      !on error print ""
+		      !value = RCGetResourceProviderVal("DAD1", "Control", "status", "IsIndirectUVEnabled")
+		      !if value = 1 then
+		      !  SetObjHdrVal AcqRes[1], "IndirectUV", 1
+		      !else
+		      !  SetObjHdrVal AcqRes[1], "IndirectUV", 0
+		      !endif
+        !just write for now always, since is not yet implemented in FW
+        SetObjHdrVal AcqRes[1], "IndirectUV", 0
+      endif
+    endif
+  endif
+
+  ! Copy audit trail info of acquisition method
+  if ObjHdrType (_DAMethod[1], "MethModTime") <> 99 then
+    SetObjHdrVal  AcqRes[1], "AcqMethModTime", \
+                  ObjHdrVal  (_DAMethod[1], "MethModTime")
+    SetObjHdrText AcqRes[1], "AcqMethModBy", \
+                  ObjHdrText$(_DAMethod[1], "MethModBy")
+  endif
+  SetObjHdrVal  AcqRes[1], "AcqMethModified", _MethodChanged
+
+  
+  
+  ! Copy the column parameters. First update table because of #injections
+  !ask drivers to write most uptodate info columns table
+  !now do more logic: than in RCUpdateColumnInformation  0  ! 0=gets all recent values from drivers to column table GC + LC RCnet
+  RCnet_ColumnTag_ReFreshReadIn
+
+  !make sure to have a clean table here, since below in GC front back only asks if tables exists
+  GCColTab$ = "BuiltInColumns_Front"
+  if ObjHdrType (_Config[1], GCColTab$) <> 99 then
+     DelTab _Config[1], GCColTab$  
+  endif   
+  GCColTab$ = "BuiltInColumns_Back"
+  if ObjHdrType (_Config[1], GCColTab$) <> 99 then
+     DelTab _Config[1], GCColTab$  
+  endif   
+
+  !set the right col featureset for proper reporting, see macro : RptColumnType
+  !it seems to be all right, just working in this macro
+  !decided to do this: do I want to do this - would make some things more straight
+  SetTabHdrVal _Config[1], "Columns", "ColumnType" , TabHdrVal (_Config[1], "Features", "ColumnType")
+
+  if (Check(VARIABLE,_ClusteredTcc$)=1) then !FireAnt
+    if (_ClusteredTcc$<>"")
+      !FireAnt version 1
+      UpdateBuiltInColumnsFireAnt
+    else
+      !FireAnt version 2
+      UpdateBuiltInColumns 1
+    EndIf
+  else !No FireAnt
+    !GC and LC and CE now
+    UpdateBuiltInColumns 1
+  endif
+  
+  !down below will be done a little different for GC now, seperately for front and back
+  !GC will now rely on the tables: "BuiltInColumns_Front" and "BuiltInColumns_Back"
+  if ObjHdrType (_Config[1], "BuiltInColumns") = 4 then
+     CopyTab _Config[1], "BuiltInColumns", AcqRes[1], "Columns"
+  else   
+     if ObjHdrType (_Config[1], "Columns") = 4 then
+        CopyTab _Config[1], "Columns", AcqRes[1], "Columns"
+     endif   
+  endif   
+  
+  ! Copy the module configuration
+  if ObjHdrType (_Config[1], "ModuleInfo") = 4 then
+    CopyTab _Config[1], "ModuleInfo", AcqRes[1], "ModuleInfo"
+    if ObjHdrType (_Config[1], "ModuleInfo2") = 4 then
+       CopyTab _Config[1], "ModuleInfo2", AcqRes[1], "ModuleInfo2"
+    endif
+  endif
+
+  ! Add copying of additional info right before this line.
+  ! The first object of the AcqRes register will become the basis of the
+  ! ChromRes register in Data Analysis. Therefore the names of object header
+  ! items and tables must not coincide with those added by Data Analysis
+  ! later on.
+  ! To avoid naming conflicts it is strongly suggested that names generated
+  ! by the user, e.g. for info generated in the PreRun macro, start with
+  ! USER_ or User, USR_ or Usr, CUST_ or Cust.
+  ! Names generated by HP should use prefixes like ACQ_ or Acq (Acquisition),
+  ! MOD_ or Mod (Module), INST_ or Inst (Instrument), DEV_ or Dev (Device).
+
+  ExecHook "AcqRes"        ! can be used to add info to the AcqRes register
+
+  if _SequenceOn = 1 then  ! within Run Sequence
+    DataPath$ = _DataPath$ + _DataSeqSubDir$
+  else                      ! within Run Method
+    DataPath$ = _DataPath$ + _DataSubDir$
+  endif
+  if DataPath$[len(DataPath$)] <> "\" then
+    DataPath$ = DataPath$ + "\"
+  endif
+
+  ! Copy the seqline for single sample
+  if _SequenceOn = 0 then
+    SetObjHdrVal AcqRes[1], "AcqSeqLine", 0
+  endif
+
+  if (_MethodInjectors = 1) or (_MethodInjectors = 3) then
+    ! Copy the injection volume
+    if Check (Variable, AcqInjVolume1) = 1 then
+      SetObjHdrVal AcqRes[1], "InjVolume", RoundDecimal(AcqInjVolume1,5)
+    endif
+    if Check (Variable, AcqActInjVolume1) = 1 then
+      SetObjHdrVal AcqRes[1], "ActInjVolume", RoundDecimal(AcqActInjVolume1,5)
+    endif
+
+    if instr(_ProductType$,"GC") > 0  AND  objhdrtype(_Config[1], "BuiltInColumns_Front") = 4
+       if ObjHdrType (AcqRes[1], "Columns") = 4 then
+          DelTab AcqRes[1], "Columns"
+       endif   
+       CopyTab _Config[1], "BuiltInColumns_Front", AcqRes[1], "Columns"
+    endif
+
+    if _SequenceOn = 1 then
+      SetObjHdrVal AcqRes[1], "AcqSeqLine", _seqcurrline1
+    endif
+    
+    SetObjHdrVal AcqRes[1], "AcqMethodInjector", 1
+
+    SaveObj AcqRes, DataPath$ + _DataFile1$ + "\ACQRES.REG", new
+  endif
+
+  if (_MethodInjectors = 2) or (_MethodInjectors = 3) then
+    ! Copy the injection volume
+    if Check (Variable, AcqInjVolume2) = 1 then
+      SetObjHdrVal AcqRes[1], "InjVolume", RoundDecimal(AcqInjVolume2,5)
+    endif
+    if Check (Variable, AcqActInjVolume2) = 1 then
+      SetObjHdrVal AcqRes[1], "ActInjVolume", RoundDecimal(AcqActInjVolume2,5)
+    endif
+
+    if instr(_ProductType$,"GC") > 0  AND  objhdrtype(_Config[1], "BuiltInColumns_Back") = 4
+       if ObjHdrType (AcqRes[1], "Columns") = 4 then
+          DelTab AcqRes[1], "Columns"
+       endif   
+       CopyTab _Config[1], "BuiltInColumns_Back", AcqRes[1], "Columns"
+    endif
+    
+    if _SequenceOn = 1 then
+      SetObjHdrVal AcqRes[1], "AcqSeqLine", _seqcurrline2
+    endif
+    
+    SetObjHdrVal AcqRes[1], "AcqMethodInjector", 2
+   
+    SaveObj AcqRes, DataPath$ + _DataFile2$ + "\ACQRES.REG", new
+  endif
+
+  DelReg AcqRes
+
+  return
+endmacro
+
+!Support for Pvcs7259
+!==============================================================================
+Name RoundDecimal
+Parameter Value, Decimal
+!------------------------------------------------------------------------------
+Local Factor
+  Factor = Exp(Decimal * Ln(10))
+  Return Floor(Value * Factor + 0.5)/Factor
+EndMacro
+
+!==============================================================================
+Name Init_PostAcq
+!------------------------------------------------------------------------------
+  ! Must be the last macro.
+  ! Do not make any changes to this macro. If necessary, modify macro PostAcq.
+  PostAcq
+  return
+endmacro
+

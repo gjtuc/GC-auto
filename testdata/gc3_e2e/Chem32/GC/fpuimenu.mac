@@ -1,0 +1,87 @@
+!/****************************************************************************
+
+!File:  fpuimenu.mac
+
+!Description:  Menu for Companion View.
+
+!HMS:  $Header: /prodast/pui/src/macros/fpuimenu.mac 1.7 2000-04-19 09:18:01-04 lfs-pfeifere Exp $
+
+!****************************************************************************/
+
+!
+! standard parts of menus structure: Abort, Help and View addtions
+! 
+
+! WARNING: are these supposed to be at the end after all the other definitions
+local     ID_HPPUIM01_MCX_VIEW_29
+local     ID_HPPUIM01_MCX_ABORT_32	     		 
+local     ID_HPPUIM01_MCX_ABORT_ANY__33			 
+local     ID_HPPUIM01_MCX_ONLINE_SIG_34			 
+local     ID_HPPUIM01_MCX_ACCESS_TO__35			 
+local     ID_HPPUIM01_MCX_VIEW_ONLIN_36			 
+local     ID_HPPUIM01_MCX_SIGNAL_WIN_37			 
+local     ID_HPPUIM01_MCX_DISPLAY_WI_38			 
+local     ID_HPPUIM01_MCX_SIGNAL_WIN_39			 
+local     ID_HPPUIM01_MCX_DISPLAY_WI_40			 
+local     ID_HPPUIM01_MCX_INSTRUMENT_41			 
+local     ID_HPPUIM01_MCX_SHOW_HIDE__42			 
+local     ID_HPPUIM01_MCX_HELP_43		    	 
+local     ID_HPPUIM01_MCX_CHEMSTATIO_44			 
+local     ID_HPPUIM01_MCX_CHEMSTATIO_45			 
+
+ID_HPPUIM01_MCX_VIEW_29             =  17029
+ID_HPPUIM01_MCX_ABORT_32	          =  17032     		 
+ID_HPPUIM01_MCX_ABORT_ANY__33			  =  17033
+ID_HPPUIM01_MCX_ONLINE_SIG_34			  =  17034
+ID_HPPUIM01_MCX_ACCESS_TO__35			  =  17035
+ID_HPPUIM01_MCX_VIEW_ONLIN_36			  =  17036
+ID_HPPUIM01_MCX_SIGNAL_WIN_37			  =  17037
+ID_HPPUIM01_MCX_DISPLAY_WI_38			  =  17038
+ID_HPPUIM01_MCX_SIGNAL_WIN_39			  =  17039
+ID_HPPUIM01_MCX_DISPLAY_WI_40			  =  17040
+ID_HPPUIM01_MCX_INSTRUMENT_41			  =  17041
+ID_HPPUIM01_MCX_SHOW_HIDE__42			  =  17042
+ID_HPPUIM01_MCX_HELP_43		    	    =  17043
+ID_HPPUIM01_MCX_CHEMSTATIO_44			  =  17044
+ID_HPPUIM01_MCX_CHEMSTATIO_45			  =  17045
+
+
+MenuStop ReadResource$("hppuim01",ID_HPPUIM01_MCX_ABORT_32), ReadResource$("hppuim01",ID_HPPUIM01_MCX_ABORT_32), ReadResource$("hppuim01",ID_HPPUIM01_MCX_ABORT_ANY__33)
+
+! note that view, abort and help are handled by system, see below
+! now setup the 'standard' part
+
+ AddViewMenuBasic ReadResource$("hppuim01",ID_HPPUIM01_MCX_VIEW_29)    ! set up menu items for PUI View menu item
+
+    if _offline = 0  
+
+        menuadd ReadResource$("hppuim01",ID_HPPUIM01_MCX_VIEW_29),,"SEPARATOR",,,,,,90009000
+        menuadd ReadResource$("hppuim01",ID_HPPUIM01_MCX_VIEW_29),ReadResource$("hppuim01",ID_HPPUIM01_MCX_ONLINE_SIG_34),"SUBMENU",,\
+            ReadResource$("hppuim01",ID_HPPUIM01_MCX_ACCESS_TO__35),,,,90010000
+        menuadd ReadResource$("hppuim01",ID_HPPUIM01_MCX_VIEW_ONLIN_36),ReadResource$("hppuim01",ID_HPPUIM01_MCX_SIGNAL_WIN_37), \
+            "ShowSignalPlotWindow 33",,\
+            ReadResource$("hppuim01",ID_HPPUIM01_MCX_DISPLAY_WI_40),,,,90010100
+        menuadd ReadResource$("hppuim01",ID_HPPUIM01_MCX_VIEW_ONLIN_36),ReadResource$("hppuim01",ID_HPPUIM01_MCX_SIGNAL_WIN_39), \
+            "ShowSignalPlotWindow 34",,\
+            ReadResource$("hppuim01",ID_HPPUIM01_MCX_DISPLAY_WI_40),,,,90010200
+        menuadd ReadResource$("hppuim01",ID_HPPUIM01_MCX_VIEW_29),ReadResource$("hppuim01",ID_HPPUIM01_MCX_INSTRUMENT_41), "ACQMONITORS",,\
+            ReadResource$("hppuim01",ID_HPPUIM01_MCX_SHOW_HIDE__42),,115,,90014000
+        CheckViewActuals
+
+    endif
+
+ ConfigureHelpMenu               ! set up the Help Menu
+ 
+ !menuadd ReadResource$("hppuim01",ID_HPPUIM01_MCX_HELP_43), ReadResource$("hppuim01",ID_HPPUIM01_MCX_CHEMSTATIO_44), "HELP.FINDER ""HPPUI""",, \
+         !ReadResource$("hppuim01",ID_HPPUIM01_MCX_CHEMSTATIO_45),,,,94000500
+ menuadd ReadResource$("hppuim01",ID_HPPUIM01_MCX_HELP_43), ReadResource$("hppuim01",ID_HPPUIM01_MCX_CHEMSTATIO_44), "Help 5134,0",, \
+         ReadResource$("hppuim01",ID_HPPUIM01_MCX_CHEMSTATIO_45),,,,94000500     !Fix for PVCS#7835
+
+
+!// !!!!!!!!!! IMPORTANT !!!!!!!!!!
+!// Leave some blank lines at end of file because CodeWright does
+!// not place a 0D0A on the last line, and this causes problems with HMS (RCS)
+!// !!!!!!!!!! IMPORTANT !!!!!!!!!!
+
+
+

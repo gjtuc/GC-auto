@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="PURDAD" PosStyle="BOTTOM" Caption="峰纯度" PanelName="Chem">
+		<PushButton Name="PrevImpPeak" Help="选择上一个“不纯的”峰" Command="PUR_StatusBarFunction &quot;PrevImpure&quot;,&quot;DAD&quot;" NewGroup="1" ImageName="PeakPur_PrevImpurePeak16" ImageNameDisabled="PeakPur_PrevImpurePeak16_d"/>
+		<PushButton Name="PrevPeak" Help="选择上一个峰" Command="PUR_StatusBarFunction &quot;PrevPeak&quot;,&quot;DAD&quot;" ImageName="PeakPur_PrevPeak16" ImageNameDisabled="PeakPur_PrevPeak16_d"/>
+		<Static Name="PeakNumber" Text="--" Help="当前峰的编号和时间" Width="200" Enable="1"/>
+		<PushButton Name="NextPeak" Help="选择下一个峰" Command="PUR_StatusBarFunction &quot;NextPeak&quot;,&quot;DAD&quot;" ImageName="PeakPur_NextPeak16" ImageNameDisabled="PeakPur_NextPeak16_d"/>
+		<PushButton Name="PrevNextPeak" Help="选择下一个“不纯的”峰" Command="PUR_StatusBarFunction &quot;NextImpure&quot;,&quot;DAD&quot;" ImageName="PeakPur_NextImpurePeak16" ImageNameDisabled="PeakPur_NextImpurePeak16_d"/>
+		<!-- <Static Name="Detector" Text="- no info -" Help="Information on the Peak Purity" Width="200" Enable="1"/> -->
+		<Static Name="PurityInfo" Text="" Help="有关峰纯度的信息" Width="200" Enable="1"/>
+		<PushButton Name="MoreInfo" Help="有关 LC 峰纯度的信息" Command="PUR_StatusBarFunction &quot;PurInfo&quot;,&quot;DAD&quot;" ImageName="PeakPur_Info20" ImageNameDisabled="PeakPur_Info20_d"/>
+		<PushButton Name="IsoPlot" Help="生成选定峰的光谱等高线图" Command="PUR_StatusBarFunction &quot;IsoPlot&quot;,&quot;DAD&quot;" ImageName="PeakPur_IsoPlot20" ImageNameDisabled="PeakPur_IsoPlot20_d"/>
+		<PushButton Name="TDPlot" Help="生成选定峰的光谱 3D 图" Command="PUR_StatusBarFunction &quot;TDPlot&quot;,&quot;DAD&quot;" ImageName="PeakPur_3Dplot20" ImageNameDisabled="PeakPur_3Dplot20_d"/>
+		<PushButton Name="Print" Help="生成当前峰纯度的打印输出" Command="PUR_StatusBarFunction &quot;Print&quot;,&quot;DAD&quot;" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="Close" Help="关闭峰纯度显示" Command="PUR_StatusBarFunction &quot;Close&quot;, &quot;DAD&quot;" ImageName="Exit20" ImageNameDisabled="Exit20_d"/>
+	</toolbar>
+</graphical_object>

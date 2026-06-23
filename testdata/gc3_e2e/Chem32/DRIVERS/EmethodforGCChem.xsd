@@ -1,0 +1,1871 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 rel. 3 sp2 (http://www.altova.com) by Suneetha Tippireddy (AGILENT TECHNOLOGIES) -->
+<!-- edited with XMLSPY v5 rel. 3 U (http://www.xmlspy.com) by Charles Steele (Agilent Technologies) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:element name="AgEMRoot">
+    <xs:annotation>
+      <xs:documentation>Root element of all eMethod content</xs:documentation>
+    </xs:annotation>
+    <xs:complexType>
+      <xs:all minOccurs="0">
+        <xs:element name="Transform" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>Transforms not specifically associated with a specific platform.</xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:all minOccurs="0">
+              <xs:element name="Start" minOccurs="0">
+                <xs:annotation>
+                  <xs:documentation>The start thread, used to bootstrap the wizard.</xs:documentation>
+                </xs:annotation>
+                <xs:complexType>
+                  <xs:complexContent>
+                    <xs:extension base="TransformElement" />
+                  </xs:complexContent>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Source" minOccurs="0">
+                <xs:annotation>
+                  <xs:documentation>The thread for exporting the eMethod.  Contains transforms needed to load a concrete method and convert to internal eMethod form.</xs:documentation>
+                </xs:annotation>
+                <xs:complexType>
+                  <xs:complexContent>
+                    <xs:extension base="TransformThread">
+                      <xs:attribute name="DestinationPath" type="xs:string" use="optional">
+                        <xs:annotation>
+                          <xs:documentation>The absolute file path and file name into which we will write the final output (eMethod or concrete method)</xs:documentation>
+                        </xs:annotation>
+                      </xs:attribute>
+                    </xs:extension>
+                  </xs:complexContent>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Target" type="TransformThread" minOccurs="0">
+                <xs:annotation>
+                  <xs:documentation>The thread for importing the eMethod.  Contains transforms needed to translate the emethod content to a valid concrete method.</xs:documentation>
+                </xs:annotation>
+              </xs:element>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Hash" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>Element containing Hash code corresponding to the emethod file -specific elements.</xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:complexContent>
+              <xs:extension base="TransformElement">
+                <xs:attribute name="HashCode" type="xs:string" use="required" />
+              </xs:extension>
+            </xs:complexContent>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Platforms" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>Element containing platform (DataSystem) -specific elements.</xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:sequence minOccurs="0" maxOccurs="unbounded">
+              <xs:element name="G2070" minOccurs="0">
+                <xs:annotation>
+                  <xs:documentation>Data specific to the G2070(GC ChemStation) Data System</xs:documentation>
+                </xs:annotation>
+                <xs:complexType>
+                  <xs:all minOccurs="0">
+                    <xs:element name="Target" minOccurs="0">
+                      <xs:complexType>
+                        <xs:complexContent>
+                          <xs:extension base="TransformThread" />
+                        </xs:complexContent>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="Source" minOccurs="0">
+                      <xs:complexType>
+                        <xs:complexContent>
+                          <xs:extension base="TransformThread">
+                            <xs:all minOccurs="0">
+                              <xs:element name="ConcreteMethod" type="DirectoryImage" minOccurs="0" />
+                            </xs:all>
+                            <xs:attribute name="SourcePath" type="xs:string" use="optional" />
+                          </xs:extension>
+                        </xs:complexContent>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:all>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="System" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>Element containing generic data elements specific to the eMethod "System".</xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:all minOccurs="0">
+              <xs:element name="Target" minOccurs="0">
+                <xs:complexType>
+                  <xs:attribute name="Listing" type="xs:string" use="optional">
+                    <xs:annotation>
+                      <xs:documentation>Contains the formatted method listing (as HTML) that will be appended to the import exit notes.</xs:documentation>
+                    </xs:annotation>
+                  </xs:attribute>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="Source" minOccurs="0">
+                <xs:complexType>
+                  <xs:attribute name="Introduction" type="xs:string" use="optional">
+                    <xs:annotation>
+                      <xs:documentation>If the first character is '&lt;', then the value of this attribute is taken as literal text.  Otherwise, it is base-64 encoded.</xs:documentation>
+                    </xs:annotation>
+                  </xs:attribute>
+                  <xs:attribute name="Notes" type="xs:string" use="optional">
+                    <xs:annotation>
+                      <xs:documentation>Natural-language (coded in HTML) notes describing the eMethod.  The notes are written by the exporting user (in the Edit Notes Screen) and displayed to teh importing user immediately after selecting the eMethod.  The importing user uses the notes to confirm/determine the applicability of the eMethod to their application.</xs:documentation>
+                    </xs:annotation>
+                  </xs:attribute>
+                </xs:complexType>
+              </xs:element>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+  <xs:simpleType name="CLSID">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\{[0-9A-Fa-f]{8}\-[0-9A-Fa-f]{4}\-[0-9A-Fa-f]{4}\-[0-9A-Fa-f]{4}\-[0-9A-Fa-f]{12}\}" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="PROGID">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="\c*" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="T68xxColumnType">
+    <xs:annotation>
+      <xs:documentation>         Column Types:           Capillary           Packed           [Any type listed in the Agilent Column DB]       </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:whiteSpace value="collapse" />
+      <xs:pattern value="(Capillary)|(Packed)|(.*)" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="T68xxDetectorType">
+    <xs:annotation>
+      <xs:documentation>         Detector Types:             MSD-type             AED             Unknown             Flame_Ionization_Detector             Thermal_Conductivity_Detector              Electron_Capture_Detector             Nitrogen_Phosphorous_Detector              Flame_Photometric_Detector             Analog_Input_Board             Micro_Electron_Capture_Detector             No_Detector             Electrometer             Slave_Flame_Photometric_Detector             Undefined_Detector                   </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="(((5971)|(5972)|(5973)|(5975))\s((\(EI\))|(\([PN]CI\s\[.*\]\)))?)|(AED)|(Unknown)|(Flame_Ionization_Detector)|(Thermal_Conductivity_Detector)|(Electron_Capture_Detector)|(Nitrogen_Phosphorous_Detector)|(Flame_Photometric_Detector)|(Analog_Input_Board)|(Micro_Electron_Capture_Detector)|(No_Detector)|(Electrometer)|(Slave_Flame_Photometric_Detector)|(Undefined_Detector)" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="T68xxInletType">
+    <xs:annotation>
+      <xs:documentation> Inlet Types:     Purge_Packed_Inlet         Cool_On_Column_Inlet         Split_Splitless_Inlet         PTV_Inlet         Manual_Purge_Packed_Inlet         Manual_Cool_On_Column_Inlet         Manual_Split_Splitless_Inlet         Unknown_Inlet         No_Inlet         Gerstel_CIS4_PTV_Inlet         Simulated_Distillation_Inlet         Gerstel_CIS3_PTV_Inlet         Secondary_Standard_IQ_Manifold_Inlet         Volatiles_Interface     Unspecified      [+ cryo_type, if installed]  Inlet/Oven Cryo Types:     N2_Cryo     CO2_Cryo     Compressed_Air       </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="((Purge_Packed_Inlet)|(Cool_On_Column_Inlet)|(Split_Splitless_Inlet)|(PTV_Inlet)|(Manual_Purge_Packed_Inlet)|(Manual_Cool_On_Column_Inlet)|(Manual_Split_Splitless_Inlet)|(Unknown_Inlet)|(No_Inlet)|(Gerstel_CIS4_PTV_Inlet)|(Simulated_Distillation_Inlet)|(Gerstel_CIS3_PTV_Inlet)|(Secondary_Standard_IQ_Manifold_Inlet)|(Volatiles_Interface)|(Unspecified))(,\s((N2_Cryo)|(CO2_Cryo)|(Compressed_Air)))?" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="T68xxOvenType">
+    <xs:annotation>
+      <xs:documentation> Oven Types:   Regular_Oven   Fast_Oven   [+ cryo_type, if installed]                 Inlet/Oven Cryo Types:   N2_Cryo   CO2_Cryo   Compressed_Air       </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="((Regular_Oven)|(Fast_Oven))(,\s((N2_Cryo)|(CO2_Cryo)|(Compressed_Air)))?" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="T68xxPneumaticAuxType">
+    <xs:annotation>
+      <xs:documentation>         Pneumatic_Aux[3..5] = Pneumatic_Aux               </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="Pneumatic_Aux[3-5]\s=\sPneumatic_Aux" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="T68xxSignalType">
+    <xs:annotation>
+      <xs:documentation>          Signal Types:             Front_Detector              Back_Detector             Front_Detector-Back_Detector             Back_Detector-Front_Detector              Column_Compensation_1              Column_Compensation_2              Front_Detector-Column_Compensation_1              Back_Detector-Column_Compensation_1             Front_Detector-Column_Compensation_2             Back_Detector-Column_Compensation_2             Test_Plot              Test_Signal              Oven_Temperature              Front_Detector_Temperature              Back_Detector_Temperature              Front_Inlet_Temperature              Back_Inlet_Temperature              Thermal_Aux_1_Temperature             Thermal_Aux_2_Temperature             Column_1_Volumetric_Flow             Column_2_Volumetric_Flow              Column_1_Head_Pressure              Column_2_Head_Pressure              Front_Inlet_Total_Flow              Back_Inlet_Total_Flow              Front_Inlet_Pressure              Back_Inlet_Pressure              Front_Detector_Gas_1_Pressure              Front_Detector_Gas_2_Pressure              Front_Detector_Gas_3_Pressure             Back_Detector_Gas_1_Pressure             Back_Detector_Gas_2_Pressure             Back_Detector_Gas_3_Pressure              Front_Detector_Gas_1_Flow              Front_Detector_Gas_2_Flow              Front_Detector_Gas_3_Flow              Back_Detector_Gas_1_Flow              Back_Detector_Gas_2_Flow              Back_Detector_Gas_3_Flow              Pneumatic_Aux_3_Pressure             Pneumatic_Aux_4_Pressure              Pneumatic_Aux_5_Pressure              Muxed_ADC_Offset              Oven_Sensor_Reading              Front_Detector_Sensor_Reading              Back_Detector_Sensor_Reading              Front_Inlet_Sensor_Reading              Back_Inlet_Sensor_Reading             Thermal_Aux_1_Sensor_Reading             Thermal_Aux_2_Sensor_Reading             Attenuation_1_To_ADC              Attenuation_2_To_ADC              DAC_1_To_Mux_ADC              DAC_2_To_Mux_ADC              +5V_Monitor_Signal              +24V_Monitor_Signal              +15V_Monitor_Signal              -15V_Monitor_Signal             Front_Detector_Voltage_Out_1_Diagnostic             Front_Detector_Voltage_Out_2_Diagnostic             Back_Detector_Voltage_Out_1_Diagnostic              Back_Detector_Voltage_Out_2_Diagnostic              Atmospheric_Pressure              Front_Inlet_EPC_Temperature              Back_Inlet_EPC_Temperature              Front_Detector_EPC_Temperature              Back_Detector_EPC_Temperature              Aux_EPC_Temperature             EPC_10V_Reference_Voltage             EPC_ADC_Offset_Signal             Front_Inlet_Gas_Sense_Voltage              Back_Inlet_Gas_Sense_Voltage              Test_Signal              Diagnostic              Memory_Location       </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Front_Detector" />
+      <xs:enumeration value="Back_Detector" />
+      <xs:enumeration value="Front_Detector-Back_Detector" />
+      <xs:enumeration value="Back_Detector-Front_Detector" />
+      <xs:enumeration value="Column_Compensation_1" />
+      <xs:enumeration value="Column_Compensation_2" />
+      <xs:enumeration value="Front_Detector-Column_Compensation_1" />
+      <xs:enumeration value="Back_Detector-Column_Compensation_1" />
+      <xs:enumeration value="Front_Detector-Column_Compensation_2" />
+      <xs:enumeration value="Back_Detector-Column_Compensation_2" />
+      <xs:enumeration value="Test_Plot" />
+      <xs:enumeration value="Test_Signal" />
+      <xs:enumeration value="Oven_Temperature" />
+      <xs:enumeration value="Front_Detector_Temperature" />
+      <xs:enumeration value="Back_Detector_Temperature" />
+      <xs:enumeration value="Front_Inlet_Temperature" />
+      <xs:enumeration value="Back_Inlet_Temperature" />
+      <xs:enumeration value="Thermal_Aux_1_Temperature" />
+      <xs:enumeration value="Thermal_Aux_2_Temperature" />
+      <xs:enumeration value="Column_1_Volumetric_Flow" />
+      <xs:enumeration value="Column_2_Volumetric_Flow" />
+      <xs:enumeration value="Column_1_Head_Pressure" />
+      <xs:enumeration value="Column_2_Head_Pressure" />
+      <xs:enumeration value="Front_Inlet_Total_Flow" />
+      <xs:enumeration value="Back_Inlet_Total_Flow" />
+      <xs:enumeration value="Front_Inlet_Pressure" />
+      <xs:enumeration value="Back_Inlet_Pressure" />
+      <xs:enumeration value="Front_Detector_Gas_1_Pressure" />
+      <xs:enumeration value="Front_Detector_Gas_2_Pressure" />
+      <xs:enumeration value="Front_Detector_Gas_3_Pressure" />
+      <xs:enumeration value="Back_Detector_Gas_1_Pressure" />
+      <xs:enumeration value="Back_Detector_Gas_2_Pressure" />
+      <xs:enumeration value="Back_Detector_Gas_3_Pressure" />
+      <xs:enumeration value="Front_Detector_Gas_1_Flow" />
+      <xs:enumeration value="Front_Detector_Gas_2_Flow" />
+      <xs:enumeration value="Front_Detector_Gas_3_Flow" />
+      <xs:enumeration value="Back_Detector_Gas_1_Flow" />
+      <xs:enumeration value="Back_Detector_Gas_2_Flow" />
+      <xs:enumeration value="Back_Detector_Gas_3_Flow" />
+      <xs:enumeration value="Pneumatic_Aux_3_Pressure" />
+      <xs:enumeration value="Pneumatic_Aux_4_Pressure" />
+      <xs:enumeration value="Pneumatic_Aux_5_Pressure" />
+      <xs:enumeration value="Muxed_ADC_Offset" />
+      <xs:enumeration value="Oven_Sensor_Reading" />
+      <xs:enumeration value="Front_Detector_Sensor_Reading" />
+      <xs:enumeration value="Back_Detector_Sensor_Reading" />
+      <xs:enumeration value="Front_Inlet_Sensor_Reading" />
+      <xs:enumeration value="Back_Inlet_Sensor_Reading" />
+      <xs:enumeration value="Thermal_Aux_1_Sensor_Reading" />
+      <xs:enumeration value="Thermal_Aux_2_Sensor_Reading" />
+      <xs:enumeration value="Attenuation_1_To_ADC" />
+      <xs:enumeration value="Attenuation_2_To_ADC" />
+      <xs:enumeration value="DAC_1_To_Mux_ADC" />
+      <xs:enumeration value="DAC_2_To_Mux_ADC" />
+      <xs:enumeration value="+5V_Monitor_Signal" />
+      <xs:enumeration value="+24V_Monitor_Signal" />
+      <xs:enumeration value="+15V_Monitor_Signal" />
+      <xs:enumeration value="-15V_Monitor_Signal" />
+      <xs:enumeration value="Front_Detector_Voltage_Out_1_Diagnostic" />
+      <xs:enumeration value="Front_Detector_Voltage_Out_2_Diagnostic" />
+      <xs:enumeration value="Back_Detector_Voltage_Out_1_Diagnostic" />
+      <xs:enumeration value="Back_Detector_Voltage_Out_2_Diagnostic" />
+      <xs:enumeration value="Atmospheric_Pressure" />
+      <xs:enumeration value="Front_Inlet_EPC_Temperature" />
+      <xs:enumeration value="Back_Inlet_EPC_Temperature" />
+      <xs:enumeration value="Front_Detector_EPC_Temperature" />
+      <xs:enumeration value="Back_Detector_EPC_Temperature" />
+      <xs:enumeration value="Aux_EPC_Temperature" />
+      <xs:enumeration value="EPC_10V_Reference_Voltage" />
+      <xs:enumeration value="EPC_ADC_Offset_Signal" />
+      <xs:enumeration value="Front_Inlet_Gas_Sense_Voltage" />
+      <xs:enumeration value="Back_Inlet_Gas_Sense_Voltage" />
+      <xs:enumeration value="Test_Signal" />
+      <xs:enumeration value="Diagnostic" />
+      <xs:enumeration value="Memory_Location" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="T68xxThermalAuxType">
+    <xs:annotation>
+      <xs:documentation> Thermal_Aux Types:     Valve_Box     Unknown_Aux     MSD_Transfer_Line     AED_Transfer_Line     No_Aux_Installed     Cryo_Focus_Unit     Nickel_Catalyst     FPD_Transfer_Line       </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="(Thermal_Aux[12]=((Valve_Box)|(Unknown_Aux)|(MSD_Transfer_Line)|(AED_Transfer_Line)|(No_Aux_Installed)|(Cryo_Focus_Unit)|(Nickel_Catalyst)|(FPD_Transfer_Line))\n?){0,2}" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="T68xxValveConfigurationType">
+    <xs:annotation>
+      <xs:documentation> Valve[1..8] = [Valve Type]          Valve Types:   No_Valve   Multiposition   Gas_Sampling   Switching   Other   Remote_Start       </xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="(Valve[1-8]=((No_Valve)|(Multiposition)|(Gas_Sampling)|(Switching)|(Other)|(Remote_Start))\n?){0,8}" />
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="TransformIdentity">
+    <xs:union memberTypes="CLSID PROGID " />
+  </xs:simpleType>
+  <xs:complexType name="DirectoryImage">
+    <xs:sequence minOccurs="0" maxOccurs="unbounded">
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="File" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>Represents a binary (incl text) file image in the directory represented by the enclosing directory element.  The content of the file is the text of the element, usually represented as "bin.base64" (hence has an explicit type declaration).  MOst files are compressed as specified by the Compression, OriginalSIze and CompressedSize attributes.</xs:documentation>
+          </xs:annotation>
+          <xs:complexType mixed="true">
+            <xs:attribute name="name" type="xs:string" use="optional">
+              <xs:annotation>
+                <xs:documentation>May be an absolute or relative path. Relative paths are interpreted with respect to the (efefctive) path of the enclosing element.</xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="Compression" type="xs:string" use="optional" default="Xceed.BWTCompression.1">
+              <xs:annotation>
+                <xs:documentation>ProgID or GUID identifying the compression scheme used for the file content.</xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="OriginalSize" type="xs:decimal" use="optional">
+              <xs:annotation>
+                <xs:documentation>The original size of the file (bytes).  Used when expanding a file to determine the approipriate size of a buffer for the expanded image.</xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="CompressedSize" type="xs:decimal" use="optional">
+              <xs:annotation>
+                <xs:documentation>The size of the file (bytes) , in its compressed format.  Used when expanding a compressed file to determine the number of bytes to expand.</xs:documentation>
+              </xs:annotation>
+            </xs:attribute>
+            <xs:anyAttribute />
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Directory" type="DirectoryImage" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>Represents a directory in a file system.  A directory may contain other directories or may contain individual files.  The order of (dub)directory and file elements is not significant.</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="optional">
+      <xs:annotation>
+        <xs:documentation>Name of the directory.  May be an absolute or relative path. Relative paths are interpreted with respect to the (efefctive) path of the enclosing element.</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="HeadspaceElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent Headspace Sampler</xs:documentation>
+    </xs:annotation>
+    <xs:attribute name="type" type="xs:string" use="optional">
+      <xs:annotation>
+        <xs:documentation>Type should be "G1888" or "HP7694".</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="composite" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_add_run_table_entry_cmd">
+    <xs:attribute name="iq_run_time_event_id" type="xs:string" use="optional" />
+    <xs:attribute name="iq_run_time" type="xs:string" use="optional" />
+    <xs:attribute name="iq_run_time_event_number" type="xs:string" use="optional" />
+    <xs:attribute name="iq_parameter" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_aux_temp_ramp_cmd">
+    <xs:attribute name="loc" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:decimal">
+          <xs:minInclusive value="1" />
+          <xs:maxInclusive value="2" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="iq_aux_id" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:decimal">
+          <xs:minInclusive value="1" />
+          <xs:maxInclusive value="2" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="index_attribute" type="xs:string" />
+    <xs:attribute name="iq_init_temp" type="xs:decimal" />
+    <xs:attribute name="iq_init_time" type="xs:decimal" />
+    <xs:attribute name="iq_rate_1" type="xs:decimal" />
+    <xs:attribute name="iq_final_temp_1" type="xs:decimal" />
+    <xs:attribute name="iq_final_time_1" type="xs:decimal" />
+    <xs:attribute name="iq_rate_2" type="xs:decimal" />
+    <xs:attribute name="iq_final_temp_2" type="xs:decimal" />
+    <xs:attribute name="iq_final_time_2" type="xs:decimal" />
+    <xs:attribute name="iq_rate_3" type="xs:decimal" />
+    <xs:attribute name="iq_final_temp_3" type="xs:decimal" />
+    <xs:attribute name="iq_final_time_3" type="xs:decimal" />
+  </xs:complexType>
+  <xs:complexType name="iq_channel_report_configuration_cmd">
+    <xs:attribute name="iq_channel_id" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_pneu_aux_pressure" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_pres_sensor_range" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_gas_type" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_pres_equib_time" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_check_method_cmd">
+    <xs:attribute name="iq_method_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_column_configuration_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_col_length" type="xs:string" use="optional" />
+    <xs:attribute name="iq_col_diameter" type="xs:string" use="optional" />
+    <xs:attribute name="iq_col_film_thickness" type="xs:string" use="optional" />
+    <xs:attribute name="iq_col_outlet_pressure_correct_value" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_col_outlet_pressure_correct" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_vacuum_correct" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_column_id" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:decimal">
+          <xs:minInclusive value="1" />
+          <xs:maxInclusive value="2" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="iq_inlet_connection" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_detect_connection" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_op_param" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_column_pneu_ramp_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_valid" type="xs:string" use="optional" />
+    <xs:attribute name="iq_defined_column" type="xs:string" use="optional" />
+    <xs:attribute name="iq_pneu_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_what" type="xs:string" use="optional" />
+    <xs:attribute name="iq_init_value" type="xs:string" use="optional" />
+    <xs:attribute name="iq_init_time" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_value_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_value_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_value_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_post_value" type="xs:string" use="optional" />
+    <xs:attribute name="iq_column_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_column_report_configuration_cmd">
+    <xs:attribute name="loc" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:decimal">
+          <xs:minInclusive value="1" />
+          <xs:maxInclusive value="2" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_outlet_pressure_correct_value" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_outlet_pressure_correct" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_vacuum_correct" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_op_param" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_config_analog_signal_path_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_analog_range" type="xs:string" use="optional" />
+    <xs:attribute name="iq_fast_peaks_on_off" type="xs:string" use="optional" />
+    <xs:attribute name="iq_strip_chart_attenuation" type="xs:string" use="optional" />
+    <xs:attribute name="iq_signal_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_config_digital_signal_path_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate" type="xs:string" use="optional" />
+    <xs:attribute name="iq_acq_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_format" type="xs:string" use="optional" />
+    <xs:attribute name="iq_signal_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_config_signal_path_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_signal_definition" type="xs:string" use="optional" />
+    <xs:attribute name="iq_signal_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_analog_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_configuration_cmd">
+    <xs:attribute name="iq_loc" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="B" />
+          <xs:enumeration value="F" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="iq_makeup_gas_type" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_oxidizer_gas_type" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_electrometer_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_electron_capture_pneu_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_makeup_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_combo_flow" type="xs:string" use="optional" />
+    <xs:attribute name="iq_anode_flow" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_electron_capture_setpoint_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_target_output" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_flame_photometric_pneu_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_makeup_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_combo_flow" type="xs:string" use="optional" />
+    <xs:attribute name="iq_H2_flow" type="xs:string" use="optional" />
+    <xs:attribute name="iq_air_flow" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_flame_photometric_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_pmt_voltage_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_flame_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_lit_offset" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_max_gas_flow_rates_cmd">
+    <xs:attribute name="iq_detector_id" type="xs:string" use="optional" />
+    <xs:attribute name="iq_fuel_nitrogen" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_fuel_hydrogen" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_fuel_helium" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_fuel_argon_methane" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_fuel_oxygen" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_fuel_air" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_fuel_argon" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_util_nitrogen" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_util_hydrogen" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_util_helium" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_util_argon_methane" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_util_oxygen" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_util_air" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_util_argon" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_makeup_nitrogen" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_makeup_hydrogen" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_makeup_helium" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_makeup_argon_methane" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_makeup_oxygen" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_makeup_air" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_makeup_argon" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_micro_electron_capture_pneu_setpoint_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_makeup_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_combo_flow" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_micro_electron_capture_setpoint_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_NPh_pneumatic_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_makeup_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_combo_flow" type="xs:string" use="optional" />
+    <xs:attribute name="iq_H2_flow" type="xs:string" use="optional" />
+    <xs:attribute name="iq_air_flow" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_NPh_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_pol_voltage_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_bead_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_target_output" type="xs:string" use="optional" />
+    <xs:attribute name="iq_equib_time" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_open_interface_mod_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_value1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_value2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_value3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_value4" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_report_configuration_cmd">
+    <xs:attribute name="iq_detector_id" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="F" />
+          <xs:enumeration value="B" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="iq_detector_type" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_zone_presence" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:integer">
+          <xs:minInclusive value="0" />
+          <xs:maxInclusive value="3" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="iq_epc_presence" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_fuel_pres_sensor_range" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_util_pres_sensor_range" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_makeup_pres_sensor_range" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_gas_type" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_makeup_gas_type" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_temp_ramp_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_init_temp" type="xs:string" use="optional" />
+    <xs:attribute name="iq_init_time" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_5" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_5" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_5" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_6" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_6" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_6" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_7" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_7" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_7" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_8" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_8" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_8" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_9" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_9" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_9" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_10" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_10" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_10" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_detector_thermal_zone_onoff_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_dispense_speed_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_dispense_speed" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_draw_speed_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_draw_speed" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_driver_params">
+    <xs:attribute name="iq_tray" type="xs:int" />
+    <xs:attribute name="iq_front_injector" type="xs:int" />
+    <xs:attribute name="iq_back_injector" type="xs:int" />
+    <xs:attribute name="iq_bar_code_reader" type="xs:int" />
+    <xs:attribute name="iq_front_inlet_type" type="xs:int" />
+    <xs:attribute name="iq_back_inlet_type" type="xs:int" />
+    <xs:attribute name="iq_tray_max" type="xs:int" />
+    <xs:attribute name="iq_bcr_type" type="xs:int" />
+    <xs:attribute name="iq_tray_disabled_flag" type="xs:int" />
+    <xs:attribute name="iq_bcr_disabled_flag" type="xs:int" />
+    <xs:attribute name="iq_front_turret_max" type="xs:int" />
+    <xs:attribute name="iq_front_tray_allowed" type="xs:int" />
+    <xs:attribute name="iq_front_max_stop" type="xs:int" />
+    <xs:attribute name="iq_front_full_stop" type="xs:int" />
+    <xs:attribute name="iq_back_turret_max" type="xs:int" />
+    <xs:attribute name="iq_back_tray_allowed" type="xs:int" />
+    <xs:attribute name="iq_back_max_stop" type="xs:int" />
+    <xs:attribute name="iq_back_full_stop" type="xs:int" />
+  </xs:complexType>
+  <xs:complexType name="iq_enable_injector_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_injector_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_fb_setpoints">
+    <xs:attribute name="iq_inj_stop" type="xs:int" />
+    <xs:attribute name="iq_num_sample_pumps" type="xs:int" />
+    <xs:attribute name="iq_viscosity_delay" type="xs:int" />
+    <xs:attribute name="iq_sample_prewash" type="xs:int" />
+    <xs:attribute name="iq_solvA_postwash" type="xs:int" />
+    <xs:attribute name="iq_solvB_postwash" type="xs:int" />
+    <xs:attribute name="iq_slowplunger_enable" type="xs:int" />
+    <xs:attribute name="iq_preinj_dwell" type="xs:int" />
+    <xs:attribute name="iq_postinj_dwell" type="xs:int" />
+    <xs:attribute name="iq_sample_skim_enable" type="xs:int" />
+    <xs:attribute name="iq_skimdepth" type="xs:int" />
+    <xs:attribute name="iq_solvA_prewash" type="xs:int" />
+    <xs:attribute name="iq_solvB_prewash" type="xs:int" />
+  </xs:complexType>
+  <xs:complexType name="iq_flame_ionization_elec_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_pol_voltage_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_flame_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_lit_offset" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_flame_ionization_pneu_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_makeup_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_combo_flow" type="xs:string" use="optional" />
+    <xs:attribute name="iq_H2_flow" type="xs:string" use="optional" />
+    <xs:attribute name="iq_air_flow" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_gc_report_configuration_cmd">
+    <xs:attribute name="iq_mio_bd_presence" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_epc_bd_presence" type="xs:boolean" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_gc_set_pressure_units_cmd">
+    <xs:attribute name="iq_pressure_units" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_aux1_szLabel_cmd">
+    <xs:attribute name="iq_idx_aux1_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_aux2_szLabel_cmd">
+    <xs:attribute name="iq_idx_aux2_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_aux3_szLabel_cmd">
+    <xs:attribute name="iq_idx_aux3_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_aux4_szLabel_cmd">
+    <xs:attribute name="iq_idx_aux4_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_aux5_szLabel_cmd">
+    <xs:attribute name="iq_idx_aux5_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_back_inlet__PP_actual_flow_cmd">
+    <xs:attribute name="iq_idx_back_inlet__PP_actual_flow" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_back_inlet__PP_actual_pressure_cmd">
+    <xs:attribute name="iq_idx_back_inlet__PP_actual_pressure" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_back_inlet_lCPres_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_back_inlet_lCPres" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_column1_szDescription_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_column1_szDescription" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_column1_szManufacturer_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_column1_szManufacturer" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_column1_szType_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_column1_szType" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_column1_TMax_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_column1_TMax" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_column2_szDescription_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_column2_szDescription" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_column2_szManufacturer_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_column2_szManufacturer" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_column2_szType_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_column2_szType" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_column2_TMax_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_column2_TMax" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_front_inlet__PP_actual_flow_cmd">
+    <xs:attribute name="iq_idx_front_inlet__PP_actual_flow" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_front_inlet__PP_actual_pressure_cmd">
+    <xs:attribute name="iq_idx_front_inlet__PP_actual_pressure" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_front_inlet_lCPres_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_front_inlet_lCPres" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_lbIQOriginated_cmd">
+    <xs:attribute name="iq_idx_lbIQOriginated" type="xs:boolean" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_lbLockKeyboardWhileLoaded_cmd">
+    <xs:attribute name="iq_idx_lbLockKeyboardWhileLoaded" type="xs:boolean" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_lSamplerPresence_cmd">
+    <xs:attribute name="iq_idx_lSamplerPresence" type="xs:boolean" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_signal1_lbSave_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_signal1_lbSave" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_signal1_lSave_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_signal1_lSave" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_signal1_tStartSave_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_signal1_tStartSave" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_signal1_tStopSave_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_signal1_tStopSave" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_signal1_y_scale_factor_cmd">
+    <xs:attribute name="iq_idx_signal1_y_scale_factor" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_signal2_lbSave_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_signal2_lbSave" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_signal2_lSave_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_signal2_lSave" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_signal2_tStartSave_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_signal2_tStartSave" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_signal2_tStopSave_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_signal2_tStopSave" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_signal2_y_scale_factor_cmd">
+    <xs:attribute name="iq_idx_signal2_y_scale_factor" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_valve1_szLabel_cmd">
+    <xs:attribute name="iq_idx_valve1_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_valve2_szLabel_cmd">
+    <xs:attribute name="iq_idx_valve2_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_valve3_szLabel_cmd">
+    <xs:attribute name="iq_idx_valve3_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_valve4_szLabel_cmd">
+    <xs:attribute name="iq_idx_valve1_szLabel" type="xs:string" use="optional" />
+    <xs:attribute name="iq_idx_valve4_szLabel" type="xs:string" use="optional" />
+    <!--     actual eMethods have an "iq_idx_value1_sxLabel", here...     -->
+  </xs:complexType>
+  <xs:complexType name="iq_idx_valve5_szLabel_cmd">
+    <xs:attribute name="iq_idx_valve5_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_valve6_szLabel_cmd">
+    <xs:attribute name="iq_idx_valve6_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_valve7_szLabel_cmd">
+    <xs:attribute name="iq_idx_valve7_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_idx_valve8_szLabel_cmd">
+    <xs:attribute name="iq_idx_valve8_szLabel" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inject_speed_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_inject_speed" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_injection_mode_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_injection_mode" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_injection_repeat_delay_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_injection_repeat_delay" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_injection_repeats_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_injection_repeats" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_CIS3GerstelPTV_pneu_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_inject_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param5" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param6" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param7" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param8" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param9" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param10" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param11" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_CIS4GerstelPTV_pneu_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_inject_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param5" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param6" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param7" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param8" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param9" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param10" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param11" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_configuration_cmd">
+    <xs:attribute name="iq_loc" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="B" />
+          <xs:enumeration value="F" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="iq_gas_type" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_pres_equib_time" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_flow_equib_time" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_coolon_col_pneu_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_inlet_pres" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_cryo_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_cryo_type" type="xs:string" use="optional" />
+    <xs:attribute name="iq_cryo_on_off" type="xs:string" use="optional" />
+    <xs:attribute name="iq_quick_cool" type="xs:string" use="optional" />
+    <xs:attribute name="iq_ambient_temp" type="xs:string" use="optional" />
+    <xs:attribute name="iq_cryo_timeout" type="xs:string" use="optional" />
+    <xs:attribute name="iq_cryo_timeout_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_cryo_fault" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_pneu_control_mod_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_what" type="xs:string" use="optional" />
+    <xs:attribute name="iq_flowpres" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_pneu_onoff_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_inlet_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_pneu_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param5" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param6" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param7" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param8" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param9" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param10" type="xs:string" use="optional" />
+    <xs:attribute name="iq_inlet_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_purge_regulator_terms_cmd">
+    <xs:attribute name="iq_pressure_units" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_inlet_id" type="xs:string" use="optional" />
+    <xs:attribute name="iq_N2_flow" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_N2_df_dp" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_H2_flow" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_H2_df_dp" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_He_flow" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_He_df_dp" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_ArMe_flow" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_ArMe_df_dp" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_purged_packed_pneu_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_what" type="xs:string" use="optional" />
+    <xs:attribute name="iq_flowpres" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_report_configuration_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_dummy" type="xs:string" use="optional" />
+    <xs:attribute name="RTL_Locked" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_temp_ramp_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_oven_track_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_init_temp" type="xs:string" use="optional" />
+    <xs:attribute name="iq_init_time" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_inlet_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_thermal_zone_onoff_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_inlet_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_inlet_volatiles_pneu_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_inject_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param5" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param6" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param7" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param8" type="xs:string" use="optional" />
+    <xs:attribute name="iq_param9" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_install_method_cmd">
+    <xs:attribute name="iq_method_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_oven_configuration_cmd">
+    <xs:attribute name="iq_oven_max" type="xs:string" use="optional" />
+    <xs:attribute name="iq_oven_max_temp" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_oven_cryo_onoff_cmd">
+    <xs:attribute name="iq_cryo" type="xs:string" use="optional" />
+    <xs:attribute name="iq_quick_cool" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_oven_misc_setpoints_cmd">
+    <xs:attribute name="iq_equib_time" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_oven_report_configuration_cmd">
+    <xs:attribute name="iq_oven_type" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_zone_presence" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_cryo_type" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_oven_max" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_post_run_setpoints_cmd">
+    <xs:attribute name="iq_post_oven_temp" type="xs:string" use="optional" />
+    <xs:attribute name="iq_post_time" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_revision_codes">
+    <xs:attribute name="iq_driver_rev" type="xs:string" />
+    <xs:attribute name="iq_G1512a_rev" type="xs:string" />
+    <xs:attribute name="iq_front_injector_rev" type="xs:string" />
+  </xs:complexType>
+  <xs:complexType name="iq_run_table_delete_cmd">
+    <xs:attribute name="line_of_text" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_separator_cmd">
+    <xs:attribute name="iq_separator_id" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_set_aux_thermal_zone_onoff_cmd">
+    <xs:attribute name="loc" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:decimal">
+          <xs:minInclusive value="1" />
+          <xs:maxInclusive value="2" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="iq_aux_id" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:decimal">
+          <xs:minInclusive value="1" />
+          <xs:maxInclusive value="2" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:decimal">
+          <xs:minInclusive value="0" />
+          <xs:maxInclusive value="1" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_detector_pneu_channels_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_fuel" type="xs:string" use="optional" />
+    <xs:attribute name="iq_util" type="xs:string" use="optional" />
+    <xs:attribute name="iq_mug" type="xs:string" use="optional" />
+    <xs:attribute name="iq_detector_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_set_injection_vol_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_injection_vol" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_nano_liter_adapter_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_nano_liter_adapter_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_on_column_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_oncolumn_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_oven_temp_ramp_cmd">
+    <xs:attribute name="iq_init_temp" type="xs:string" use="optional" />
+    <xs:attribute name="iq_init_time" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_1" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_2" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_3" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_4" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_5" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_5" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_5" type="xs:string" use="optional" />
+    <xs:attribute name="iq_rate_6" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_temp_6" type="xs:string" use="optional" />
+    <xs:attribute name="iq_final_time_6" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_set_oven_thermal_zone_cmd">
+    <xs:attribute name="iq_onoff" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_set_post_injection_dwell_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_post_injection_dwell" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_pre_injection_dwell_cmd">
+    <xs:attribute name="loc" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="F" />
+          <xs:enumeration value="B" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_pre_injection_dwell" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_sample_pumps_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_num_sample_pumps" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_sample_skim_enable_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_sample_skim_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_sample_washes_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_num_sample_washes" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_skim_depth_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_skim_depth" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_slow_plunger_enable_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_slow_plunger_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_solvent_postwashes_cmd">
+    <xs:attribute name="loc" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="F" />
+          <xs:enumeration value="B" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_solvent_postwashes_id" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="A" />
+          <xs:enumeration value="B" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_solvent_postwashes_onoff" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_solvent_prewashes_cmd">
+    <xs:attribute name="loc" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="F" />
+          <xs:enumeration value="B" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_solvent_prewashes_id" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="A" />
+          <xs:enumeration value="B" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_solvent_prewashes_onoff" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_syringe_size_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_syringe_size" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_set_viscosity_delay_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_viscosity_delay" type="xs:string" use="optional" />
+    <xs:attribute name="force_copy" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_loc_full">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="FRONT" />
+          <xs:enumeration value="BACK" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_single_column_comp_config_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_detector_position" type="xs:string" use="optional" />
+    <xs:attribute name="iq_column_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_syringe_info">
+    <xs:attribute name="iq_front_inj_syringe_vol" type="xs:decimal" />
+    <xs:attribute name="iq_front_inj_nanoliter" type="xs:int" />
+    <xs:attribute name="iq_front_inj_oncolumn" type="xs:int" />
+    <xs:attribute name="iq_back_inj_syringe_vol" type="xs:decimal" />
+    <xs:attribute name="iq_back_inj_nanoliter" type="xs:int" />
+    <xs:attribute name="iq_back_inj_oncolumn" type="xs:int" />
+  </xs:complexType>
+  <xs:complexType name="iq_thermal_aux_cryo_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_cryo_type" type="xs:string" use="optional" />
+    <xs:attribute name="iq_cryo_on_off" type="xs:string" use="optional" />
+    <xs:attribute name="iq_quick_cool" type="xs:string" use="optional" />
+    <xs:attribute name="iq_ambient_temp" type="xs:string" use="optional" />
+    <xs:attribute name="iq_cryo_timeout" type="xs:string" use="optional" />
+    <xs:attribute name="iq_cryo_timeout_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_cryo_fault" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_thermal_aux_type_cmd">
+    <xs:attribute name="iq_aux_id" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_aux_type" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_thermal_conductivity_elec_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_filament_onoff" type="xs:string" use="optional" />
+    <xs:attribute name="iq_neg_polarity_onoff" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_thermal_conductivity_pneu_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_makeup_mode" type="xs:string" use="optional" />
+    <xs:attribute name="iq_combo_flow" type="xs:string" use="optional" />
+    <xs:attribute name="iq_ref_flow" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_uploaddownload_unformatted_method_cmd">
+    <xs:attribute name="iq_method_id" type="xs:string" use="optional" />
+    <xs:attribute name="line_of_text" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_valve_configuration_cmd">
+    <xs:attribute name="loc" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="1" />
+          <xs:enumeration value="2" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_valve_type" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_GSV_loop_volume" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_GSV_inlet" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="0" />
+          <xs:enumeration value="1" />
+          <xs:enumeration value="2" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="iq_MPV_switch_time" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_MPV_invert_BCD" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="0" />
+          <xs:enumeration value="1" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="iq_valve_id" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:decimal">
+          <xs:minInclusive value="1" />
+          <xs:maxInclusive value="8" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="iq_valve_gas_sampling_setpoints_cmd">
+    <xs:attribute name="loc" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="1" />
+          <xs:enumeration value="2" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff" type="xs:boolean" use="optional" />
+    <xs:attribute name="iq_GSV_Load_time" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_GSV_Inject_time" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_valve_multiposition_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_MP_valve_position" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_valve_report_configuration_cmd">
+    <xs:attribute name="iq_valve_id" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_valve_type" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_GSV_loop_volume" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_GSV_inlet" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_MPV_switch_time" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_MPV_invert_BCD" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_valve_switching_setpoints_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_onoff" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_workfile_identity_cmd">
+    <xs:attribute name="iq_gc_type" type="xs:string" use="optional" />
+    <xs:attribute name="iq_mainbd_firmware_rev" type="xs:string" use="optional" />
+    <xs:attribute name="iq_time" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_date" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_serial_num" type="xs:string" />
+    <xs:attribute name="iq_curr_method" type="xs:string" />
+  </xs:complexType>
+  <xs:complexType name="iq_zero_analog_output_cmd">
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+    <xs:attribute name="iq_zero_on_off" type="xs:string" use="optional" />
+    <xs:attribute name="iq_zero_offset" type="xs:string" use="optional" />
+    <xs:attribute name="iq_signal_id" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="iq_zone_report_configuration_cmd">
+    <xs:attribute name="iq_aux_id" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:decimal">
+          <xs:minInclusive value="1" />
+          <xs:maxInclusive value="5" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="iq_therm_aux_type" type="xs:decimal" use="optional" />
+    <xs:attribute name="iq_zone_presence" type="xs:decimal" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="RuntimeEventsElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent Runtime Events</xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="iq_add_run_table_entry_cmd" type="iq_add_run_table_entry_cmd" minOccurs="0" />
+    </xs:all>
+    <xs:attribute name="composite" type="xs:string" use="optional" />
+    <xs:attribute name="type" type="xs:string" use="optional">
+      <xs:annotation>
+        <xs:documentation>set to "Runtime_Events"</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="T68xxColumnElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent 68xx Columns</xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="iq_column_configuration_cmd" type="iq_column_configuration_cmd" minOccurs="0" />
+      <xs:element name="iq_column_pneu_ramp_cmd" type="iq_column_pneu_ramp_cmd" minOccurs="0" />
+      <xs:element name="iq_single_column_comp_config_cmd" type="iq_single_column_comp_config_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_column1_szManufacturer_cmd" type="iq_idx_column1_szManufacturer_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_column1_szType_cmd" type="iq_idx_column1_szType_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_column1_szDescription_cmd" type="iq_idx_column1_szDescription_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_column1_TMax_cmd" type="iq_idx_column1_TMax_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_column2_szManufacturer_cmd" type="iq_idx_column2_szManufacturer_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_column2_szType_cmd" type="iq_idx_column2_szType_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_column2_szDescription_cmd" type="iq_idx_column2_szDescription_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_column2_TMax_cmd" type="iq_idx_column2_TMax_cmd" minOccurs="0" />
+      <xs:element name="iq_column_report_configuration_cmd" type="iq_column_report_configuration_cmd" minOccurs="0" />
+    </xs:all>
+    <xs:attribute name="type" type="T68xxColumnType" use="optional" />
+    <xs:attribute name="composite" type="xs:string" use="optional" />
+    <xs:attribute name="loc" type="xs:string" use="optional">
+      <xs:annotation>
+        <xs:documentation>'1' or '2', for columns</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="T68xxDetectorElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent 68xx Detectors</xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="iq_set_detector_pneu_channels_cmd" type="iq_set_detector_pneu_channels_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_thermal_zone_onoff_cmd" type="iq_detector_thermal_zone_onoff_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_temp_ramp_cmd" type="iq_detector_temp_ramp_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_analog_setpoints_cmd" type="iq_detector_analog_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_open_interface_mod_setpoints_cmd" type="iq_detector_open_interface_mod_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_electrometer_setpoints_cmd" type="iq_detector_electrometer_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_electron_capture_setpoint_cmd" type="iq_detector_electron_capture_setpoint_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_micro_electron_capture_setpoint_cmd" type="iq_detector_micro_electron_capture_setpoint_cmd" minOccurs="0" />
+      <xs:element name="iq_flame_ionization_elec_setpoints_cmd" type="iq_flame_ionization_elec_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_flame_photometric_setpoints_cmd" type="iq_detector_flame_photometric_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_NPh_setpoints_cmd" type="iq_detector_NPh_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_thermal_conductivity_elec_setpoints_cmd" type="iq_thermal_conductivity_elec_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_electron_capture_pneu_setpoints_cmd" type="iq_detector_electron_capture_pneu_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_micro_electron_capture_pneu_setpoint_cmd" type="iq_detector_micro_electron_capture_pneu_setpoint_cmd" minOccurs="0" />
+      <xs:element name="iq_flame_ionization_pneu_setpoints_cmd" type="iq_flame_ionization_pneu_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_flame_photometric_pneu_setpoints_cmd" type="iq_detector_flame_photometric_pneu_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_detector_NPh_pneumatic_setpoints_cmd" type="iq_detector_NPh_pneumatic_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_thermal_conductivity_pneu_setpoints_cmd" type="iq_thermal_conductivity_pneu_setpoints_cmd" minOccurs="0" />
+    </xs:all>
+    <xs:attribute name="type" type="T68xxDetectorType" use="optional" />
+    <xs:attribute name="composite" type="xs:string" use="optional" />
+    <xs:attribute name="disposition" type="xs:string" use="optional">
+      <xs:annotation>
+        <xs:documentation>Should be "Source" (-&gt; taking setpoints from imported emethod) or "Target" (-&gt; taking setpoints from current method on target system)</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="useroverride" type="xs:string" use="optional">
+      <xs:annotation>
+        <xs:documentation>1 -&gt; that the default selection has been overriden by the user</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="loc" type="xs:string" use="optional">
+      <xs:annotation>
+        <xs:documentation>'F' -&gt; front; 'B' -&gt; back</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="role" type="xs:string" use="optional" />
+    <xs:attribute name="Ionization" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="EI" />
+          <xs:enumeration value="CI" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="Polarity" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="Negative" />
+          <xs:enumeration value="Positive" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="SourceTemp" type="xs:decimal" use="optional" />
+    <xs:attribute name="QuadTemp" type="xs:decimal" use="optional" />
+    <xs:attribute name="ReagentGas" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="T68xxInjectorElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent a 68xx Injector</xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="iq_enable_injector_cmd" type="iq_enable_injector_cmd" minOccurs="0" />
+      <xs:element name="iq_set_syringe_size_cmd" type="iq_set_syringe_size_cmd" minOccurs="0" />
+      <xs:element name="iq_set_nano_liter_adapter_cmd" type="iq_set_nano_liter_adapter_cmd" minOccurs="0" />
+      <xs:element name="iq_set_injection_vol_cmd" type="iq_set_injection_vol_cmd" minOccurs="0" />
+      <xs:element name="iq_set_sample_pumps_cmd" type="iq_set_sample_pumps_cmd" minOccurs="0" />
+      <xs:element name="iq_set_sample_washes_cmd" type="iq_set_sample_washes_cmd" minOccurs="0" />
+      <xs:element name="iq_set_viscosity_delay_cmd" type="iq_set_viscosity_delay_cmd" minOccurs="0" />
+      <xs:element name="iq_set_solvent_prewashes_cmd" type="iq_set_solvent_prewashes_cmd" minOccurs="0" maxOccurs="2" />
+      <xs:element name="iq_set_solvent_postwashes_cmd" type="iq_set_solvent_postwashes_cmd" minOccurs="0" maxOccurs="2" />
+      <xs:element name="iq_set_slow_plunger_enable_cmd" type="iq_set_slow_plunger_enable_cmd" minOccurs="0" />
+      <xs:element name="iq_set_pre_injection_dwell_cmd" type="iq_set_pre_injection_dwell_cmd" minOccurs="0" maxOccurs="4" />
+      <xs:element name="iq_set_post_injection_dwell_cmd" type="iq_set_post_injection_dwell_cmd" minOccurs="0" />
+      <xs:element name="iq_set_sample_skim_enable_cmd" type="iq_set_sample_skim_enable_cmd" minOccurs="0" />
+      <xs:element name="iq_set_skim_depth_cmd" type="iq_set_skim_depth_cmd" minOccurs="0" />
+      <xs:element name="iq_set_on_column_cmd" type="iq_set_on_column_cmd" minOccurs="0" />
+      <xs:element name="iq_inject_speed_cmd" type="iq_inject_speed_cmd" minOccurs="0" />
+      <xs:element name="iq_draw_speed_cmd" type="iq_draw_speed_cmd" minOccurs="0" />
+      <xs:element name="iq_dispense_speed_cmd" type="iq_dispense_speed_cmd" minOccurs="0" />
+      <xs:element name="iq_injection_mode_cmd" type="iq_injection_mode_cmd" minOccurs="0" />
+      <xs:element name="iq_injection_repeats_cmd" type="iq_injection_repeats_cmd" minOccurs="0" />
+      <xs:element name="iq_injection_repeat_delay_cmd" type="iq_injection_repeat_delay_cmd" minOccurs="0" />
+    </xs:sequence>
+    <xs:attribute name="loc" type="xs:string" use="optional" />
+    <xs:attribute name="type" type="xs:string" use="optional" />
+    <xs:attribute name="composite" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="T68xxInletElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent 68xx Inlets</xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="iq_inlet_report_configuration_cmd" type="iq_inlet_report_configuration_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_pneu_setpoints_cmd" type="iq_inlet_pneu_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_temp_ramp_cmd" type="iq_inlet_temp_ramp_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_thermal_zone_onoff_cmd" type="iq_inlet_thermal_zone_onoff_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_pneu_onoff_cmd" type="iq_inlet_pneu_onoff_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_front_inlet_lCPres_cmd" type="iq_idx_front_inlet_lCPres_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_back_inlet_lCPres_cmd" type="iq_idx_back_inlet_lCPres_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_cryo_setpoints_cmd" type="iq_inlet_cryo_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_CIS3GerstelPTV_pneu_setpoints_cmd" type="iq_inlet_CIS3GerstelPTV_pneu_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_CIS4GerstelPTV_pneu_setpoints_cmd" type="iq_inlet_CIS4GerstelPTV_pneu_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_coolon_col_pneu_setpoints_cmd" type="iq_inlet_coolon_col_pneu_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_purged_packed_pneu_setpoints_cmd" type="iq_inlet_purged_packed_pneu_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_pneu_control_mod_setpoints_cmd" type="iq_inlet_pneu_control_mod_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_inlet_volatiles_pneu_setpoints_cmd" type="iq_inlet_volatiles_pneu_setpoints_cmd" minOccurs="0" />
+    </xs:all>
+    <xs:attribute name="type" type="T68xxInletType" use="optional" />
+    <xs:attribute name="loc" type="xs:string" use="optional">
+      <xs:annotation>
+        <xs:documentation> One of [F, B, 3, 4, 5, 6, 7]   F -&gt; front inlet   B -&gt; back inlet   3 -&gt; Pneumatic_Aux #3   4 -&gt; Pneumatic_Aux #4   5 -&gt; Pneumatic_Aux #5   6 -&gt; Unknown_Inlet   7 -&gt; undefined </xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+    <xs:attribute name="composite" type="xs:string" use="optional">
+      <xs:annotation>
+        <xs:documentation>set to '0'</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="T68xxOvenElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent 68xx Oven</xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="iq_oven_configuration_cmd" type="iq_oven_configuration_cmd" minOccurs="0" />
+      <xs:element name="iq_oven_misc_setpoints_cmd" type="iq_oven_misc_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_set_oven_temp_ramp_cmd" type="iq_set_oven_temp_ramp_cmd" minOccurs="0" />
+      <xs:element name="iq_set_oven_thermal_zone_cmd" type="iq_set_oven_thermal_zone_cmd" minOccurs="0" />
+      <xs:element name="iq_post_run_setpoints_cmd" type="iq_post_run_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_oven_cryo_onoff_cmd" type="iq_oven_cryo_onoff_cmd" minOccurs="0" />
+    </xs:all>
+    <xs:attribute name="type" type="T68xxOvenType" use="optional" />
+    <xs:attribute name="composite" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="T68xxPneumaticAuxElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent a 68xx Pneumatic Aux Configuration</xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="iq_set_pneu_zone_onoff_cmd" minOccurs="0">
+        <xs:complexType>
+          <xs:attribute name="loc" type="xs:string" use="optional" />
+          <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+          <xs:attribute name="iq_onoff" type="xs:string" use="optional" />
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="iq_aux_pressure_ramp_cmd" minOccurs="0">
+        <xs:complexType>
+          <xs:attribute name="loc" type="xs:string" use="optional" />
+          <xs:attribute name="index_attribute" type="xs:string" use="optional" />
+          <xs:attribute name="iq_init_pressure" type="xs:string" use="optional" />
+          <xs:attribute name="iq_init_time" type="xs:string" use="optional" />
+          <xs:attribute name="iq_rate_1" type="xs:string" use="optional" />
+          <xs:attribute name="iq_final_pressure_1" type="xs:string" use="optional" />
+          <xs:attribute name="iq_final_time_1" type="xs:string" use="optional" />
+          <xs:attribute name="iq_rate_2" type="xs:string" use="optional" />
+          <xs:attribute name="iq_final_pressure_2" type="xs:string" use="optional" />
+          <xs:attribute name="iq_final_time_2" type="xs:string" use="optional" />
+          <xs:attribute name="iq_rate_3" type="xs:string" use="optional" />
+          <xs:attribute name="iq_final_pressure_3" type="xs:string" use="optional" />
+          <xs:attribute name="iq_final_time_3" type="xs:string" use="optional" />
+        </xs:complexType>
+      </xs:element>
+    </xs:all>
+    <xs:attribute name="type" type="T68xxPneumaticAuxType" use="optional" />
+    <xs:attribute name="composite" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="T68xxSamplePathway">
+    <xs:annotation>
+      <xs:documentation>Represents the structure of a Sample Pathway (Chemical Path)</xs:documentation>
+    </xs:annotation>
+    <xs:all minOccurs="0">
+      <xs:element name="Inlet" type="T68xxInletElement" minOccurs="0" />
+      <xs:element name="Headspace" type="HeadspaceElement" minOccurs="0" />
+      <xs:element name="Injector" type="T68xxInjectorElement" minOccurs="0" />
+      <xs:element name="Column" type="T68xxColumnElement" minOccurs="0" />
+      <xs:element name="Oven" type="T68xxOvenElement" minOccurs="0" />
+      <xs:element name="Detector" type="T68xxDetectorElement" minOccurs="0" />
+      <xs:element name="Thermal_Aux" type="T68xxThermalAuxElement" minOccurs="0" />
+      <xs:element name="Pneumatic_Aux" type="T68xxPneumaticAuxElement" minOccurs="0" />
+      <xs:element name="Signal1" type="T68xxSignalElement" minOccurs="0" />
+      <xs:element name="Signal2" type="T68xxSignalElement" minOccurs="0" />
+      <xs:element name="Files" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence minOccurs="0">
+            <xs:element name="File" minOccurs="0" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:attribute name="name" type="xs:string" use="optional">
+                  <xs:annotation>
+                    <xs:documentation>The name of the file.</xs:documentation>
+                  </xs:annotation>
+                </xs:attribute>
+                <xs:attribute name="ref" type="xs:string" use="optional">
+                  <xs:annotation>
+                    <xs:documentation>An XPath expression referring to the element containing an image of the file.</xs:documentation>
+                  </xs:annotation>
+                </xs:attribute>
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="Runtime_Events" type="RuntimeEventsElement" minOccurs="0" />
+      <xs:element name="Valves" type="T68xxValveConfigurationElement" minOccurs="0" />
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="T68xxSignalElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent 68xx Signals</xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="iq_config_analog_signal_path_cmd" type="iq_config_analog_signal_path_cmd" minOccurs="0" />
+      <xs:element name="iq_config_signal_path_cmd" type="iq_config_signal_path_cmd" minOccurs="0" />
+      <xs:element name="iq_zero_analog_output_cmd" type="iq_zero_analog_output_cmd" minOccurs="0" />
+      <xs:element name="iq_config_digital_signal_path_cmd" type="iq_config_digital_signal_path_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_signal1_lbSave_cmd" type="iq_idx_signal1_lbSave_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_signal2_lbSave_cmd" type="iq_idx_signal2_lbSave_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_signal1_lSave_cmd" type="iq_idx_signal1_lSave_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_signal2_lSave_cmd" type="iq_idx_signal2_lSave_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_signal1_tStartSave_cmd" type="iq_idx_signal1_tStartSave_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_signal2_tStartSave_cmd" type="iq_idx_signal2_tStartSave_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_signal1_tStopSave_cmd" type="iq_idx_signal1_tStopSave_cmd" minOccurs="0" />
+      <xs:element name="iq_idx_signal2_tStopSave_cmd" type="iq_idx_signal2_tStopSave_cmd" minOccurs="0" />
+    </xs:all>
+    <xs:attribute name="type" type="T68xxSignalType" use="optional" />
+    <xs:attribute name="composite" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="T68xxThermalAuxDetailElement">
+    <xs:all>
+      <xs:element name="iq_aux_temp_ramp_cmd" type="iq_aux_temp_ramp_cmd" minOccurs="0" />
+      <xs:element name="iq_set_aux_thermal_zone_onoff_cmd" type="iq_set_aux_thermal_zone_onoff_cmd" minOccurs="0" />
+    </xs:all>
+    <xs:attribute name="type" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="Valve_Box" />
+          <xs:enumeration value="Unknown_Aux" />
+          <xs:enumeration value="MSD_Transfer_Line" />
+          <xs:enumeration value="AED_Transfer_Line" />
+          <xs:enumeration value="No_Aux_Installed" />
+          <xs:enumeration value="Cryo_Focus_Unit" />
+          <xs:enumeration value="Nickel_Catalyst" />
+          <xs:enumeration value="FPD_Transfer_Line" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="T68xxThermalAuxElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent 68xx Thermal Auxs</xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="iq_aux_temp_ramp_cmd" type="iq_aux_temp_ramp_cmd" minOccurs="0" />
+      <xs:element name="iq_set_aux_thermal_zone_onoff_cmd" type="iq_set_aux_thermal_zone_onoff_cmd" minOccurs="0" />
+      <xs:element name="iq_thermal_aux_cryo_setpoints_cmd" type="iq_thermal_aux_cryo_setpoints_cmd" minOccurs="0" />
+      <xs:element name="Thermal_Aux1" type="T68xxThermalAuxDetailElement" minOccurs="0" />
+      <xs:element name="Thermal_Aux2" type="T68xxThermalAuxDetailElement" minOccurs="0" />
+    </xs:all>
+    <xs:attribute name="type" type="T68xxThermalAuxType" use="optional" />
+    <xs:attribute name="composite" type="xs:string" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="T68xxValveConfigurationDetail">
+    <xs:all>
+      <xs:element name="iq_valve_configuration_cmd" type="iq_valve_configuration_cmd" minOccurs="0" />
+      <xs:element name="iq_valve_gas_sampling_setpoints_cmd" type="iq_valve_gas_sampling_setpoints_cmd" minOccurs="0" />
+    </xs:all>
+    <xs:attribute name="type" use="optional">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="No_Valve" />
+          <xs:enumeration value="Multiposition" />
+          <xs:enumeration value="Gas_Sampling" />
+          <xs:enumeration value="Switching" />
+          <xs:enumeration value="Other" />
+          <xs:enumeration value="Remote_Start" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="T68xxValveConfigurationElement">
+    <xs:annotation>
+      <xs:documentation>Represents structures used to represent a 68xx Valve Configuration</xs:documentation>
+    </xs:annotation>
+    <xs:all>
+      <xs:element name="iq_valve_configuration_cmd" type="iq_valve_configuration_cmd" minOccurs="0" />
+      <xs:element name="iq_valve_multiposition_setpoints_cmd" type="iq_valve_multiposition_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_valve_gas_sampling_setpoints_cmd" type="iq_valve_gas_sampling_setpoints_cmd" minOccurs="0" />
+      <xs:element name="iq_valve_switching_setpoints_cmd" type="iq_valve_switching_setpoints_cmd" minOccurs="0" />
+      <xs:element name="Valve1" type="T68xxValveConfigurationDetail" minOccurs="0" />
+      <xs:element name="Valve2" type="T68xxValveConfigurationDetail" minOccurs="0" />
+      <xs:element name="Valve3" type="T68xxValveConfigurationDetail" minOccurs="0" />
+      <xs:element name="Valve4" type="T68xxValveConfigurationDetail" minOccurs="0" />
+      <xs:element name="Valve5" type="T68xxValveConfigurationDetail" minOccurs="0" />
+      <xs:element name="Valve6" type="T68xxValveConfigurationDetail" minOccurs="0" />
+      <xs:element name="Valve7" type="T68xxValveConfigurationDetail" minOccurs="0" />
+      <xs:element name="Valve8" type="T68xxValveConfigurationDetail" minOccurs="0" />
+    </xs:all>
+    <xs:attribute name="type" type="T68xxValveConfigurationType" use="optional" />
+    <xs:attribute name="composite" type="xs:boolean" use="optional" />
+  </xs:complexType>
+  <xs:complexType name="TransformElement">
+    <xs:annotation>
+      <xs:documentation>Represents an individual invocation of a transform object.</xs:documentation>
+    </xs:annotation>
+    <xs:attribute name="ref" type="TransformIdentity" use="optional">
+      <xs:annotation>
+        <xs:documentation>The identity (PROGID or CLSID) of an object realizing IAgEMTransform.</xs:documentation>
+      </xs:annotation>
+    </xs:attribute>
+  </xs:complexType>
+  <xs:complexType name="TransformThread">
+    <xs:all minOccurs="0">
+      <xs:element name="Transforms" minOccurs="0">
+        <xs:complexType>
+          <xs:sequence minOccurs="0">
+            <xs:element name="Transform" type="TransformElement" minOccurs="0" maxOccurs="unbounded" />
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:all>
+  </xs:complexType>
+</xs:schema>

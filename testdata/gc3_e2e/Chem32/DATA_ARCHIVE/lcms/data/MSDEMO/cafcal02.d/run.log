@@ -1,0 +1,16 @@
+ 443 41e0 32d181a9  202
+Method       Method started:  line# 2 vial# 2 inj# 1        14:50:17 01/06/97
+  67 41e0 32d181aa    0
+Method       Instrument running sample vial# 2              14:50:18 01/06/97
+   0 1da8 32d18207  600
+1100 PMP   1 Pressure = 93.9 bar                            14:51:51 01/06/97
+   0 1da9 32d18207  600
+1100 THM   1 Temperature = 36.0 °C                          14:51:51 01/06/97
+   0 1da8 32d182c7  600
+1100 PMP   1 Pressure = 94.7 bar                            14:55:03 01/06/97
+   0 1da9 32d182c7  600
+1100 THM   1 Temperature = 36.0 °C                          14:55:03 01/06/97
+  67 41e0 32d182cb    0
+Method       Instrument run completed                       14:55:07 01/06/97
+  67 41e0 32d182cf    0
+Method       Method completed                               14:55:11 01/06/97

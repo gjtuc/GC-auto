@@ -1,0 +1,26 @@
+ 443 1d59 2db3f7a0
+Method       Method started: line# 1 vial# 5 inj# 6         08:24:16 04/19/94
+  67 1d59 2db3f7a0
+Method       Instrument running sample vial# 5              08:24:16 04/19/94
+   0 1d45 2db3f7ce
+PUMP 1050  1 Pressure = 187.5 bar                           08:25:02 04/19/94
+   0 1d45 2db3f7ce
+PUMP 1050  1 Temperature = 40.0 Centigrade                  08:25:02 04/19/94
+   0 1d45 2db3f972
+PUMP 1050  1 Pressure = 192.3 bar                           08:32:02 04/19/94
+   0 1d45 2db3f972
+PUMP 1050  1 Temperature = 40.0 Centigrade                  08:32:02 04/19/94
+  67 1d59 2db3f974
+Method       Instrument Run completed                       08:32:04 04/19/94
+  70 1d57 2db3f975
+CP Macro     Analyzing rawdata 005-0106.D                   08:32:05 04/19/94
+  70 1d57 2db3f97e
+CP Macro     Saving GLP Data for rawdata 005-0106.D         08:32:14 04/19/94
+  67 1d59 2db3f987
+Method       Method completed                               08:32:23 04/19/94
+ 443 1d59 2db79377
+Method       Method started: line# 1 vial# 5 inj# 6         02:05:59 04/22/94
+  70 1d57 2db79377
+CP Macro     Analyzing rawdata 005-0106.D                   02:05:59 04/22/94
+  67 1d59 2db7937b
+Method       Method completed                               02:06:03 04/22/94

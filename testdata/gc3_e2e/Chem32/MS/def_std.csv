@@ -1,0 +1,17 @@
+Filename: def_std.csv 
+
+"Instructions:  Save a copy of this file with a new name in the directory hpchem\n\sequence, where n is your instrument number (typically 1), "
+then edit your new file in Excel or other appropriate environment to create a .CSV file for import to a ChemStation Standard Sequence Table.   
+"Your .CSV file MUST contain a bracketed Table section identifier immediately prior to the start of the data section.  Also, the Sequence Table column headers"
+"must be spelled exactly as listed in this default file, unless aliases are used (see the Import CSV HELP in ChemStation for more details about aliases.)  "
+"Correct header spellings are also available from the ""stabhdr.txt"" file located in the path ""hpchem/ms"". "
+
+"Although this default CSV file contains column headers for all of the ChemStation Standard Sequence Table columns, it is not required "
+that your .CSV file for Standard Sequence import contain all of the Standard Sequence Table columns; any subset is also acceptable.  
+
+NOTE:  Rows 1 through 15 in this default file can be deleted when you prepare your own .CSV import file.  They are only for reference use.
+"Lines 16 and 17 can also be deleted or overwritten, but please take note of the requirement for the bracketed Table section identifier, and also the requirement for "
+"correct column header spellings, when preparing your .CSV sequence import file."
+
+[Table]
+Location,SampleName,Method,InjVial,SampleType,CalLevel,UpdateRF,UpdateRT,Interval,Amount,ISTDAmt,Multiplier,Dilution,DataFileName,InjVolume,SampleInfo,CalLine

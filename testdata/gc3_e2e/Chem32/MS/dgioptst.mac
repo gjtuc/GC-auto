@@ -1,0 +1,808 @@
+!***************************************************************************!
+!* dgIOpTst.mac        
+!* LC/MSD Ion Optics test macros
+!*
+!* These macros exercise the ion optics and check for faults.  This should
+!* help find any electronic problems, short circuits, or inadequate insulators.
+!* If no faults are found, then each element is ramped, and the ramp is 
+!* evaluated to determine if there is an open (disconnected) element.
+!*
+!*
+!* Globals:  IopTestVer$
+!* 
+!* Macros:   dgMsIonOpTest$           Main macro
+!*           dgMsIonOpTestInit        Initializes test register
+!*           dgMsIonOpTestExec        Executes fault testing
+!*           dgMsIonOpTestRamps       Executes ramp testing
+!*           dgMsIonOpRecordFaults    Evaluates fault status
+!*           dgMs_DelObject1          Deletes test object 1 after moving headers
+!*           dgDispRegFix             Modifies DiagDispReg if necessary
+!*           dgMsIonOpTestCleanUp     Exit routine
+!*
+  IOpTestVer$ = "$Header: /cag/triath1b/partsmac/diag/dgioptst.mac 1.31 2003-06-23 15:39:02-07 julie_zhao Exp $"
+  verIx = instr(IOpTestVer$, ".mac ") + 5
+  IOpTestVer$ =  IOpTestVer$[verIx:VerIx + instr(IOpTestVer$[VerIx:len(IOpTestVer$)]," ") - 1] 
+  remove verIx
+!
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsIonOpTest$
+
+! 04/21/03 JZ  Setup _ABORT$ string for Ion Optics test
+!***************************************************************************!
+LOCAL Result$, res, PrintMac$, tmp$, SrcMode$
+  res=0
+
+  ! JZ Setup Abort routine
+  if (check(Variable, _abort$) = 0) then
+     _abort$ = ""
+   endif
+  _abort$ = "DgMsIonOpTestCleanUp;"+_abort$
+
+  ! If the tune file is for the wrong spray chamber, change tune file mode
+  ! This should be restored in the cleanup routine
+  if dgMsCheckTuneMode() <> 1 then
+     MSGetMode dgMSNoiseIonMode$
+     SrcMode$ = MSGetIonSrc$()
+     MSMode SrcMode$
+     !if dgMSNoiseIonMode$ = "APCI" then
+     !   MSMode "API-ES"
+     !else
+     !   MSMode "APCI"
+     !endif
+  else
+     dgMSNoiseIonMode$ = ""
+  endif
+
+  dgMsIonOpTestInit 
+
+  res=dgMsIonOpTestExec()
+
+  if (res < 1) then
+     res= res+ dgMSIonOpTestRamps()
+  endif
+
+  if (res > 0) then                     !4-02PR res=1 indicates bad data so don't draw chart
+     SetObjHdrVal Result_Reg[1], "NoDraw", 1
+  endif
+
+  ! reset log as soon as possible
+  if CHECK( Variable, oldLogDataState) = 1 then
+    MSLogData, oldLogDataState
+    remove oldLogDataState
+  endif
+
+  if Res = 0 then
+    Result$=NlsMsDiag$("Passed")
+   SetObjHdrText RESULT_REG[1], "TestResAll", Result$
+    PrintMac$="dgMsPrintTest IonOpReport, IonOpRes, IonOpChart, , ,5, ""%-20s"","""","""", ""%-58s"""
+    Tmp$=dgMsGetTestResults$("IonOpChart", "IonOpRes", PrintMac$)
+  else    
+    Result$=NlsMsDiag$("Failed")
+   SetObjHdrText RESULT_REG[1], "TestResAll", Result$
+    PrintMac$="dgMsPrintTest IonOpReport, IonOpRes, IonOpChart, , ,5, ""%-20s"","""","""", ""%-58s"""
+    Tmp$=dgMsGetTestResults$("IonOpChart", "IonOpRes", PrintMac$)
+  endif
+
+  dgMsIonOpTestCleanUp
+  return Result$
+   
+ENDMACRO            ! end dgMsIonOpTest
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsIonOpTestExec
+
+! This macro executes the four test conditions and read the fault strings
+! from the instrument. the conglusion of the sub tests are the overall result 
+! 1. initail scan
+! 2. all parameters turned off
+! 3. all parameters with maximum settings
+! 4. all parameters with maximum but with the other ion polarity
+!
+! RETURN
+!   0: no fault detected
+!   1: error or fault detected
+!***************************************************************************!
+LOCAL evalStr$, ionMode$, Parm$, val$, i, result
+LOCAL IonPol1, IOnPol2, Pol1$, Pol2$, NumParms, dynError
+   ON ERROR GOTO errortrap
+
+   ! Ionpolarity of the current tune file
+   MsParm IonPolarity, IonPol1
+   if IonPol1 = 1 then
+     Pol1$=NlsMsDiag$("Negative")
+     IonPol2= 0
+     Pol2$=NlsMsDiag$("Positive")
+   else
+     Pol1$=NlsMsDiag$("Positive")
+     IonPol2= 1
+     Pol2$=NlsMsDiag$("Negative")
+   endif  
+   
+   ! This sets the calibrant setting in the tune file to the current value
+   ! This avoids a lengthy purge cycle if the CDS is on when test starts
+   MSCalValve  OldCDSstate
+   MSCalValve, OldCDSstate
+
+   ! check fault state and display when faults detected
+   !result=dgMsIonOpRecordFaults ("Detected faults before test started")
+   !if TabHdrVal( RESULT_REG[1], "TestResultTab", "NumberOfRows") = 1 then
+   !  DelTabRow RESULT_REG[1], "TestResultTab", -1
+   !endif
+
+   !print "Initial Scan"
+   !print "------------"
+   result = result+ dgMsIonOpRecordFaults("Initial Scan ("+Pol1$[1:3]+".)")
+
+   ! MS Parameter Information Table
+   dgMsGetParmLimitsTab 1
+   
+   NumParms = TabHdrVal(RESULT_REG[1], ParmLimits, "NumberOfRows")
+   
+   !print "Turned Off ("+Pol1$+")"
+   !print "----------------------"
+   ! Set all ion optics parameters to zero; no ion optics faults should
+   ! be encountered.
+   for i = 1 to NumParms
+      Parm$ = TabText$(RESULT_REG[1], ParmLimits, i, "Parameter")
+      ! disable dynamic ramps if necessary
+      ! (Note: OK to use "Frag" because fragmentor is unlinked at this point.)
+!      on error evaluate "MSDynamic " + Parm$ + ", disable" ; evaluate evalStr$
+      on error evaluate "MSDynamic " + Parm$ + ", disable" + ";MSParm " + Parm$ + ",, 0"
+      evalStr$ = "MSParm " + Parm$ + ",, 0"
+      !print evalStr$
+      evaluate evalStr$
+      on error goto errortrap
+   next i
+
+   result = result+ dgMsIonOpRecordFaults("Turned off ("+Pol1$[1:3]+".)")
+   
+   !print "On Maximum ("+Pol1$+")"
+   !print "----------------------"
+   ! Set all values to maximum 
+   MSOff
+   for i = 1 to NumParms
+      Parm$ = TabText$(RESULT_REG[1], ParmLimits, i, "Parameter")
+      val   = TabVal  (RESULT_REG[1], ParmLimits, i, "Max" )
+      ! disable dynamic ramps if necessary
+      on error evaluate "MSDynamic " + Parm$ + ", disable" + ";MSParm " + Parm$ + ",, " + val$(val)
+      evalStr$ =  "MSParm " + Parm$ + ",, " + val$(val)
+      !print evalStr$
+      evaluate evalStr$
+      on error goto errortrap
+   next i
+   result = result+ dgMsIonOpRecordFaults("On Maximum ("+Pol1$[1:3]+".)")
+
+   ! Change to next ion polarity for maximum test
+   MSGetTuneFile _tunepath$ + _DiagTuneFile$, IonPol2,,0
+
+   !print "On Maximum ("+Pol2$+")"
+   !print "----------------------"
+   
+   ! Set all values to maximum for other Ion mode 
+   MSOff
+   for i = 1 to NumParms
+      Parm$ = TabText$(RESULT_REG[1], ParmLimits, i, "Parameter")
+      val   = TabVal  (RESULT_REG[1], ParmLimits, i, "Max" )
+      ! disable dynamic ramps if necessary
+      on error evaluate "MSDynamic " + Parm$ + ", disable" + ";MSParm " + Parm$ + ",, " + val$(val)
+      evalStr$ =  "MSParm " + Parm$ + ",, " + val$(val)
+      !print evalStr$
+      evaluate evalStr$
+      on error goto errortrap
+   next i
+   result = result+ dgMsIonOpRecordFaults("On Maximum ("+Pol2$[1:3]+".)")
+
+   MSOff
+   
+   !Restore old ion polarity of the tune file
+   MSGetTuneFile _tunepath$ + _DiagTuneFile$, IonPol1 ,,0
+
+   ! Restore parameters to initial conditions
+   dgMsSetTestParms 1, "Original"
+
+   return Result
+
+   errortrap:  
+     ON ERROR
+     dgMsPrintError    
+     SetTabText RESULT_REG[1], TestResultTab, TestNumber, Result, "Error"
+     SetObjHdrText RESULT_REG[1], "ErrMsg", _ErrMsg$
+     SetObjHdrText RESULT_REG[1], "ErrMacro", _ErrMacro$
+     dgMsIonOpTestCleanUp
+     Generate Error 55555,  "MSD Test ("+_ErrMacro$+"):"+_ErrMsg$
+    return 1
+     
+ENDMACRO   ! end  dgMsIonOpTestExec
+!***************************************************************************!
+   
+!***************************************************************************!
+NAME dgMsIonOpTestRamps
+!
+! Ramp Test - This checks for opens by testing for a flat ramp.
+! This test is not done if there has been a fault (too lengthy)
+! Turn calibrant on, ensure that there is some signal, and ramp
+! on the base peak
+!
+! RETURN
+!   0:    no fault detected
+!   1..8: error or number of flat ramped  parameters
+!***************************************************************************!
+LOCAL evalStr$, ionMode$, Parm$, AbundThresh, MinPctChange
+LOCAL hiMass, loMass, basePeakMass, basePeakAbund, NumRamps, Percent$
+LOCAL rampMinAbund, rampMaxAbund, oldMass1, oldMass1Sel, RampTab$, RampTabBak$
+LOCAL val$, i, Row, val, err, rampRow, Result, dynEnabled, dummy
+
+   AbundThresh  = 2000
+   BasePeakAbund= 0
+   MinPctChange = 15      ! % difference bet. min & max, divided by the mean
+   hiMass = MSInstrParm("maxMass")
+   loMass = MSInstrParm("minMass")
+
+   rampTab$ = "ramp_ctl_table"
+   rampTabBak$ = "ramp_ctl_table_back"
+   
+   InsTabRow  RESULT_REG[1], "TestResultTab",
+   rampRow = TabHdrVal( RESULT_REG[1], "TestResultTab", "NumberOfRows")
+   SetTabText RESULT_REG[1],  "TestResultTab", rampRow, "Text",  "Ramping Test"
+   SetTabText RESULT_REG[1],  "TestResultTab", rampRow, "Result","Error"
+   ON ERROR GOTO errortrap
+
+   ! turn on calibrant
+   MsGetMode IonMode$
+   if (IonMode$ = "APCI") or (IonMode$ = "APPI") then
+     ! turn on calibrant "A"
+     MsCalValve ,1
+   else     ! must be ESI
+     ! turn on calibrant "B"
+     MsCalValve ,2
+   endif
+   sleep 10
+
+   err=0
+   ON ERROR err=1
+   !MSFindMass loMass, hiMass, BasePeakMass, BasePeakAbund, 1
+   MsScan
+   BasePeakMass   =ScanBasePeak
+   BasePeakAbund=ScanBaseAbund
+   ON ERROR GOTO errortrap
+
+   if err=1 then
+     print dgMsIonOpRecordFaults("Finding base peak")
+     SetObjHdrText RESULT_REG[1], "RampError", _ErrMsg$
+     SetObjHdrText RESULT_REG[1], "RampErrMacro", _ErrMacro$
+     SetTabText RESULT_REG[1], "TestResultTab", rampRow, "Result", \
+                "ERROR: No Scan data available."
+     return  1
+   endif
+
+   ! if there is enough signal, begin the ramp test
+   if BasePeakAbund > abundThresh then  
+      ! initialize ramping result
+      Result = 0
+      
+      ! Store the scan 
+      ! CopyObj MSTuneData[1], RESULT_REG
+      
+      ! Set first mass to base peak
+      MSMassValue 1, oldMass1, BasePeakMass, oldMass1Sel, 1
+      
+      ! Ramp each element
+      !look for a significant difference between min & max
+      NumRamps = TabHdrVal(RESULT_REG[1], ParmLimits, "NumberOfRows")
+      for i = 1 to NumRamps
+         Parm$ = TabText$(RESULT_REG[1], ParmLimits, i, "Parameter")
+         ! For ramping purposes, elongate Frag name:
+           if Parm$ = "Frag" then
+             if ((MS_SQ_SL = 0) and (check(variable, dgMSUnlinked) = 0)) then
+               Parm$ = "Fragmentor"            ! All other models, with Frag/Sk1 linked
+             else
+               Parm$ = "Fragment"              ! SL model
+             endif
+           endif
+         dynDisabled = 0
+         ON ERROR dynDisabled = 1 ! next command will fault if Dyn disabled
+         MSDynamic Parm$, disable 
+         ON ERROR goto errortrap
+         ! Set ramp limits to ParmLimits
+         evalStr$ = "MSSetRamp " + Parm$ + ", " + \
+                     val$(TabVal(RESULT_REG[1], "ParmLimits", i, "Min")) + \
+                     ", " + val$(TabVal(RESULT_REG[1], "ParmLimits", i , \
+                     "Max"))
+       ! 05/29/08 CPL: Limit range of QuadDC ramp from -10 to +10 (SCR# 15313) 
+           If ( instr( evalStr$, "QuadDC") > 0 ) then
+             evalStr$ = "mssetramp quaddc,-10,+10"
+           endif
+           
+           If ( Getverbose() > 0 ) then
+             Print "dgioptst.mac:dgMsIonOpTestRamps:evalstr$ =", evalstr$
+           Endif
+         
+         evaluate evalStr$
+         evalStr$ = "MSSIMRamp " + Parm$ + ", 1,,, 20" 
+         ! print evalStr$
+
+           If ( Getverbose() > 0 ) then
+             Print "dgioptst.mac:dgMsIonOpTestRamps:evalstr$ =", evalstr$
+           Endif
+
+         evaluate evalStr$
+         ! Reset the Frag parm$, if necessary:
+
+           if instr(parm$,"Frag") = 1
+             parm$ = "Frag"
+           endif
+
+           if dynDisabled <> 1 then ! restore dynamic ramp
+             if ((MS_SQ_SL = 0) and (check(variable, dgMSUnlinked) = 0)) then
+               dgMSRestoreDynamic 1, "Fragmentor"       ! All other models, with Frag/Sk1 linked
+             else
+               dgMSRestoreDynamic 1, "Fragment"         ! SL model
+             endif
+               dynDisabled = 0 
+           endif
+
+         copyobj MSTuneData[8], RESULT_REG
+         SetObjHdrText RESULT_REG[regsize(RESULT_REG)],"Title", \
+                       Parm$ + " SIMramp"            
+         dummy = NewTextAnn(RESULT_REG[regsize(RESULT_REG)], \
+                            SPrintF$(ScanBasePeak, \
+                            Parm$ + " SIMramp at m/z %2.0f"),,,,1)
+
+         ! evaluate ramp
+         GetDataMinMax MSTuneData[8], 1
+         rampMinAbund = OBJ_MIN
+         rampMaxAbund = OBJ_MAX
+         Percent$= SprintF$(((rampMaxAbund - rampMinAbund)/rampMaxAbund)*100, \
+                             "%.2f")
+
+               ! if flat ramp
+         if Val(Percent$) < MinPctChange then
+         Result = Result +1
+           SetTabText RESULT_REG[1], "TestResultTab", RampRow, "Result", \
+              SprintF$(ScanBasePeak, "Failed at m/z %2.0f for the following parameters")
+           InsTabRow RESULT_REG[1], "TestResultTab"
+           Row = TabHdrVal (RESULT_REG[1], "TestResultTab", "NumberOfRows")
+           SetTabText RESULT_REG[1], "TestResultTab", Row, "Result", \
+                      NlsMsDiag$(Parm$) +" (flatness "+ Percent$ +"%)"
+         endif ! end if flat ramp
+
+      next i 
+
+      ! Restore the original mass 1   
+      MSMassValue 1, , oldMass1,, oldMass1Sel
+      
+      ! Move the scan to last; clear the first object for drawing
+      ! MoveObj RESULT_REG[2], RESULT_REG
+      dgms_DelObject1 "RESULT_REG"
+      
+    else
+          ! not enough signal
+      Result = 1
+      SetTabText RESULT_REG[1], "TestResultTab", RampRow, "Result", \
+         SprintF$(ScanBasePeak, "Error: Not enough signal at m/z %2.0f " + \
+                                "for ramping test")
+      
+    endif ! end if there's enough signal
+
+    if result = 0 then
+      SetTabText RESULT_REG[1], "TestResultTab", rampRow, "Result", \
+                                SprintF$(ScanBasePeak, "Passed (m/z %2.0f)")   
+    endif
+
+   return Result
+
+    errortrap:  
+     ON ERROR
+     dgMsPrintError    
+     SetTabText RESULT_REG[1], TestResultTab, rampRow, Result, "Error"
+     SetObjHdrText RESULT_REG[1], "ErrMsg",   _ErrMsg$
+     SetObjHdrText RESULT_REG[1], "ErrMacro", _ErrMacro$
+     dgMsIonOpTestCleanUp
+     Generate Error 55555,  "MSD Test ("+_ErrMacro$+"):"+_ErrMsg$
+    return 1
+
+ENDMACRO     ! end  dgMsIonOpTestRamps$
+!***************************************************************************!   
+
+!***************************************************************************!
+NAME dgMsIonOpTestInit                                                      !
+!   Macro to initialize RESULT_REG[1].  Each test case will have a different!
+!   register to hold the test parameters and the test result.  The initial  !
+!   register will use the existing tune values; all tests will vary one or  !
+!   more parameters, acquire the data, and declare a pass/fail.             !
+!                                                                           !
+!   The following tables are defined:                                       !
+!       TestParms:     parameters used for each test
+!       TestResultTab: detected faults and flat ramped parameters
+!       DynamicsParm:  all dynamically ramped parameters         
+!       ParmLimits:    parameter limits                          
+!                                                                           !
+!***************************************************************************!
+LOCAL  IonPol, val, rowNum, IonMode$
+
+   ! Hide the MS Tune display window
+   MSGDisplay 0
+
+   ! Initialize data logging
+   MSBufsize , 65064
+   MSLogData oldLogDataState, 1  ! msTuneData register is used
+      
+   ! define a user object with no data block
+   DelReg (RESULT_REG)
+   NewObj RESULT_REG[1], 1, 0, 0
+
+   ! SetObjHdrVal  RESULT_REG[1], "NoDraw", 1
+
+   ! save ion polarity
+   ! MsParm IonPolarity, IonPol
+   IonPolarity = dgMsCheckTunePol()       ! Will switch to Standard scan mode if in Fast mode
+   SetObjHdrVal RESULT_REG[1], "IonPolarity", IonPol
+   if IonPol = 0 then
+      SetObjHdrText RESULT_REG[1], "IonPol", "Pos"
+   else
+      SetObjHdrText RESULT_REG[1], "IonPol", "Neg"
+   endif
+   MSGetMode IonMode$
+   SetObjHdrText RESULT_REG[1], "IonMode", IonMode$
+
+   ! save Tune Fault Window settings
+   dgIopTestTuneWin = RowByText(_Config[1], Window,, "WinTitle", "=", \
+                               "MSD Tune")
+   clearWin dgIopTestTuneWin
+   val = TabVal(_Config[1], Window, dgIopTestTuneWin, "DefWXLow")
+   SetObjHdrVal RESULT_REG[1], "DefWXLow", val
+   SetTabVal    _Config[1], Window, dgIopTestTuneWin, "DefWXLow", 0
+
+   val = TabVal(_Config[1], Window, dgIopTestTuneWin, "DefWXHigh")
+   SetObjHdrVal RESULT_REG[1], "DefWXHigh", val
+   SetTabVal    _Config[1], Window, dgIopTestTuneWin, "DefWXHigh", 0
+   
+   val = TabVal(_Config[1], Window, dgIopTestTuneWin, "DefWYLow")
+   SetObjHdrVal RESULT_REG[1], "DefWYLow", val
+   SetTabVal    _Config[1], Window, dgIopTestTuneWin, "DefWYLow", 0
+   
+   val = TabVal(_Config[1], Window, dgIopTestTuneWin, "DefWYHigh")
+   SetObjHdrVal RESULT_REG[1], "DefWYHigh", val
+   SetTabVal    _Config[1], Window, dgIopTestTuneWin, "DefWYHigh", 0
+
+   ! Create object header items
+   dgMsTestInfo "IonOpChart", \
+                "dgMsDisplayTest IonOpChart, IonOpRes, IonOpReport", \
+                IOpTestVer$,  "RESULT_REG[1]"
+
+   !***************************************
+   ! Dynamics Parameter Table
+   !***************************************
+   ! Parameter: name of the dynamic parameter
+   ! ParamString: dynamic settings
+   dgMsGetDynamicsParmTab 1
+
+   ! Unlink parameters to enable ramp of Skim2 with dynamic frag (except for G1946D)
+   if MS_SQ_SL = 0 then
+     MSUnlinkParms 1
+     dgMSUnlinked = 1
+
+     ! Apply linked fragmentor dynamic ramp to unlinked fragmentor
+     rowNum = RowByText(RESULT_REG, DynamicsParm,, "Parameter", "i=", \
+                                                           "Frag")
+     if rowNum > 0 then
+       ON ERROR print    ! in case unlinked fragmentor is already dynamically
+                         ! ramped
+       MSDynamic Frag, Enable
+       ON ERROR dgMSPrintError
+       evaluate "MSDynamic Frag, set, " + TabText$(RESULT_REG, DynamicsParm, \
+                 rowNum , "ParmString")
+       MSDynamic Frag, read
+     endif
+   endif
+
+   !***************************************
+   ! MS Parameter Table
+   !***************************************
+   dgMsGetTestParmsTab 1
+   SetObjHdrText RESULT_REG[1], "Scan_or_Capture", "Scan"
+   ! Define the detailed test results table
+   NewTab     RESULT_REG[1], "TestResultTab"
+   NewColText RESULT_REG[1], "TestResultTab", "Text",  ""
+   NewColText RESULT_REG[1], "TestResultTab", "Result",""
+
+   ! save CDS state and turn it off
+   MsCalValve val, 0
+   SetObjHdrVal RESULT_REG[1], "MsCalValve", val
+
+   !print "dgMsIonOpTestInit done."
+   
+   
+ENDMACRO       ! end dgMsIonOpTestInit
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsIonOpRecordFaults
+
+  PARAMETER Text$
+!
+!  Reads full fault string from instrument and copies the fault table
+!  to the test result table when a fault is detected
+! RETURN
+!   0: no fault detected
+!   1: error or fault detected
+!***************************************************************************!
+LOCAL FZero$, Fault$, row, err, fromRow, String$, Result 
+
+   InsTabRow  RESULT_REG[1],"TestResultTab",
+   row = TabHdrval( RESULT_REG[1], "TestResultTab", "NumberOfRows")
+   SetTabText RESULT_REG[1],"TestResultTab", row, "Text",  Text$
+   SetTabText RESULT_REG[1],"TestResultTab", row, "Result","Error"
+   Result=1
+
+   ! clean Fault state
+   FZero$="0x0000000000000000000000000000000000000000000000000000000000000000"
+   err=1
+
+   ! turn on MSD and suppress tune fault window
+   ON ERROR err=1
+   MSScan
+   clearWin dgIopTestTuneWin
+
+   ! read full fault status
+   ON ERROR err=2
+   !MsScQuery ":msc:Flt:Stat:Full?", Fault$
+   Fault$=MsGetFullFault$()
+   ON ERROR
+
+   ! check fault except the parity bit
+   if err=2 then
+    SetTabText RESULT_REG[1],"TestResultTab", row, "Result", "Error: faults not accessible."
+   else
+     if dgMsInterpretFault(Fault$, FZero$, FZero$) <> 0 then
+      SetTabText RESULT_REG[1],"TestResultTab", row, "Result", "Failed"
+      ! copy strings to Test result table
+      FOR FromRow=1 TO TabHdrVal( dgmsFault[1], "Fault", "NumberOfRows")
+        string$ = TabText$(dgmsFault[1], "Fault", FromRow, "String")
+        InsTabRow  RESULT_REG[1], "TestResultTab",
+       row=row+1
+        SetTabText RESULT_REG[1], "TestResultTab", row, "Result", String$
+      NEXT FromRow
+    else
+      SetTabText RESULT_REG[1],"TestResultTab", row, "Result", "Passed"
+      Result=0
+    endif
+   endif
+
+   return Result
+ENDMACRO     ! end  dgMsIonOpRecordFaults
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsIonOpTestCleanUp
+
+! Clean up variables, restore instrument state and return PASS or FAIL
+! result
+!
+! 04/21/03 JZ  Remove Ion Optics cleanup routine from _ABORT$ string
+!***************************************************************************!
+  LOCAL result$, val, valOld
+  Local AbortCmd$
+  Local Pos, LenAbort, LenCmd
+
+  ! dummy error trap to see no error during clean up
+  ON ERROR i=1
+
+  if CHECK( Variable, oldLogDataState) = 1 then
+    MSLogData ,oldLogDataState
+    remove oldLogDataState
+  endif
+  
+  ! Restore ionization mode
+  if dgMSNoiseIonMode$ <> "" then
+     MSMode dgMSNoiseIonMode$
+  endif
+  Remove dgMSNoiseIonMode$
+    
+  ! Relink parameters
+  MSUnlinkParms 0
+  if Check(variable, dgMSUnlinked) = 1 then
+    remove (dgMSUnlinked)
+  endif
+  
+  ! clean up windows
+  MSGDisplay 1
+
+  ! Store test result
+  if RegSize(RESULT_REG) <> 0 then
+    
+  ! Restore parameters to initial conditions
+  dgMsSetTestParms 1, "Original"
+
+  ! Restore Ion Polarity of the tune file
+  MSGetTuneFile _tunepath$ + _DiagTuneFile$, dgOrigPol,,0
+
+  ! Restore CDS state
+  if ObjHdrType(RESULT_REG[1], "MsCalValve") <> 99 then
+     MsCalValve val
+     valOld = ObjHdrVal(RESULT_REG[1], "MsCalValve")
+     if valOld <> val then
+        MSCalValve ,valOld
+     endif
+  endif
+
+  clearWin dgIopTestTuneWin
+  if ObjHdrType(RESULT_REG[1], "DefWXLow") <> 99 then
+     val = ObjHdrVal (RESULT_REG[1], "DefWXLow")
+     SetTabVal    _Config[1], Window, dgIopTestTuneWin, "DefWXLow", val
+     val = ObjHdrVal (RESULT_REG[1], "DefWYLow")
+     SetTabVal    _Config[1], Window, dgIopTestTuneWin, "DefWYLow", val
+     val = ObjHdrVal (RESULT_REG[1], "DefWXHigh")
+     SetTabVal    _Config[1], Window, dgIopTestTuneWin, "DefWXHigh",val
+     val = ObjHdrVal (RESULT_REG[1], "DefWYHigh")
+     SetTabVal    _Config[1], Window, dgIopTestTuneWin, "DefWYHigh",val
+  endif
+
+    SaveObj RESULT_REG, _TunePath$+"dgionopt.reg",NEW
+  endif
+  WinUpdate
+  
+  ! JZ DELETE CLEAN UP MACRO FROM _ABORT$ STRING
+  AbortCmd$="dgMsIonOpTestCleanUp;"
+  Pos=InStr(_abort$,Abortcmd$)
+  IF Pos>0 THEN
+    LenAbort=Len(_abort$)
+    LenCmd=Len(AbortCmd$)
+    if Pos=1 THEN
+      _abort$= _abort$[Pos+LenCmd:LenAbort]
+    else
+      if (Pos+LenCmd)<LenAbort
+        _abort$= _abort$[1:Pos-1] + _abort$[Pos+LenCmd:LenAbort]
+      else
+        _abort$= _abort$[1:Pos-1]
+      endif
+    endif
+  ENDIF
+
+  ! clean message line
+  print " "
+
+ENDMACRO
+!*************************************************************************
+
+!*************************************************************************
+NAME dgMs_DelObject1
+PARAMETER RegName$
+! Move ll object header items from Object# 1 to Object #2 and delete 
+! object 1
+!*************************************************************************
+LOCAL i, ObjHeaderName$, ObjHeaderType          
+LOCAL RegSize, SourceReg$, DestReg$
+
+  evaluate "RegSize = RegSize(" + RegName$ + ")"
+  if (RegSize < 1) then
+     return
+  endif
+
+  ! Copy all object header items and tables
+  i = 1
+  SourceReg$ = RegName$ + "[1]"
+  DestReg$   = RegName$ + "[2]"
+  print sourcereg$, destreg$
+  ObjHeaderName$ = "*"
+  while ObjHeaderName$ <> ""
+     evaluate "ObjHeaderName$ = ObjHdrName$(" + SourceReg$ + ", i)"
+     i = i + 1
+     ! Print "Copying ", ObjHeaderName$, " to TmpGainCalib"
+     if (ObjHeaderName$ <> "ObjClass") and (ObjHeaderName$ <> "") then
+        evaluate "ObjHeaderType = ObjHdrType(" + SourceReg$ + \  
+                 ", ObjHeaderName$)"
+        if ObjHeaderType = 0 then         ! text item
+           evaluate "SetObjHdrText " + DestReg$ + \
+                    ", ObjHeaderName$, ObjHdrText$(" + SourceReg$ + \
+                    ", ObjHeaderName$)"
+        else
+           if ObjHeaderType = 1 then      ! numeric item
+              evaluate "SetObjHdrVal " + DestReg$ + \
+                       ", ObjHeaderName$, ObjHdrVal(" + SourceReg$ + \
+                       ", ObjHeaderName$)"
+           else
+              if ObjHeaderType = 4 then   ! table
+                 evaluate "CopyTab " + SourceReg$ + ", ObjHeaderName$, " + \
+                           DestReg$ + ",     ObjHeaderName$"
+              else 
+                 Print "ResizeGainObj: ", ObjHeaderName$, \
+                       " is of unknown type: ", ObjHeaderType
+              endif
+           endif
+        endif
+     endif
+  endwhile 
+  
+  evaluate "DelObj " + SourceReg$
+    
+  RETURN
+
+ENDMACRO   !* dgMSDelObj1
+!*************************************************************************
+
+!***************************************************************************!
+NAME dgDispRegFix
+! Add Ion optics display to DiagDispReg (for A.05.0x)
+! Revision History:
+! 07/26/99 YD   Removed a section of undocumented code that caused execution
+!               error.
+!***************************************************************************!
+LOCAL i, MsdDiagReg, NewRow
+
+   ! look for evidence that this hasn't been done:
+   if RowByText(DiagDispReg[1], "ScreenTab",, "EntryID", "=", "IonOpChart") \
+               > 0 then
+      RETURN
+   endif
+
+   ! Find MsdDiag screen in DiagDispReg
+   MsdDiagReg = 0
+   i = 1
+   while (i <= RegSize(DiagDispReg))
+      if (ConvertText$(lower, ObjHdrText$(DiagDispReg[i], "Title")) =    \
+                   "msddiag") then
+         MsdDiagReg = i
+         i = RegSize(DiagDispReg)
+      endif
+      i = i + 1
+   endwhile
+   
+   if MsdDiagReg = 0 then
+      Print "dgDispFix: could not find MsdDiag screen"
+      RETURN
+   endif
+   
+   ! Add a descriptive line to the DiagDispReg Chart table
+   NewRow = 1 + RowByText(DiagDispReg[MsdDiagReg], "ScreenTab",, "EntryID", \
+                                                   "=", "IonOpRes")
+   InsTabRow  DiagDispReg[MsdDiagReg], "ChartTable", NewRow
+   SetTabText DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "EntryID", \
+                                       "IonOpChart"
+   SetTabVal  DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "x1", 0.0059
+   SetTabVal  DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "x2", 0.6821
+   SetTabVal  DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "y1", 0.2652
+   SetTabVal  DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "y2", 0.9221
+   SetTabText DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "title", \
+                                       "MS Ion Optics Test SIMRamp Chart"
+   SetTabText DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "xAxisTitle", \
+                                       "Volts"
+   SetTabText DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "yAxisTitle", \
+                                       "Abundance"
+   SetTabVal  DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "NoOfObj", 8
+   SetTabText DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "HelpFile", "MSD"
+   SetTabVal  DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "HelpContext", 7514
+   SetTabText DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "yAxisMode", " ABS"
+   SetTabVal  DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "yAxisFullScale", 0
+   SetTabVal  DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "Separated", 1
+   SetTabText DiagDispReg[MsdDiagReg], "ChartTable", NewRow, "instrAccess", \
+                                       "DIAG_ReturnString$(""DiagTestResult"")"
+
+   ! Add an entry to the DiagDispReg, "ScreenTab" tables 
+    
+   NewRow = 1 + RowByText(DiagDispReg[1], "ScreenTab",, "EntryID", "=", \
+                                           "IonOpRes")
+   InsTabRow  DiagDispReg[1], "ScreenTab", NewRow
+   SetTabText DiagDispReg[1], "ScreenTab", NewRow, "EntryType", "XYCHART"
+   SetTabText DiagDispReg[1], "ScreenTab", NewRow, "EntryID",   "IonOpChart"
+   SetTabText DiagDispReg[1], "ScreenTab", NewRow, "ScreenID",  "MsdDiag"
+   SetTabVal  DiagDispReg[1], "ScreenTab", NewRow, "WinID", 0
+   ! 07/26/99 YD
+   ! I don't understand what are the following section of code doing. I have
+   ! to remove them since they caused execution error.
+   ! NewRow = 1 + RowByText(DiagDispReg[NewRow], "ScreenTab",, "EntryID", "=", \
+   !                                            "IonOpRes")
+   ! InsTabRow  DiagDispReg[NewRow], "ScreenTab", NewRow
+   ! SetTabText DiagDispReg[NewRow], "ScreenTab", NewRow, "EntryType", "XYCHART"
+   ! SetTabText DiagDispReg[NewRow], "ScreenTab", NewRow, "EntryID",   "IonOpChart"
+   ! SetTabVal  DiagDispReg[NewRow], "ScreenTab", NewRow, "WinID", 0
+
+ENDMACRO
+!***************************************************************************!
+
+print "dgIopTst.mac v. " + IopTestVer$ + " loaded."
+
+!********* end of file ******************************************************

@@ -1,0 +1,949 @@
+
+!******************************************************************************
+!*
+!* FILE:  meth3365.mac
+!*
+!* This file contains the macros necessary to import HP3365 methods.
+!* The files, once loaded are saved as new-style methods.
+!* Note that the .DRN file cannot be converted -- instead a check
+!* is made to see if it is non-standard and a warning generated.
+!*
+!* $Header: /PHX3D/parts/macros/meth3365.mac 4.0 1996-03-22 17:45:21-05 hmgr Exp $
+!******************************************************************************
+!*
+!*
+name checksum
+    parameter filename$
+! Standard checksum calculation for an entire file.
+! The result is returned as a single integer with the two checsums
+! in two bytes of the return value.
+
+    local ret, ret2, fsize, done, val, length, i, inputline$
+
+    ret=0
+    ret2=0
+    on error ret=-1
+    fsize=filestat(SIZE,filename$)
+    if ret < 0 then
+       return -1
+    endif
+    on error
+    done=0
+    on error done=1
+    open filename$ for input as #3
+    if done = 1 then
+       return -2
+    endif
+    while done = 0 do
+        input #3,inputline$
+	if done=0 then
+	    length=len(inputline$)
+	    if length > 0 then
+	        for i = 1 to length
+		    val = asc(inputline$[i])
+		    ret = mod(ret + val, 255)
+		    ret2 = mod(ret2 + fsize*val,255)
+		    fsize = fsize - 1
+	        next i
+	    endif
+	    fsize = fsize - 2 ! cr/lf
+	endif
+    endwhile
+    close #3
+    on error
+    return ret + ret2*256
+endmacro
+
+
+name RemoveSlash$
+    parameter path$
+    local length
+    length = len(path$)
+    if length > 1
+	if path$[length:length] = "\"
+	  return path$[1:length-1]
+	endif
+	return path$
+    endif
+    ! length <= 1 path
+    if length = 0
+	return path$
+    endif
+    if path$ = "\"
+	return ""
+    endif
+    return path$
+endmacro
+    
+
+name SelectNew3365MthDir$
+    parameter title$, initpath$ default "", initdir$ default ""
+
+    ! Select the new directory for the method file(s)
+    local button, fstat
+
+    if initpath$ = "" then
+	initpath$ = _methpath$
+    endif
+
+    fstat = 0
+
+    while fstat <> 2 do
+	button = SelectFile(2,Title$,,initpath$,initdir$,fstat)
+
+        ! button = 0; Cancel
+        ! button = 1; path AND file unchanged
+        ! button = 2; path OR  file did change
+        ! fstat  = 0; does not exist
+        ! fstat  = 1; is a file
+        ! fstat  = 2; is a directory
+
+        if button = 0 then
+	   return ""
+	endif
+    endwhile
+    return initpath$+initdir$
+endmacro
+
+
+name cutpath
+    parameter path$
+    ! Find the spot of the "\" just before the last part of the path:
+    ! C:\HPCHEM\1\DATA
+    !            ^
+    ! this is what we want
+    local curcut, prevcut, fulllen
+    fulllen = len(path$)
+    curcut = 1
+    prevcut=-1
+    while curcut > 0  AND curcut < fulllen AND curcut > prevcut do
+    	prevcut=curcut
+	curcut=curcut+instr(path$[curcut:fulllen],"\")
+    endwhile
+    if prevcut <= 1 then
+       return 0
+    endif
+    return prevcut-1
+endmacro     ! cutpath
+
+name SetGCDetectors
+    local conf5890$, det$, i, j
+    DetectorList$ = "ADC|TCD|FID|ECD|NPD|FPD|AIB|TST|NONE"
+    FrontDetector$ = "FID"
+    RearDetector$ = "FID"
+
+    j=RowByText(_config[1],"modules",,"DriverName","=","GC")
+    if (j>=0) then
+        i=RowByVal(_config[1],"moduleInfo",,"nameRef","=",j)
+    else
+        i=-1
+    endif
+
+    if (i<0) then
+	FrontDetector$ = "ADC"
+	RearDetector$ =  "ADC"
+    else
+      if filestat(MODE,_InstPath$+"HP5890.INI")=1 then
+	! Read the HP5890 field and parse detector types
+	conf5890$ = PrivateProfileString$("HP5890Config","HP5890",_InstPath$+"HP5890.INI")
+	if (len(conf5890$)<2)
+	    return
+	endif
+	for i=1 to 2
+	    det$="FID"
+	    if conf5890$[i]="1" then
+		det$="TCD"
+	    endif
+	    if conf5890$[i]="2" then
+		det$="NPD"
+	    endif
+	    if conf5890$[i]="3" then
+		!  Actually, 3 means no detector.
+		det$="NONE"
+	    endif
+	    if conf5890$[i]="4" then
+		det$="ECD"
+	    endif
+	    if conf5890$[i]="5" then
+		det$="FPD"
+	    endif
+	    if conf5890$[i]="6" then
+		det$="AIB"
+	    endif
+	    if i=1 then
+		FrontDetector$ = det$
+	    else
+		RearDetector$ = det$
+	    endif
+	next i
+      endif
+    endif
+endmacro
+
+name Import3365Method
+     parameter  newpath$ default "", path$ default "", file$ default ""
+     local button, fstat, offset, MethParmsError, cutpoint,chksum
+     local currpath$, currfile$, newfile$, tempdir$, tempfile$, savepath$,inline$
+
+     ID_PHX3DSUPPORTFILES_IMPORT_METHOD_18              =  17018  
+     ID_PHX3DSUPPORTFILES_HP3365_METHOD_19              =  17019  
+     ID_PHX3DSUPPORTFILES_NEW_METHOD_PAT_20             =  17020  
+     ID_PHX3DSUPPORTFILES_IMPORT_HP3365_21              =  17021  
+     ID_PHX3DSUPPORTFILES_HP3365_METHOD_22              =  17022  
+     ID_PHX3DSUPPORTFILES__DOES_NOT_EXIS_23             =  17023  
+     ID_PHX3DSUPPORTFILES__IS_NOT_A___MT_24             =  17024  
+     ID_PHX3DSUPPORTFILES_NEW_METHOD_PAT_25             =  17025  
+     ID_PHX3DSUPPORTFILES_NEW_METHOD_PAT_27             =  17027  
+     ID_PHX3DSUPPORTFILES_WARNING__NON_S_29             =  17029  
+     ID_PHX3DSUPPORTFILES_WARNING__NON_S_31             =  17031  
+     ID_PHX3DSUPPORTFILES_WARNING__NON_S_32             =  17032  
+     ID_PHX3DSUPPORTFILES_LOADING_METHOD_33             =  17033  
+     ID_PHX3DSUPPORTFILES_LOADING_DA_MET_35             =  17035  
+     ID_PHX3DSUPPORTFILES_ERROR_OCCURRED_36             =  17036  
+     NLSFileName_phx3dsupport$="phx3dsupport"
+	 if _SequenceOn = 0
+        ! Check for Dirty Method - only if not in sequence
+        if ClearUpDirtyMethod() = 0
+           return
+        endif
+     endif
+
+     if len(path$) = 0 AND len(file$) = 0
+	SetGCDetectors
+	if ( newpath$ = "" )
+	    newpath$ = _MethPath$
+	endif
+	if DialogExists("MethPaths3365") = 0 then
+
+	    ! display dialog box for selecting paths 
+
+            LoadDialog  NLSCoreMacDLL$, "MethPaths3365", "MethPaths3365"
+	    EditBoxParm 10001,file$,1
+	    EditBoxParm 10004,newpath$,1
+	    ComboBoxParm   10005,DetectorList$,FrontDetector$
+	    ComboBoxParm   10006,DetectorList$,RearDetector$
+            enddialog
+	endif
+
+! 10002 is the control id of the Select import method file push button
+	    IdNumber = 10002
+	    while IdNumber > 1 do
+		IdNumber=showDialog("MethPaths3365") 
+		if IdNumber = 10002 then
+		    savepath$ = file$
+		    cutpoint = cutpath(file$)
+		    if (cutpoint <= 0) then
+			path$ = file$
+			file$ = ""
+		    else
+			path$ = file$[1:cutpoint]
+			file$ = file$[cutpoint+1:len(file$)]
+		    endif
+		    button = selectfile(1, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORT_METHOD_18),ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_HP3365_METHOD_19),path$,file$,fstat)
+		    if button = 0
+			file$=savepath$
+		    else
+			file$ = path$+file$
+		    endif
+		else
+		    if IdNumber = 10003 then
+			savepath$ = newpath$
+		        if newpath$ = "" then 
+			    cutpoint = cutpath(file$)
+			    if cutpoint > 0 then
+			        newpath$ = file$[1:cutpoint]
+			    else
+				newpath$ = file$
+			    endif
+			endif
+			cutpoint = cutpath(newpath$)
+			if cutpoint > 0 then
+			    tempdir$ = newpath$[1:cutpoint]
+			    tempfile$ = newpath$[cutpoint+1:len(newpath$)]
+			    tempfile$ = RemoveSlash$(tempfile$)
+			else
+			    tempdir$ = path$
+			    tempfile$= ""
+			endif
+			newpath$ = SelectNew3365MthDir$(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_NEW_METHOD_PAT_20),tempdir$,tempfile$)
+			if newpath$ = "" then
+			    newpath$ = savepath$
+			endif
+		    endif
+		endif
+	    endwhile
+            removedialog("MethPaths3365")
+	    if IdNumber = 0 then
+	       print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORT_HP3365_21)
+	       return
+	    endif
+	    cutpoint = cutpath(file$)
+	    if (cutpoint <= 0) then
+		path$ = file$
+		file$ = ""
+	    else
+		path$ = file$[1:cutpoint]
+		file$ = file$[cutpoint+1:len(file$)]
+	    endif
+     else
+        ! at least one param given - don't show SelectFile box
+        if len(path$) = 0
+           path$ = _methpath$
+        endif
+        if len(file$) = 0
+           file$ = _methfile$
+        endif
+     endif
+
+     if len(path$) > 0
+	path$ = RemoveSlash$(path$)
+     endif
+     if filestat(MODE, path$ + "\" + file$) <> 1   ! not a file
+        print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_HP3365_METHOD_22) + file$ + ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__DOES_NOT_EXIS_23)
+        return
+     else
+	offset = instr(file$,".mth")
+	if (offset = 0) 
+	    offset = instr(file$,".MTH")
+	endif
+	if (offset = 0)
+            print file$ + ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__IS_NOT_A___MT_24)
+            return
+        else
+            ! file exists
+	    newfile$ = file$[1:offset]+"M"
+            currpath$ = _methpath$
+            currfile$ = _methfile$
+
+	    if newpath$ = "" then
+		cutpoint = cutpath(path$)
+		if cutpoint > 0 then
+		    tempdir$ = path$[1:cutpoint]
+		    tempfile$ = path$[cutpoint+1:len(path$)]
+		    tempfile$ = RemoveSlash$(tempfile$)
+		else
+		    tempdir$ = path$
+		    tempfile$= ""
+		endif
+		newpath$ = SelectNew3365MthDir$(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_NEW_METHOD_PAT_25) + newfile$ + ": ",tempdir$,tempfile$)
+
+		if newpath$ = "" then
+		   print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORT_HP3365_21)
+		   return
+		endif
+	    endif
+	    if filestat(MODE,newpath$)<>2 then
+		if newpath$[len(newpath$)] = "\" then
+		    if filestat(MODE,newpath$[1:len(newpath$)-1])<>2 then
+		       print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_NEW_METHOD_PAT_27) + newpath$ + ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__DOES_NOT_EXIS_23)
+		       return
+		    endif
+		else
+		   print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_NEW_METHOD_PAT_27) + newpath$ + ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__DOES_NOT_EXIS_23)
+		   return
+		endif
+	    endif
+	    newpath$ = RemoveSlash$(newpath$) + "\"
+
+            _methpath$ = _instpath$+"temp\"
+            _methfile$ = "xxxyyyz.m"
+	    tempdir$ = _temppath$+"xxxyyyz.m"
+
+	    if filestat(MODE,tempdir$) > 0
+        delete tempdir$,DONTASK
+	    endif
+	    mkdir tempdir$
+
+	    ! Now copy the various pieces of the 3365 method to the
+	    ! temp directory
+	    if path$[len(path$)] <> "\" then
+	    	path$ = path$ + "\"
+	    endif
+            if Check (Macro, CopyInfoFile) = 0 then
+      macro "caltbl.mac"
+            endif
+	    CopyInfoFile path$+file$,tempdir$+"\info.mth"
+	    !execnowait _exepath$+"..\gc\hpchup01.exe "+path$+file$[1:offset]+"CHR "+tempdir$,2
+      progcmd$ = Chr$(34) + _exepath$ + "..\gc\hpchup01.exe" + Chr$(34) + \
+                 " " + Chr$(34) + path$ + file$[1:offset] + "CHR " + Chr$(34)+ \
+                 chr$(34) + tempdir$ + chr$(34)
+                 
+       SetCWD  _ExePath$
+	    execnowait progcmd$,2
+	    tempfile$ = path$+file$[1:offset]+"EVT"
+	    if filestat(MODE,tempfile$) > 0
+	        copy tempfile$,tempdir$+"\events.mac",DONTASK
+	    endif
+	    tempfile$ = path$+file$[1:offset]+"CAL"
+	    if filestat(MODE,tempfile$) > 0
+	        copy tempfile$,tempdir$+"\caltbl.mac",DONTASK
+	    endif
+	    tempfile$ = path$+file$[1:offset]+"RCL"
+	    if filestat(MODE,tempfile$) > 0
+	        copy tempfile$,tempdir$+"\recalib.mth",DONTASK
+	    endif
+	    tempfile$ = path$+file$[1:offset]+"RPT"
+	    if filestat(MODE,tempfile$) > 0
+	        copy tempfile$,tempdir$+"\rptparms.mac",DONTASK
+	    endif
+	    ! Check the drn file: if it is standard do nothing
+	    ! If not generate a warning
+	    tempfile$ = path$+file$[1:offset]+"drn"
+	    if filestat(MODE,tempfile$) > 0
+	        fstat = filestat(SIZE,tempfile$)
+		if (fstat = 1129 OR fstat = 1153) then
+		    chksum=checksum(tempfile$)
+		    if (fstat = 1129 AND chksum <> 8424) OR (fstat = 1153 AND chksum <> 62061) then
+			WriteToLogbook ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_WARNING__NON_S_29)+file$[1:offset]
+			print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_WARNING__NON_S_29)+file$[1:offset]
+		    endif
+		else
+		    WriteToLogbook ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_WARNING__NON_S_31)+file$[1:offset]
+		    print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_WARNING__NON_S_32)+file$[1:offset]
+		endif
+	    endif
+	endif
+     endif
+
+     ! Before loading the method, set ThreshOffset so that
+     ! Alice thresholds will be modified in the events.
+     ThreshOffset = 5
+
+     print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LOADING_METHOD_33) + _methpath$ + _methfile$ + "..."
+     MethParmsError = 0
+     on error MethParmsError = _Error
+     LOADMETHPARAMS
+     on error
+     if MethParmsError = 0
+        button = Event (_DAMethod, OFF)
+        print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LOADING_DA_MET_35)
+        LoadDAMethod
+        button = Event (_DAMethod, ON)
+        ! Error checking!!!!
+	SaveMethod newpath$,newfile$
+     else
+        _methpath$ = currpath$
+        _methfile$ = currfile$
+        print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_ERROR_OCCURRED_36)
+     endif
+
+     remove ThreshOffset
+endmacro
+
+
+name Import3365EachMth
+    parameter fromdir$,todir$
+    local done, position,methfile$, filelist$
+    ! Iterate through the list of .mth's in fromdir$
+    ! and import each of them into todir$
+    filelist$ =  findfile$(RemoveSlash$(fromdir$)+"\*.mth","N") 
+    done=0
+    if filelist$ = "" then
+       done=1
+    endif
+    while done = 0 do
+        position = instr(filelist$,"|")
+	if (position = 0) then
+	   done = 1
+	   methfile$ = filelist$
+	else
+	   methfile$ = filelist$[1:position-1]
+	   filelist$ = filelist$[position+1:len(filelist$)]
+        endif
+	if methfile$="" then
+	    done=1
+	else
+	    import3365method todir$, fromdir$, methfile$
+	endif
+    endwhile
+endmacro
+
+
+name Import3365MthDir
+    ! Select the .mth directory and iterate through the list of files
+    local button, path$, fstat, dir$, newdir$, temppath$, tempdir$
+
+    ID_PHX3DSUPPORTFILES_IMPORT_FROM_ME_37     =17037
+    ID_PHX3DSUPPORTFILES_DIRECTORY_FOR_38      =17038  
+    NLSFileName_phx3dsupport$="phx3dsupport"
+    newdir$ = _methpath$
+    dir$=_methpath$
+    SetGCDetectors
+    if DialogExists("MethDirs3365") = 0 then
+        LoadDialog  NLSCoreMacDLL$, "MethDirs3365", "MethDirs3365"
+        EditBoxParm 10001,dir$,1
+        EditBoxParm 10004,newdir$,1
+        ComboBoxParm   10005,DetectorList$,FrontDetector$
+        ComboBoxParm   10006,DetectorList$,RearDetector$
+        enddialog
+    endif
+
+    IdNumber = 10002
+    while IdNumber > 1 do
+	IdNumber=showDialog("MethDirs3365") 
+	if IdNumber = 10002 then
+	    tempdir$ = dir$
+	else
+	    tempdir$ = newdir$
+	endif
+	if IdNumber > 1 then
+	    cutpoint = cutpath(tempdir$)
+	    if cutpoint > 0 then
+		temppath$ = tempdir$[1:cutpoint]
+		tempdir$ = tempdir$[cutpoint+1:len(tempdir$)]
+		tempdir$ = RemoveSlash$(tempdir$)
+	    endif
+	    if IdNumber = 10002 then
+		tempdir$ = SelectNew3365MthDir$(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORT_FROM_ME_37),temppath$,tempdir$)
+	    else
+		tempdir$ = SelectNew3365MthDir$(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIRECTORY_FOR_38),temppath$,tempdir$)
+	    endif
+	    if tempdir$ <> "" then
+		if IdNumber = 10002 then
+		    dir$ = tempdir$
+		else
+		    newdir$ = tempdir$
+		endif
+	    endif
+	endif
+    endwhile
+    removedialog("MethDirs3365")
+    if IdNumber > 0 then
+        Import3365EachMth dir$,newdir$
+    endif
+    print ""
+endmacro
+
+name Choose3365ImpMth
+  ID_PHX3DSUPPORTFILES_IMPORTING_A_SI_39             =  17039  
+  ID_PHX3DSUPPORTFILES_IMPORTING_ALL_40              =  17040  
+  NLSFileName_phx3dsupport$="phx3dsupport"
+
+	! Decide whether we are importing a single method or a whole directory 
+
+    ! display dialog box for choosing 
+    if DialogExists("Choose3365") = 0 then
+        LoadDialog  NLSCoreMacDLL$, "Choose3365", "Choose3365"
+	Option3365=1
+	OptionGroupParm 10001, Option3365
+        enddialog
+    endif
+
+    print ""
+    if showDialog("Choose3365") > 0 then
+	if Option3365=1 then
+	    print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORTING_A_SI_39)
+	    Import3365Method
+	else
+	    print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORTING_ALL_40)
+	    Import3365MthDir
+	endif
+    else
+        print ""
+    endif
+
+    if (check(VARIABLE,DetectorList$)=1)
+	remove DetectorList$
+	remove FrontDetector$
+	remove RearDetector$
+    endif
+    if (check(VARIABLE,ThreshOffset)=1)
+       remove ThreshOffset
+    endif
+
+
+    removeDialog "Choose3365"
+    remove Option3365
+
+endMacro ! Choose3365ImpMth
+
+
+
+
+
+!******************************************************************************
+!*
+!*
+!* From here on are the macros necessary to import HP3365 files.
+!*
+!******************************************************************************
+!*
+!*
+
+
+name SelectNewFileDir$
+
+    parameter title$, initpath$ default "", initdir$ default ""
+
+    ! Select the new directory for the file(s)
+    local button, fstat
+
+    if initpath$ = "" then
+	initpath$ = _datapath$
+    endif
+
+    fstat = 0
+
+    while fstat <> 2 do
+	button = SelectFile(2,Title$,,initpath$,initdir$,fstat)
+
+        ! button = 0; Cancel
+        ! button = 1; path AND file unchanged
+        ! button = 2; path OR  file did change
+        ! fstat  = 0; does not exist
+        ! fstat  = 1; is a file
+        ! fstat  = 2; is a directory
+
+        if button = 0 then
+	   return ""
+	endif
+    endwhile
+    return initpath$+initdir$
+endmacro     ! SelectNewFileDir$
+
+
+name Import3365File
+
+     parameter  newpath$ default "", path$ default "", file$ default ""
+     local button, fstat, offset, FileParmsError, cutpoint,chksum, dummy
+     local currpath$, currfile$, newfile$, tempdir$, tempfile$, savepath$
+
+   ID_PHX3DSUPPORTFILES__DOES_NOT_EXIS_23             =  17023  
+   ID_PHX3DSUPPORTFILES_FILENAME_AND_D_41             =  17041  
+   ID_PHX3DSUPPORTFILES_IMPORT_DATA_FI_42             =  17042  
+   ID_PHX3DSUPPORTFILES_HP3365_DATA_FI_43             =  17043  
+   ID_PHX3DSUPPORTFILES_SELECT_NEW_PAT_44             =  17044  
+   ID_PHX3DSUPPORTFILES_IMPORT_HP3365_45              =  17045  
+   ID_PHX3DSUPPORTFILES_HP3365_DATA_FI_46             =  17046  
+   ID_PHX3DSUPPORTFILES__IS_NOT_A___D_47              =  17047  
+   ID_PHX3DSUPPORTFILES_NEW_DATA_PATH_48              =  17048  
+   ID_PHX3DSUPPORTFILES_IMPORT_HP3365_49              =  17049  
+   ID_PHX3DSUPPORTFILES_DIRECTORY_50                  =  17050  
+   ID_PHX3DSUPPORTFILES__ALREADY_EXIST_51             =  17051  
+   ID_PHX3DSUPPORTFILES_DIRECTORY_52                  =  17052  
+   ID_PHX3DSUPPORTFILES__ALREADY_EXIST_53             =  17053  
+   ID_PHX3DSUPPORTFILES_DIRECTORY_ALRE_54             =  17054  
+   ID_PHX3DSUPPORTFILES_HP3365_DATA_FILE_217          =  17217
+NLSFileName_phx3dsupport$="phx3dsupport"
+     
+	 if len(path$) = 0 AND len(file$) = 0
+	if newpath$ = "" then
+	    newpath$ = _DataPath$
+	endif
+	if DialogExists("dImportSingle") = 0 then
+	    ! display dialog box for selecting paths 
+            LoadDialog  NLSCoreMacDLL$, "dImportSingle", "dImportSingle"
+	    EditBoxParm 10001, file$,1
+	    EditBoxParm 10004,newpath$,1
+            enddialog
+	endif
+
+	IdNumber = 10002
+	while IdNumber > 1 do
+ReDisplay:
+	    IdNumber=showDialog("dImportSingle")
+            if IdNumber = 1 then
+               if len(file$) = 0 OR len(newpath$) = 0 then
+                   dummy = alert (ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_FILENAME_AND_D_41),3)
+                   goto ReDisplay
+               endif
+            endif 
+	    if IdNumber = 10002 then
+               savepath$ = file$
+	        cutpoint = cutpath(file$)
+	        if (cutpoint <= 0) then
+	            path$ = file$
+		    file$ = ""
+	        else
+	            path$ = file$[1:cutpoint]
+		    file$ = file$[cutpoint+1:len(file$)]
+                endif
+	        button = selectfile(1, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORT_DATA_FI_42),ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_HP3365_DATA_FILE_217),path$,file$,fstat)
+                if button = 0
+	            file$=savepath$
+	        else
+		    file$ = path$+file$
+	        endif
+            else
+		if IdNumber = 10003 then
+		    savepath$ = newpath$
+		    if newpath$ = "" then 
+	                cutpoint = cutpath(file$)
+			if cutpoint > 0 then
+			    newpath$ = file$[1:cutpoint]
+			else
+			    newpath$ = file$
+		        endif
+		    endif
+		    cutpoint = cutpath(newpath$)
+		    if cutpoint > 0 then
+		        tempdir$ = newpath$[1:cutpoint]
+			tempfile$ = newpath$[cutpoint+1:len(newpath$)]
+			tempfile$ = RemoveSlash$(tempfile$)
+		    else
+			tempdir$ = path$
+			tempfile$= ""
+		    endif
+		    newpath$ = SelectNewFileDir$(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SELECT_NEW_PAT_44),tempdir$,tempfile$)
+		    if newpath$ = "" then
+		        newpath$ = savepath$
+		    endif
+		endif
+	    endif
+	endwhile
+        removedialog("dImportSingle")
+	if IdNumber = 0 then
+	   print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORT_HP3365_45)
+	   return 1
+        endif
+	cutpoint = cutpath(file$)
+	if (cutpoint <= 0) then
+	    path$ = file$
+	    file$ = ""
+	else
+	    path$ = file$[1:cutpoint]
+	    file$ = file$[cutpoint+1:len(file$)]
+        endif
+     else
+        ! at least one param given - don't show SelectFile box
+        if len(path$) = 0
+           path$ = _datapath$
+        endif
+        if len(file$) = 0
+           file$ = _datafile$
+        endif
+     endif
+
+     path$ = RemoveSlash$(path$)
+     if filestat(MODE, path$ + "\" + file$) <> 1   ! not a file
+        print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_HP3365_DATA_FI_46) + file$ + ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__DOES_NOT_EXIS_23)
+        return 1
+     else
+	offset = instr(file$,".D")
+	if (offset = 0)
+            print file$ + ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__IS_NOT_A___D_47)
+            return 1
+        else
+            ! file exists
+	    newfile$ = file$[1:offset - 1]
+            currpath$ = _datapath$
+            currfile$ = _datafile$
+
+	    if newpath$ = "" then
+		cutpoint = cutpath(path$)
+		if cutpoint > 0 then
+		    tempdir$ = path$[1:cutpoint]
+		    tempfile$ = path$[cutpoint+1:len(path$)]
+		    tempfile$ = RemoveSlash$(tempfile$)
+		else
+		    tempdir$ = path$
+		    tempfile$= ""
+		endif
+		newpath$ = SelectNewFileDir$(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_NEW_DATA_PATH_48) + newfile$ + ": ",tempdir$,tempfile$)
+
+		if newpath$ = "" then
+		   print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORT_HP3365_49)
+		   return 1
+		endif
+	    endif
+	    if newpath$[len(newpath$)] <> "\" then
+	        newpath$ = newpath$ + "\"
+	    endif
+         endif
+     
+     if FileStat(MODE, NewPath$ + File$) <> -1 Then
+
+         if Option3365 = 1 then
+             message ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIRECTORY_50) + NewPath$ + File$ + ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__ALREADY_EXIST_51)
+         else
+             message ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIRECTORY_52) + NewPath$ + File$ + ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES__ALREADY_EXIST_53)
+             if (alert(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIRECTORY_ALRE_54),4) = 0) then
+                 return 0
+             endif 
+          
+         endif
+         
+     else
+
+         MkDir NewPath$ + file$
+
+         Detector = GetDetectorNumber(File$,Path$)
+
+         ChFile$ = "ADC"
+         if Detector = 1 then
+	     ChFile$ = "TCD"
+	 endif
+	 if Detector = 2 then
+	     ChFile$ = "FID"
+	 endif
+	 if Detector = 3 then
+	     ChFile$ = "ECD"
+	 endif
+	 if Detector = 4 then
+	     ChFile$ = "NPD"
+	 endif
+	 if Detector = 5 then
+	     ChFile$ = "FPD"
+	 endif
+	 if Detector = 6 then
+	     ChFile$ = "AIB"
+	 endif
+
+        Copy Path$ + "\" + File$, NewPath$ + File$ + "\" + ChFile$ + "1A.CH"
+        if Option3365 = 1 
+            LoadFile NewPath$ + File$
+        endif
+    endif
+endif 
+return 1  
+	    
+endmacro  ! Import3365File
+
+
+name ImportAllLoop
+
+    parameter fromdir$,todir$
+    local done, position, datafile$, filelist$
+
+    ! Iterate through the list of .d's in fromdir$
+    ! and import each of them into todir$
+
+    filelist$ =  findfile$(RemoveSlash$(fromdir$)+"\*.d","N") 
+    done=0
+    if filelist$ = "" then
+       done=1
+    endif
+
+    while done = 0 do
+        position = instr(filelist$,"|")
+	if (position = 0) then
+	   done = 1
+	   datafile$ = filelist$
+	else
+	   datafile$ = filelist$[1:position-1]
+	   filelist$ = filelist$[position+1:len(filelist$)]
+        endif
+
+	if datafile$="" then
+	    done=1
+	else
+	    if (Import3365File (todir$, fromdir$, datafile$) = 0) then
+                return
+            endif
+	endif
+    endwhile
+endmacro     ! ImportAllLoop
+
+
+name ImportAllFiles
+
+    ! Select the .d directory and iterate through the list of files
+
+    
+    local button, path$, fstat, dummy
+    local fromdir$, newdir$
+    local temppath$, tempdir$
+    ID_PHX3DSUPPORTFILES_DIRECTORIES_MU_55             =  17055  
+    ID_PHX3DSUPPORTFILES_IMPORT_FROM_DA_56             =  17056  
+    ID_PHX3DSUPPORTFILES_DIRECTORY_FOR_57              =  17057  
+    ID_PHX3DSUPPORTFILES_IMPORT_HP3365_58              =  17058  
+    NLSFileName_phx3dsupport$="phx3dsupport"
+    fromdir$ = ""
+    newdir$ = ""
+
+
+ 
+    if DialogExists("dImportAll") = 0 then
+
+	! display dialog box for selecting paths 
+        LoadDialog  NLSCoreMacDLL$, "dImportAll", "dImportAll"
+	EditBoxParm 10001,fromdir$,1
+	EditBoxParm 10004,newdir$,1
+	endDialog 
+    endif
+
+    IdNumber = 10002
+    while IdNumber > 1 do
+
+ReDisplay:	
+
+        IdNumber=showDialog("dImportAll")
+        if IdNumber = 1 then
+            if len(fromdir$) = 0 OR len(newdir$) = 0 then
+                dummy = alert (ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIRECTORIES_MU_55),3)
+                goto ReDisplay
+            endif
+        endif  
+	if IdNumber = 10002 then
+	    tempdir$ = fromdir$
+	else
+	    tempdir$ = newdir$
+	endif
+
+	if IdNumber > 1 then
+	    cutpoint = cutpath(tempdir$)
+	    if cutpoint > 0 then
+		tempdir$ = tempdir$[cutpoint+1:len(tempdir$)]
+		tempdir$ = RemoveSlash$(tempdir$)
+	    endif
+            temppath$ = _instpath$
+	    if IdNumber = 10002 then
+		tempdir$ = SelectNewFileDir$(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORT_FROM_DA_56),temppath$,tempdir$)
+	    else
+		tempdir$ = SelectNewFileDir$(ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_DIRECTORY_FOR_57),temppath$,tempdir$)
+	    endif
+	    if tempdir$ <> "" then
+		if IdNumber = 10002 then
+		    fromdir$ = tempdir$
+		else
+		    newdir$ = tempdir$
+		endif
+	    endif
+	endif
+        if IdNumber = 0 then
+	   print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORT_HP3365_58)
+	   return 
+        endif
+
+    endwhile
+    removedialog("dImportAll")
+    if IdNumber > 0 then
+        fromdir$ = RemoveSlash$(fromdir$) + "\"
+        ImportAllLoop fromdir$,newdir$
+    endif
+    print ""
+endmacro     !ImportAllFiles
+
+name Choose3365ImpFile
+
+    ID_PHX3DSUPPORTFILES_IMPORTING_A_SI_59             =  17059  
+    ID_PHX3DSUPPORTFILES_IMPORTING_ALL_60              =  17060  
+    NLSFileName_phx3dsupport$="phx3dsupport"
+	! Display dialog box for choosing whether we are importing a single data
+    ! file or a whole directory. 
+    
+    if DialogExists("ChooseMode") = 0 then
+        LoadDialog  NLSCoreMacDLL$, "ChooseMode", "ChooseMode"
+	Option3365=1
+	OptionGroupParm 10001, Option3365
+	endDialog 
+    endif
+
+    print ""
+    if showDialog("ChooseMode") > 0 then
+	if Option3365=1 then
+	    print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORTING_A_SI_59)
+	    x = Import3365File()
+	else
+	    print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_IMPORTING_ALL_60)
+	    ImportAllFiles
+	endif
+    else
+        print ""
+    endif
+
+    removeDialog "ChooseMode"
+    remove Option3365
+
+endMacro ! Choose3365ImpFile
+

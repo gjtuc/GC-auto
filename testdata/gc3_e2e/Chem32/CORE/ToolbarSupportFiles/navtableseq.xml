@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="NavtableSeq" PosStyle="Top" DockRow="0" DockCol="1" Caption="Navigation" PanelName="NavTable">
+		<Static Name="Seq" Visible="1" Enable="1" Text="Seq"  Border="NoBorder"/>
+		<PushButton Name="SequenceTable" Help="Edit Sequence Table" Command="EdSequenceTable" ImageName="Seq_SeqTable20" ImageNameDisabled="Seq_SeqTable20_d"/>
+		<PushButton Name="SequenceParameters" Help="Edit Sequence Parameters" Command="EdSequenceParms" ImageName="Seq_Paramter20" ImageNameDisabled="Seq_Paramter20_d"/>
+		<PushButton Name="SaveSequence" Help="Save current Sequence" Command="SaveCurrentSequence" ImageName="Save_sequence20" ImageNameDisabled="Save_sequence20_d"/>
+		<PushButton Name="PrintSequence" Help="Print current Sequence" Command="PrintSequence" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<StickyButton Name="SeqLogBook" Help="Show/Hide Sequence Logbook" CmdList="SeqX_OpenLogbook 0|SeqX_OpenLogbook 1" ImageName="Sequence_logbook20" ImageNameDisabled="Sequence_logbook20_d"/>
+		<PushButton Name="ReportBrowser" Help="View saved Sequence Summary Report File(s)" CpName="Cp3" Command="RPTV_ViewReportNewUI SeqSumRptGrp" ImageName="Browse_Sequence_Report20" ImageNameDisabled="Browse_Sequence_Report20_d"/>
+		<PushButton Name="ReprocessSequence" Help="Start Sequence reprocessing" Command="RunSequence" NewGroup="1" ImageName="Seq_Reprocess20" ImageNameDisabled="Seq_Reprocess20_d"/>
+		<PushButton Name="StopSequence" Help="Stop Sequence" CpName="Cp3" Command="StopSequence_Wrap" ImageName="Seq_Stop20" ImageNameDisabled="Seq_Stop20_d" Enable="0"/>
+		<StickyButton Name="PauseSequence" Help="Pause/Resume Sequence" CpName="Cp3" CmdList="ResumePausedSequence_Wrap|PauseSequence_Wrap" ImageName="Seq_Pause20" ImageNameDisabled="Seq_Pause20_d" Enable="0"/>
+		<PushButton Name="XSRSingleSeq" Help="Create OpenLAB IR" Command="VC_XSRSingleSeq" Visible="0" ImageName="XSRSingle20" ImageNameDisabled="XSRSingle20_d"/>
+		<StatusList Name="SysStatus" Help="Shows ChemStation Reprocessing Status" NewGroup="1" Enable="1" Width="250" Font="Microsoft Sans Serif, 8, Bold" Border="NoBorder" Justify="Center" Height="20" BkColor="LightGreen" Text="Ready" UseElements="0|0|0|1|1|1" Alias='SysGreen=LightGreen|SysBlue=LightSteelBlue|SysRed=LightSalmon|SysYellow=LightYellow|SysMagenta=Orchid|SysCyan=Aquamarine|SysWhite=GhostWhite|MthGreen=LawnGreen|MthBlue=RoyalBlue|MthRed=Red|MthYellow=Yellow|MthMagenta=Magenta|MthCyan=Cyan|MthWhite=White' Separator="/" Symbols="SysGreen|SysBlue|SysRed|SysYellow|SysMagenta|SysCyan|SysWhite|MthGreen|MthBlue|MthRed|MthYellow|MthMagenta|MthCyan|MthWhite|" Elements="1|1|SysGreen|Ready|MthGreen|"/>
+		<PushButton Name="Help" Help="Navigation Table Help" NewGroup="1" Command="NavTab_CallHelp" ImageName="Help20" ImageNameDisabled="Help20_d"/>
+	</toolbar>
+</graphical_object>
+
+

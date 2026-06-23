@@ -1,0 +1,30 @@
+  67 41e0 3909e8bc    0
+Method       Method started                                 12:38:36 04/28/00
+  67 41e0 3909e8bd    0
+Method       Instrument running sample vial# 41             12:38:37 04/28/00
+   0 1da8 3909e90f  600
+1100 ALS   1 FIA method injecting from vial 41              12:39:59 04/28/00
+   0 1da7 3909e90f  600
+1100 PMP   1 Pressure = 47.2 bar                            12:39:59 04/28/00
+   0 1da8 3909e96f  600
+1100 ALS   1 FIA method injecting from vial 21              12:41:35 04/28/00
+   0 1da8 3909e9ca  600
+1100 ALS   1 FIA method injecting from vial 21              12:43:06 04/28/00
+   0 1da8 3909ea24  600
+1100 ALS   1 FIA method injecting from vial 21              12:44:36 04/28/00
+   0 1da8 3909ea7f  600
+1100 ALS   1 FIA method injecting from vial 21              12:46:07 04/28/00
+   0 1da8 3909eada  600
+1100 ALS   1 FIA method injecting from vial 21              12:47:38 04/28/00
+   0 1da7 3909eb35  600
+1100 PMP   1 Pressure = 48.5 bar                            12:49:09 04/28/00
+  67 41e0 3909eb3b    0
+Method       Instrument run completed                       12:49:15 04/28/00
+ 875 41e0 3909eb3e    0
+Method       Saving Method RUN.M                            12:49:18 04/28/00
+  70 41de 3909eb40    0
+CP Macro     Analyzing rawdata 00041433.D                   12:49:20 04/28/00
+  70 41de 3909eb49    0
+CP Macro     Custom Data Analysis on rawdata 00041433.D     12:49:29 04/28/00
+  67 41e0 3909ebbe    0
+Method       Method completed                               12:51:26 04/28/00

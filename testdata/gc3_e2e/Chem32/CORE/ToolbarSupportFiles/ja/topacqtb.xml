@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="TopAcqTB" PosStyle="TOP" DockRow="0" DockCol="0" Caption="メソッド ＆ ランコントロール" PanelName="Main">
+		<RadioButton Name="TopSeq" Help="シーケンス タスク選択" Command="TLB_SwitchAcqTask TopSeq" Group="1" Enable="1" ImageName="Task_Sequence20" NewGroup="1" ImageNameDisabled="Task_Sequence20_d"/>
+		<RadioButton Name="TopRun" Help="ラン メソッド タスク選択" Command="TLB_SwitchAcqTask TopRun" Group="1" Enable="1" ImageName="Task_RunMethod20" ImageNameDisabled="Task_RunMethod20_d"/>
+		<Static Name="Methods" Visible="1" Enable="1" Text="メソッド" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadMethod" Help="メソッド読み込み" Command="TLB_LoadMethod" ImageName="Load_method20" ImageNameDisabled="Load_method20_d"/>
+		<PushButton Name="SaveMethod" Help="現在のメソッドを保存します" Command="TLB_SaveCurrentMethod" ImageName="Save_method20" ImageNameDisabled="Save_method20_d"/>
+		<NonEditCombobox Name="ActualAndPreviousMethods" Help="前に読み込まれたメソッド ファイルの選択" Enable="1" Table="_Config,1,MethodFile" Selection="1" Width="200"/>
+		<Static Name="Sequences" Visible="1" Enable="1" Text="シーケンス" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadSequence" Help="シーケンス テンプレート ファイル読み込み" Command="LoadSequenceAuto" ImageName="Load_sequence20" ImageNameDisabled="Load_sequence20_d"/>
+		<PushButton Name="SaveSequence" Help="現在のシーケンス テンプレートを保存します" Command="SaveCurrentSequence" ImageName="Save_sequence20" ImageNameDisabled="Save_sequence20_d"/>
+		<NonEditCombobox Name="ActualAndPreviousSequences" Help="前に読み込まれたシーケンス テンプレート ファイルの選択" Enable="1" Table="_Config,1,SequenceFile" Selection="1" Width="200"/>
+		<RadioButton Name="ViewInstr" Help="このボタンを押すとスクリーン レイアウトを変更します" Command="ACQ_SwitchDisplay Instr" Group="2" Enable="1" State="1" ImageName="MR_LayoutB20" NewGroup="1" ImageNameDisabled="MR_LayoutB20_d"/>
+		<RadioButton Name="ViewSignal" Help="このボタンを押すとスクリーン レイアウトを変更します" Command="ACQ_SwitchDisplay Signal" Group="2" Enable="1" ImageName="MR_LayoutC20" ImageNameDisabled="MR_LayoutC20_d"/>
+		<RadioButton Name="ViewAll" Help="このボタンを押すとスクリーン レイアウトを変更します" Command="ACQ_SwitchDisplay All" Group="2" Enable="1" ImageName="MR_LayoutA20" ImageNameDisabled="MR_LayoutA20_d"/>
+		<PushButton Name="InsLogBook" Help="現在のオンライン ログブックを表示/消去" Command="LBK.LOGBOOK" NewGroup="1" ImageName="Logbook20" ImageNameDisabled="Logbook20_d"/>
+		<PushButton Name="SeqLogBook" Help="シーケンス ログブックの表示/非表示します" Command="LBK.OPENSEQLOGBOOK" ImageName="Sequence_logbook20" ImageNameDisabled="Sequence_logbook20_d"/>
+		<PushButton Name="ReportPreview" Help="ピーク定量、計算およびプレビュー" Command="MenuQuantify SCREEN" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="ReportPrint" Help="ピーク定性、定量結果およびレポート出力" Command="MenuQuantify PRINTER" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="EditEntireMethod" Help="メソッド全体の編集" Command="EditEntireMethod" ImageName="Edit_entire_method20" ImageNameDisabled="Edit_entire_method20_d"/>
+		<PushButton Name="LCDiagnostics" Help="LC 診断開始" Command="StartLABDEV" Visible="0" ImageName="Start_LCDiagnostic20" ImageNameDisabled="Start_LCDiagnostic20_d"/>
+		<PushButton Name="Preferences" Help="オープン プレファレンス ダイアログ" Command="CpRequest &quot;Cp2&quot;, &quot;DlgPreferences&quot;" Visible="1" ImageName="Preferences20" ImageNameDisabled="Preferences20_d"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="ChemstoreLock" Help="Chemstation セッションをロック" Command="ChemStoreLock.ChemStoreSessionLock 1,0" NewGroup="1" Visible="0" ImageName="Chemstore_Lock20" ImageNameDisabled="Chemstore_Lock20_d"/>
+		<PushButton Name="ChemstoreClient" Help="Chemstore レビュー クライアント" Command="ChemStoreShowReviewClient" Visible="0" ImageName="Chemstore_ReviewClient20" ImageNameDisabled="Chemstore_ReviewClient20_d"/>
+	</toolbar>
+</graphical_object>

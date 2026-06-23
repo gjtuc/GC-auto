@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ApplicationCustomizationSettings xsi:noNamespaceSchemaLocation="ApplicationCustomizationSettings.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <FLDSpectraEnabled>true</FLDSpectraEnabled>
+  <FLD3DScanEnabled>true</FLD3DScanEnabled>
+  <VWDScanEnabled>true</VWDScanEnabled>
+  <RunRecoveryEnabled>false</RunRecoveryEnabled>
+  <OverlappedInjectionSupported>true</OverlappedInjectionSupported>
+  <LicopType>DotNetLicop</LicopType>
+  <IsDisplayNameEditable>true</IsDisplayNameEditable>
+  <OnlyFullSpectraSupported>false</OnlyFullSpectraSupported> 
+  <ExtendDeviceRunUntilEndOfRawData>true</ExtendDeviceRunUntilEndOfRawData>
+  <SignalDataUnitsConfigurable>true</SignalDataUnitsConfigurable>
+  <SampleExtensionsSupported>true</SampleExtensionsSupported>
+  <ShowDefaultTrayUIContextMenuEntries>false</ShowDefaultTrayUIContextMenuEntries>
+  <MultipleSpectraPerDeviceSupported>false</MultipleSpectraPerDeviceSupported>
+  <ShowWellplateInformationAsDiagItems>true</ShowWellplateInformationAsDiagItems>
+  <ClusteringSupported>false</ClusteringSupported>
+  <OnlyIntegralSpectraWavelengthsSupported>false</OnlyIntegralSpectraWavelengthsSupported>
+</ApplicationCustomizationSettings>

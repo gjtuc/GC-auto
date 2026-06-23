@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="CalibT" PosStyle="TOP" DockRow="2" DockCol="0" Caption="キャリブレーション カーソル ツールバー" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="シグナル表示" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals " DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="グラフィック ツールバー表示" CmdList="ANN_CloseTask|ANN_InitTask" Group="0" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="ウィンドウを拡大します" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="ウィンドウをズーム アウトします" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="クロマトグラムからピークを選択するとキャリブレーション テーブル内のそのピークがハイライトします" Command="CalTabMain.CAL_SetCalibMenuSelection &quot;NoSel&quot;,1" Group="2" NewGroup="1" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="DeletePeak" Help="クロマトグラムから選択したキャリブレーション ピークをキャリブレーション テーブルから削除します" Command="CalTabMain.CAL_SetCalibMenuSelection &quot;DeletePeak&quot;,1" Group="2" ImageName="Int_RemovePeak20" ImageNameDisabled="Int_RemovePeak20_d"/>
+		<RadioButton Name="AddPeak" Help="クロマトグラムから未知のピークを選択して、キャリブレーション テーブルに追加します" Command="CalTabMain.CAL_SetCalibMenuSelection &quot;AddPeak&quot;,1" Group="2" ImageName="Calib_AddPeak20" ImageNameDisabled="Calib_AddPeak20_d"/>
+		<RadioButton Name="RecalComp" Help="クロマトグラムから化合物(例えば、メイン ピーク)を選択し、リキャリブレーションを行います" Command="CalTabMain.CAL_SetCalibMenuSelection &quot;RecalComp&quot;,1" Group="2" ImageName="Calib_SelectCompound20" ImageNameDisabled="Calib_SelectCompound20_d"/>
+		<NonEditCombobox Name="SelLevel" Help="追加ピークやリキャリブレーション ピーク用のレベルを設定します" NewGroup="0" Enable="1" DefCmdParNumber="1" DefCommand="CalTabMain.CAL_OnLevelCombo" Width="100"/>
+		<Static Name="RecalMode" Text="" Help="" Width="100" Enable="1"/>
+		<NonEditCombobox Name="SelOptionSet" Help="キャリブレーション テーブル オプションを設定します" NewGroup="0" Enable="1" DefCmdParNumber="1" DefCommand="CalTabMain.CAL_OnOptionsCombo" Width="100"/>
+		<PushButton Name="Options" Help="キャリブレーション テーブルのオプションを設定" Command="CalTabMain.CAL_TLBFunction Options,1" ImageName="Calib_CalibTableOptions20" ImageNameDisabled="Calib_CalibTableOptions20_d"/>
+		<StickyButton Name="ToggleChrom" State="1" Help="現在のクロマトグラムを表示/消去" CmdList="CalTabMain.CAL_TLBFunction ShowChrom,1|CalTabMain.CAL_TLBFunction HideChrom,1" ImageName="Calib_HideSignals20" ImageNameDisabled="Calib_HideSignals20_d" Enable="1"/>
+		<PushButton Name="ZoomInMS" Help="MS ウィンドウを拡大します" Command="MSD_SetCalibIonSelection &quot;&quot;" NewGroup="1" Visible="0" ImageName="Spec_ZoominMS20" ImageNameDisabled="Spec_ZoominMS20_d"/>
+		<PushButton Name="ExtractIon" Help="抽出イオン クロマトグラム" Command="MSD_SetCalibIonSelection &quot;CalibSelectIon&quot;" Visible="0" ImageName="Spec_ExtractIons20" ImageNameDisabled="Spec_ExtractIons20_d"/>
+		<PushButton Name="RemoveExtracedIons" Help="ディスプレイ ウィンドウから抽出イオン クロマトグラムを削除します" Command="MS_RemoveEICs" Visible="0" ImageName="Calib_RemoveExtIons20" ImageNameDisabled="Calib_RemoveExtIons20_d"/>
+	</toolbar>
+</graphical_object>

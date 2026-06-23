@@ -1,0 +1,6 @@
+Stoptime=system
+Posttime=off
+Autobalance=on
+Peakwidth=0.100
+SignalA=254,   4, 450,  80
+SignalB=230,   4, 450,  80

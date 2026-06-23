@@ -1,0 +1,1053 @@
+! This is the rundamth.mac equivalent for LCMS-Auto
+!macro _AutoMSPath$+"calcspec.mac"
+!macro _AutoMSPath$+"lcmsauto.mac"
+!macro _AutoMSPath$+"makelcms.mac"
+
+name DoRunLCMS
+
+print "Running LCMS-Auto"
+  LCMS_Make_LCMSAuto
+  LDMS_CheckLoadDLC
+  ExecHook "PreLoadFile"      ! can be used to change file name and other vars
+  LoadReqSignals              ! load all required signals
+  ! LCMS-Auto only works with a single LC chromatogram -- choose 
+  SelectCorrectSignals
+
+  ExecHook "PreInteg"         ! can be used to modify the loaded signals, e.g.
+                              ! by scaling or shifting, subtract blank run, etc.
+  GUISetDARunStatus "Integ"   ! display Integrate state on GUI
+  IntSignals                  ! integrate
+
+  LCMS_SmoothAlign 0
+  ExecHook "PostInteg"        ! can be used to do manual integ, or
+                              ! re-integrate with optimized parameters.
+  GUISetDARunStatus "Quant"   ! display Quantify state on GUI
+  LCMS_AutoCalcRep
+!    QuantPeaks                ! quantify peaks
+!    DoPrintReport             ! print report if not disabled by seq sum report
+!    DoSaveChromResults        ! save results for seq sum report
+!    DoCustomDA                ! custom Data Analysis if enabled
+!    DoSaveGLPData             ! save GLP Data if enabled
+    ExecHook "PostDA"         ! can be used to transfer result files
+  GUISetDARunStatus "Done"    ! finish step on GUI
+  return
+endmacro
+
+name SelectCorrectSignals
+    ! Remove all but the TIC and the "correct" LC signal
+    ! If LCSignal in table LCMSAuto is "", choose the first signal
+    ! Otherwise choose the first one that matches LCSignal
+    local objnum, ticnum, sigdesc$, LCSignal$
+    LCSignal$="" ! TabHdrText$(_damethod[1],"LCMSAuto",LCSignal)
+    objnum=1
+    while (objnum <= regsize(chromreg)) do
+	sigdesc$ = objhdrtext$(chromreg[objnum],"signaldesc")
+	if instr(sigdesc$,"MSD") = 1 AND instr(sigdesc$,"TIC")>0 then
+	    ticnum=objnum
+	    objnum = objnum+1
+	else
+	    if instr(sigdesc$,LCSignal$)=1 OR LCSignal$="" then
+		! If LCSignal is "", change it so no other matches
+		LCSignal$="no other matches"
+		objnum=objnum+1
+	    else
+		delobj chromreg[objnum]
+	    endif
+	endif
+    endwhile
+    if ticnum>1 then
+	moveobj chromreg[ticnum],chromreg[1]
+    endif
+endmacro
+    
+
+
+!############################################################################
+Name BracketingRequired
+
+! this updates and returns the flag "Bracketing" in SeqInfoReg[1]
+!############################################################################
+
+  local Bracketing
+
+  if _SequenceOn = 1 then
+    Bracketing = ObjHdrVal (SeqInfoReg[1], "Bracketing")
+    if (FirstSeqRun = 1) or ((NewSeqMethod = 1) and (SeqResumeRun = 0)) then
+      Bracketing = 0
+    endif
+    if (_CalibLine > 0) and (_UpdRF = 3) then
+      if _CalibInject >= 11 then
+        Bracketing = 1
+      else
+        if Bracketing = 0 then
+          ! This requests to start bracketing but _CalibInject is not set
+          ! consistently. Perhaps the user forgot to specify a recalib interval.
+          ! Bracket not possible, will do Replace instead
+          WriteToLogbook NLSCoreChrom$("LogNoBracket")
+          _UpdRF = 2            ! replace
+          SetUpdateResp         ! set ChromRes[1] (QuantParm, Update Response)
+          return 0
+        endif
+      endif
+    endif
+    SetObjHdrVal SeqInfoReg[1], "Bracketing", Bracketing
+    return Bracketing
+  else
+    return 0
+  endif
+endmacro
+
+!############################################################################
+Name LoadReqSignals
+
+! this loads all signals required in _DAMethod[1], Signal
+!############################################################################
+
+  local MethRow,nMethRows,MethDesc$
+  local nSigRows, Start, End
+  local nObj, i, found
+  local ForceLoadAll
+  local SignalObj
+  local SigWL1, SigWL2, RefWL1, RefWL2
+
+  WriteToLogbook sprintf$(DADataFile$, NLSCoreChrom$("LogRunDA"))
+  File DADataPath$ + DADataFile$
+  if RowByVal (_Config[1], "Signal",, "Source", "=", 1) = -1 then
+    ! no signals available in data file
+    generate error 30005, ""
+  endif
+  if _SequenceOn = 0 then  ! within Run Method
+    UpdateFourFileMenu "DataFile", DADataPath$, DADataFile$
+  endif
+  ShowTitle
+  REG_Path$ = ""        ! reset path for the Save Window function
+  MakeChromRes          ! delete old results, prepare initial contents
+  if _SequenceOn = 1 then  ! within Run Sequence
+    SetObjHdrText ChromRes[1], "SeqPathAndFile", _SeqPath$ + _SeqFile$
+  endif
+  if RegSize(ChromReg) > 0 then
+    DelObj ChromReg
+  endif
+  LoadDADiag            ! load DADiag register, if needed
+
+  ForceLoadAll = 0
+  SignalObj = 0
+  nMethRows = TabHdrVal (_DAMethod[1],"Signal","NumberOfRows")
+  if nMethRows > 0 then
+    ! for each signal in _DAMethod[1].Signal check the signal description
+    ! against the available signals in _Config[1].Signal:
+    nSigRows = TabHdrVal (_Config[1], "Signal", "NumberOfRows")
+    MethRow = 1
+    while (MethRow <= nMethRows) and (ForceLoadAll = 0) do
+      MethDesc$ = TabText$ (_DAMethod[1],"Signal",MethRow,"Desc")
+      if MethDesc$ <> "" then
+        ParseSigDesc MethDesc$ ! sets variables Desc_...
+        if Desc_Valid = 1 then
+          if Desc_SigSource = 0 then
+            ! this requests a signal from a .CH file
+            if LoadAcqSignal (MethRow, MethDesc$, nSigRows) = 1 then
+              SignalObj = RegSize(ChromReg)
+            else
+              ForceLoadAll = 1       ! force to load all available signals
+            endif
+          else
+            if Desc_SigSource = 1 then
+              ! this requests a signal to be extracted from spectra
+              SigWL1 = Desc_SetPoint1 - Desc_SetPoint2 / 2
+              SigWL2 = Desc_SetPoint1 + Desc_SetPoint2 / 2
+              RefWL1 = Desc_SetPoint3 - Desc_SetPoint4 / 2
+              RefWL2 = Desc_SetPoint3 + Desc_SetPoint4 / 2
+              LoadChrom Desc_Detector$, \
+                        TabVal (_DAMethod[1],"Signal",MethRow,"Start"): \
+                        TabVal (_DAMethod[1],"Signal",MethRow,"End"), \
+                        SigWL1 : SigWL2, RefWL1 : RefWL2, \
+                        ChromReg
+              SignalObj = RegSize(ChromReg)
+            else
+              if Desc_SigSource = 2 then
+                ! this requests a signal from LCDIAG.REG
+                CopyInstrDataCurve MethDesc$
+              else
+                ! unknown Desc_SigSource
+                ForceLoadAll = 1       ! force to load all available signals
+              endif
+            endif
+          endif
+        else
+          ! MethDesc$ could not be parsed correctly
+          WriteToLogbook sprintf$(MethDesc$, NLSCoreChrom$("LogBadSigDesc"))
+          ForceLoadAll = 1       ! force to load all available signals
+        endif
+      else ! MethDesc$ empty
+        ForceLoadAll = 1       ! force to load all available signals
+      endif ! MethDesc$
+      MethRow = MethRow+1
+    endwhile
+  endif
+
+  if (ForceLoadAll = 1) and (RegSize(ChromReg) > 0) then
+    DelObj ChromReg
+  endif
+
+  if RegSize(ChromReg) <= 0 then
+    ! load all available signals:
+    LoadSignal , , , ChromReg
+    SignalObj = 1
+  endif
+  if regsize(chromreg)>1 then
+	delobj chromreg[2:regsize(chromreg)]
+  endif
+  ! YD    talked to Nora. This might be a dead function.
+  LoadTIC chromreg
+  moveobj chromreg[2],chromreg[1]  ! Must have TIC first
+
+  ! load rawdata file information from ChromReg[SignalObj] into ChromRes[1]:
+  if SignalObj = 0 then
+    ! Signal Details contains only Instrument Data Curves
+    Generate error 29999, ""
+  endif
+  LoadFileInfo SignalObj
+
+  GetInstrConditions    ! if available, extract info about Start/Stop etc.
+
+  ! load sample table info from SAMPLE.MAC to variables:
+  if (_SequenceOn = 1) and (_SeqMode = 3) then
+    LoadSampleVars 1
+  else
+    LoadSampleVars 0
+  endif
+
+  AddInstrOverlays      ! append instrument curves to ChromReg, if needed
+
+  ! Make sure the graphics is updated as well.
+  if FreeWin(38) <> 38 then     ! Window exists
+    DrawSignals
+  endif
+
+  return
+endmacro
+
+!############################################################################
+Name LoadAcqSignal
+
+  parameter MethRow             ! current row in _DAMethod[1], Signal
+  parameter MethDesc$           ! _DAMethod[1], Signal, MethRow, Desc
+  parameter nSigRows            ! number of rows in _Config[1], Signal
+
+! this loads a signal from a .CH file
+! Return:
+! 0: signal not found
+! 1: signal loaded
+!############################################################################
+
+  local SigRow, Start, End
+  local i, found, ok
+
+  if nSigRows = 0 then
+    ! this should have been checked by calling macro already
+    return 0
+  endif
+
+  SigRow = 1
+  repeat
+    SigRow = RowByText (_Config[1], "Signal", SigRow:-1, \
+                        "Desc", "=", MethDesc$)
+    if SigRow > 0 then
+      if TabVal (_Config[1],"Signal",SigRow,"Source") = 1 then
+        ok = 1
+      else
+        if SigRow < nSigRows then
+          SigRow = SigRow + 1
+          ok = 0
+        else
+          SigRow = -1
+          ok = 1
+        endif
+      endif
+    else
+      ok = 1
+    endif
+  until ok = 1
+
+  if SigRow = -1 then
+    ! This requests an acquired signal which is not available.
+    ! Check if at least the required .CH file is available;
+    ! i.e. check for changed wavelengths or bandwidths:
+    SigRow = 1
+    found = 0
+    while found = 0 do
+      SigRow = RowByVal (_Config[1], "Signal", SigRow:-1, \
+                         "Source", "=", 1)
+      if SigRow > 0 then
+        ! This is a row generated by the File cmd
+        if (TabText$ (_Config[1], "Signal", SigRow, "Detector") = \
+            Desc_Detector$) and \
+           (TabText$ (_Config[1], "Signal", SigRow, "SignalId") = \
+            Desc_SignalId$) \
+        then
+          found = 1
+        else
+          SigRow = SigRow + 1
+          if SigRow > nSigRows then
+            found = -1
+          endif
+        endif
+      else
+        ! no more rows generated by the File cmd available
+        found = -1
+      endif
+    endwhile
+
+    ! Generate warning, that signal is requested but can't be loaded
+    WriteToLogbook sprintf$(MethDesc$, NLSCoreChrom$("LogCantLoadSig1"))
+    WriteToLogbook NLSCoreChrom$("LogCantLoadSig2")
+
+    if found = -1 then
+      ! no substitute signal found; quit
+      return 0
+    endif
+
+    ! .CH file is available.
+    ! Generate warning, that other signal will be loaded
+    WriteToLogbook sprintf$(TabText$(_Config[1], "Signal", SigRow, "Desc"), \
+                            NLSCoreChrom$("LogCantLoadSig3"))
+
+    ! Switch back to uncalibrated report
+    SetObjHdrVal ChromRes[1], "WrongSignals", 1
+  endif
+
+  Start = TabVal (_DAMethod[1], "Signal", MethRow, "Start")
+  End = TabVal (_DAMethod[1], "Signal", MethRow, "End")
+  if (Start > 0) and (End = 0) then
+    ! This request the last part of the signal.
+    ! If the parameters are given to LoadSignal as they are, the
+    ! command would swap them, thereby loading the first part of
+    ! the signal instead of the last part.
+    ! Therefore we have to substitute the correct end time.
+    End = TabVal (_Config[1], "Signal", SigRow, "End")
+  endif
+
+  LoadSignal Desc_Detector$, Desc_SignalId$, Start : End, ChromReg
+
+  return 1
+endmacro
+
+!############################################################################
+Name IntSignals
+
+! integrate
+!############################################################################
+
+  IntegrateObj ChromReg
+  !Use the new macro writeable header item
+  if ObjHdrVal(_DAMethod[1],"ApplyManintExt") = 1 then
+     ApplyManIntEvents
+  endif
+  ! reset the flag that has been set in LoadDAMethod and will be checked
+  ! in MenuQuantify:
+  DA_IntResultsDirty = 0
+  return
+endmacro
+
+!############################################################################
+Name SetCalibInfo
+
+  parameter RunType default _RunType
+  parameter SampleLevel$ default val$(_CalibLevel)
+
+! Sets RunType and SampleLevel for calibration run (or sample run if 0,"")
+!############################################################################
+
+  SetTabHdrVal  ChromRes[1], "QuantParm", "RunType", RunType
+  SetTabHdrText ChromRes[1], "QuantParm", "SampleLevel", SampleLevel$
+  return
+endmacro
+
+!############################################################################
+Name SetUpdateRT
+
+  parameter UpdateRT default _UpdRT
+
+! define updating of retention times for next recalibration
+!############################################################################
+
+  if UpdateRT = 1 then
+    ! Average
+    SetTabHdrVal ChromRes[1], "QuantParm", "RTUpdate", \
+                 TabHdrVal (_DAMethod[1], "QuantParm", "RTUpdate")
+    SetTabHdrVal ChromRes[1], "QuantParm", "RTReplace", 0
+    SetTabHdrVal ChromRes[1], "QuantParm", "RTUpdWeight", \
+                 TabHdrVal (_DAMethod[1], "QuantParm", "RTUpdWeight")
+  else
+    if UpdateRT = 2 then
+      ! Replace
+      SetTabHdrVal ChromRes[1], "QuantParm", "RTUpdate", 2
+      SetTabHdrVal ChromRes[1], "QuantParm", "RTReplace", 1
+      SetTabHdrVal ChromRes[1], "QuantParm", "RTUpdWeight", 100
+    else
+      ! No update
+      SetTabHdrVal ChromRes[1], "QuantParm", "RTUpdate", 0
+      SetTabHdrVal ChromRes[1], "QuantParm", "RTReplace", 0
+    endif
+  endif
+  return
+endmacro
+
+!############################################################################
+Name SetUpdateResp
+
+  parameter UpdateRF default _UpdRF
+
+! define updating of response factors for next recalibration
+!############################################################################
+
+  if UpdateRF = 1 then
+    ! Average
+    SetTabHdrVal ChromRes[1], "QuantParm", "RespUpdate", \
+                 TabHdrVal (_DAMethod[1], "QuantParm", "RespUpdate")
+    SetTabHdrVal ChromRes[1], "QuantParm", "RespReplace", 0
+    SetTabHdrVal ChromRes[1], "QuantParm", "RespUpdWeight", \
+                 TabHdrVal (_DAMethod[1], "QuantParm", "RespUpdWeight")
+  else
+    if UpdateRF = 2 then
+      ! Replace
+      SetTabHdrVal ChromRes[1], "QuantParm", "RespUpdate", 2
+      SetTabHdrVal ChromRes[1], "QuantParm", "RespReplace", 1
+      SetTabHdrVal ChromRes[1], "QuantParm", "RespUpdWeight", 100
+    else
+      ! No update
+      ! (UpdateRF = 0) or (UpdateRF = 3)
+      ! In case of bracketing (UpdateRF = 3) this macro has to be called
+      ! later with either replace or average.
+      SetTabHdrVal ChromRes[1], "QuantParm", "RespUpdate", 0
+      SetTabHdrVal ChromRes[1], "QuantParm", "RespReplace", 0
+    endif
+  endif
+  return
+endmacro
+
+!############################################################################
+Name ClearBracketCalib
+
+! Clear the BracketCalib table
+!############################################################################
+
+  DelTab SeqInfoReg[1], "BracketCalib"
+  NewTab SeqInfoReg[1], "BracketCalib"
+  NewColText SeqInfoReg[1], "BracketCalib", "DataPath"
+  NewColText SeqInfoReg[1], "BracketCalib", "DataFile"
+  NewColText SeqInfoReg[1], "BracketCalib", "SampleName"
+  return
+endmacro
+
+!############################################################################
+Name SaveBracketCalib
+
+! Save file names for use by PrintBracketSamples
+!############################################################################
+
+  local row
+
+  InsTabRow SeqInfoReg[1], "BracketCalib"
+  row = TabHdrVal (SeqInfoReg[1], "BracketCalib", "NumberOfRows")
+  SetTabText SeqInfoReg[1], "BracketCalib", row, "DataPath", DADataPath$
+  SetTabText SeqInfoReg[1], "BracketCalib", row, "DataFile", DADataFile$
+  SetTabText SeqInfoReg[1], "BracketCalib", row, "SampleName", \
+             ObjHdrText$ (ChromRes[1], "SampleName")
+  return
+endmacro
+
+!############################################################################
+Name PrintBracketSamples
+
+  parameter Destination$ default "PRINTER"
+
+! print info about used calibration and sample runs
+!############################################################################
+
+  local row, DataPath$, DataFile$, SampleName$, nRows, SampleRuns
+
+  if (Destination$="SCREEN") or (Destination$="PRINTER") or \
+     (Destination$="TXT") \
+  then
+    if ObjHdrType (SeqInfoReg[1], "BracketSample") = 4 then
+      SampleRuns = TabHdrVal (SeqInfoReg[1], "BracketSample", "SampleRuns")
+      if SampleRuns > 0 then
+        ! print seq file name and header info for calibration runs
+        print using #5, NLSCoreQnt$("HdrBrackCalib"), _SeqPath$ + _SeqFile$
+        nRows = TabHdrVal (SeqInfoReg[1], "BracketCalib", "NumberOfRows")
+        for row = 1 to nRows
+          DataPath$ = TabText$ (SeqInfoReg[1], "BracketCalib", row, "DataPath")
+          DataFile$ = TabText$ (SeqInfoReg[1], "BracketCalib", row, "DataFile")
+          SampleName$ = TabText$ (SeqInfoReg[1], "BracketCalib", row, "SampleName")
+          print using #5, "    %    %/", DataPath$ + DataFile$, SampleName$
+        next row
+        print using #5, NLSCoreQnt$("HdrBrackSample")
+        for row = 1 to SampleRuns
+          DataPath$ = TabText$ (SeqInfoReg[1], "BracketSample", row, "DataPath")
+          DataFile$ = TabText$ (SeqInfoReg[1], "BracketSample", row, "DataFile")
+          SampleName$ = TabText$(SeqInfoReg[1], "BracketSample", row, "SampleName")
+          print using #5, "    %    %/", DataPath$ + DataFile$, SampleName$
+        next row
+        print #5, ""
+      endif
+    endif
+  endif
+  return
+endmacro
+
+!############################################################################
+Name ClearBracketSample
+
+! Clear the BracketSample table
+!############################################################################
+
+  DelTab SeqInfoReg[1], "BracketSample"
+  NewTab SeqInfoReg[1], "BracketSample"
+  NewColVal  SeqInfoReg[1], "BracketSample", "ALSBottle"
+  NewColVal  SeqInfoReg[1], "BracketSample", "CalibInject"
+  NewColVal  SeqInfoReg[1], "BracketSample", "CalibLevel"
+  NewColVal  SeqInfoReg[1], "BracketSample", "CalibLine"
+  NewColText SeqInfoReg[1], "BracketSample", "DataFile"
+  NewColText SeqInfoReg[1], "BracketSample", "DataName"
+  NewColText SeqInfoReg[1], "BracketSample", "DataPath"
+  NewColVal  SeqInfoReg[1], "BracketSample", "Dilution"
+  NewColVal  SeqInfoReg[1], "BracketSample", "ISTDAmount"
+  NewColVal  SeqInfoReg[1], "BracketSample", "LastSeqRun"
+  NewColVal  SeqInfoReg[1], "BracketSample", "Multiplier"
+  NewColVal  SeqInfoReg[1], "BracketSample", "Replicate"
+  NewColVal  SeqInfoReg[1], "BracketSample", "RunType"
+  NewColVal  SeqInfoReg[1], "BracketSample", "SampleAmount"
+  NewColText SeqInfoReg[1], "BracketSample", "SampleInfo"
+  NewColText SeqInfoReg[1], "BracketSample", "SampleName"
+  NewColVal  SeqInfoReg[1], "BracketSample", "SeqIndex"
+  NewColVal  SeqInfoReg[1], "BracketSample", "UpdRF"
+  NewColVal  SeqInfoReg[1], "BracketSample", "UpdRT"
+  NewTabHdrVal SeqInfoReg[1], "BracketSample", "SampleRuns", 0
+  return
+endmacro
+
+!############################################################################
+Name SaveBracketSample
+
+  parameter CalibRun default 0
+
+! save the current run in the BracketSample table, and save the necessary
+! registers to files.
+!############################################################################
+
+  local row
+
+  SaveObj ChromReg, DADataPath$+DADataFile$ + "\SIGNAL"+val$(_Instance)+".REG",\
+          "NEW"
+  SaveObj ChromRes, DADataPath$+DADataFile$ + "\RESULT"+val$(_Instance)+".REG",\
+          "NEW"
+  InsTabRow SeqInfoReg[1], "BracketSample"
+  row = TabHdrVal (SeqInfoReg[1], "BracketSample", "NumberOfRows")
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "ALSBottle", _ALSBottle
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "CalibInject", _CalibInject
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "CalibLevel", _CalibLevel
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "CalibLine", _CalibLine
+  SetTabText SeqInfoReg[1], "BracketSample", row, "DataFile", DADataFile$
+  SetTabText SeqInfoReg[1], "BracketSample", row, "DataName", _DataName$
+  SetTabText SeqInfoReg[1], "BracketSample", row, "DataPath", DADataPath$
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "Dilution", _Dilution
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "ISTDAmount", _ISTDAmt
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "LastSeqRun", LastSeqRun
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "Multiplier", _Multiplier
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "Replicate", _Replicate
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "RunType", _RunType
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "SampleAmount", _SampAmt
+  SetTabText SeqInfoReg[1], "BracketSample", row, "SampleInfo", _SampInfo$
+  SetTabText SeqInfoReg[1], "BracketSample", row, "SampleName", \
+             ObjHdrText$ (ChromRes[1], "SampleName")
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "SeqIndex", _SeqIndex
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "UpdRF", _UpdRF
+  SetTabVal  SeqInfoReg[1], "BracketSample", row, "UpdRT", _UpdRT
+  if CalibRun = 0 then
+    ! In the BracketSample the first couple of rows are sample runs,
+    ! the remaining rows are calibration runs. SampleRuns is the number
+    ! of sample runs.
+    SetTabHdrVal SeqInfoReg[1], "BracketSample", "SampleRuns", row
+  else
+    ! This is a calibration run
+    if RegSize (DAPreCal) > 0 then
+      CopyObj _DAMethod[1], DAPreCal    ! new method as 3rd object
+      SaveObj DAPreCal, DADataPath$+DADataFile$ + \
+                        "\PRECAL"+val$(_Instance)+".REG", "NEW"
+    endif
+  endif
+  return
+endmacro
+
+!############################################################################
+Name LoadBracketSample
+
+  parameter row
+
+! Load the necessary registers from files.
+!############################################################################
+
+  local mes$, PreCalFile$, Status
+
+  _ALSBottle   = TabVal   (SeqInfoReg[1], "BracketSample", row, "ALSBottle")
+  _CalibInject = TabVal   (SeqInfoReg[1], "BracketSample", row, "CalibInject")
+  _CalibLevel  = TabVal   (SeqInfoReg[1], "BracketSample", row, "CalibLevel")
+  _CalibLine   = TabVal   (SeqInfoReg[1], "BracketSample", row, "CalibLine")
+  DADataFile$  = TabText$ (SeqInfoReg[1], "BracketSample", row, "DataFile")
+  _DataName$   = TabText$ (SeqInfoReg[1], "BracketSample", row, "DataName")
+  DADataPath$  = TabText$ (SeqInfoReg[1], "BracketSample", row, "DataPath")
+  _Dilution    = TabVal   (SeqInfoReg[1], "BracketSample", row, "Dilution")
+  _ISTDAmt     = TabVal   (SeqInfoReg[1], "BracketSample", row, "ISTDAmount")
+  LastSeqRun   = TabVal   (SeqInfoReg[1], "BracketSample", row, "LastSeqRun")
+  _Multiplier  = TabVal   (SeqInfoReg[1], "BracketSample", row, "Multiplier")
+  _Replicate   = TabVal   (SeqInfoReg[1], "BracketSample", row, "Replicate")
+  _RunType     = TabVal   (SeqInfoReg[1], "BracketSample", row, "RunType")
+  _SampAmt     = TabVal   (SeqInfoReg[1], "BracketSample", row, "SampleAmount")
+  _SampInfo$   = TabText$ (SeqInfoReg[1], "BracketSample", row, "SampleInfo")
+  _SeqIndex    = TabVal   (SeqInfoReg[1], "BracketSample", row, "SeqIndex")
+  _UpdRF       = TabVal   (SeqInfoReg[1], "BracketSample", row, "UpdRF")
+  _UpdRT       = TabVal   (SeqInfoReg[1], "BracketSample", row, "UpdRT")
+  if row <= TabHdrVal (SeqInfoReg[1], "BracketSample", "SampleRuns") then
+    ! Re-Analyzing delayed rawdata
+    mes$ = "LogStartDelayed"
+    Status = 15         ! Recalculate Bracket Data
+  else
+    ! Initializing next bracket
+    mes$ = "LogInitNextBrac"
+    Status = 16         ! Initialize next Bracket
+  endif
+  mes$ = sprintf$(DADataFile$, NLSCoreChrom$(mes$))
+  print mes$
+  WriteToLogbook mes$
+  SetRunStatus , Status, DADataFile$
+  File DADataPath$ + DADataFile$
+  if RegSize(ChromReg) > 0 then
+    DelObj ChromReg
+  endif
+  LoadObj DADataPath$+DADataFile$ + "\SIGNAL"+val$(_Instance)+".REG", , ChromReg
+  Delete  DADataPath$+DADataFile$ + "\SIGNAL"+val$(_Instance)+".REG", dontask
+  DelReg ChromRes
+  LoadObj DADataPath$+DADataFile$ + "\RESULT"+val$(_Instance)+".REG", , ChromRes
+  Delete  DADataPath$+DADataFile$ + "\RESULT"+val$(_Instance)+".REG", dontask
+  PreCalFile$ = DADataPath$+DADataFile$ + "\PRECAL"+val$(_Instance)+".REG"
+  if FileStat (Mode, PreCalFile$) = 1 then
+    ! This is a calibration run
+    DelReg DAEndBracket
+    LoadObj PreCalFile$, , DAEndBracket
+    Delete PreCalFile$, dontask
+    CopyObj ChromRes[1], DAEndBracket   ! should be the 4th object now
+    endif
+  return
+endmacro
+
+!############################################################################
+Name DoBracketRun
+
+! integrate and identify peaks
+! evtl. quantify delayed sample runs
+!############################################################################
+
+  local i, nRows, CalibInject, dummy, SampleRuns
+
+  CalibInject = _CalibInject
+  if _CalibLine > 0 then
+    ! this is a calibration
+    if CalibInject >= 11 then
+      ! This is the first calibration after loading the method.
+      ClearBracketCalib
+      ClearBracketSample
+      ! force normal processing for a calibration sample:
+      CalibInject = CalibInject - 10
+    endif
+
+    SaveBracketCalib    ! Save file names for use by PrintBracketSamples
+
+    NewTabHdrVal ChromRes[1], "QuantParm", "Bracketing", 1
+
+    on error WriteToLogbook val$(_SequenceOn) + "," + \
+                            val$(FirstSeqRun) + "," + \
+                            val$(NewSeqMethod) + "," + \
+                            val$(SeqResumeRun) + "," + \
+                            val$(_CalibLine) + "," + \
+                            val$(_CalibInject)
+    SampleRuns = TabHdrVal (SeqInfoReg[1], "BracketSample", "SampleRuns")
+    on error
+
+    if SampleRuns = 0 then
+      ! This is one of the first calibrations after loading the method.
+      ! No deferred samples are in the BracketSample table.
+      ! Therefore the report can be done immediately.
+
+      ! Update the calibration table for the next cycle of samples coming after
+      ! these calibrations:
+      if _Replicate = 1 then
+        SetUpdateResp 2   ! replace
+      else
+        SetUpdateResp 1   ! average
+      endif
+
+      ! Do the normal analysis for this calibration:
+      QuantPeaks 1        ! start bracket
+      DoPrintReport       ! print report if not disabled by seq sum report
+      DoSaveChromResults  ! save results for seq sum report
+      DoCustomDA          ! custom Data Analysis if enabled
+      DoSaveGLPData       ! save GLP Data if enabled
+      ExecHook "PostDA"   ! can be used to transfer result files
+
+      ! Calibrate the method with sorting enabled, and save it to disc.
+      UpdateCalibAndSave
+      ! No QuantifyPeaks, CalibratePeaks or DoPrintReport must come after this,
+      ! because the references from ChromRes to _DAMethod may have been changed.
+
+    else ! SampleRuns > 0
+
+      ! This calibration comes after some samples have been deferred.
+      ! Therefore just an average of the calibration table is done.
+      SetUpdateResp 1   ! average
+      ReCalibUnsorted 2 ! end bracket
+      ! All other processing is deferred until the samples have been fully
+      ! reported. Just save the results.
+      SaveBracketSample 1  ! Calibration Run
+
+      if (CalibInject = 1) or (CalibInject = 4) then
+        ! This is the last calibration in a series, i.e. the end of a bracket.
+
+        ! Print calibration table which is used for the evaluation of the
+        ! bracketed samples:
+        DoPrintReport -32767, "InternalStyle"
+        ClearBracketCalib
+
+        ! Evaluate the samples that were stored on file after partial analysis:
+        nRows = TabHdrVal (SeqInfoReg[1], "BracketSample", "NumberOfRows")
+        for i = 1 to nRows
+          LoadBracketSample i
+          if i <= SampleRuns then
+            ! This is a sample run
+            SetUpdateResp 0       ! no update
+            ! save the calibration table that is used to analyse this sample, if
+            ! - in Run Method, or in Run Sequence with Runtime Checklist on,
+            ! - Acquisition is enabled,
+            ! - Save method with Data is enabled,
+            ! i.e. exactly the conditions when the method has been saved during
+            ! execution of the Runtime Checklist.
+            if ((_SequenceOn = 0) or (_SeqMode = 0)) and \
+               (_Offline = 0) and (RUN_Acq = 1) and (RUN_SaveMethod = 1) \
+            then
+              dummy = Event (_DAMethod, OFF)
+              SaveDAMethod DADataPath$+DADataFile$ + "\", "RUN.M"
+              dummy = Event (_DAMethod, ON)
+            endif
+          else
+            ! This is a calibration run. Update the calibration table
+            ! for the next cycle of samples coming after these calibrations:
+            if _Replicate = 1 then
+              SetUpdateResp 2   ! replace
+            else
+              SetUpdateResp 1   ! average
+            endif
+            ! Save file names for use by PrintBracketSamples:
+            SaveBracketCalib
+          endif
+          SetUpdateRT 0       ! no update
+          QuantPeaks 1        ! start bracket
+          DoPrintReport       ! print report if not disabled by seq sum report
+          DoSaveChromResults  ! save results for seq sum report
+          DoCustomDA          ! custom Data Analysis if enabled
+          DoSaveGLPData       ! save GLP Data if enabled
+          ExecHook "PostDA"   ! can be used to transfer result files
+        next i
+
+        ! Calibrate the method with sorting enabled, and save it to disc.
+        UpdateCalibAndSave
+        ! No QuantifyPeaks, CalibratePeaks or DoPrintReport must come after this
+        ! because the references from ChromRes to _DAMethod may have changed.
+
+        ! Prepare for next samples to come right after this:
+        ClearBracketSample
+      endif ! (CalibInject = 1) or (CalibInject = 4)
+    endif ! SampleRuns > 0
+  else
+    ! This is a sample run. Defer the processing. Just save the results.
+    if TabHdrVal (ChromRes[1], "QuantParm", "RTUpdate") > 0 then
+      ReCalibUnsorted
+    endif
+    SaveBracketSample    ! Sample Run
+  endif
+  return
+endmacro
+
+!############################################################################
+Name ReCalibUnsorted
+
+  parameter Bracketing default 0        ! 0: no bracketing
+                                        ! 1: start bracket
+                                        ! 2: end bracket
+
+! recalibrate without resorting the calibration table.
+!############################################################################
+
+  local CalibLevel$, CalibError, nErrorRows, dummy, Msg$
+
+  if TabHdrVal (ChromRes[1], "QuantParm", "RespUpdate") > 0 then
+    ! Check if the calibration level is correct
+    CalibLevel$ = TabHdrText$ (ChromRes[1], "QuantParm", "SampleLevel")
+    if RowByText(_DAMethod[1], "Level",, "ShortName", "=", CalibLevel$) < 1 then
+      ! Recalibration not done; Level doesn't exist
+      Msg$ = sprintf$(CalibLevel$, NLSCoreChrom$("LogBadLevel"))
+      WriteToLogbook Msg$
+      InsTabRow ChromRes[1], "ErrorReport"
+      nErrorRows = TabHdrVal (ChromRes[1], "ErrorReport", "NumberOfRows")
+      SetTabText ChromRes[1], "ErrorReport", nErrorRows, "Comment", Msg$
+      SetTabVal ChromRes[1],"ErrorReport",nErrorRows,"ErrorStatus",1
+      ! reset all calibration info and do a normal quantification
+      SetCalibInfo  0, ""   ! RunType unspecified, SampleLevel empty
+      SetUpdateResp 0       ! no update
+      SetUpdateRT   0       ! no update
+      DoQuantifyPeaks
+      return
+    endif
+  endif
+
+  ! QuantifyPeaks is done to check the amount limits
+  nErrorRows = TabHdrVal (ChromRes[1], "ErrorReport", "NumberOfRows")
+  DoQuantifyPeaks
+
+  DelReg DAPreCal
+  ! check flag for calibration report options:
+  if ((Bracketing = 2) and (CAL_EndBracket = 1)) or \
+     ((Bracketing = 1) and (CAL_StartBracket = 1)) or \
+     (Bracketing = 0) \
+  then
+    ! save ChromRes[1] and _DAMethod[1] to separate register, so that they
+    ! can be used later by the report:
+    CopyObj _DAMethod[1], DAPreCal
+    CopyObj ChromRes[1], DAPreCal
+  endif
+
+  if CAL_PostCalRpt = 1 then
+    if TabHdrVal (ChromRes[1], "ErrorReport", "NumberOfRows") > nErrorRows then
+      ! throw away the errors that were generated by QuantifyPeaks to avoid
+      ! duplication of error messages by the second QuantifyPeaks
+      DelTabRow ChromRes[1], "ErrorReport", nErrorRows+1:-1
+    endif
+  endif
+
+  ! Recover from some errors which define a failed calibration
+  CalibError = 0
+  on error CalibError=_error
+  ! prevent setting _MethodChanged due to automatic recalibration:
+  dummy = Event (_DAMethod, OFF)
+  SetTabHdrVal _DAMethod[1], "QuantParm", "SortCalData", 0 ! disable sorting
+  ! Calibrates and replaces empty signal descriptors
+  CalibratePeaksMac 
+  SetTabHdrVal _DAMethod[1], "QuantParm", "SortCalData", 1 ! enable sorting
+  on error
+
+  ! reenable setting _MethodChanged:
+  dummy = Event (_DAMethod, ON)
+
+  if CalibError = 0 then
+    ! set flag that tells whether the method has been automatically
+    ! recalibrated in a sequence due to a calibration sample:
+    SetTabHdrVal ChromRes[1], "QuantParm", "MethCalibInSeq", 1
+
+    ! Set the time stamp for the method modification. This has to be done
+    ! here explicitly because the time stamp is needed immediately afterwards
+    ! in the report. If the time stamp were to be set indirectly through
+    ! setting _MethodChanged=1, this wouldbe delayed until this macro here
+    ! is finished completely, i.e. long after the report is done.
+    SetMethModTime
+    ! Recalibration done
+    WriteToLogbook NLSCoreChrom$("LogRecalDone")
+  else
+    SetUpdateResp 0       ! no update
+    SetUpdateRT   0       ! no update
+
+    if (CalibError = 16) or (CalibError = 21) or (CalibError = 22) then
+      ! Recalibration not done due to known error
+      ! error codes, if PartialCalib=0:
+      ! 16: not all compounds found
+      ! 21: not all compounds qualified
+      ! 22: not all compounds within amount limits
+      Msg$ = NLSCoreChrom$("LogRecalError")
+      WriteToLogbook Msg$
+      InsTabRow ChromRes[1], "ErrorReport"
+      nErrorRows = TabHdrVal (ChromRes[1], "ErrorReport", "NumberOfRows")
+      SetTabText ChromRes[1], "ErrorReport", nErrorRows, "Comment", Msg$
+      SetTabVal ChromRes[1],"ErrorReport",nErrorRows,"ErrorStatus",2
+    else ! unknown error
+      generate error _Error, _ErrMsg$, _ErrFile$, _ErrLine, _ErrMacro$, _ErrCmd$
+    endif
+  endif
+
+  ! check flag for calibration report options:
+  if CAL_PostCalRpt = 1 then
+    DoQuantifyPeaks
+  endif
+  return
+endmacro
+
+!############################################################################
+Name UpdateCalibAndSave
+
+! Sort the calibration table and save it to the method.
+!############################################################################
+
+  local CalibError, dummy, SkipMethodUpdate, PermDir, PermFile
+
+  ! Trap calibration errors to be able to reenable setting _MethodChanged:
+  CalibError = 0
+  on error CalibError=_error
+  ! prevent setting _MethodChanged due to automatic recalibration:
+  dummy = Event (_DAMethod, OFF)
+  SetTabHdrVal _DAMethod[1], "QuantParm", "SortCalData", 1 ! enable sorting
+  CalibratePeaks , , _DAMethod[1]
+  on error
+  if CalibError <> 0 then
+    ! reenable setting _MethodChanged:
+    dummy = Event (_DAMethod, ON)
+    generate error _Error, _ErrMsg$, _ErrFile$, _ErrLine, _ErrMacro$, _ErrCmd$
+  endif
+  ! set flag that tells whether the method has been automatically
+  ! recalibrated in a sequence due to a calibration sample:
+  SetTabHdrVal ChromRes[1], "QuantParm", "MethCalibInSeq", 1
+  if Check (Variable, DA_SkipMethodUpdate) = 0 then
+    SkipMethodUpdate = 0
+  else
+    SkipMethodUpdate = DA_SkipMethodUpdate
+  endif
+  if SkipMethodUpdate = 0 then
+    PermDir  = FileStat (Perm, _MethPath$ + _MethFile$)
+    PermFile = FileStat (Perm, _MethPath$ + _MethFile$ + "\damethod.reg")
+    if (mod (trunc (PermDir/2), 2) = 0) or \
+       ((PermFile <> -1) and (mod (trunc (PermFile/2), 2) = 0)) \
+    then
+      ! .m dir or damethod.reg file is read-only
+      WriteToLogbook printf$(NLSCoreChrom$("LogMthReadOnly"), _MethFile$)
+    else
+      SaveDAMethod
+      ! Method updated after recalibration
+      WriteToLogbook printf$(NLSCoreChrom$("LogSavedUpdMth"), _MethFile$)
+    endif
+  else
+    ! Update of method after recalibration disabled
+    WriteToLogbook NLSCoreChrom$("LogNoSaveUpdMth")
+  endif
+  ! reenable setting _MethodChanged:
+  dummy = Event (_DAMethod, ON)
+  ! No QuantifyPeaks, CalibratePeaks or DoPrintReport must come after this,
+  ! because the references from ChromRes to _DAMethod may have been changed.
+  return
+endmacro
+
+!############################################################################
+Name QuantPeaks
+
+  parameter Bracketing default 0        ! 0: no bracketing
+                                        ! 1: start bracket
+                                        ! 2: end bracket
+
+! Recalibrate or quantify peaks.
+!############################################################################
+
+  GUISetDARunStatus "Quant"   ! display Quantify state on GUI
+  ExecHook "PreQuant"    ! can be used to modify the ident results in ChromRes
+  if (TabHdrVal (ChromRes[1], "QuantParm", "RTUpdate") > 0) or \
+     (TabHdrVal (ChromRes[1], "QuantParm", "RespUpdate") > 0) \
+  then
+    ! This is a calibration run
+    ReCalibUnsorted Bracketing
+  else
+    ! This is a sample run
+    DoQuantifyPeaks
+  endif
+
+  DoReportStyleQuant     ! ReportStyle-specific quantification
+  CS_CheckControlSample  ! check for Control Sample
+  ExecHook "PostQuant"   ! can be used to modify the quant results in ChromRes
+                         ! or for additional calculations
+  SetDAMethInfo          ! transfer info about used DA method to ChromRes
+  return
+endmacro
+
+!############################################################################
+Name DoQuantifyPeaks
+
+! quantify peaks and note the method.
+!############################################################################
+
+  QuantifyPeaks ChromRes[1], _DAMethod[1]
+  SetTabHdrText ChromRes[1], "QuantParm", "CalMethod", _MethPath$+_MethFile$
+  return
+endmacro
+
+!############################################################################
+Name DoPrintReport
+
+  parameter Style default 0
+  parameter ReportStyle$ default "ReportStyle"
+
+! print report if not disabled by seq sum report
+!############################################################################
+
+  local doit
+
+  on error goto write
+  if _SequenceOn = 1 then
+    if (TabHdrVal (_Sequence[1], "SeqOutput", "SeqSumReport") = 0) or \
+       (TabHdrVal (_Sequence[1], "SeqOutput", "PrintSeqReport") = 1) \
+    then ! individual reports during sequence requited
+      if TabHdrVal (_Sequence[1], "SeqOutput", "SeqRepDest") = 2 then
+        ! destination for sequence reports according to SeqOutput table
+        PrintReport 2, Style, , ReportStyle$, , \
+                    TabHdrVal (_Sequence[1], "SeqOutput", "DestPrinter"), \
+                    TabHdrVal (_Sequence[1], "SeqOutput", "DestScreen"), \
+                    TabHdrVal (_Sequence[1], "SeqOutput", "DestFile"), \
+                    TabHdrVal (_Sequence[1], "SeqOutput", "FileTypeTXT"), \
+                    TabHdrVal (_Sequence[1], "SeqOutput", "FileTypeWMF"), \
+                    TabHdrVal (_Sequence[1], "SeqOutput", "FileTypeDIF"), \
+                    TabHdrVal (_Sequence[1], "SeqOutput", "FileTypeCSV"), \
+                    TabHdrText$ (_Sequence[1], "SeqOutput", "FileName")
+        return
+      else ! destination for sequence reports according to method
+        doit = 1
+      endif
+    else ! no individual reports during sequence
+      doit = 0
+    endif
+  else ! within Run Method
+    doit = 1
+  endif
+
+  if doit = 1 then
+    PrintReport 1+_SequenceOn, Style, , ReportStyle$
+  endif
+
+  return
+Write:
+  on error
+  WriteErrorToLogbook
+  return
+endmacro
+
+!############################################################################
+Name DoSaveChromResults
+
+! save results for seq sum report
+!############################################################################
+
+  local error
+
+  error = 0
+  on error error = _Error
+  if TabHdrVal (_Sequence[1], "SeqOutput", "SeqSumReport") = 1 then
+    SaveChromResults
+  endif
+  on error
+  if error <> 0 then
+    WriteErrorToLogbook
+  endif
+
+  return
+endmacro

@@ -1,0 +1,58 @@
+This data was acquired in Method&Run Control.
+The MSD parameters were saved in the msdiag register file.
+This msparms.txt file was built using the values from the msdiag register.
+Some parameters normally reported under MSData acquisition in Tune 
+may be missing from this msparms.txt file.  You may be able to read these 
+values from Data Analysis.  These items are marked with an asterisk (*).
+ 
+ 
+ 
+File                     :   D:\DATA\LIB\SULFCND8.D
+Operator                 :   mcintyre
+Date acquired            :   Wed Oct 29 13:18:12 1997
+Instrument               :   AppSprite2
+ 
+ 
+Sample information
+----------------------------------
+Sample name              :   Sulfa condensed
+Misc info                :    
+ 
+ 
+MS parameters
+----------------------------------
+Tune File                   :    C:\HPCHEM\1\1946TUNE\atunes.tun
+Skim1                       :    Not Applicable
+Skim2                       :    9.8 V     
+Ion Energy                  :    5.0 V     
+Lens1                       :    1.6 V     
+Lens2                       :    35 V      
+Iris                        :    350 V     
+HED                         :    10000 V   
+Width Gain                  :    837       
+Width Offset                :    Variable  
+                                 Mass         :   Value    
+                                 --------------------------
+                                 118.08       :   -106     
+                                 622.03       :   -106     
+                                 922.01       :   -86      
+                                 1521.97      :   -56      
+                                 2121.93      :   -106     
+                                 --------------------------
+Mass Gain                   :    76.55     
+Mass Offset                 :    Variable  
+                                 Mass         :   Value    
+                                 --------------------------
+                                 118.08       :   0        
+                                 622.03       :   1        
+                                 922.01       :   1        
+                                 1521.97      :   1        
+                                 2121.93      :   0        
+                                 --------------------------
+Quad DC                     :    0.00 V    
+Octopole Peak               :    262 V     
+Octopole Knee               :    280 Da    
+Mass Filter                 :    Gaussian  
+Mass Filter Width           :    0.30 Da   
+Time Filter                 :    Gaussian  
+Time Filter Width           :    0.050 minutes

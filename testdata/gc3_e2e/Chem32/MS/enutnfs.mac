@@ -1,0 +1,1308 @@
+    !===============================================================================
+    !  ENUTNFS.MAC: G2715 Fast Scan PeakWidths Algorithm
+    !
+    ! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+    ! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+    ! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+    ! AGILENT TECHNOLOGIES.
+    !
+    !                     RESTRICTED RIGHTS LEGEND                          
+    !                                                                       
+    ! Use, duplication, or disclosure by the Government is subject to       
+    ! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+    ! Technical Data and Computer Software clause at 52.227-7013.           
+    !                                                                       
+    ! AGILENT TECHNOLOGIES                                               
+    ! Life Sciences and Chemical Analysis Solutions           
+    ! 5301 Stevens Creek Blvd
+    ! Santa Clara, CA 95051-7201
+    ! United States
+    !
+    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    !  These MACROs are the common macros that are called when tune is invoked.
+    !  They take care of testing for the current instrument configuration and
+    !  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+    !  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    !
+    !===============================================================================
+    !  The Purpose:  Calibrate peakwidths of up to five masses at a set peakwidth target.
+    !
+    !===============================================================================
+    !  Macros:
+    !            msat_FSWarnDialog
+    !            msat_FSWidthsErr
+    !            msat_FSWidthsAbort
+    !            msat_FSWidthsCleanup
+    !            msat_FrntHalf
+    !            msat_FastScan
+    !            msat_UltraFastScan
+    !            ufs
+    !            msat_FastScan6100       ! Fast-scan tune for SL models 6130 and later
+    !            msat_SelectTuneIon      ! Selects masses as defined in TuneMixRegister    
+    !
+    !===============================================================================
+    !
+     AtunePWVer$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/enutnfs.mac 1.20 2007-06-15 clove Exp $"
+     verIx = instr(AtunePWVer$, ".mac ") + 5
+     AtunePWVer$ =  AtunePWVer$[verIx:VerIx + instr(AtunePWVer$[VerIx:len(AtunePWVer$)]," ") - 1] 
+     remove verIx
+    !
+    !===============================================================================
+    name msat_FSWarnDialog
+    !===============================================================================
+    local noshowvar,HelpIndex
+    
+    Local  ID_TUNEMAC_YOU_HAVE_CHOSE_652
+    Local  ID_TUNEMAC_REPORT_FOR_FAS_653
+    Local  ID_TUNEMAC_THAT_ARE_WIDER_654
+    Local  ID_TUNEMAC_ABUNDANCES_THA_655
+    Local  ID_TUNEMAC_THIS_IS_NORMAL_656
+    Local  ID_TUNEMAC_PLEASE_SEE_THE_657
+    Local  ID_TUNEMAC_REGARDING_FAST_658
+    Local  ID_TUNEMAC__CONTINUE_659
+    Local  ID_TUNEMAC_C_ANCEL_660
+    Local  ID_TUNEMAC__HELP_283
+    Local  ID_TUNEMAC__DON_T_SHOW_TH_661
+    Local  ID_TUNEMAC_1121
+    ID_TUNEMAC_YOU_HAVE_CHOSE_652                      =  17652  
+    ID_TUNEMAC_REPORT_FOR_FAS_653                      =  17653  
+    ID_TUNEMAC_THAT_ARE_WIDER_654                      =  17654  
+    ID_TUNEMAC_ABUNDANCES_THA_655                      =  17655  
+    ID_TUNEMAC_THIS_IS_NORMAL_656                      =  17656  
+    ID_TUNEMAC_PLEASE_SEE_THE_657                      =  17657  
+    ID_TUNEMAC_REGARDING_FAST_658                      =  17658  
+    ID_TUNEMAC__CONTINUE_659                           =  17659  
+    ID_TUNEMAC_C_ANCEL_660                             =  17660  
+    ID_TUNEMAC__HELP_283                               =  17283  
+    ID_TUNEMAC__DON_T_SHOW_TH_661                      =  17661 
+    ID_TUNEMAC_1121 = 18121
+    ID_TUNEMAC_1121                                    =  18121
+    
+      if ObjHdrType(_Config[1],"FS_Warn") = 99 then
+        NewObjHdrVal _Config[1],"FS_Warn",0           ! default the warning box to come up
+      endif
+    
+      if ObjHdrVal(_Config[1],"FS_Warn") = 0 then
+        HelpIndex = HelpSubSystemTopic("msd") + 9024
+        BeginDialog "FS_WarnDlgBox", 100,50,200,140, ReadResource$("tunemac",ID_TUNEMAC_1121)
+        StaticText 10,10,200,90, ReadResource$("tunemac",ID_TUNEMAC_YOU_HAVE_CHOSE_652) + chr$(13) + \
+                                  ReadResource$("tunemac",ID_TUNEMAC_REPORT_FOR_FAS_653) + chr$(13) + \
+                                  ReadResource$("tunemac",ID_TUNEMAC_THAT_ARE_WIDER_654) + chr$(13) + \
+                                  ReadResource$("tunemac",ID_TUNEMAC_ABUNDANCES_THA_655) + chr$(13) + \
+                                  ReadResource$("tunemac",ID_TUNEMAC_THIS_IS_NORMAL_656) + chr$(13) + chr$(13) + \
+                                  ReadResource$("tunemac",ID_TUNEMAC_PLEASE_SEE_THE_657) + chr$(13) + \
+                                  ReadResource$("tunemac",ID_TUNEMAC_REGARDING_FAST_658)
+                                  
+         OkButton 5,90,60,20, ReadResource$("tunemac",ID_TUNEMAC__CONTINUE_659)
+         CancelButton 70,90,60,20,ReadResource$("tunemac",ID_TUNEMAC_C_ANCEL_660)
+         ExecPushButton 135,90,60,20, ReadResource$("tunemac",ID_TUNEMAC__HELP_283),CP2,"Help " + sprintf$(HelpIndex,"%f")
+         
+         CheckBox 10,110,180,24, ReadResource$("tunemac",ID_TUNEMAC__DON_T_SHOW_TH_661), noshowvar
+        EndDialog
+      
+        if (ShowDialog("FS_WarnDlgBox") = 1) then
+          if (noshowvar = 0) then
+            SetObjHdrVal _config[1],FS_Warn,0      ! box not checked - do bring up again
+          else
+            SetObjHdrVal _config[1],FS_Warn,1
+          endif
+        else
+          RemoveDialog "FS_WarnDlgBox"
+          return 0
+        endif
+        RemoveDialog "FS_WarnDlgBox"
+      endif  !* if ObjHdrType(_Config[1],"FS_Warn") = 1
+    
+      return 1
+    
+    endmacro  !msat_FSWidthsErr
+    
+    !===============================================================================
+    name msat_FSWidthsErr
+    !===============================================================================
+    Local  ID_TUNEMAC_FAST_SCANNING_662
+    ID_TUNEMAC_FAST_SCANNING_662                       =  17662  
+    on error print
+      print Alert("Fast Scanning Peak Width Adjust error : " + _errmsg$,3,"Error")
+      msat_FSWidthsCleanup
+      MSGetTuneFile OldTuneFile$, OldPolarity,,1    ! reload the tune and polarity from start of Autotune
+      mstn_UpdateStatusBar
+      stop
+    endmacro  !msat_FSWidthsErr
+    
+    !===============================================================================
+    name msat_FSWidthsAbort
+    !===============================================================================
+    on error print
+      msat_FSWidthsCleanup
+    endmacro  !msat_FSWidthsAbort
+    
+    !===============================================================================
+    name msat_FSWidthsCleanup
+    !===============================================================================
+    PARAMETER numStepsize default 0.10
+    PARAMETER numAverage default 1
+    on error print
+      remove NumMass, peakmaxA
+      if RegSize(SaveMass) > -1 then
+        msat_RestoreMasses
+        DelReg SaveMass
+      endif
+      if RegSize(MassTable) > -1 then
+        DelReg MassTable
+      endif
+      MSSamples ,1
+      MSAverages ,1
+      mstn_RemoveAbortHandler "msat_FSWidthsAbort"
+    
+    endmacro  !msat_FSWidthsErr
+    
+    !===============================================================================
+    ! 
+    name msat_FrntHalf         ! Calculate total peakwidth based on the front half of the peak.
+    !                            For use on higher masses that get isotope interference.
+    PARAMETER TunMassNum
+    !
+    !===============================================================================
+    
+    LOCAL massIndex, halfHeight, slope, mzLow, mzHigh, pkWidth 
+    
+    ! Check if PrfData already exists:
+      regcheck = RegSize (PrfData)
+      if regcheck >-1 then
+        DelReg PrfData
+      endif
+    
+    ! Turn on logging and do the MSProfile:
+      MSLogData origlogval,1,PrfData        ! save old value,toggle on logging, state the register name.
+      MSProfile
+      MSLogData newlogval,0                     ! Toggle logging off.
+    
+      regIndex = TunMassNum + 1
+    
+      ! Set abundance and mass assignment
+        GetDataMinMax PrfData[regIndex], 1
+        BasePeakHeight = OBJ_MAX - OBJ_MIN
+        BasePeakMA     = OBJ_X_MAX
+        massIndex = DataIndex(PrfData[regIndex], basePeakMA)
+          print massIndex
+        halfHeight = Data(PrfData[regIndex], 1, massIndex)/2
+          print halfHeight
+    
+        if halfheight < 1 then   ! abort if there's no peak
+          pkWidth = 0
+        else
+          ! Find the mass of the leading edge (mzLow)
+          i = massIndex
+          while Data(PrfData[regIndex], 1, i) > HalfHeight do
+             i = i - 1
+          endwhile
+          ! mass of point just below halfHeight
+          mzLow = Data(PrfData[regIndex], 0, i)
+          ! get the slope of the segment that crosses HalfHeight
+          slope = (Data(PrfData[regIndex], 1, i+1) - \
+                   Data(PrfData[regIndex], 1, i)) / \
+                  (Data(PrfData[regIndex], 0, i+1) - \
+                   Data(PrfData[regIndex], 0, i))
+          ! get interpolated mass value at HalfHeight
+          mzLow = mzLow + ((halfHeight - \
+                  Data(PrfData[regIndex], 1, i)) / slope)
+          pkWidth = 2*(BasePeakMA - mzLow)
+            print pkWidth
+       endif            ! end if there's no peak
+    
+       RETURN pkWidth
+    
+    endmacro  !msat_FrntHalf
+    
+    !===============================================================================
+    !                                  ! Fast-scan tune for SL models G1956x and earlier
+    name msat_FastScan                 ! Use 0.8 u pw for fast-scanning
+    PARAMETER polarity default 0       ! Ion polarity from msat_auto
+    PARAMETER regIndex default 2       ! Tune RegIndex from msat_auto
+    PARAMETER autonum default 4        ! 3 = dual polarity tune
+                                       ! 4 = positive tune only
+                                       ! 5 = negative tune only
+                                       ! 6 = placeholder for not from autotune
+    !
+    !===============================================================================
+    !* Globals:  charge, NumMass, MSD_SL, MSD_RF
+    Local lDebug;		lDebug = 0
+        If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then
+            Print "MSAT_FastScan: Entry parameters:"
+            Print "               pPolarity =", pPolarity
+            Print "               pRegIndex =", pRegIndex
+            Print "               pAutoNum  =", pAutoNum
+        Endif
+        ! For 6130 and successors there is a different fast scan tuning procedure.
+        ! This is done to make sure the code stays compatible with old models.
+        If ( pre6100() < 1 ) then 
+            MSAT_FastScan6100 polarity, regindex, autonum
+            return
+        Endif
+    local largestMass,nextMass,warning$,CurrTuneFile$,oldMG,defmsg$,stopit
+    local StdPkMax1,StdPkMaxHiMass,FsPkMax1,FsPkMaxHiMass,RelAbd1,RelAbdHiMass
+    local saveStepsize,M1Targ,Button
+    local lens1$,lens2$,lens3$,lens4$,lens5$,lens6$,lens7$,lens8$
+    local a$,b$,OldRFen,param$,i,j,newL1
+    local RowBelow,WO_Row,WO_mass1,counter,oldavg,saveNumMass,saveWidthOffset
+    local mass1,mass2,mass3,mass4,mass5,mass6
+    local newWO,mass,delta_pw,doit,best_delta,best_WO,oldWO,old_delta
+    local act_tgt,delta_act,oldWidthOffset
+    local modemsg$,ess$,atmsg$,failmsg$,FailIt,ThisAbund
+    
+    Local  ID_TUNEMAC_SCAN_MODE_SET_663
+    Local  ID_TUNEMAC_DISABLING_LENS_593
+    Local  ID_TUNEMAC_MSPARM_664
+    Local  ID_TUNEMAC_NEED_AT_LEAST_667
+    Local  ID_TUNEMAC_UNABLE_TO_ADJU_668
+    Local  ID_TUNEMAC_SAVING_PROFILE_669
+    Local  ID_TUNEMAC_SAVING_FAST_SC_670
+    Local  ID_TUNEMAC_SAVING_PROFILE_671
+    Local  ID_TUNEMAC_SAVING_FAST_SC_672
+    Local  ID_TUNEMAC_PEAKWIDTHS_ARE_673
+    Local ID_TUNEMAC_1134
+    Local ID_TUNEMAC_1135
+    ID_TUNEMAC_SCAN_MODE_SET_663                       =  17663  
+    ID_TUNEMAC_DISABLING_LENS_593                      =  17593  
+    ID_TUNEMAC_MSPARM_664                              =  17664  
+    ID_TUNEMAC_NEED_AT_LEAST_667                       =  17667  
+    ID_TUNEMAC_UNABLE_TO_ADJU_668                      =  17668  
+    ID_TUNEMAC_SAVING_PROFILE_669                      =  17669  
+    ID_TUNEMAC_SAVING_FAST_SC_670                      =  17670  
+    ID_TUNEMAC_SAVING_PROFILE_671                      =  17671  
+    ID_TUNEMAC_SAVING_FAST_SC_672                      =  17672  
+    ID_TUNEMAC_PEAKWIDTHS_ARE_673                      =  17673  
+    ID_TUNEMAC_1134 = 18134
+    ID_TUNEMAC_1135 = 18135
+    
+      target = 0.95                ! Because we're starting at samples=2
+      tolerance = 0.05
+      
+      largestMass = 0
+      nextMass = 0
+      
+    if MSD_SL = 0 then
+      !warning$ = "Fast scanning is only supported on a G1946D or G1956B SL MSD."
+      warning$ = ReadResource$("tunemac",ID_TUNEMAC_1134)
+      !stopit = Alert(warning$,1,"Fast Scan adjustment")
+      stopit = Alert(warning$,1,ReadResource$("tunemac",ID_TUNEMAC_1135))
+      stop
+    endif
+    
+    ! Ensure the FSTuneMixReg is loaded:
+      FSmixfile$    = "FStunmix.reg"
+      defFSmixFile$ = "defmixFS.reg"
+      if FileStat(mode, _tunePath$ + FSmixfile$) = 1 then
+        LoadObj _tunePath$ + FSmixfile$,,FSTuneMixReg
+      else
+        LoadObj _tunePath$ + defFSmixFile$,,FSTuneMixReg
+      endif
+    
+    ! Check for which tune file is currently loaded and what the polarity/scanning mode is:
+      CurrTuneFile$=tunefilename$                   !* Save current tune file
+      MSParm polarity,charge                       !* Save current polarity/scanning mode
+      FScharge = charge+2
+      
+    ! Copy the std tune file to the fast scan tune file for that polarity:
+      print ReadResource$("tunemac",ID_TUNEMAC_SCAN_MODE_SET_663)
+      msparm polarity,,FScharge
+      MSSamples ,1                          ! Set the default fast scan value
+      msFiltermass ,gauss,,0.5
+      ! Get list of all dynamic ramps:
+        lens1$ = ""
+        lens2$ = ""
+        lens3$ = ""               !* Initialize to empty string
+        lens4$ = ""               !* because MSDynamic won't reset
+        lens5$ = ""               !* lens strings that are not active
+        lens6$ = ""
+        lens7$ = ""
+        lens8$ = ""
+        msdynamic list,lens1$,lens2$,lens3$,lens4$,lens5$,lens6$,lens7$,lens8$
+        a$=lens1$+","+lens2$+","+lens3$+","+lens4$+","+lens5$+","+lens6$+","+lens7$+","+lens8$
+        a$=ConvertText$(upper,a$)
+      ! Disable any Lens2RF parameters:             ! SL with Lens2RF
+      ! (Have to disable Amplitude before querying Enable)
+        if (MSD_RF = 1) then
+          ! Check to see if Amplitude is in the list of dynamic ramps:
+            b$=ConvertText$(upper,"Lens2RFAmplitude")
+            if instr(a$,b$) > 0 then            ! it has been dynamically ramped
+              MSDynamic Lens2RFAmplitude,disable
+            endif
+          ! Check to see if DC is in the list:
+            b$=ConvertText$(upper,"Lens2DC")
+            if instr(a$,b$) > 0 then            ! it has been dynamically ramped
+              MSDynamic Lens2DC,disable
+            endif
+          ! Disable the Lens2 RF, if enabled:
+            MSParm Lens2RFEnable,OldRFen
+            if OldRFen=1 then
+              AtunePrint ReadResource$("tunemac",ID_TUNEMAC_DISABLING_LENS_593)
+              MSParm Lens2RFEnable,,0
+            endif
+        endif
+        MSParm Lens2DC,,11                  ! Set the default fast scan value
+      ! Set the QuadDC dynamic ramp:
+        b$=ConvertText$(upper,"QuadDC")
+        if instr(a$,b$) = 0 then     ! it has not been dynamically ramped
+          MSDynamic QuadDC, enable
+          if polarity = 0 then    ! positive mode
+            MSDynamic QuadDC,set,118,0,622,-1,922,-2,1522,-4,2122,-7,2722,-12
+          else
+            MSDynamic QuadDC,set,118,0,622,1,922,2,1522,4,2122,7,2722,12
+          endif
+        endif
+      MSSaveTuneFile _tunepath$+CurrTuneFile$,FScharge       ! save as a fast scan file
+      mstn_UpdateStatusBar
+    
+    ! Set spray chamber parameters:
+      FastTuneRegIndex = msat_SelectTuneMix("auto")
+      msat_CheckZones msat_srctype,FastTuneRegIndex,"FSTuneMixReg"   ! set the spray chamber parameters
+      if (msat_srctype = 1) or (msat_srctype = 3) then      ! APCI or MM-ES+APCI
+        corona_row = RowByText(FSTuneMixReg[FastTuneRegIndex], "TuneParms",, "Parm", "i=", "corona")
+        DefVal = TabVal(FSTuneMixReg[FastTuneRegIndex], "TuneParms", corona_row, "Default")
+       ! Print ReadResource$("tunemac",ID_TUNEMAC_MSPARM_664) + "corona" + ",, " + val$(DefVal)
+       Print "MSParm " + "corona" + ",, " + val$(DefVal)
+      endif  !* if APCI or ES+APCI
+    
+    !* Save tune masses settings
+      on error print                          !* ignore errors and prevent aborts
+      setabort off                            !* until settings are saved
+      msat_SaveMasses
+      msat_SetAllWidths target,tolerance,FastTuneregIndex,"FSTuneMixReg"
+      setabort on
+     
+    ! Change stepsize and samples:
+      MSStepsize saveStepsize,0.1
+      MSSamples ,3                            ! change samples to 3 for preliminary tuning
+    
+    !* sorts tune masses, delete replicates, moves selected masses up, 
+    !* and masses that are not selected are removed
+      MSMassSort 1
+    
+    !* gets the number of tune masses available, also represents highest mass number
+      MSMassValue 0,NumMass                          ! Yields number of masses
+      MSMassValue 1,M1Targ
+    
+      if NumMass < 2 then
+        Button = alert("Need at least two tune masses to calibrate",1)          ! quits after this message
+        Button = alert(ReadResource$("tunemac",ID_TUNEMAC_NEED_AT_LEAST_667),1)          ! quits after this message
+        if RegSize(SaveMass) > -1 then
+          msat_RestoreMasses
+          DelReg SaveMass
+        endif
+        remove NumMass
+        return
+      endif
+    
+      on error msat_FSWidthsErr
+      mstn_AddAbortHandler "msat_FSWidthsAbort"
+    
+    ! Optimize Lens1:
+      MSParm Lens2DC,,30
+      MSSimramp lens1,1,max
+      msParm lens1,i
+    
+      MSParm Lens2DC,,11
+    
+      if (MSD_RF = 1) then   ! has L2RF
+        ! Optimize the phase:
+          MSParm Lens2RFEnable,,1
+          MSParm Lens2RFAmplitude,,100
+          MSSimramp Lens2RFPhase,2,max
+        ! Perform an automatic Dynamic ramp for Lens2RFAmp:
+          MSSetRamp Lens2RFAmplitude,10,400,1
+          msat_RFramp "Lens2RFAmplitude"
+        ! Find values for masses:
+          msprofile                   ! needs this before you can read the new ramp values
+          RfAmp_Row = RowByVal (TuneFileReg[1],DynParm_Table,,ParmID,"=",31)     ! parmID=31 for Lens2RFAmplitude
+          j=0
+          k=1
+          for i=1 to nummass
+            evaluate "rfmass"+val$(i)+" = TabVal(TuneFileReg[1],DynParm_Table,RfAmp_Row,funcValue"+val$(j)+")"
+              evaluate "print rfmass"+val$(i)
+            evaluate "rfval"+val$(i)+" = TabVal(TuneFileReg[1],DynParm_Table,RfAmp_Row,funcValue"+val$(k)+")"
+              evaluate "print rfval"+val$(i)
+            j=j+2
+            k=k+2
+          next i
+          if rfval1 > 40 then
+            MSDynamic Lens2RFAmplitude,disable
+            MSSetRamp Lens2RFAmplitude,10,40,1
+            MSSimramp Lens2RFAmplitude,1,max
+            MSParm Lens2RFAmplitude,newRFval1
+            MSDynamic Lens2RFAmplitude,enable
+            param$ = "Lens2RFAmplitude,set,rfmass1,newRFval1,rfmass2,rfval2,rfmass3,rfval3,rfmass4,rfval4,rfmass5,rfval5"
+            evaluate "MSDynamic " + param$
+          endif
+      endif
+      
+    ! Disable the current WO ramp:
+      b$=ConvertText$(upper,"WidthOffset")
+      if instr(a$,b$) > 0 then            ! it has been dynamically ramped
+        ! Find value for mass1:
+          WO_Row = RowByVal (TuneFileReg[1],DynParm_Table,,ParmID,"=",21)     ! parmID=21 for WO
+          WO_mass1 = TabVal(TuneFileReg[1],DynParm_Table,WO_Row,funcValue1)
+    print WO_mass1
+        MSDynamic widthOffset, disable  
+        MSParm WidthOffset,,WO_mass1
+      endif
+      !* do not use high mass because there is a greater chance of the peak being unresolved or unstable
+         MSMassValue NumMass,largestMass
+         if largestMass > 2300 AND NumMass >= 3 then
+           nextMass = 1
+           NumMass = NumMass - nextMass
+         endif
+          
+        for counter = 2 to (NumMass - 1)
+          !* This will set up MSProfile to do only two masses
+          !* by unselecting masses all but the first and NumMass masses
+          !* assuming that first and NumMass masses are selected
+          MSMassValue counter,,,,0
+        next counter
+    
+    ! Set up WO ramp:
+      MSSamples ,2                            ! Set samples to 2 for WO ramp
+      saveNumMass = NumMass
+      NumMass = NumMass + NextMass            ! Resets it to 6 if in 6 mass tune
+      LastTry = 0
+      msparm widthOffset,saveWidthOffset
+      param$ = "widthOffset,set"
+      for i = 1 to NumMass
+        ! Find value for mass(i):
+          evaluate "funcNum = ("+val$(i)+"*2)-1"
+          funcVal$ = "funcValue" +val$(funcNum)
+          evaluate "WO_mass"+val$(i)+" = TabVal(TuneFileReg[1],DynParm_Table,WO_Row,funcVal$)"
+    evaluate "print WO_mass"+val$(i)
+        evaluate "MSMassValue " + val$(i) + ",mass" + val$(i)
+        evaluate "newWO = WO_mass"+val$(i)               ! To start with
+        MSParm WidthOffset,,newWO
+        for j = 1 to NumMass
+          MSMassValue j,,,,1                  ! Select the mass
+        next j
+        for j = 1 to NumMass
+          if j <> i then
+            MSMassValue j,,,,0                ! Deselect all other masses
+          endif
+        next j
+        if (i > 3) then
+          target = 0.8     ! Leaves higher masses close to 0.8 at samples of 1
+        endif
+    
+        if (i < 4) then 
+          print MSProfileAvg(5,2,2)
+          evaluate "print peakwidth"+val$(i)
+        else
+          evaluate "pkwidth"+val$(i)+" = msat_FrntHalf("+val$(i)+")"
+        endif
+        MSMassValue i, mass
+        evaluate "delta_pw = peakwidth"+val$(i)+"-target"
+    print delta_pw
+        if (abs(delta_pw) <= tolerance) then
+          doit = 1
+        else
+          doit = 0
+        endif
+        count = 0
+        best_delta = delta_pw
+        bestWO = newWO
+        ! Begin the loop for the current mass:
+        while ((abs(delta_pw) > tolerance) or (doit = 0)) and (LastTry < 2)
+          oldWO = newWO
+          old_delta = delta_pw
+          newWO = newWO + (delta_pw*500)
+          MSParm WidthOffset,,newWO
+          if (i < 4) then 
+            print MSProfileAvg(5,2)
+            evaluate "print peakwidth"+val$(i)
+          else
+            evaluate "pkwidth"+val$(i)+" = msat_FrntHalf("+val$(i)+")"
+          endif
+          evaluate "ThisAbund = peakmax"+val$(i)+"-peakmin"+val$(i)
+          evaluate "delta_pw = peakwidth"+val$(i)+"-target"
+          if (abs(delta_pw) <= tolerance) then
+            doit = 1
+          else
+            doit = 0
+          endif
+          if delta_pw < old_delta               ! keep track of best effort
+            best_delta = delta_pw
+            bestWO = newWO
+          endif
+    print delta_pw
+          !if ((abs(delta_pw) > abs(old_delta)) and (count > 9)) or (ThisAbund < 15000) then
+          if ((abs(delta_pw) > abs(old_delta)) and (count > 9)) then
+            if (i>3) and (LastTry < 2) then
+              LastTry = LastTry + 1
+              evaluate "MSParm WidthOffset,,WO_mass"+val$(i)
+              act_tgt = TabVal(FSTuneMixReg[FastTuneRegIndex],"TuneIons",i,"GPW50")   ! Get the wider target
+    print act_tgt
+              if (i < 4) then 
+                print MSProfileAvg(5,2,2)
+                evaluate "print peakwidth"+val$(i)
+             else
+               evaluate "pkwidth"+val$(i)+" = msat_FrntHalf("+val$(i)+")"
+             endif
+    evaluate "this_pw = peakwidth"+val$(i)
+    print this_pw
+              evaluate "delta_big = peakwidth"+val$(i)+"-act_tgt"
+    print delta_big
+              if abs(delta_big) < tolerance
+                doit = 1
+              else
+                delta_pw = delta_big
+                evaluate "newWO = WO_mass"+val$(i)
+                target = act_tgt
+                count = 0                        ! Reset the count and try one last time
+              endif
+            else
+              generate error 1,"Unable to adjust widthoffset for tune mass " + val$(mass)      ! quits after this message
+            endif !* if (i>3)
+          endif !* if delta_pw > old_delta
+          count = count + 1
+        endwhile !* while (abs(delta_pw) > tolerance)
+    
+        ! Set the WO that works:
+        msparm widthOffset, GoodWidthOffset
+        evaluate "o" + val$(i) + " = " + val$(GoodWidthOffset)
+        param$ = param$ + sprintf$(i,",mass%i,") + sprintf$(i,"o%i")
+      next i
+    
+      for j = 1 to NumMass
+        MSMassValue j,,,,1              ! Reselects all the masses
+      next j
+          
+      ! Send down the WO ramp now:
+        MSDynamic widthOffset, enable  
+        evaluate "MSDynamic " + param$
+    
+    ! Set samples to 1 for fast scanning and adjust mass axis:
+      MSSamples ,1
+        print msprofileavg(3,1,1)
+        evaluate "peakmaxA = peakmax" + val$(NumMass)
+        evaluate "basepeakA = basepeak" + val$(NumMass)
+      msat_adjustMassAxis
+      
+    ! Reset some parameters:
+      MSMassWindow 5
+      MSAverages ,1
+    
+    ! Save the fast scan tune file, if run from autotune:           ! Assuming fast scan pos = 2
+      if charge = 0 then
+        ! mstn_DoGenReport ,3      !print report for atunes.tun for positive mode
+        mstn_DoGenReport ,9      !print report for atunes.tun for positive mode
+        AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_PROFILE_669)
+        msat_SaveAtune 1                          !saves profile and scan data in atune register
+        AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_FAST_SC_670) + tunefilename$
+        MSSaveTuneFile tunefilename$,FScharge              !saves fast scan tune file for positive mode
+      else
+        ! mstn_DoGenReport ,3    !print report for atunes.tun for negative mode
+        mstn_DoGenReport ,9    !print report for atunes.tun for negative mode
+        AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_PROFILE_671)
+        msat_SaveAtune 1                          !saves profile and scan data in atune register
+        AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_FAST_SC_672) + tunefilename$
+        MSSaveTuneFile tunefilename$,FScharge              !saves fast scan tune file for negative mode
+      endif
+    
+      print msprofileavg(5,2)
+      msat_FSWidthsCleanup saveStepsize,1
+    
+      print ReadResource$("tunemac",ID_TUNEMAC_PEAKWIDTHS_ARE_673)
+      
+    endmacro  ! msat_FastScan
+    !===============================================================================
+    
+    !===============================================================================
+    name msat_FastScan6100             ! Fast-scan tune for SL models 6130 and later
+    PARAMETER pPolarity default 0      ! Ion polarity from msat_auto
+    PARAMETER pRegIndex default 2      ! Tune RegIndex from msat_auto
+    PARAMETER pAutoNum default 4       ! 3 = dual polarity tune
+                                       ! 4 = positive tune only
+                                       ! 5 = negative tune only
+                                       ! 6 = placeholder if not called from msat_auto
+    !===============================================================================
+    Local lDebug;               lDebug = 0
+    Local iMass;                ! Loop index over the tune masses
+    Local iWidth                ! Loop index over the peak widths
+    Local lDefFSMixFile$;       lDefFSMixFile$ = "defmixfs.reg"
+    Local lFSAverags;           ! Number of scans to average
+    Local lFSFilter$;           ! Filter for fast scan:
+    Local lFSFilterParm1;       ! Filter parameter 1 for fast scan
+    Local lFSMixFile$;          lFSMixFile$ = "FSTunemix.reg"
+    Local lFSPolarity;	        ! Fast scan polarity [2|3]
+    Local lFSSamples;           ! Number of samples for fast scan
+    Local lFSStepSize;          ! Stepsize for scanning in fast mode
+    Local lPWTarget;            ! Target value for peak width adjustment
+    Local lPWTolerance;         ! Target value for peak width adjustment tolerance
+    Local lPolarity;            ! Initial Polarity [0|1]
+    Local lProfileReturn;       ! Return value from procedure MSProfileAVG
+    Local lRegIndex;            ! Index for tunemixregister for given source
+    Local lReturnValue          ! Return value for MSProfileAvg() function
+    Local lStepSize;            ! Stepsize for scanning as it was before.
+    Local lTuneMixRegIndex;     ! Index of tunemixreg that holds the source data
+    Local lMaxIterations;       lMaxIterations = 5
+    Local lWOGain;              lWOGain = 500
+    Local lWOStepSize;          lWOStepSize = 0.4
+    Local lOldWO;               ! old / previous peak width offset
+    Local lNewWO;               ! new / next peak width offset
+    Local lMass1, lMass2, lMass3, lMass4, lMass5, lMass6	  ! tune mass width offset
+    Local lWOff1, lWOff2, lWOff3, lWOff4, lWoff5, lWOff6    ! Widthoff for tune mass
+
+    Local lParm$, lParmList$,lDynList$
+  
+    Local  ID_TUNEMAC_SCAN_MODE_SET_663
+    ID_TUNEMAC_SCAN_MODE_SET_663                       =  17663    
+  
+    ! Strategy:
+    ! Set all tuning parameters defined in TuneMixRegister for fast scan
+    ! Take current (normal scan) tune register values
+    ! Adjust mass axis
+    ! Adjust peak width for each tune mass in fixed iteration
+    ! Adjust mass axis
+    ! Create report and save result as fast scan tune register
+    
+    ! Test string:
+    ! macro ..\ms\enutnfs.mac;msdynamic widthoffset,enable;msdynamic widthoffset,set,118,1,622,2,922,3,1522,3,2122,5; msdynamic widthoffset,plot;for i=1 to 5;msmassvalue i,,,,1;next i;msat_fastscan;msdynamic widthoffset,plot
+    
+    
+        If ( lDebug > 0 ) or ( GetVerbose() > 0 ) then                         ! dbg
+            Print "MSAT_FastScan6100: Entry parameters:"                       ! dbg
+            Print "                   pPolarity =", pPolarity                  ! dbg
+            Print "                   pRegIndex =", pRegIndex                  ! dbg
+            Print "                   pAutoNum  =", pAutoNum                   ! dbg
+        Endif                                                                  ! dbg
+    
+        ! Ensure the FSTuneMixReg is loaded:
+        ! If not, load it from the file system.
+        ! If not on the file system, load the default (backup) file.
+        If ( Regsize( FSTuneMixReg ) < 1 ) then
+          If FileStat(mode, _tunePath$ + lFSmixfile$) = 1 then
+              ! Loading writable TuneMixRegister
+              LoadObj _tunePath$ + lFSMixfile$,,FSTuneMixReg
+          Else
+            ! Loading default TuneMixRegister
+            LoadObj _tunePath$ + lDefFSMixFile$,,FSTuneMixReg
+          EndIf
+        EndIf
+          
+        print ReadResource$("tunemac", 17663)
+        ! FSTuneMixReg[1] holds the required source independent tune parameter
+        lFSSamples     = ObjHdrVal( FSTuneMixReg, "Samples" )
+        lFSFilter$     = ObjHdrText$( FSTuneMixReg, "MSFilter" )
+        lFSFilterParm1 = ObjHdrVal( FSTuneMixReg, "MSFilterParm" )
+        lFSAverages    = ObjHdrVal( FSTuneMixReg, "Averages" )
+        lFSStepSize    = ObjHdrVal( FSTuneMixReg, "StepSize" )
+        If ( lDebug > 0 ) or ( GetVerbose() > 1 ) then                         ! dbg
+            Print "MSAT_FastScan6100: Samples, Averages, Stepsize =",\
+                   lFSSamples, lFSAverages, lFSStepSize                        ! dbg
+            Print "               MSFilter =", lFSFilter$, lFSFilterParm1      ! dbg
+        Endif                                                                  ! dbg
+        MSParm POLARITY, lPolarity            !* Save current polarity/scanning mode
+        lFSPolarity = mod( lPolarity, 2 ) + 2 !* Switch to fast if not already fast  ! dbg
+        MSParm POLARITY,,lFSPolarity
+        mstn_UpdateStatusBar
+        Print ReadResource$("tunemac",ID_TUNEMAC_SCAN_MODE_SET_663)
+        ! Print "Scan mode set to fast scan"
+        
+        MSSamples , lFSSamples
+        MSAverages ,9 !Increase averaging to optimize tune parameters
+        MSFilterMass ,lFSFilter$,,lFSFilterParm1
+        MSStepSize lStepSize, lFSStepsize
+          
+      ! Set QuadDC to manual ramp from FSTuneMix.reg
+        !lParm$ = "QuadDC"
+        !lDynList$ = "MSDynamic " + lParm$ + ", SET,"
+    
+        !lParmList$ = msat_GetFSManRampList$(pRegIndex,lParm$)
+        !lDynList$ = lDynList$ + lParmList$
+        
+        !MSDynamic lParm$, enable
+        !evaluate lDynList$
+        !MSDynamic lParm$, plot
+        
+        ! All parameters for fast scan are set
+        ! Now do the tuning of the system
+        
+        ! Adjust mass axis
+        MSProfile ! To ensure parameters are downloaded
+        MSAxis ! Adjust mass axis with Samples = 1
+        
+        ! Generate list of tune masses and widthoffset values
+        lTuneMixRegIndex = MSAT_SelectTuneMix( "auto" )
+        msat_SelectTuneIon 0	! 0 = select all masses defined in Tune Mix Reg
+        For iMass = 1 to ObjHdrVal(FSTuneMixReg[lTuneMixRegIndex], "NumIons")
+          Evaluate "MSDynamic Widthoffset, Read," + val$(iMass) \
+                    + ",lMass" + val$( iMass ) + ",lWOff" + val$( iMass )
+        Next iMass
+        
+        ! Adjust the peakwidth to fast scan peakwidth
+        ! The target peakwidth and the tolerance is defined in the tune register
+        ! Disable WidthOffset dynamic ramp so new dynamic ramp can be generated.
+        MSDynamic WidthOffset, disable
+        lTuneMixRegIndex = MSAT_SelectTuneMix( "auto" )
+        lParm$ = "" !Initialize blank string
+        ! Loop over each tune ion
+        For iMass = 1 to ObjHdrVal(FSTuneMixReg[lTuneMixRegIndex], "NumIons")
+          MSAT_SelectTuneIon iMass	! Select this tune mass
+          lPWTarget = TabVal( FSTuneMixReg[lTuneMixRegIndex],TuneIons,iMass,PW50)
+          Evaluate "lMass = lMass" + val$( iMass )
+            
+          If ( lDebug > 0 ) or ( GetVerbose() > 1 ) then  
+              Print "MSAT_FastScan6100: peak width optimization mass",\
+                      iMass, "Target", lPWTarget
+          Endif
+          
+          ! Loop over peak width adjust iteration
+            For iWidth = 1 to lMaxIterations
+            lReturnValue = MSProfileAvg( 2, 1, 1 )
+
+          !   Now we have:
+          !   BasePeak#          mass where maximum abundance occurs
+          !   ConFidm_z#         95% confidence level of Peak m_z
+          !   IsoAbund#          abundance of isotope peak 
+          !   IsoMass#           mass of isotope peak
+          !   Peakm_z#           m/z value from curve fitting
+          !   PeakMax#           maximum abundance of tune mass
+          !   PeakMin#           minimum abundance of tune mass
+          !   PeakWidth#         peak width at 50% height of tune mass
+          !   Precursor#         abundance of precursor
+          !   Valley#            abundance of valley
+                
+          ! Replace numbered variable for each mass with common variable for comparison loop
+    	    evaluate( "lActPeakWidth = PeakWidth" + val$( iMass ))
+    	    evaluate( "lActBasePeak  = BasePeak"  + val$( iMass ))
+          
+          ! Get old peak width offset and calculate new peak width offset
+            MSParm Widthoffset, lOldWO
+            lNewWO = lOldWO + (lActPeakWidth-lPWTarget) * lWOGain * lWOStepSize
+            If ( lDebug > 0 ) or ( GetVerbose() > 1 ) then  
+              Print "MSAT_FastScan6100:",\
+                "peak width", lActPeakWidth,\
+                "base peak", lActBasePeak
+              Print "MSAT_FastScan6100:",\
+                "old PW offset", lOldWO,\
+                "new PW offset", lNewWO
+            Endif
+                MSParm WidthOffset,,lNewWO
+            Next iWidth
+            
+            ! Iterations done. Save widthOffset and build string for WO setting
+            lNewWO = trunc( lNewWO )
+            Evaluate "lWOff" + val$(i) + "= lNewWO"
+            lParm$ = lParm$ + "," + val$( lMass ) + "," + val$( lNewWO )
+        Next iMass
+        MSAT_SelectTuneIon 0 ! 0 selects all tune ions
+          If ( lDebug > 0 ) or ( GetVerbose() > 1 ) then  
+            Print "MSAT_FastScan6100: Widthoffset:", lParm$
+          Endif
+        MSDynamic WidthOffset, Enable
+        Evaluate "MSDynamic Widthoffset, Set" + lParm$
+        MSAverages , lFSAverages ! Restore averages from FSTuneMixReg
+        MSAxis	! Final mass axis calibration
+        
+        ! Tuning complete, create report and save results
+        If ( lDebug > 0 ) or ( GetVerbose() > 1 ) then                         ! dbg
+            Print "MSAT_FastScan6100: Tuning done."                            ! dbg
+            Print "                   tunefilename =", tunefilename$           ! dbg
+        Endif                                                                  ! dbg
+    
+        if ( lPolarity = 0 ) then
+          ! Positive polarity
+          mstn_DoGenReport ,9
+          AtunePrint ReadResource$("tunemac", 17669)
+          ! Save profile and scan data in atune register
+          msat_SaveAtune 1
+          AtunePrint ReadResource$("tunemac", 17670) + tunefilename$
+          ! Save fast scan tune file
+          MSSaveTuneFile tunefilename$, lFSPolarity
+        else
+          ! Negative Polarity
+          mstn_DoGenReport ,9
+          AtunePrint ReadResource$("tunemac", 17671)
+          ! Save profile and scan data in atune register
+          msat_SaveAtune 1
+          AtunePrint ReadResource$("tunemac", 17672) + tunefilename$
+          ! Save fast scan tune file
+          MSSaveTuneFile tunefilename$, lFSPolarity
+        endif
+        msprofile
+        msat_FSWidthsCleanup lStepSize, 1
+        print ReadResource$("tunemac", 17673)
+    EndMacro !msat_FastScan6100
+  
+    !===============================================================================
+    
+    !===============================================================================
+    name msat_UltraFastScan            ! Fast-scan tune for HT models
+    PARAMETER pPolarity default 0      ! Ion polarity from msat_auto
+    PARAMETER pRegIndex default 2      ! Tune RegIndex from msat_auto
+    PARAMETER pAutoNum default 4       ! 3 = dual polarity tune
+                                       ! 4 = positive tune only
+                                       ! 5 = negative tune only
+                                       ! 6 = placeholder for not from autotune
+    !===============================================================================
+    !* Globals:  NumMass, 
+    
+    Local lDebug                ; lDebug = 0
+    Local iMass;                ! Loop index over the tune masses
+    Local iWidth                ! Loop index over the peak widths
+    Local lButton
+    Local lCharge               ! Current IonPolarity (2 = FastPos, 3 = FastNeg)
+    Local lCorona               ! Corona current setting from FSTuneMix.reg
+    Local lDefFSMixFile$        ; lDefFSMixFile$ = "DefMixFS.reg"
+    Local lDynPar$              ! Holds parameters for dynamic ramping
+    Local lFSAverages           ! Number of averages for Ultra Fast Scan
+    Local lFSCharge             ! Fast Scan ion polarity (=lCharge+2)
+    Local lFSIonEnergy          ! Fast Scan ion energy
+    Local lFSMixFile$           ; lFSMixFile$ = "FSTuneMix.reg"
+    Local lFSSamples            ! Number of samples for Ultra Fast Scan
+    Local lFSStepSize           ! Stepsize for scanning in Ultra Fast Scan 
+    Local lFSTuneMixReg         ! Points to index of FSTuneMixReg of current source
+    Local lInfo
+    Local lMaxIterations;       lMaxIterations = 5         
+    Local lMSFilter$            ! Type of mass filter used --> MSFilterMass
+    Local lMSFilterParm         ! Parameter of mass filter used --> MSFilterMass
+    Local lMSProfileAvg         ! Return value of MSProfileAvg function
+    Local lNodes                ! number of nodes for e.g. dynamic ramp definition
+    Local lNumberOfMasses       ! Number of masses selected for Ultra Fast Tune
+    Local lParm$                ! String to build dynamic ramp
+    Local lPWTarget;            ! Target value for peak width adjustment
+    Local lPWTolerance;         ! Target value for peak width adjustment tolerance
+    Local lReturnValue          ! Return value for MSProfileAvg() function
+    Local lRFAmp_Row
+    Local lRow
+    Local lOldWO;               ! old / previous peak width offset
+    Local lNewWO;               ! new / next peak width offset
+    Local lWOGain;              lWOGain = 500
+    Local lWOStepSize;          lWOStepSize = 0.4
+    Local lMass1, lMass2, lMass3, lMass4, lMass5, lMass6	  ! tune mass width offset
+    Local lWOff1, lWOff2, lWOff3, lWOff4, lWoff5, lWOff6    ! Widthoff for tune mass
+    
+    Local  ID_TUNEMAC_SCAN_MODE_SET_663
+    Local  ID_TUNEMAC_DISABLING_LENS_593
+    Local  ID_TUNEMAC_MSPARM_664
+    Local  ID_TUNEMAC_NEED_AT_LEAST_667
+    Local  ID_TUNEMAC_UNABLE_TO_ADJU_668
+    Local  ID_TUNEMAC_SAVING_PROFILE_669
+    Local  ID_TUNEMAC_SAVING_FAST_SC_670
+    Local  ID_TUNEMAC_SAVING_PROFILE_671
+    Local  ID_TUNEMAC_SAVING_FAST_SC_672
+    Local  ID_TUNEMAC_PEAKWIDTHS_ARE_673
+    ID_TUNEMAC_SCAN_MODE_SET_663                       =  17663  
+    ID_TUNEMAC_DISABLING_LENS_593                      =  17593  
+    ID_TUNEMAC_MSPARM_664                              =  17664  
+    ID_TUNEMAC_NEED_AT_LEAST_667                       =  17667  
+    ID_TUNEMAC_UNABLE_TO_ADJU_668                      =  17668  
+    ID_TUNEMAC_SAVING_PROFILE_669                      =  17669  
+    ID_TUNEMAC_SAVING_FAST_SC_670                      =  17670  
+    ID_TUNEMAC_SAVING_PROFILE_671                      =  17671  
+    ID_TUNEMAC_SAVING_FAST_SC_672                      =  17672  
+    ID_TUNEMAC_PEAKWIDTHS_ARE_673                      =  17673  
+      
+        If ( lDebug > 0 ) then
+            Print "MSAT_UltraFastScan: Entry parameters:"
+            Print "     pPolarity =", pPolarity
+            Print "     pRegIndex =", pRegIndex
+            Print "     pAutoNum  =", pAutoNum
+        Endif
+    
+        ! Ensure that it is used only for G6140A SL-HT model.
+        If MSD_HT = 0 then
+            ! This is an internal, error message and does not need globalisation.
+            Print "MSAT_UltraFastScan: Stop. Ultra fast supported by G6140A only."
+            Stop
+        Endif
+    
+        ! Ensure that ultra fast scanning is called after a standard scan tune
+        ! Ionpolarity / Charge must be 0 or 1
+        MSParm Polarity, lCharge    ! Get Polarity: 0=Positive, 1=Negative
+        If ( lCharge > 1 ) then
+            ! This is an internal, error message and does not need globalisation.
+            Print "MSAT_UltraFastScan: Stop. Not called from standard scan mode."
+            Stop
+        Endif
+        
+        ! Ensure the FSTuneMixReg is loaded:
+        ! If not, load it from the file system.
+        ! If not on the file system, load the default (backup) file.
+        If ( RegSize( FSTuneMixReg ) < 1 ) then
+            If FileStat( mode, _tunePath$ + lFSMixFile$ ) = 1 then
+                LoadObj _tunePath$ + lFSMixFile$,,FSTuneMixReg
+            Else
+                LoadObj _tunePath$ + lDefFSMixFile$,,FSTuneMixReg
+            Endif
+        Endif
+    
+        MSParm Polarity, lCharge    ! Get Polarity: 0=Positive, 1=Negative,
+        lFSCharge = mod( lCharge, 2 ) + 2 ! Switch to fast version of the current
+                                          ! polarity. (Use mod function in case lCharge is 2 or 3)
+        MSParm IonPolarity,, lFSCharge
+        mstn_UpdateStatusBar ! Updates mode to indicate Fast Scan
+        Print ReadResource$("tunemac",ID_TUNEMAC_SCAN_MODE_SET_663)
+        ! Print "Scan mode set to fast scan"
+    
+        ! FSTuneMixReg[1] holds the required source independent tune parameters
+        lFSSamples = ObjHdrVal( FSTuneMixReg, "Samples" )
+        lFSStepSize = ObjHdrVal( FSTuneMixReg, "StepSize" )
+        lFSAverages = ObjHdrVal( FSTuneMixReg, "Averages" )
+        lMSFilter$ = ObjHdrText$( FSTuneMixReg, "MSFilter" )
+        lMSFilterParm = ObjHdrVal( FSTuneMixReg, "MSFilterParm" )
+        lRow = RowByText( FSTuneMixReg, TuneParms,, Parm, "i=", "IonEnergy")
+        lFSIonEnergy = TabVal( FSTuneMixReg, TuneParms, lRow, "Default" )
+        
+        If ( lDebug > 0 ) then
+            Print "MSAT_UltraFastScan: Samples, StepSize, Averages =",\
+                   lFSSamples, lFSStepsize, lFSAverages
+            Print "MSAT_UltraFastScan: MSFilter =", lMSFilter$, lMSFilterParm
+        Endif
+
+        MSFilterMass ,lMSFilter$,,lMSFilterParm ! Apply ERES filter
+        MSSamples ,lFSSamples
+        MSStepSize ,lFSStepSize
+        MSAverages ,9       ! Increase averaging to optimize parameters
+
+        MSParm Ionenergy,,lFSIonEnergy ! Apply value from FSTuneMixReg
+   
+        ! Set spray chamber parameters:
+        lFSTuneRegIndex = msat_SelectTuneMix("auto")
+        If ( lDebug > 0 ) then
+            Print "MSAT_UltraFastScan: Index of FSTuneMixReg =", lFSTuneRegIndex
+        Endif
+        msat_CheckZones msat_srctype, lFSTuneRegIndex, "FSTuneMixReg"
+    
+        MSParmInfo Corona, lInfo
+        If ( lInfo > 0 ) then 
+            lRow = RowByText( FSTuneMixReg[ lFSTuneRegIndex ], "TuneParms",,\
+                   "Parm", "i=", "corona")
+            lCorona = TabVal( FSTuneMixReg[ lFSTuneRegIndex ], "TuneParms", lRow,\
+                   "Default")
+            MSParm Corona,,lCorona
+            If ( lDebug > 0 ) then
+                Print "Msat_UltraFastScan: Corona =", lCorona
+            Endif
+        endif
+    
+        ! Save tune masses settings
+        msat_SaveMasses
+        ! sorts tune masses, delete replicates, moves selected masses up, 
+        ! and masses that are not selected are removed
+        MSMassSort 1
+        ! gets the number of tune masses used for tune
+        MSMassValue 0, lNumberOfMasses
+    
+        if lNumberOfMasses < 2 then
+          Button = alert(ReadResource$("tunemac",ID_TUNEMAC_NEED_AT_LEAST_667),1)  ! quits after this message
+          if RegSize(SaveMass) > -1 then
+            msat_RestoreMasses
+            DelReg SaveMass
+          endif
+            return
+        endif
+    
+        on error msat_FSWidthsErr
+        mstn_AddAbortHandler "msat_FSWidthsAbort"
+    
+        ! Check whether the dynamic ramp is enabled, then disable to create new dynamic ramp.
+        MSParmInfo Lens2RFAmplitude, lInfo
+        If ( lInfo > 0 ) then; 
+            MSDynamic Lens2RFAmplitude, Disable 
+        Endif
+        MSParmInfo Lens2DC, lInfo
+        If ( lInfo > 0 ) then; 
+            MSDynamic Lens2DC, disable   ! Value from positive.u becomes active
+        endif
+        MSParmInfo Lens2RFEnable, lInfo
+        If ( lInfo > 0 ) then
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_DISABLING_LENS_593)
+            MSParm Lens2RFEnable,,0      ! Disables Lens2RF
+        endif
+    
+        If ( lDebug > 0 ) then
+            Print "MSAT_UltraFastScan: Optimize Lens1"
+        Endif
+        MSParm Lens2DC,, 30
+        MSSimramp Lens1, 1, max
+        MSParm Lens2DC,, 0.5 ! Set Lens2DC to 0.5V for Lens2RF Optimization
+    
+       ! ToDo: Get it from the Ramp Ctrl table from fastpos/fastneg
+        If ( lDebug > 0 ) then
+            Print "MSAT_UltraFastScan: Optimize Lens2 Phase"
+        Endif
+        MSParm Lens2RFEnable,,1
+        MSParm Lens2RFAmplitude,,100    ! has to be set to value > 0
+        MSSimramp Lens2RFPhase,2,max
+    
+        ! Perform an automatic Dynamic ramp for Lens2RFAmp:
+        MSSetRamp Lens2RFAmplitude,10,400,1
+        MSAT_RFRamp "Lens2RFAmplitude"
+    
+        ! Read Lens2RF dynamic ramp values:
+        MSProfile   ! needs this before you can read the new ramp values
+        lRFAmp_Row = RowByVal ( TuneFileReg, DynParm_Table,, ParmID, "=", 31 )
+        ! Read Lens2RF values
+        lDynPar$ = ""
+        lNodes = TabVal( tunefilereg, dynparm_table, lRFAmp_Row, "numValues" )
+        ! lNodes equals the number of scalars given.
+        ! The number of (mass,L2RF) pairs is half the number of scalars.
+        lNodes = trunc( lNodes / 2 )
+        MSMassValue 0, lNumberOfMasses
+        for i=0 to lNodes-1 ! Index starts at 0
+            lColName$ = "funcValue" + Val$( 2*i )
+            lRFMass = TabVal( TuneFileReg, DynParm_Table, lRFAmp_Row, lColName$ )
+            lColName$ = "funcValue" + Val$( 2*i+1 )
+            lRFVal  = TabVal( TuneFileReg, DynParm_Table, lRFAmp_Row, lColName$ )
+            lDynPar$ = lDynPar$ + "," + Val$( lRFMass ) + "," + Val$( lRFVal )
+        next i
+        evaluate "MSDynamic Lens2RFAmplitude, Set" + lDynPar$
+        MSDynamic Lens2RFAmplitude, Plot
+        
+        ! Set the QuadDC dynamic ramp:
+        MSDynamic QuadDC, enable
+          if lCharge = 0 then    ! positive mode
+            ! MSDynamic QuadDC,set,118,0,622,2,922,4,1222,6,1350,8
+            MSDynamic QuadDC,set,622,-5,1350,-12 ! New ramp for B.03.01, SR1
+          else ! negative mode
+            ! MSDynamic QuadDC,set,118,0,622,-2,922,-4,1222,-6,1350,-8
+            MSDynamic QuadDC,set,622,5,1350,12   ! New ramp for B.03.01, SR1
+          endif    
+        MSDynamic QuadDC, Plot
+        
+        ! Replace msat_WORamp with routine using FSTuneMixReg for peakwidths and tolerances
+        ! MSAT_WORamp 0.65                !* Set new WO ramp for fast scan
+        
+        ! Generate list of tune masses and WidthOffset values
+          lTuneMixRegIndex = MSAT_SelectTuneMix( "auto" )
+          msat_SelectTuneIon 0	! 0 = select all masses defined in Tune Mix Reg
+        For iMass = 1 to ObjHdrVal(FSTuneMixReg[lTuneMixRegIndex], "NumIons")
+          Evaluate "MSDynamic Widthoffset, Read," + val$(iMass) \
+                    + ",lMass" + val$( iMass ) + ",lWOff" + val$( iMass )
+        Next iMass
+        
+        ! Make WidthOffset dynamic and iterate peak width for each mass. 
+        MSDynamic WidthOffset, disable
+        lTuneMixRegIndex = MSAT_SelectTuneMix( "auto" )
+        lParm$ = "" !Initialize blank string
+        ! Loop over each tune ion
+        For iMass = 1 to ObjHdrVal(FSTuneMixReg[lTuneMixRegIndex], "NumIons")
+    	  MSAT_SelectTuneIon iMass	! Select this tune mass
+          lPWTarget = TabVal( FSTuneMixReg[lTuneMixRegIndex],TuneIons,iMass,PW50)
+          Evaluate "lMass = lMass" + val$( iMass )
+            If ( lDebug > 0 ) or ( GetVerbose() > 1 ) then  
+                Print "MSAT_UltraFastScan: peak width optimisation mass",\
+                      iMass, "Target", lPWTarget
+            Endif
+            ! Loop over peak width adjust iteration
+            For iWidth = 1 to lMaxIterations
+            lReturnValue = MSProfileAVG( 2, 1, 1 )
+          
+            !   Now we have:
+            !   BasePeak#          mass where maximum abundance occurs
+            !   ConFidm_z#         95% confidence level of Peak m_z
+            !   IsoAbund#          abundance of isotope peak 
+            !   IsoMass#           mass of isotope peak
+            !   Peakm_z#           m/z value from curve fitting
+            !   PeakMax#           maximum abundance of tune mass
+            !   PeakMin#           minimum abundance of tune mass
+            !   PeakWidth#         peak width at 50% height of tune mass
+            !   Precursor#         abundance of precursor
+            !   Valley#            abundance of valley
+            
+            ! Replace numbered variable for each mass with common variable for comparison loop
+              evaluate( "lActPeakWidth = PeakWidth" + val$( iMass ))
+              evaluate( "lActBasePeak  = BasePeak"  + val$( iMass ))
+            ! Get old peak width offset and calculate new peak width offset
+              MSParm Widthoffset, lOldWO
+              lNewWO = lOldWO + (lActPeakWidth-lPWTarget) * lWOGain * lWOStepSize
+            If ( lDebug > 0 ) or ( GetVerbose() > 1 ) then  
+              Print "MSAT_UltraFastScan:",\
+                "peak width", lActPeakWidth,\
+                "base peak", lActBasePeak
+              Print "MSAT_UltraFastScan:",\
+                "old PW offset", lOldWO,\
+                "new PW offset", lNewWO
+            Endif
+                
+            MSParm WidthOffset,,lNewWO
+            Next iWidth
+            ! Iterations done. Evaluate WidthOffset values and build string for dynamic ramp
+            lNewWO = trunc( lNewWO )
+            Evaluate "lWOff" + val$(i) + "= lNewWO"
+            lParm$ = lParm$ + "," + val$( lMass ) + "," + val$( lNewWO )
+        Next iMass
+          MSAT_SelectTuneIon 0 ! 0 selects all tune ions
+        If ( lDebug > 0 ) or ( GetVerbose() > 1 ) then  
+          Print "MSAT_UltraFastScan: Widthoffset:", lParm$
+        Endif
+          MSDynamic WidthOffset, Enable
+          Evaluate "MSDynamic Widthoffset, Set" + lParm$
+     
+        If ( lDebug > 0 ) then
+            Print "MSAT_UltraFastScan: Isotope resolution =", lMSProfileAvg
+            Print "    Confidence levels:", Confidm_z1, Confidm_z2, Confidm_z3,\
+                       Confidm_z4, Confidm_z5, Confidm_z6
+        Endif
+        ! Setting global variables need in MSAT_AdjustMassAxis
+        ! ToDo: Convert it to a regular function / procedure call
+        ! evaluate "peakmaxA = peakmax" + val$( lNumberOfMasses ) CPL 10/10/2006 start
+        ! evaluate "basepeakA = basepeak" + val$( lNumberOfMasses ) 
+        ! NumMass = lNumberOfMasses 
+        ! MSAT_AdjustMassAxis
+        
+        MSAverages , lFSAverages ! Restore averages from FSTuneMixReg
+        MSProfile
+        MSPeakParm ,0 ! Don't want Gaussian fit applied for msAxis (using ERES filter)
+        msAxis ,4,1 ! First iteration.
+        msAxis ,4,1 ! Second iteration CPL 10/10/2006
+    
+        ! Save Ultra Fast Scan tune file
+        if ( lCharge = 0 ) then    ! Positive ion polarity
+            MSTN_DoGenReport ,9    ! print report for atunes.tun 
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_PROFILE_669)
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_FAST_SC_670) \
+                       + MSTN_GetTuneFileName$()
+            msat_SaveAtune 1       !saves profile and scan data in atune register
+            MSSaveTuneFile MSTN_GetTuneFileName$(), lFScharge
+            
+        else                       ! Negative ion polarity
+            !mstn_DoGenReport ,3   ! CPL 10/11/2006 remove extra report
+            mstn_DoGenReport ,9    !print report for atunes.tun for negative mode CPL 10/11/2006 
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_PROFILE_671)
+            msat_SaveAtune 1       !saves profile and scan data in atune register
+            AtunePrint ReadResource$("tunemac",ID_TUNEMAC_SAVING_FAST_SC_672) \
+                       + MSTN_GetTuneFileName$()
+            MSSaveTuneFile MSTN_GetTuneFileName$(), lFScharge 
+        endif
+    
+        ! Print MSProfileAvg( 2, 1 )  ! CPL 10/10/2006 Comment out
+        ! MSProfile ! CPL 04/30/2007 Comment out
+        MSAT_FSWidthsCleanup lFSStepsize,1
+        ! Print ENU: Peakwidths are calibrated for scanning
+        print ReadResource$( "tunemac", ID_TUNEMAC_PEAKWIDTHS_ARE_673 )
+        If ( lDebug > 0 ) then
+            ! After everything is done. Create a debug summary of the settings
+            Print "MSAT_UltraFastScan: Final parameter report"
+            MSSamples lFSSamples
+            MSStepSize lFSStepSize
+            MSAverages lFSAverages
+            MSParm IonEnergy, lFSIonEnergy
+            Print "    Samples, StepSize, Averages:", lFSSamples, lFSStepSize, lFSAverages
+            Print "    IonEnergy:", lFSIonEnergy
+            MSFilterMass lMSFilter$,, lMSFilterParm
+            Print "    Filter:", lMSFilter$, lMSFilterParm
+            Print "    Dynamic Ramps for:"
+            MSDynamic List
+        Endif
+    endmacro  ! msat_UltraFastScan
+    
+    !===============================================================================
+  
+    !===============================================================================
+    Name ufs
+    ! Shortcut macro for performing UltraFastScan 
+       MSCalValve ,2
+       MSGetTuneFile "ATunes",0
+       MSon
+       MSAT_UltraFastScan 0,2,4
+       MSCalValve ,0
+       MSoff
+    Endmacro
+
+    !===============================================================================
+  
+    !===============================================================================
+    Name msat_SelectTuneIon
+    Parameter pSelectedMass default 0
+    ! Selects 1 tune ion or all
+    ! A parameter of [1..6] selects the appropriate ion
+    ! A parameter of 0 selects all masses as defined in tunemixregister
+    Local i
+    Local lDebug			; lDebug = 0
+    Local lTuneMixRegIndex		! Points to tunemixregister index of source
+        If ( lDebug > 0 ) or ( GetVerbose() > 1 ) then  
+    	Print "MSAT_SelectTuneIon: Selected mass =", pSelectedMass
+        Endif
+        If ( pSelectedMass >= 1 ) AND ( pSelectedMass <= 6 ) then
+            ! Select just this mass, disable all other masses
+    	MSMassValue pSelectedMass,,,,1
+    	For i = 1 to 6 
+    	    If ( i <> pSelectedMass ) then
+    		MSMassValue i,,,,0
+    	    Endif
+    	Next i
+        Else
+            If ( pSelectedMass = 0 ) then
+    	    ! Select all masses as defined by tuneMixRegister
+    	    lTuneMixRegIndex = MSAT_SelectTuneMix( "auto" )
+    	    For i = 1 to ObjHdrVal(FSTuneMixReg[lTuneMixRegIndex], "NumIons")
+    		MSMassValue i,,,,1
+    	    Next i
+            Else
+                Return	! Return if parameter outside range [0..6]
+            Endif
+        Endif
+    Endmacro
+    
+    !===============================================================================
+    name msat_GetFSManRampList$
+    PARAMETER RegIndex
+    PARAMETER parm$
+    !
+    !  This routine builds the list of MANRAMP parameters to pass to
+    !  MSDynamic for a manual dynamic ramp.  It will check the mass and settings
+    !  against known limits and will ensure that the masses are in ascending
+    !  order.
+    !===============================================================================
+    local NumIons, low, high, minmass, maxmass, list$, lensrow
+    local i, rampVal, mass, j, tmp$, idx, strlen
+    
+          NumIons = TabHdrVal(FSTuneMix[RegIndex],"ManRamp","NumPairs")
+          MSParmInfo parm$,,low,high
+          maxmass = MSInstrParm("maxmass")
+          minmass = MSInstrParm("minmass") 
+          list$ = ""
+          
+          lensrow = RowByText(FSTuneMix[RegIndex], "ManRamp",, "Parm", "i=", Parm$)
+          if lensrow = -1 then
+            return list$
+          endif
+          
+          for i = 1 to ((NumIons+2)/2)
+             rampVal = TabVal (FSTuneMix[RegIndex],"ManRamp",lensrow,"Setting"+val$(i))
+             mass = TabVal(FSTuneMix[RegIndex], "ManRamp", lensrow, "Mass"+val$(i))
+                
+             !if mass <= maxmass AND mass >= minmass AND \
+                !rampVal >= low AND rampVal <= high
+               !* Add to list in ascending order
+                 if i = 1 then
+                   list$ = val$(mass) + "," + val$(RampVal)
+                 else
+                   for j = 1 to i
+                     tmp$ = substring$(list$,(j*2)-1,,",")
+                     if abs(val(tmp$)-mass)<0.1 then
+                       goto next_item
+                     endif
+                     if val(tmp$) > mass then
+                       idx = instr(list$,tmp$)
+                       if idx = 1 then
+                         list$ = val$(mass) + "," + val$(RampVal)+ "," + list$
+                       else
+                         strlen = len(list$)
+                         list$ = list$[1:idx-1] + val$(mass) + "," + val$(RampVal)  +","+ list$[idx:strlen]
+                       endif
+                       print list$
+                       goto next_item
+                     endif
+                   next j
+                   list$ = list$ + "," + val$(mass) + "," + val$(RampVal)
+                 endif
+             !endif  
+    next_item:         
+          next i
+          return list$
+ 
+    endmacro              !* msat_GetFSManRampList$
+
+    !*******************************************************************************
+    
+    

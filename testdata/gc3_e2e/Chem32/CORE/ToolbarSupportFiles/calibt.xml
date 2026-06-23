@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="CalibT" PosStyle="TOP"  DockRow="2" DockCol="0" Caption="Calibration Cursor Toolbar" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="Signal(s) Displayed" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals " DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="Display the Graphics Toolbar" CmdList="ANN_CloseTask|ANN_InitTask" Group="0" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="Zoom in on Window" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="Zoom out active Window" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="Select a peak from chromatogram and highlight it in the calibration table" Command='CalTabMain.CAL_SetCalibMenuSelection "NoSel",1' Group="2" NewGroup="1" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="DeletePeak" Help="Select calibrated peak(s) from chromatogram and delete them from calibration table" Command='CalTabMain.CAL_SetCalibMenuSelection "DeletePeak",1' Group="2" ImageName="Int_RemovePeak20" ImageNameDisabled="Int_RemovePeak20_d"/>
+		<RadioButton Name="AddPeak" Help="Select unknown peak(s) from chromatogram and add to calibration table" Command='CalTabMain.CAL_SetCalibMenuSelection "AddPeak",1' Group="2" ImageName="Calib_AddPeak20" ImageNameDisabled="Calib_AddPeak20_d"/>
+		<RadioButton Name="RecalComp" Help="Select compounds (i. e. main peaks) from chromatogram and recalibrate" Command='CalTabMain.CAL_SetCalibMenuSelection "RecalComp",1' Group="2" ImageName="Calib_SelectCompound20" ImageNameDisabled="Calib_SelectCompound20_d"/>
+		<NonEditCombobox Name="SelLevel" Help="Select Level for Add or Recalibrate Peaks" NewGroup="0" Enable="1" DefCmdParNumber="1" DefCommand="CalTabMain.CAL_OnLevelCombo" Width="100"/>
+		<Static Name="RecalMode" Text="" Help="" Width="100" Enable="1"/>
+		<NonEditCombobox Name="SelOptionSet" Help="Select an calibration table option set" NewGroup="0" Enable="1" DefCmdParNumber="1" DefCommand="CalTabMain.CAL_OnOptionsCombo" Width="100"/>
+		<PushButton Name="Options" Help="Edit current option set for Calibration table" Command="CalTabMain.CAL_TLBFunction Options,1" ImageName="Calib_CalibTableOptions20" ImageNameDisabled="Calib_CalibTableOptions20_d"/>
+		<StickyButton Name="ToggleChrom" State="1" Help="Show/Hide current Chromatogram" CmdList="CalTabMain.CAL_TLBFunction ShowChrom,1|CalTabMain.CAL_TLBFunction HideChrom,1" ImageName="Calib_HideSignals20" ImageNameDisabled="Calib_HideSignals20_d" Enable="1"/>
+		<PushButton Name="ZoomInMS" Help="Zoom in on MS window" Command='MSD_SetCalibIonSelection ""' NewGroup="1" Visible="0" ImageName="Spec_ZoominMS20" ImageNameDisabled="Spec_ZoominMS20_d"/>
+		<PushButton Name="ExtractIon" Help="Extract Ion Chromatogram" Command='MSD_SetCalibIonSelection "CalibSelectIon"' Visible="0" ImageName="Spec_ExtractIons20" ImageNameDisabled="Spec_ExtractIons20_d"/>
+		<PushButton Name="RemoveExtracedIons" Help="Removes extracted ion chromatograms from the display window" Command="MS_RemoveEICs" Visible="0" ImageName="Calib_RemoveExtIons20" ImageNameDisabled="Calib_RemoveExtIons20_d"/>
+	</toolbar>
+</graphical_object>

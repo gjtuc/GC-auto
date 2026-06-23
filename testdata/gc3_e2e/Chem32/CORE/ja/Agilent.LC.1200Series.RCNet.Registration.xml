@@ -1,0 +1,3392 @@
+<?xml version="1.0"?>
+<ModuleRegistration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="file://RCNetRegistrationScheme.xsd">
+  <Instruments>
+    <Instrument UniqueInstID="Agilent.LC.1200Series" ContainsCombinedConfig="true">
+      <Module UniqueModuleID="FractionCollector" AutoConfigID="f1">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <!--AutosamplerTrayUI>
+						<Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+						<Class>Agilent.LCDrivers.RapidControl.FractionCollector.TrayUI</Class>
+					</AutosamplerTrayUI-->
+          <!--PretreatmentUI>
+						<Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+						<Class>Agilent.LCDrivers.RapidControl.Sampler.PretreatmentUI</Class>
+					</PretreatmentUI-->
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.GenericIF</Class>
+          </GenericIF>
+          <SoftConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.SoftConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>フラクションコレクタ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>フラクションコレクタ</NLSFullModuleName>
+        <ModuleType>eFractionCollector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>AFC</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconFractionCollector.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconFractionCollector.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconFractionCollector.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconFractionCollector.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="pretreatment" Source="Process" IsPretreatment="true">
+            <RegisterMapping RegisterName="Pretreatment" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <!--DiagnosticMapping>
+					<DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="Position"/>
+					<DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="InjPosition"/>
+					<DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+				</DiagnosticMapping-->
+        <Customization>
+          <TrayUI BackColor="White"/>
+        </Customization>
+        <FractionCollector>
+          <KnownTriggerSources DefaultTriggerToken="P">
+            <TriggerModule ModuleID="G1390A">
+              <TriggerChannel ID="UIB.DIGITAL1.MSD" ExternalDelayTime="ClassicMSD" TriggerToken="G" ModuleShortName="MSD"/>
+              <TriggerChannel ID="UIB.ANALOG1" ExternalDelayTime="NotUsed" TriggerToken="P" ModuleShortName="UIB"/>
+            </TriggerModule>
+          </KnownTriggerSources>
+          <SpecialLocations>
+            <SpecialLocation Type="eNextPlate" Token="Next Plate"/>
+            <SpecialLocation Type="eNextLocation" Token="Next Location"/>
+            <SpecialLocation Type="ePooling" Token="Pooling"/>
+          </SpecialLocations>
+        </FractionCollector>
+      </Module>
+      <Module UniqueModuleID="LowFlowFractionCollector" AutoConfigID="f2">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.LowFlowConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.LowFlowConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <!--AutosamplerTrayUI>
+						<Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+						<Class>Agilent.LCDrivers.RapidControl.FractionCollector.TrayUI</Class>
+					</AutosamplerTrayUI-->
+          <!--PretreatmentUI>
+						<Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+						<Class>Agilent.LCDrivers.RapidControl.Sampler.PretreatmentUI</Class>
+					</PretreatmentUI-->
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.GenericIF</Class>
+          </GenericIF>
+          <SoftConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.FractionCollector.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.FractionCollector.SoftConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>低流量フラクションコレクタ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>低流量フラクションコレクタ</NLSFullModuleName>
+        <ModuleType>eFractionCollector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>AFC</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconFractionCollector.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconFractionCollector.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconFractionCollector.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconFractionCollector.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="pretreatment" Source="Process" IsPretreatment="true">
+            <RegisterMapping RegisterName="Pretreatment" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <!--DiagnosticMapping>
+					<DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="Position"/>
+					<DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="InjPosition"/>
+					<DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+				</DiagnosticMapping-->
+        <Customization>
+          <TrayUI BackColor="White"/>
+        </Customization>
+        <FractionCollector>
+          <KnownTriggerSources DefaultTriggerToken="P">
+            <TriggerModule ModuleID="G1390A">
+              <TriggerChannel ID="UIB.DIGITAL1.MSD" ExternalDelayTime="ClassicMSD" TriggerToken="G" ModuleShortName="MSD"/>
+              <TriggerChannel ID="UIB.ANALOG1" ExternalDelayTime="NotUsed" TriggerToken="P" ModuleShortName="UIB"/>
+            </TriggerModule>
+          </KnownTriggerSources>
+          <SpecialLocations>
+            <SpecialLocation Type="eNextPlate" Token="Next Plate"/>
+            <SpecialLocation Type="eNextLocation" Token="Next Location"/>
+            <SpecialLocation Type="ePooling" Token="Pooling"/>
+          </SpecialLocations>
+        </FractionCollector>
+      </Module>
+      <Module UniqueModuleID="AutoSampler" AutoConfigID="3a">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.AlsConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.AlsConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <AutosamplerTrayUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.TrayUI</Class>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.PretreatmentUI</Class>
+          </PretreatmentUI>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>サンプラ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>オートサンプラ</NLSFullModuleName>
+        <ModuleType>eInjector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>ALS</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="pretreatment" Source="Process" IsPretreatment="true">
+            <RegisterMapping RegisterName="Pretreatment" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="Position"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="InjPosition"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+        <Customization>
+          <TrayUI BackColor="White"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="WellplateSampler" AutoConfigID="3c">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.HipAlsConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.HipAlsConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <AutosamplerTrayUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.TrayUI</Class>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.PretreatmentUI</Class>
+          </PretreatmentUI>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>高性能サンプラ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>高性能オートサンプラ</NLSFullModuleName>
+        <ModuleType>eWellplateInjector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>WLS</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconHiPALS.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconHiPALS.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconHiPALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconHiPALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="pretreatment" Source="Process" IsPretreatment="true">
+            <RegisterMapping RegisterName="Pretreatment" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="Position"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="InjPosition"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Plate_ID" DestinationNdrName="PlateType"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+        <Customization>
+          <TrayUI BackColor="White"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="LowFlowAutoSampler" AutoConfigID="3g">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.LowFlowAlsConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.LowFlowAlsConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <AutosamplerTrayUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.TrayUI</Class>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.PretreatmentUI</Class>
+          </PretreatmentUI>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>低流量サンプラ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>低流量オートサンプラ</NLSFullModuleName>
+        <ModuleType>eInjector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>ALS</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="pretreatment" Source="Process" IsPretreatment="true">
+            <RegisterMapping RegisterName="Pretreatment" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="Position"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="InjPosition"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+        <Customization>
+          <TrayUI BackColor="White"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="LowFlowHiPSampler" AutoConfigID="3f">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.LowFlowHipAlsConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.LowFlowHipAlsConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <AutosamplerTrayUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.TrayUI</Class>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.PretreatmentUI</Class>
+          </PretreatmentUI>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>低流量高性能サンプラ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>低流量高性能オートサンプラ</NLSFullModuleName>
+        <ModuleType>eWellplateInjector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>WLS</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconHiPALS.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconHiPALS.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconHiPALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconHiPALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="pretreatment" Source="Process" IsPretreatment="true">
+            <RegisterMapping RegisterName="Pretreatment" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="Position"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="InjPosition"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Plate_ID" DestinationNdrName="PlateType"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+        <Customization>
+          <TrayUI BackColor="White"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="BinPump" AutoConfigID="1b">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.BinPumpConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.BinPumpConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>バイナリポンプ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>バイナリポンプ</NLSFullModuleName>
+        <ModuleType>ePump</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>PMP</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconBIN.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconBIN.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconBIN.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconBIN.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <AuxTraceMapping StoreAllAsDefault="true"/>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Pressure_Actual" DestinationNdrName="StartPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Flow_Actual" DestinationNdrName="StartFlow"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Pressure_Actual" DestinationNdrName="StopPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Flow_Actual" DestinationNdrName="StopFlow"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_SolventType" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position2_SolventType" DestinationNdrName="SolventA2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position1_SolventType" DestinationNdrName="SolventB"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position2_SolventType" DestinationNdrName="SolventB2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_UserName" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position2_UserName" DestinationNdrName="SolventA2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position1_UserName" DestinationNdrName="SolventB"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position2_UserName" DestinationNdrName="SolventB2"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="IsoPump" AutoConfigID="1a">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.IsoPumpConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.IsoPumpConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>アイソクラティックポンプ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>アイソクラティックポンプ</NLSFullModuleName>
+        <ModuleType>ePump</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>PMP</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <AuxTraceMapping StoreAllAsDefault="true"/>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Pressure_Actual" DestinationNdrName="StartPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Flow_Actual" DestinationNdrName="StartFlow"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Pressure_Actual" DestinationNdrName="StopPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Flow_Actual" DestinationNdrName="StopFlow"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_SolventType" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_UserName" DestinationNdrName="SolventA"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="QuatPump" AutoConfigID="1c">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.QuatPumpConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.QuatPumpConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>クォータナリポンプ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>クォータナリポンプ</NLSFullModuleName>
+        <ModuleType>ePump</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>PMP</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconQUAT.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconQUAT.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconQUAT.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconQUAT.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <AuxTraceMapping StoreAllAsDefault="true"/>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Pressure_Actual" DestinationNdrName="StartPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Flow_Actual" DestinationNdrName="StartFlow"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Pressure_Actual" DestinationNdrName="StopPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Flow_Actual" DestinationNdrName="StopFlow"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_SolventType" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position1_SolventType" DestinationNdrName="SolventB"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel3_Position1_SolventType" DestinationNdrName="SolventC"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel4_Position1_SolventType" DestinationNdrName="SolventD"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_UserName" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position1_UserName" DestinationNdrName="SolventB"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel3_Position1_UserName" DestinationNdrName="SolventC"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel4_Position1_UserName" DestinationNdrName="SolventD"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="LowFlowPump" AutoConfigID="1h">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.LowFlowPumpConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.LowFlowPumpConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.GenericIF</Class>
+          </GenericIF>
+          <SoftConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.LowFlowPumpSoftConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>低流量ポンプ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>低流量ポンプ</NLSFullModuleName>
+        <ModuleType>ePump</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>PMP</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconBIN.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconBIN.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconBIN.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconBIN.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <AuxTraceMapping StoreAllAsDefault="true"/>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Pressure_Actual" DestinationNdrName="StartPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Flow_Actual" DestinationNdrName="StartFlow"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Pressure_Actual" DestinationNdrName="StopPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Flow_Actual" DestinationNdrName="StopFlow"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_SolventType" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position2_SolventType" DestinationNdrName="SolventA2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position1_SolventType" DestinationNdrName="SolventB"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position2_SolventType" DestinationNdrName="SolventB2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_UserName" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position2_UserName" DestinationNdrName="SolventA2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position1_UserName" DestinationNdrName="SolventB"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position2_UserName" DestinationNdrName="SolventB2"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="PumpValveCluster" AutoConfigID="p1" IsCluster="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.PumpValveCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.PumpValveCluster.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.PumpValveCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.PumpValveCluster.ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.PumpValveCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.PumpValveCluster.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.PumpValveCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.PumpValveCluster.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.PumpValveCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.PumpValveCluster.GenericIF</Class>
+          </GenericIF>
+          <SoftConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.PumpValveCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.PumpValveCluster.SoftConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>ポンプバルブクラスタ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>ポンプバルブクラスタ</NLSFullModuleName>
+        <ModuleType>ePump</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>PVC</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Pressure_Actual" DestinationNdrName="StartPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Flow_Actual" DestinationNdrName="StartFlow"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Pressure_Actual" DestinationNdrName="StopPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Flow_Actual" DestinationNdrName="StopFlow"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_SolventType" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_UserName" DestinationNdrName="SolventA"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="ColumnComp" AutoConfigID="2">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnComp.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnComp.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnComp.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnComp.ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnComp.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnComp.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnComp.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnComp.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnComp.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnComp.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>カラムコンパートメント</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>カラムコンパートメント</NLSFullModuleName>
+        <ModuleType>eColumnCompartment</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>THM</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_TemperatureControl_Actual" DestinationNdrName="StartLeftTemp"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_TemperatureControl2_Actual" DestinationNdrName="StartRightTemp"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_TemperatureControl_Actual" DestinationNdrName="StopLeftTemp"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_TemperatureControl2_Actual" DestinationNdrName="StopRightTemp"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="ColumnCompCluster" AutoConfigID="c1" IsCluster="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnCompCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnCompCluster.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnCompCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnCompCluster.ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnCompCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnCompCluster.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnCompCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnCompCluster.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnCompCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnCompCluster.GenericIF</Class>
+          </GenericIF>
+          <SoftConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnCompCluster.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnCompCluster.SoftConfigUI</Class>
+          </SoftConfigUI>
+        </Interfaces>
+        <NLSModuleName>カラムコンパートメントクラスタ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>カラムコンパートメントクラスタ</NLSFullModuleName>
+        <ModuleType>eColumnCompartment</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>CCC</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_TemperatureControl_Actual" DestinationNdrName="StartTemp"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_TemperatureControl_Actual" DestinationNdrName="StopTemp"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="DAD" AutoConfigID="4">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Dad.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Dad.DadConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Dad.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Dad.DadConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Dad.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Dad.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Dad.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Dad.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Dad.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Dad.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>DAD</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>ダイオードアレイ検出器 (DAD)</NLSFullModuleName>
+        <ModuleType>eDetector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>DAD</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconDAD.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconDAD.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <SpecFileType>eDADSpecDataFile</SpecFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconDAD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconDAD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_UVLamp_OnTime" DestinationNdrName="UVOnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_UVLamp_BurnTime" DestinationNdrName="UVBurnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_VisLamp_OnTime" DestinationNdrName="VisOnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_VisLamp_BurnTime" DestinationNdrName="VisBurnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_UVLamp_OnTime" DestinationNdrName="StartUVOnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_UVLamp_BurnTime" DestinationNdrName="StartUVBurnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_VisLamp_OnTime" DestinationNdrName="StartVisOnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_VisLamp_BurnTime" DestinationNdrName="StartVisBurnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_UVLamp_OnTime" DestinationNdrName="StopUVOnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_UVLamp_BurnTime" DestinationNdrName="StopUVBurnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_VisLamp_OnTime" DestinationNdrName="StopVisOnTime"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_VisLamp_BurnTime" DestinationNdrName="StopVisBurnTime"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_ProductNumber" DestinationNdrName="CellProdnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_SerialNumber" DestinationNdrName="CellSerialnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_ProductionDate" DestinationNdrName="CellProdDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_PathLength" DestinationNdrName="CellPathlength"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_MaximumPressure" DestinationNdrName="CellMaxPressure"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_LastPassedTestDate" DestinationNdrName="CellTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_CellVolume" DestinationNdrName="CellVolume"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_ProductNumber" DestinationNdrName="LampProdnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_SerialNumber" DestinationNdrName="LampSerialnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_ProductionDate" DestinationNdrName="LampProdDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_NumberOfIgnitions" DestinationNdrName="LampIgnitions"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_BurnTime" DestinationNdrName="LampBurnTime"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_LastPassedTestDate" DestinationNdrName="LampTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_LastPassedTestIntensity" DestinationNdrName="LampIntensityTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_MinimumLifeTime" DestinationNdrName="LampMinimumLifeTime"/>
+        </DiagnosticMapping>
+        <Customization>
+          <Balance ActionID="Agilent.LCDrivers.RapidControl.Dad.Actions.BalanceItem" Mode="eExecuteGenericItemAction"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="MWD" AutoConfigID="5">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Dad.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Dad.MwdConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Dad.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Dad.MwdConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Dad.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Dad.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Dad.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Dad.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Dad.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Dad.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>MWD</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>多波長検出器 (MWD)</NLSFullModuleName>
+        <ModuleType>eDetector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>MWD</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconMWD.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconMWD.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <SpecFileType>eDADSpecDataFile</SpecFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconMWD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconMWD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+        <Customization>
+          <Balance ActionID="Agilent.LCDrivers.RapidControl.Dad.Actions.BalanceItem" Mode="eExecuteGenericItemAction"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="VWD" AutoConfigID="6">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>VWD</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>可変波長検出器 (VWD)</NLSFullModuleName>
+        <ModuleType>eDetector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>VWD</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <SpecFileType>eDADSpecDataFile</SpecFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_ProductNumber" DestinationNdrName="CellProdnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_SerialNumber" DestinationNdrName="CellSerialnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_ProductionDate" DestinationNdrName="CellProdDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_PathLength" DestinationNdrName="CellPathlength"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_MaximumPressure" DestinationNdrName="CellMaxPressure"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_LastPassedTestDate" DestinationNdrName="CellTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_CellVolume" DestinationNdrName="CellVolume"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_ProductNumber" DestinationNdrName="LampProdnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_SerialNumber" DestinationNdrName="LampSerialnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_ProductionDate" DestinationNdrName="LampProdDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_NumberOfIgnitions" DestinationNdrName="LampIgnitions"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_BurnTime" DestinationNdrName="LampBurnTime"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_LastPassedTestDate" DestinationNdrName="LampTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_LastPassedTestIntensity" DestinationNdrName="LampIntensityTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_MinimumLifeTime" DestinationNdrName="LampMinimumLifeTime"/>
+        </DiagnosticMapping>
+        <Customization>
+          <Balance ActionID="Agilent.LCDrivers.RapidControl.Vwd.Actions.BalanceItem" Mode="eExecuteGenericItemAction"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="FLD" AutoConfigID="8">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Fld.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Fld.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Fld.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Fld.ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Fld.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Fld.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Fld.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Fld.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Fld.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Fld.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>FLD</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>蛍光検出器 (FLD)</NLSFullModuleName>
+        <ModuleType>eDetector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1120 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>FLD</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconFLD.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconFLD.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <SpecFileType>eFLDSpecDataFile</SpecFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconFLD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconFLD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+        <Customization>
+          <Balance ActionID="Agilent.LCDrivers.RapidControl.Fld.Actions.BalanceItem" Mode="eExecuteGenericItemAction"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="RID" AutoConfigID="7">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Rid.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Rid.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Rid.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Rid.ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Rid.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Rid.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Rid.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Rid.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Rid.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Rid.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>RID</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>示差屈折率検出器 (RID)</NLSFullModuleName>
+        <ModuleType>eDetector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1120 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>RID</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconRID.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconRID.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconRID.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconRID.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+        <Customization>
+          <Balance ActionID="Agilent.LCDrivers.RapidControl.Rid.Actions.BalanceItem" Mode="eExecuteGenericItemAction"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="ELSD" AutoConfigID="1">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.NonLCDrivers.RapidControl.Elsd.dll</Assembly>
+            <Class>Agilent.NonLCDrivers.RapidControl.Elsd.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.NonLCDrivers.RapidControl.Elsd.dll</Assembly>
+            <Class>Agilent.NonLCDrivers.RapidControl.Elsd.ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.NonLCDrivers.RapidControl.Elsd.dll</Assembly>
+            <Class>Agilent.NonLCDrivers.RapidControl.Elsd.ControlIF</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.NonLCDrivers.RapidControl.Elsd.dll</Assembly>
+            <Class>Agilent.NonLCDrivers.RapidControl.Elsd.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.NonLCDrivers.RapidControl.Elsd.dll</Assembly>
+            <Class>Agilent.NonLCDrivers.RapidControl.Elsd.ProcessIF</Class>
+          </ProcessIF>
+        </Interfaces>
+        <NLSModuleName>ELSD</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>蒸発光散乱検出器 (ELSD)</NLSFullModuleName>
+        <ModuleType>eDetector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>ELS</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconELSD.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconELSD.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconELSD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconELSD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+      </Module>
+      <Module UniqueModuleID="Valve" AutoConfigID="10">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Valve.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Valve.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Valve.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Valve.ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Valve.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Valve.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Valve.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Valve.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Valve.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Valve.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>バルブ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>バルブ</NLSFullModuleName>
+        <ModuleType>eValve</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>VLV</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconValve.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconValve.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconValve.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconValve.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="LowFlowValve" AutoConfigID="10a">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Valve.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Valve.LowFlowConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Valve.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Valve.LowFlowConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Valve.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Valve.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Valve.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Valve.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Valve.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Valve.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>低流量バルブ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>低流量バルブ</NLSFullModuleName>
+        <ModuleType>eValve</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1100/1200 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>VLV</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconValve.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconValve.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconValve.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconValve.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig1" AutoConfigID="CombinedZEN1" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4286AA_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>Compact LC (G4286A)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>Compact LC (G4286A)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig2" AutoConfigID="CombinedZEN2" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4287AA_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>Compact LC (G4287A)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>Compact LC (G4287A)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig3" AutoConfigID="CombinedZEN3" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4288AA_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>Compact LC (G4288A)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>Compact LC (G4288A)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig4" AutoConfigID="CombinedZEN4" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4289AA_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>Compact LC (G4289A)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>Compact LC (G4289A)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig5" AutoConfigID="CombinedZEN5" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4290AA_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>Compact LC (G4290A)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>Compact LC (G4290A)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig6" AutoConfigID="CombinedZEN6" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4286BB_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4286B)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4286B)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig7" AutoConfigID="CombinedZEN7" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4287BB_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4287B)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4287B)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig8" AutoConfigID="CombinedZEN8" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4288BB_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4288B)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4288B)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig9" AutoConfigID="CombinedZEN9" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4289BB_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4289B)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4289B)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig10" AutoConfigID="CombinedZEN10" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4290BB_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4290B)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4290B)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig11" AutoConfigID="CombinedZEN11" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4291BB_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4291B)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4291B)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig12" AutoConfigID="CombinedZEN12" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4292BB_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4292B)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4292B)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig13" AutoConfigID="CombinedZEN13" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4293BB_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4293B)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4293B)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig14" AutoConfigID="CombinedZEN14" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4288CC_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4288C)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4288C)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig15" AutoConfigID="CombinedZEN15" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4289CC_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4289C)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4289C)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig16" AutoConfigID="CombinedZEN16" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4290CC_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4290C)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4290C)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Compact.1120.ZenConfig17" AutoConfigID="CombinedZEN17" IsCombinedContainer="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.CombinedConfig.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.CombinedConfig.G4293CC_ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly/>
+            <Class/>
+          </ControlIF>
+          <MethodUI>
+            <Assembly/>
+            <Class/>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly/>
+            <Class/>
+          </ProcessIF>
+          <AutosamplerTrayUI>
+            <Assembly/>
+            <Class/>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly/>
+            <Class/>
+          </PretreatmentUI>
+        </Interfaces>
+        <NLSModuleName>LC システム (G4293C)</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>LC システム (G4293C)</NLSFullModuleName>
+        <ModuleType>eOther</ModuleType>
+        <ModuleToken>ZEN</ModuleToken>
+      </Module>
+      <Module UniqueModuleID="Sampler" AutoConfigID="3b" IsHidden="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.CompactLCConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.CompactLCConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <AutosamplerTrayUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.TrayUI</Class>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.PretreatmentUI</Class>
+          </PretreatmentUI>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>サンプラ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>オートサンプラ</NLSFullModuleName>
+        <ModuleType>eInjector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1120 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>ALS</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="pretreatment" Source="Process" IsPretreatment="true">
+            <RegisterMapping RegisterName="Pretreatment" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="Position"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="InjPosition"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+        <Customization>
+          <TrayUI BackColor="White"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="Sampler1220" AutoConfigID="3d" IsHidden="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.CompactLC1220ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.CompactLC1220ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <AutosamplerTrayUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.TrayUI</Class>
+          </AutosamplerTrayUI>
+          <PretreatmentUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.PretreatmentUI</Class>
+          </PretreatmentUI>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Sampler.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Sampler.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>サンプラ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>オートサンプラ</NLSFullModuleName>
+        <ModuleType>eInjector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1220 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>ALS</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconALS.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="pretreatment" Source="Process" IsPretreatment="true">
+            <RegisterMapping RegisterName="Pretreatment" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="Position"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="Injection_Position" DestinationNdrName="InjPosition"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+        <Customization>
+          <TrayUI BackColor="White"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="GradPump" AutoConfigID="1e" IsHidden="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.CompactLCGradPumpConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.CompactLCGradPumpConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>グラジエント</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>グラジエントポンプ</NLSFullModuleName>
+        <ModuleType>ePump</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1120 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>PMP</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <AuxTraceMapping StoreAllAsDefault="true"/>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Pressure_Actual" DestinationNdrName="StartPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Flow_Actual" DestinationNdrName="StartFlow"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Pressure_Actual" DestinationNdrName="StopPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Flow_Actual" DestinationNdrName="StopFlow"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_SolventType" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position2_SolventType" DestinationNdrName="SolventA2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position1_SolventType" DestinationNdrName="SolventB"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position2_SolventType" DestinationNdrName="SolventB2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_UserName" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position2_UserName" DestinationNdrName="SolventA2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position1_UserName" DestinationNdrName="SolventB"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position2_UserName" DestinationNdrName="SolventB2"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="GradPump1220" AutoConfigID="1f" IsHidden="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.CompactLC1220GradPumpConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.CompactLC1220GradPumpConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>グラジエント</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>グラジエントポンプ</NLSFullModuleName>
+        <ModuleType>ePump</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1220 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>PMP</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <AuxTraceMapping StoreAllAsDefault="true"/>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Pressure_Actual" DestinationNdrName="StartPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Flow_Actual" DestinationNdrName="StartFlow"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Pressure_Actual" DestinationNdrName="StopPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Flow_Actual" DestinationNdrName="StopFlow"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_SolventType" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position2_SolventType" DestinationNdrName="SolventA2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position1_SolventType" DestinationNdrName="SolventB"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position2_SolventType" DestinationNdrName="SolventB2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_UserName" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position2_UserName" DestinationNdrName="SolventA2"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position1_UserName" DestinationNdrName="SolventB"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel2_Position2_UserName" DestinationNdrName="SolventB2"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="IsoPump1120" AutoConfigID="1d" IsHidden="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.CompactLCIsoPumpConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.CompactLCIsoPumpConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>アイソクラティックポンプ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>アイソクラティックポンプ</NLSFullModuleName>
+        <ModuleType>ePump</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1120 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>PMP</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <AuxTraceMapping StoreAllAsDefault="true"/>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Pressure_Actual" DestinationNdrName="StartPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Flow_Actual" DestinationNdrName="StartFlow"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Pressure_Actual" DestinationNdrName="StopPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Flow_Actual" DestinationNdrName="StopFlow"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_SolventType" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_UserName" DestinationNdrName="SolventA"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="IsoPump1220" AutoConfigID="1g" IsHidden="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.CompactLC1220IsoPumpConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.CompactLC1220IsoPumpConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Pump.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Pump.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>アイソクラティックポンプ</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>アイソクラティックポンプ</NLSFullModuleName>
+        <ModuleType>ePump</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1220 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>PMP</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconISO.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <AuxTraceMapping StoreAllAsDefault="true"/>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Pressure_Actual" DestinationNdrName="StartPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_Flow_Actual" DestinationNdrName="StartFlow"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Pressure_Actual" DestinationNdrName="StopPressure"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_Flow_Actual" DestinationNdrName="StopFlow"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_SolventType" DestinationNdrName="SolventA"/>
+          <DiagnosticItem ResourceProviderID="method" Source="Process" ResourceID="PumpChannel_Position1_UserName" DestinationNdrName="SolventA"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="ColumnComp1120" AutoConfigID="2b" IsHidden="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnComp.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnComp.CompactLCConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnComp.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnComp.CompactLCConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnComp.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnComp.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnComp.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnComp.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.ColumnComp.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.ColumnComp.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>カラムコンパートメント</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>カラムオーブン</NLSFullModuleName>
+        <ModuleType>eColumnCompartment</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1120 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>THM</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconTCC.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_TemperatureControl_Actual" DestinationNdrName="StartLeftTemp"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStart_TemperatureControl2_Actual" DestinationNdrName="StartRightTemp"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_TemperatureControl_Actual" DestinationNdrName="StopLeftTemp"/>
+          <DiagnosticItem ResourceProviderID="ExtendedRunInformation" Source="Control" ResourceID="RunStop_TemperatureControl2_Actual" DestinationNdrName="StopRightTemp"/>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+        </DiagnosticMapping>
+      </Module>
+      <Module UniqueModuleID="VWD1120" AutoConfigID="6b" IsHidden="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.CompactLCConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.CompactLCConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>VWD</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>可変波長検出器 (VWD)</NLSFullModuleName>
+        <ModuleType>eDetector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1120 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>VWD</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <SpecFileType>eDADSpecDataFile</SpecFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_ProductNumber" DestinationNdrName="CellProdnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_SerialNumber" DestinationNdrName="CellSerialnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_ProductionDate" DestinationNdrName="CellProdDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_PathLength" DestinationNdrName="CellPathlength"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_MaximumPressure" DestinationNdrName="CellMaxPressure"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_LastPassedTestDate" DestinationNdrName="CellTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_CellVolume" DestinationNdrName="CellVolume"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_ProductNumber" DestinationNdrName="LampProdnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_SerialNumber" DestinationNdrName="LampSerialnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_ProductionDate" DestinationNdrName="LampProdDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_NumberOfIgnitions" DestinationNdrName="LampIgnitions"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_BurnTime" DestinationNdrName="LampBurnTime"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_LastPassedTestDate" DestinationNdrName="LampTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_LastPassedTestIntensity" DestinationNdrName="LampIntensityTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_MinimumLifeTime" DestinationNdrName="LampMinimumLifeTime"/>
+        </DiagnosticMapping>
+        <Customization>
+          <Balance ActionID="Agilent.LCDrivers.RapidControl.Vwd.Actions.BalanceItem" Mode="eExecuteGenericItemAction"/>
+        </Customization>
+      </Module>
+      <Module UniqueModuleID="VWD1220" AutoConfigID="6c" IsHidden="true">
+        <Interfaces>
+          <ConfigUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.CompactLC1220ConfigUI</Class>
+          </ConfigUI>
+          <ConfigIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.CompactLC1220ConfigIF</Class>
+          </ConfigIF>
+          <ControlIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.UnifiedControl.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.UnifiedControl.UnifiedControl</Class>
+          </ControlIF>
+          <MethodUI>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.MethodUI</Class>
+          </MethodUI>
+          <ProcessIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.ProcessIF</Class>
+          </ProcessIF>
+          <IsUnifiedControlIF>true</IsUnifiedControlIF>
+          <GenericIF>
+            <Assembly>Agilent.LCDrivers.RapidControl.Vwd.dll</Assembly>
+            <Class>Agilent.LCDrivers.RapidControl.Vwd.GenericIF</Class>
+          </GenericIF>
+        </Interfaces>
+        <NLSModuleName>VWD</NLSModuleName>
+        <NLSVendorName>Agilent</NLSVendorName>
+        <NLSFullModuleName>可変波長検出器 (VWD)</NLSFullModuleName>
+        <ModuleType>eDetector</ModuleType>
+        <UnifiedStatus>
+          <UnifiedStatusUI>
+            <Assembly>Agilent.LCDrivers.Dashboard.dll</Assembly>
+            <Class>Agilent.LCDrivers.Dashboard.DashboardPanel.mainPanel</Class>
+          </UnifiedStatusUI>
+          <UnifiedStatusTabName>Agilent 1220 Status</UnifiedStatusTabName>
+        </UnifiedStatus>
+        <ModuleToken>VWD</ModuleToken>
+        <ModuleIconSmall>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </ModuleIconSmall>
+        <ModuleIconLarge>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </ModuleIconLarge>
+        <ChromFileType>e130_LC</ChromFileType>
+        <SpecFileType>eDADSpecDataFile</SpecFileType>
+        <MethodConversion>
+          <LoadMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </LoadMethodConverterPlugIn>
+          <SaveMethodConverterPlugIn>
+            <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+            <Class>Agilent.ChemStation.RapidControl.MethodMigration.LC1200ChemStationMethodConverter</Class>
+          </SaveMethodConverterPlugIn>
+          <LoadOnlyIfXMLNotAvailable>true</LoadOnlyIfXMLNotAvailable>
+        </MethodConversion>
+        <UnconfiguredModuleIconSmall>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconSmall>
+        <UnconfiguredModuleIconLarge>
+          <IconFileOrAssembly>DriverIconVWD.ico</IconFileOrAssembly>
+        </UnconfiguredModuleIconLarge>
+        <ResourceMapping>
+          <ResourceProvider ID="method" Source="Process" IsMethod="true">
+            <RegisterMapping RegisterName="Method" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="config" Source="Process" IsConfig="true">
+            <RegisterMapping RegisterName="Config" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+          <ResourceProvider ID="status" Source="Control">
+            <RegisterMapping RegisterName="Status" Replicate="AutoToRegister"/>
+          </ResourceProvider>
+        </ResourceMapping>
+        <DiagnosticMapping>
+          <DiagnosticItem ResourceProviderID="config" Source="Process" ResourceID="ModuleType" DestinationNdrName="ModuleType"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_ProductNumber" DestinationNdrName="CellProdnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_SerialNumber" DestinationNdrName="CellSerialnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_ProductionDate" DestinationNdrName="CellProdDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_PathLength" DestinationNdrName="CellPathlength"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_MaximumPressure" DestinationNdrName="CellMaxPressure"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_LastPassedTestDate" DestinationNdrName="CellTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="CellTag_CellVolume" DestinationNdrName="CellVolume"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_ProductNumber" DestinationNdrName="LampProdnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_SerialNumber" DestinationNdrName="LampSerialnumber"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_ProductionDate" DestinationNdrName="LampProdDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_NumberOfIgnitions" DestinationNdrName="LampIgnitions"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_BurnTime" DestinationNdrName="LampBurnTime"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_LastPassedTestDate" DestinationNdrName="LampTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_LastPassedTestIntensity" DestinationNdrName="LampIntensityTestDate"/>
+          <DiagnosticItem ResourceProviderID="status" Source="Control" ResourceID="LampTag_MinimumLifeTime" DestinationNdrName="LampMinimumLifeTime"/>
+        </DiagnosticMapping>
+        <Customization>
+          <Balance ActionID="Agilent.LCDrivers.RapidControl.Vwd.Actions.BalanceItem" Mode="eExecuteGenericItemAction"/>
+        </Customization>
+      </Module>
+      <NLSInstrumentName>Agilent LC モジュールおよびシステム</NLSInstrumentName>
+      <Interfaces>
+        <AutoConfigUI>
+          <Assembly>Agilent.LCDrivers.RapidControl.AutoConfiguration.dll</Assembly>
+          <Class>Agilent.LCDrivers.RapidControl.AutoConfiguration.AutoConfigurationUI</Class>
+        </AutoConfigUI>
+        <AutoConfigControlIF>
+          <Assembly>Agilent.LCDrivers.RapidControl.AutoConfiguration.dll</Assembly>
+          <Class>Agilent.LCDrivers.RapidControl.AutoConfiguration.AutoConfigurationIF</Class>
+        </AutoConfigControlIF>
+        <PostAutoConfigUI>
+          <Assembly>Agilent.LCDrivers.RapidControl.AutoConfiguration.dll</Assembly>
+          <Class>Agilent.LCDrivers.RapidControl.AutoConfiguration.PostAutoConfigUI</Class>
+        </PostAutoConfigUI>
+        <PostAutoConfigControlIF>
+          <Assembly>Agilent.LCDrivers.RapidControl.AutoConfiguration.dll</Assembly>
+          <Class>Agilent.LCDrivers.RapidControl.AutoConfiguration.PostAutoConfiguration</Class>
+        </PostAutoConfigControlIF>
+      </Interfaces>
+      <AppFilter>
+        <LC>true</LC>
+        <LCMS>true</LCMS>
+      </AppFilter>
+      <MethodCrossCheck>
+        <MethodCrossCheckPlugIn>
+          <Assembly>AgtChemLC1200MethodConverter.dll</Assembly>
+          <Class>Agilent.ChemStation.RapidControl.LC1200DriverAddOn.LC1200ChemStationMethodCrossCheck</Class>
+        </MethodCrossCheckPlugIn>
+      </MethodCrossCheck>
+    </Instrument>
+  </Instruments>
+  <MergeOrderID>1</MergeOrderID>
+</ModuleRegistration>

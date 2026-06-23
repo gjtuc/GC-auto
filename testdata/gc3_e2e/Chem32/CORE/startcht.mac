@@ -1,0 +1,683 @@
+
+
+!  file name CORE/ STARTCHT.MAC 
+! Date: May 6, 1998   
+! Hewlett-Packard
+
+! A Changed test in StartCht 
+
+name ccCopyTable
+   !    This macro is called by a hook at PostQuant time.
+   !    Check if Control Charts Table is in _DAMethod, "ccDetail"
+   !    If so, copy it to ChromRes[1],so it will go to REPORT01.XLS
+
+LOCAL Numbb
+
+	Numbb = ObjHdrType (_DAMethod, "ccDetail")
+	IF Numbb = 4 then
+		!         table exists
+	     DELTAB ChromRes[1], "ccDetail"
+	     COPYTAB  _DAMethod, "ccDetail", ChromRes[1], "ccDetail"
+	Else
+	        ! do nothing
+	Endif
+Return
+EndMacro
+
+
+name CCinstallmenu
+	!        This macro is called at startup by USER.MAC.  
+	!        It installs the pull-down menu item "Control Charts"
+
+Local CurrentView$
+  
+  NLSFileName_legomac$ = "legomac"
+
+  ID_LEGOMACFILES_AMOUNT_94		 =  17094  	
+  ID_LEGOMACFILES__REPORT_3                          =  17003  
+  ID_LEGOMACFILES_CONTROL_CHARTS_4                   =  17004 
+  ID_LEGOMACFILES_SETUP_EXCEL_BA_5                   =  17005  
+
+  CurrentView$ = Uppercase$( TabHdrText$ (_CONFIG[1],Window, "CurrentView" ))
+  IF (CurrentView$ = "DA") 
+     MenuAdd ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES__REPORT_3), ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_CONTROL_CHARTS_4), "Startcht",,\ 
+      ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_SETUP_EXCEL_BA_5),, 10201 ,,63025000
+  endif
+return
+endmacro
+
+
+
+name MakeBlankTable
+	NewObj ConChart, 1,0,0     ! user register, no rows or columns
+	NewTab ConChart, "ccDetail"
+	SetTabHdrText ConChart,"ccDetail","title", "ControlChartData"
+        SetTabHdrText ConChart, "ccDetail", "MethodName", _METHFILE$
+	NewColText  ConChart, "ccDetail", "CompoundName", "--"
+	NewColText  ConChart, "ccDetail", "PlotVariable", ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_AMOUNT_94)
+	NewColVal   ConChart, "ccDetail", "ChartingOn",    0
+	NewColVal   ConChart, "ccDetail", "LowLimit",      -999
+	NewColVal   ConChart, "ccDetail", "ExpValue",      -999
+	NewColVal   ConChart, "ccDetail", "HighLimit",     -999
+return
+endMacro
+
+
+Name Transcribe1Compound
+		! gets data for One peak:
+Parameter jLineNum
+local jcompnum, jName$, Rowe
+   jcompnum = 0
+   jName$ = ""
+   jcompNum =	TabVal  (_DAMethod, "Peak",jLineNum,"Compound")
+   IF jcompNum > 0 then
+    jName$ =TabText$(_DAMethod,"Compound",jcompNum, "Name")
+    if jName$ <> "" then
+      	InsTabRow   ConChart, "ccDetail"  
+   	Rowe =TabHdrVal (ConChart, "ccDetail", "NumberOfRows")
+   	SetTabText ConChart, "ccDetail", Rowe, "CompoundName", jName$
+    endif
+  ENDIF
+Return
+EndMacro
+
+
+Name MakeFirstTable
+!  This makes the ccDetail Table for the first time, as user table.
+local LineNum
+
+	jNumRows  = -1
+	jNumRows  = TabHdrVal (_DAMethod, "Peak", "NumberOfRows")
+	MakeBlankTable
+	LineNum = 1
+	While LineNum <= jNumrows
+	      Transcribe1Compound (LineNum)
+	      LineNum = LineNum + 1
+	EndWhile
+RETURN
+EndMacro
+
+name FindCalibUpdates !++++++++++++++++++++++++++++++++++++++++++++++
+
+	! Check to see if any compounds have been added since ccDetail
+	!   was last edited
+return
+EndMacro
+
+name SearchConChart
+	!  checks _DAMethod for ccDetail
+	!    or makes a new one in ConChart
+	! then creates the string var for names
+
+local  Numbb, Existt, Nomen$, LastRoww, lastmark, RowNumm
+! global:  CastList$
+	!           Erase the ConChart Register
+	 Existt = RegSize (ConChart)
+	 if Existt <> -1 then   ! exists
+		DELREG ConChart
+EndIf
+ CompoundRow = 1
+	!           Does The _DAMethod Table Exist?
+	Numbb = ObjHdrType (_DAMethod, "ccDetail")
+	IF Numbb = 4 then     !    table exists
+	   NEWOBJ ConChart, 1,0,0
+	   COPYTAB _DAMethod, "ccDetail", ConChart, "ccDetail"
+	   FindCalibUpdates
+	ELSE
+	   MakeFirstTable
+	ENDIF
+   	LastRoww =TabHdrVal (ConChart, "ccDetail", "NumberOfRows")
+        RowNumm = 1
+	CastList$ = ""
+		! Last line forces the first name in the list to be blank
+		!  This solves a bug with "first selection"
+ While RowNumm <= LastRoww
+     Nomen$=TabText$(ConChart,"ccDetail",RowNumm,"CompoundName") 
+     If RowNumm = 1 Then
+            NameName$ = Nomen$ 
+     endif 
+	   CastList$ = CastList$ + Nomen$ + "|"
+	   RowNumm = RowNumm + 1
+  EndWhile 
+  ! new addition 
+   
+  	lastmark = len(CastList$) -1
+        if lastmark > 0 then
+	   CastList$ = CastList$[1:lastmark]  
+	endif
+return
+EndMacro
+
+name GetNowValue
+Parameter jName$
+	! nowvalue comes from _DAMethod, depends on ParamName$
+        Local Rowwe, PKrow, jCalibNum, jamt, jarea, Nvalue
+        Nvalue = 0
+        Rowwe = -99
+	PKrow = -99
+   	Rowwe =RowByText(_DAMethod,"Compound",,"Name", "i=", jname$)
+	PKrow=  TabVal  (_DAMethod, "Compound",Rowwe,"FirstPeak")
+   jcalibNum =	TabVal  (_DAMethod, "Peak", PKrow, "firstcalpoint")
+
+	if Paramname$ = "Amount"  then
+	    NValue=TabVal(_DAMethod, "CalPoint",jcalibNum,"Amount")
+	endif
+	if Paramname$ = "Area"  then
+	    NValue=TabVal(_DAMethod, "CalPoint",jcalibNum,"Area")
+	endif
+	if Paramname$ = "Height"  then
+	    NValue=TabVal(_DAMethod, "CalPoint",jcalibNum,"Height")
+	endif
+	if Paramname$ = "Retention Time"  then
+	    NValue=TabVal(_DAMethod, "Peak", PKrow, "ExpRetTime")
+	endif
+	if Paramname$ = "Response Factor"  then
+	   jamt =TabVal(_DAMethod, "CalPoint",jcalibNum,"Amount")
+	   jarea = TabVal(_DAMethod, "CalPoint",jcalibNum,"Area") 
+	   if jarea > 0 then
+	    	    NValue = jamt/jarea
+	   endif
+	endif
+return Nvalue
+EndMacro
+
+
+name GetOneRow
+    Parameter Roww
+    		!         The desired row
+! NameName$  =TabText$  (ConChart, "ccDetail", Roww, "CompoundName") 
+  ParamName$= TabText$  (ConChart, "ccDetail", Roww, "PlotVariable")
+  doit      = TabVal    (ConChart, "ccDetail", Roww, "ChartingOn") 
+  lowvalue  = TAbVal    (ConChart, "ccDetail", Roww, "LowLimit") 
+  midvalue  = TabVal    (ConChart, "ccDetail", Roww, "ExpValue") 
+  highvalue = TabVal    (ConChart, "ccDetail", Roww, "HighLimit")
+   Nowvalue = GetNowValue(NameName$)
+return
+EndMacro
+
+
+name ClickonName
+	! When the user selects a compound name, all the data on the 
+	! screen is updated, and the "current" compound is selected.
+	! Global vars: NameName$, CompoundRow
+
+parameter a1$, a2$, a3$, a4$
+	! 	Get the row number for NameName$
+	CompoundRow = 0
+	on error print
+	PowerOFFinterrupts
+
+	CompoundRow = FindOneRow (NameName$)
+	on error
+	if CompoundRow > 0 then
+	   GetOneRow (CompoundRow)
+        endif
+	PowerONinterrupts
+Return
+EndMacro
+
+
+name ClickonVar
+	! When user selects PlotVariable, Table is updated 
+	! Global var: Paramname$, NameName$
+   parameter a1$, a2$, a3$, a4$
+   local Nuvalue
+!   globals  Compoundrow
+  
+	PowerOFFinterrupts
+
+	Nuvalue = instr(TL$, PARAMNAME$)
+	IF Nuvalue < 1 then	    ! this is user-modified name, 
+				    !  so replace with original value
+	   ParamName$= TabText$(ConChart,"ccDetail",CompoundRow,"PlotVariable")
+	Endif
+
+ SetTabText ConChart,"ccDetail",CompoundRow,"PlotVariable",ParamName$
+   Nuvalue = GetNowValue(NameName$)
+   IF Nowvalue <> Nuvalue then 
+        Nowvalue  = Nuvalue
+	lowvalue  = -999
+	midvalue  = -999
+	highvalue = -999
+   EndIf
+	PowerONinterrupts
+Return
+EndMacro
+
+!===========================
+
+name ClickonLow
+	! When user selects LowLimit, Table is updated.
+	! Global var: lowvalue
+   parameter a1$, a2$, a3$, a4$
+   SetTAbVal  ConChart, "ccDetail", CompoundRow, "LowLimit",lowvalue
+Return
+EndMacro
+
+
+name ClickonMid
+	! When the user selects Expected Value (Mid value), 
+	!		this data is updated in the table.
+	! Global var: midvalue
+   parameter a1$, a2$, a3$, a4$
+   SetTabVal  ConChart, "ccDetail", CompoundRow, "ExpValue",midvalue
+Return
+EndMacro
+
+name ClickonHigh
+	! When user selects HighLimit, Table is updated.
+	! Global var: highvalue
+   parameter a1$, a2$, a3$, a4$
+   SetTabVal  ConChart,"ccDetail",CompoundRow, "HighLimit",highvalue
+Return
+EndMacro
+
+name ClickonOn
+	! When user selects ChartingOn, Table is updated.
+	! Global var: doit
+Parameter a1$, a2$, a3$, a4$
+  
+   SetTabVal  ConChart, "ccDetail", CompoundRow, "ChartingOn",doit
+Return
+EndMacro
+
+
+
+name SaveOneRow
+! the global is    CompoundRow 
+
+!   SetTabText ConChart, "ccDetail", CompoundRow, "CompoundName", NameName$
+   SetTabText ConChart, "ccDetail", CompoundRow, "PlotVariable", Paramname$
+   SetTabVal  ConChart, "ccDetail", CompoundRow, "ChartingOn", doit
+   SetTAbVal  ConChart, "ccDetail", CompoundRow, "LowLimit", lowvalue
+   SetTabVal  ConChart, "ccDetail", CompoundRow, "ExpValue", midvalue
+   SetTabVal  ConChart, "ccDetail", CompoundRow, "HighLimit",highvalue
+return
+EndMacro
+
+name FindOneRow
+   Parameter jname$ 
+local Roww
+	!Returns the row number in ccDetail for the named compound
+        Roww= -99
+   	Roww= RowByText(ConChart,"ccDetail",,"CompoundName","i=",jname$)
+ Return Roww
+EndMacro
+
+Name Set3Screens
+	!               ccHelp Screen
+
+NLSFileName_legomac$ = "legomac"
+
+ID_LEGOMACFILES______THIS_PROC_6                   =  17006  
+ID_LEGOMACFILES_THAT_YOU_SELEC_7                   =  17007
+ID_LEGOMACFILES_BE_UPDATED_AUT_8                   =  17008  
+ID_LEGOMACFILES_____YOU_NEED_T_9                   =  17009  
+ID_LEGOMACFILES_____YOU_CAN_SE_10                  =  17010  
+ID_LEGOMACFILES_HIGH_AND_LOW_11                    =  17011  
+ID_LEGOMACFILES_ON_THE_CHART_12                    =  17012  
+ID_LEGOMACFILES_OR_MINUS_3_STA_13                  =  17013  
+ID_LEGOMACFILES_____YOU_CAN_RE_14                  =  17014  
+ID_LEGOMACFILES_HELP_FOR_CONTR_16                  =  17016  
+ID_LEGOMACFILES_OK_17                              =  17017  
+ID_LEGOMACFILES_SETTING_UP_CON_19                  =  17019  
+ID_LEGOMACFILES_CONTROL_CHART_20                   =  17020  
+ID_LEGOMACFILES_VARIABLE_21                        =  17021  
+ID_LEGOMACFILES_AMOUNT_RESPONS_22                  =  17022  
+ID_LEGOMACFILES_CURRENT_VALUE_23                   =  17023  
+ID_LEGOMACFILES_LOW_LIMIT_24                       =  17024  
+ID_LEGOMACFILES_EXPECTED_25                        =  17025  
+ID_LEGOMACFILES_HIGH_LIMIT_26                      =  17026  
+ID_LEGOMACFILES_CANCEL_27                          =  17027  
+ID_LEGOMACFILES_HELP_28                            =  17028  
+
+
+
+J1$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES______THIS_PROC_6)
+J2$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_THAT_YOU_SELEC_7) 
+J3$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_BE_UPDATED_AUT_8)
+
+K3$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_____YOU_NEED_T_9)
+K4$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_____YOU_CAN_SE_10) 
+J4$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_HIGH_AND_LOW_11)
+J5$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_ON_THE_CHART_12)
+J6$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_OR_MINUS_3_STA_13)
+j7$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_____YOU_CAN_RE_14)
+
+    RemoveDialog ("CcHELP")
+    BeginDialog "CcHELP", 50,47,270,159, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_HELP_FOR_CONTR_16)
+	 staticText 10,21,267,10, J1$ 
+	 staticText 10,31,267,10, J2$ 
+	 staticText 10,41,267,10, J3$ 
+	 staticText 10,56,267,10, K3$ 
+	 staticText 10,71,267,10, K4$ 
+	 staticText 10,81,267,10, J4$ 
+        staticText 10, 91,267,10, J5$ 
+        staticText 10, 101,267,10, J6$ 
+        staticText 10,116,267,10, J7$ 
+	OKButton 190, 138, 25,15, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_OK_17)
+    EndDialog
+
+	!                ccScreen
+
+	!  Defines a screen requesting parameters about one compound
+	!  INPUTS doit, lowvalue, midvalue, highvalue, nowvalue, 
+	!      ParamName$, CompoundName$
+   RemoveDialog (CcScreen) 
+   BeginDialog "CcScreen", 50,47,237,159, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_SETTING_UP_CON_19)
+	disabled = 0
+
+	ListBox    15,21,75,19, CastList$, NameName$
+
+	CheckBox 130,11,83, 30, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_CONTROL_CHART_20), doit
+	staticText 15,51,50,10, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_VARIABLE_21), "L"
+
+        TL$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_AMOUNT_RESPONS_22)
+!	ListBox    48,51,68,19, TL$, Paramname$
+       comboBox    48,51,75,40, TL$, Paramname$
+
+	staticText 130,51,50,10, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_CURRENT_VALUE_23), "L"
+	NumberBox  180,51,40,10, nowvalue,   ,  , ,  , disabled
+
+	staticText 15, 96,40,10, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_LOW_LIMIT_24), "L"
+	NumberBox  15,106,40,10, lowvalue 
+	staticText 72, 96,40,10, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_EXPECTED_25), "L"
+	NumberBox  72,106,40,10, midvalue 
+	staticText 130,96,40,10, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_HIGH_LIMIT_26), "L"
+	NumberBox 130,106,40,10, highvalue 
+
+	pushButton    65, 128, 35,15, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_OK_17), 3 
+        CancelButton 115, 128, 35,15, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_CANCEL_27)
+!	ExecPushButton 165, 128, 35,15, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_HELP_28), "CC_CP", DoTheHelp
+	ExecPushButton 165, 128, 35,15, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_HELP_28), "CC_CP", "Help 10201"
+
+    EndDialog
+return
+EndMacro
+
+Name ReadccTable 
+Parameter rou
+		!	 gets data for One peak:
+   NameName$  =TabText$(ConChart,"ccDetail",rou, "CompoundName")
+   Paramname$ =TabText$(ConChart,"ccDetail",rou, "PlotVariable")
+   doit       =TabVal  (ConChart,"ccDetail",rou, "ChartingOn")
+   midvalue   =TabVal  (ConChart,"ccDetail",rou, "ExpValue")
+   lowvalue   =TabVal  (ConChart,"ccDetail",rou, "LowLimit")
+   highvalue  =Tabval  (ConChart,"ccDetail",rou, "HighLimit")
+
+   nowvalue = GetNowValue(namename$)     !jamount
+Return
+EndMacro
+
+name StoreUpdatedTable
+	! the ConChart/"ccDetail" has been modified.
+	! copy it back to _DAMethod
+
+	DELTAB _DAMethod, "ccDetail"
+	COPYTAB Conchart, "ccDetail", _DAMethod, "ccDetail"
+
+Return
+EndMacro
+
+Name PowerONinterrupts
+  CPrequest "CC_CP", "OnEvent ""ParamName$"",""ClickonVar"" ,,""CP"" "
+  CPrequest "CC_CP", "OnEvent ""lowvalue"", ""ClickonLow"" ,,""CP"" "
+  CPrequest "CC_CP", "OnEvent ""midvalue"", ""ClickonMid"" ,,""CP"" "
+  CPrequest "CC_CP", "OnEvent ""highvalue"",""ClickonHigh"",,""CP"" "
+  CPrequest "CC_CP", "OnEvent ""doit"",     ""ClickonOn "" ,,""CP"" "
+  CPrequest "CC_CP", "OnEvent ""NameName$"",""ClickonName"",,""CP"" "
+Return
+EndMacro
+
+Name PowerOFFinterrupts
+	OnEvent "Paramname$",,, "CP"
+	OnEvent "Namename$" ,,, "CP"
+	OnEvent "lowvalue"  ,,, "CP"
+	OnEvent "midvalue"  ,,, "CP"
+	OnEvent "highvalue" ,,, "CP"
+	OnEvent "doit"      ,,, "CP"
+Return
+EndMacro
+
+Name TryScream
+
+!________________________ BUG A
+!	1. Only use CC_CP
+!	2. Don't use Loop in ShowDialog
+!	3. On exit from ShowDialog, only possibilities are 0 and 3
+!	4. Take out JLineNum and loop
+
+! global whattodo
+  If IsCPRunning("CC_CP") <> 1
+    CPStart "CC_CP"       
+  EndIf
+
+	PowerONinterrupts
+   !commented for space issues
+	! Namename$ = " "   
+		! This forces initial selection to be blank, to solve a bug with 
+		! first choice
+
+    	WhatToDo = -99
+    	!  While WhatToDo < 0  
+ 	    WhatToDo = ShowDialog ("CcScreen") 
+    	!  EndWhile
+	If WhatToDo = 0 then            !___ Cancel
+		! do nothing 
+	Else 				!____OK
+        	SaveOneRow
+		StoreUpdatedTable
+	Endif
+	PowerOFFinterrupts
+
+  sleep 0.01
+	CPTerminate "CC_CP"
+Return
+Endmacro
+
+
+Name AfterDialog
+! 		set (file output), as "Report"
+! 		set .XLS
+! 		set post-run macro 
+! 		set post-run macro name "HPCNTL.MAC,GO"
+
+local Roow
+! TEST FOR ANY CHARTED PEAKS
+
+Roow = RowByVal(ConChart, "ccDetail" ,, "ChartingOn", "=", 1)
+If Roow > 0 then  	!___ there are charts
+	
+	SetTabHdrVal _DAMETHOD, RptParm, FileTypeXLS, 1
+	SetTabHdrVal _DAMETHOD, RptParm, DestFile,    1
+       SetTabHdrText _DAMETHOD, RptParm, FileName,    "Report"
+	RUN_POSTRUN  = 1 
+	Run_PostRun$ =  "MACRO HPCNTL.MAC,GO"
+else			!__ No charts, so erase tables & Postrun
+	DELREG ConChart
+	DELTAB _DAMethod, "ccDetail"
+	RUN_POSTRUN  = 0
+	Run_PostRun$ =  ""
+endif
+
+Return
+EndMacro
+
+
+NAME StartCht  
+	! Main entry  point for editing or reviewing
+ !    the Control Chart setpoints    
+ 
+ NLSFileName_legomac$ = "legomac"
+
+ ID_LEGOMACFILES_GET_A_CALIBRAT_31                  =  17031  
+ 
+	Set3Screens
+	SearchConchart
+        IF TabHdrVal( ConChart,"ccDetail",NumberOfRows) > 0 THEN
+	   ReadccTable (1)
+	   TryScream
+  	ELSE
+PRINT ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_GET_A_CALIBRAT_31)	
+        ENDIF
+	AfterDialog
+	RemoveDialog ("ccHelp")
+	RemoveDialog ("ccScreen")
+
+return
+ENDMACRO
+
+
+name ckkuser
+	   !    called by InstallUserMac	
+	   ! 1. see if User.MAC EXISTS
+	   ! 2. If it does, see if it contains the magic lines.
+	   ! 3. If not, APPEND/ADD the three lines, and RUN two lines.
+	local testdone
+	local foundmac
+	local S$
+
+NLSFileName_legomac$ = "legomac"
+
+ID_LEGOMACFILES_PRESS__REPORT_37                   =  17037  
+
+
+S$ = findfile$(user.mac)
+IF S$ = "" then
+	! write a new file
+	OPEN "USER.MAC" FOR OUTPUT AS #8
+	PRINT #8, "MACRO STARTCHT.MAC"
+	PRINT #8, "setHook ""PreViewMenu"", ""CCinstallmenu"" "
+	PRINT #8, "setHook ""PostQuant"", ""CCCopyTable"" "
+	CLOSE #8
+	setHook "PreViewMenu", "CCinstallmenu"
+	setHook "PostQuant"  , "CCCopyTable"
+        ccInstallMenu
+ELSE
+	! see if the key lines are in the file
+	OPEN "USER.MAC" FOR INPUT AS #8
+	ON ERROR testdone = 1
+	testdone = 0	
+	foundmac = 0
+	WHILE testdone = 0
+                INPUT #8, S$
+		IF S$ = "MACRO STARTCHT.MAC"  THEN
+		    foundmac = 1
+		    testdone = 1
+		ENDIF 	 
+	ENDWHILE
+        CLOSE #8
+	ON ERROR
+
+	IF foundmac = 1 then
+		! do nothing
+	ELSE
+	   ! append macro commands
+	   OPEN "USER.MAC" FOR APPEND AS #8
+	   PRINT #8, "MACRO STARTCHT.MAC"
+	   PRINT #8, "setHook ""PreViewMenu"", ""CCinstallmenu"" "
+	   PRINT #8, "setHook ""PostQuant"", ""CCCopyTable"" "
+	   CLOSE #8
+	   setHook "PreViewMenu", "CCinstallmenu"
+	   setHook "PostQuant"  , "CCCopyTable"
+           ccInstallMenu
+	ENDIF
+ENDIF
+print ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_PRESS__REPORT_37)
+return
+endmacro
+
+Name SetScreen1    
+  
+  NLSFileName_legomac$ = "legomac"
+
+  ID_LEGOMACFILES_OK_17                              =  17017  
+  ID_LEGOMACFILES_CANCEL_27                          =  17027  
+  ID_LEGOMACFILES_HELP_28                            =  17028  
+  ID_LEGOMACFILES_____THIS_PROCE_38                  =  17038  
+  ID_LEGOMACFILES__ABLE_TO_MAKE_40                   =  17040  
+  ID_LEGOMACFILES__METHOD__THE_C_41                  =  17041 
+  ID_LEGOMACFILES__METHOD__THE_C_41                  =  17041  
+  ID_LEGOMACFILES__OR_FOR_SOME_O_42                  =  17042  
+  ID_LEGOMACFILES__CHARTS_WILL_B_43                  =  17043  
+  ID_LEGOMACFILES__CONTROL_CHART_44                  =  17044    
+  ID_LEGOMACFILES__CANNOT_BE_USE_45                  =  17045  
+  ID_LEGOMACFILES__GC__LC__CE__L_46                  =  17046  
+  ID_LEGOMACFILES_ADDING_CONTROL_48                  =  17048  
+  ID_G11N_INCREASE_DLGWIDTH_20000                    =  20000
+!defect fixing id-577 [dialogbox text truncation]
+G11N_SPECIALWIDTH = Val(ReadResource$(NLSFileName_legomac$,ID_G11N_INCREASE_DLGWIDTH_20000)) 
+  
+L0$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_____THIS_PROCE_38)
+L1$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES__ABLE_TO_MAKE_40)
+L2$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES__METHOD__THE_C_41)
+L3$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES__OR_FOR_SOME_O_42)
+L4$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES__CHARTS_WILL_B_43)
+L5$ = " "
+
+L6$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES__CONTROL_CHART_44)
+L7$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES__CANNOT_BE_USE_45)
+L8$ = ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES__GC__LC__CE__L_46)
+
+    RemoveDialog ("addCC")
+    BeginDialog "addCC", 50,47,270 + G11N_SPECIALWIDTH,159, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_ADDING_CONTROL_48)
+	 staticText 10,21,267,10, L0$ 
+	 staticText 10,31,267 + G11N_SPECIALWIDTH,10, L1$ 
+	 staticText 10,41,267 + G11N_SPECIALWIDTH,10, L2$ 
+	 staticText 10,51,267,10, L3$ 
+	 staticText 10,61,267,10, L4$ 
+	 staticText 10,71,267,10, L5$ 
+   staticText 10, 91,267,10, L6$ 
+   staticText 10, 101,267,10, L7$ 
+   staticText 10,111,267,10, L8$ 
+   OKButton      65, 138, 35,15, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_OK_17)
+	 CancelButton 115, 138, 35,15, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_CANCEL_27)
+	 ExecPushButton 165, 138, 35,15, ReadResource$(NLSFileName_legomac$,ID_LEGOMACFILES_HELP_28), "CC_CP5", "HELP 10202"	 
+				
+    EndDialog
+RETURN
+ENDMACRO
+
+Name IsCPRunning
+  Parameter Name$
+  
+  Local Ret, ActName$, i
+  
+  ret = 0
+  i = 1
+  Repeat
+    ActName$ = CPName$(i)
+    If ActName$ = Name$
+      Ret = 1
+    EndIf
+  
+    i = i+1
+  Until Ret = 1 Or ActName$ = ""
+  
+  return Ret
+EndMacro
+
+NAME InstallUserMac
+	!    This macro  *** MUST ***  be the last one in the file, 
+	!    so that it can be called with "macro STARTCHT.MAC,GO"
+
+	!___ Tell the user about... give warning, and chance to abort
+local WhatToDo	
+ SetScreen1
+ If IsCPRunning("CC_CP5") <> 1
+   CPStart "CC_CP5"
+ EndIf
+ 	WHATTODO = -99
+	WHATTODO = ShowDialog("addCC")
+	IF WHATTODO = 0  
+		! cancel
+	else
+		CKKUSER
+	endif
+        RemoveDialog ("addCC")
+  sleep 0.01
+	CPTerminate "CC_CP5"
+RETURN
+ENDMACRO
+
+

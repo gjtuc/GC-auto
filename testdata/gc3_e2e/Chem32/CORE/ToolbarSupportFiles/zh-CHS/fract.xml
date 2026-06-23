@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="FracT" PosStyle="TOP" DockRow="1" DockCol="1" Caption="纯化游标工具栏" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="信号显示" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals " DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="显示图形工具栏" CmdList="ANN_CloseTask|ANN_InitTask" Group="0" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="放大窗口" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="缩小活动窗口" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="设置为选择模式" Command="SIG_SetSignalMenuSelection NoSel,1" Group="2" NewGroup="1" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="DelObject" Help="从色谱图中删除对象" Command="SIG_SetSignalMenuSelection DelObject,1" Group="2" ImageName="Signal_DelSignal20" ImageNameDisabled="Signal_DelSignal20_d"/>
+		<RadioButton Name="Overlay" Help="显示重叠的信号" Command="SIG_SetSignalOption Overlay,1" Group="3" NewGroup="1" ImageName="Graph_SignalsOverlay20" ImageNameDisabled="Graph_SignalsOverlay20_d"/>
+		<RadioButton Name="Separate" Help="显示分离的信号" Command="SIG_SetSignalOption Overlay,0" Group="3" ImageName="Graph_SignalsSeparate20" ImageNameDisabled="Graph_SignalsSeparate20_d"/>
+		<RadioButton Name="FullScale" Help="各自使用满量程显示" Command="SIG_SetSignalOption FullScale,1" Group="4" ImageName="Graph_FullScale20" ImageNameDisabled="Graph_FullScale20_d"/>
+		<RadioButton Name="SameScale" Help="全部使用相同量程显示" Command="SIG_SetSignalOption FullScale,0" Group="4" ImageName="Graph_SameScale20" ImageNameDisabled="Graph_SameScale20_d"/>
+	</toolbar>
+</graphical_object>

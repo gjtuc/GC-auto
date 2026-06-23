@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="MMCGTB" PosStyle="TOP" Caption='"MMCGTB"' PanelName="Main">
+		<NonEditCombobox Name="MMCGFile" Help="Select previously loaded tune files" Enable="1" Table="_Config,1,MSDCalFile" Selection="1" Width="200"/>
+		<PushButton Name="LoadMMCg" Help="Load a MSD tune file" Command='MSTN_DoGetTuneFile' Group="0" ImageName="Tune_LoadTuneFile20"/>
+		<PushButton Name="SaveMMCg" Help="Save current MSD tune file" Command='MSTN_DoSaveTuneFile tunefilepath$+tunefilename$' Group="0" ImageName="Tune_SaveTuneFile20"/>
+		<PushButton Name="PrintReport" Help="Generate a report of profile and scan" Command="mstn_DoGenReport" ImageName="Tune_GenReport20" NewGroup="1"/>
+		<PushButton Name="AutoTune" Help="Tune the MSD automatically and print tune report" Command="msat_auto" ImageName="Tune_Autotune20"/>
+		<PushButton Name="MassAxis" Help="Calibrate the mass axis" Command="MSAxis" ImageName="Tune_CalibMassAxis20"/>
+		<PushButton Name="SprayChamber" Help="Set spray chamber values" Command="MSEdZone" ImageName="Tune_SprayChamber20"/>
+		<PushButton Name="EditMSParm" Help="Manually Set MS Parameters" Command="mstn_EdParms" ImageName="Tune_SetParams20"/>
+		<PushButton Name="Acquire" Help="Acquires multiple scans in data file" Command="mstn_Acquire" ImageName="Tune_AcquireMultipleScans20"/>		
+	</toolbar>
+</graphical_object>

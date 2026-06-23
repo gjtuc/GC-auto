@@ -1,0 +1,8 @@
+Name SAMPLEINFO
+CLRRPTSMPLINFO
+SAMPLECALISTD 1,0
+SAMPLECALAMT 0,1,1
+RPTSAMPLEINFO "sulfa drug mix in positive mode with 3 scan signals at "
+RPTSAMPLEINFO "different fragmentor voltages"
+REMOVE SAMPLEINFO
+RETURN

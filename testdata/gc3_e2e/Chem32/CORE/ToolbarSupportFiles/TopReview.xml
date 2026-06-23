@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="TopReview" PosStyle="TOP" Caption="Review" DockRow="0" DockCol="0" PanelName="Main">
+    <PushButton Name="LoadTemplate" Help="Load Report Template" Command='IR_Command_LoadTemplate' Visible="1" ImageName="Report_OpenTemplate20" ImageNameDisabled="Report_OpenTemplate20_d"/>
+    <StatusList Name="ReportTemplate" Text="" Font="Microsoft Sans Serif, 8, Regular" BkColor="white" Help="Actual Report Template" Width="250" Enable="1" Border="NoBorder"/>
+    <PushButton Name="Preview" Help="Preview Report" Command='IR_Command_PreviewReport' Visible="1" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+    <PushButton Name="Print" Help="Print Report" Command='IR_Command_PrintReport' Visible="1" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+    <PushButton Name="ExportPdf" Help="Export to PDF" Command='IR_Command_ExportPdf' Visible="1" ImageName="Report_ExportPdf20" ImageNameDisabled="Report_ExportPdf20_d"/>
+    <PushButton Name="ExportXls" Help="Export to Excel" Command='IR_Command_ExportXls' Visible="1" ImageName="Report_ExportExcel20" ImageNameDisabled="Report_ExportExcel20_d"/>
+<!--    <StickyButton Name="HideNavtable" Help="Hide/Show Navigation Table" CmdList="NavTableShow Off|NavTableShow On" State="1" NewGroup="1" ImageName="Report_TableTool20" ImageNameDisabled="Report_TableTool20_d"/> -->
+	</toolbar>
+</graphical_object>

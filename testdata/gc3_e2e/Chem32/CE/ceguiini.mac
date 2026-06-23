@@ -1,0 +1,59 @@
+!******************************************************************************
+!*
+!* FILE:  CEGUIini.mac
+!*
+!* DESCRIPTION:  Initializes basics for the HPCE GUI menu
+!*
+!* $Header: /DRIVERS/leodef/ce/misc/ceguiini.mac 1.2 1995-11-08 04:20:42-05 hmgr Exp $
+!******************************************************************************
+!*
+!* MACROS :                     
+!*           
+!*           
+!*          
+!*         
+
+
+    
+!############################################################################
+name GUIDiagramMenuAdd
+
+parameter   AreaToken$ default "" ! "SAMPLINGAREA" ,  "METHODAREA" , "SEPARATOR"
+parameter   Label$
+parameter   Item$
+parameter   Message$   default ""
+!############################################################################
+
+if AreaToken$ = "SAMPLINGAREA"
+else
+if AreaToken$ = "METHODAREA" 
+   menuadd Label$, Item$, "Diagram" ,, Message$ ,GUIDiagramStateForMenu, 
+else
+if AreaToken$ = "SEPARATOR" 
+   menuadd Label$, ,"SEPARATOR" 
+endif
+endif
+endif
+
+endmacro
+
+    
+
+!############################################################################
+name Init_CEGUIini
+
+!############################################################################
+
+
+if Check ( VARIABLE, GUIDiagramStateForMenu ) = 0
+   GUIDiagramStateForMenu=1  !enabled and unchecked
+endif
+
+
+!tie in callback macros for sampling GUI
+GUIProductMacDemandLoading "SGuiInit.mac", "Init_SGuiInit"
+
+endmacro
+
+
+

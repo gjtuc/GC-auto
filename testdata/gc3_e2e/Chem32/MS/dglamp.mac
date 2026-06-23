@@ -1,0 +1,449 @@
+!***************************************************************************!
+!* dglamp.mac        
+!* LC/MSD Photoionization lamp test macros (APPI)
+!*
+!* These macros examine the capillary current and chamber voltage.  These should
+!* give an indication of the strength of the photoionization lamp.
+!*
+!*
+!* Globals:  LampTestVer$
+!* 
+!* Macros:   dgMsLampTest$           Main macro
+!*           dgMsLampTestInit        Initializes test register
+!*           dgMsLampTestExec        Executes fault testing
+!*           dgMsLampTestCleanUp     Exit routine
+!*
+  LampTestVer$ = "$Header: /cag/triath1b/partsmac/diag/dglamp.mac 1.8 2003-06-23 15:39:06-07 julie_zhao Exp $"
+  verIx = instr(LampTestVer$, ".mac ") + 5
+  LampTestVer$ =  LampTestVer$[verIx:VerIx + instr(LampTestVer$[VerIx:len(LampTestVer$)]," ") - 1] 
+  remove verIx
+!
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsLampTest$
+
+! 04/21/03 JZ  Setup abort handler for Lamp Test in _ABORT$ string.
+!***************************************************************************!
+LOCAL Result$, res, PrintMac$, tmp$, SrcMode$
+  res=0
+
+  ! JZ Setup Abort routine
+  if (check(Variable, _abort$) = 0) then
+     _abort$ = ""
+   endif
+  _abort$ = "dgMsLampTestCleanUp;"+_abort$
+
+  ! If the tune file is for the wrong spray chamber, change tune file mode
+  ! This should be restored in the cleanup routine
+  if dgMsCheckTuneMode() <> 1 then            ! Mode of tune file and instrument type do not match
+     MSGetMode dgMSNoiseIonMode$              ! Mode of tune file
+     SrcMode$ = MSGetIonSrc$()                ! Mode of actual instrument
+     if SrcMode$ = "UNKNOWN" then
+       goto errortrap                         ! Stop the test because the source isn't set
+     else
+       MSMode SrcMode$                        ! Set the tune file to match the installed source
+     endif
+  else
+     dgMSNoiseIonMode$ = ""
+  endif
+
+  dgMsLampTestInit
+
+  res = dgMsLampTestExec()
+
+  !4-02PR(PVCS1758) flag there is no chart to print here - (just a result table)
+  SetObjHdrVal Result_Reg[1], "NoDraw", 1
+
+  ! Reset log as soon as possible
+  if CHECK( Variable, oldLogDataState) = 1 then
+    MSLogData, oldLogDataState
+    remove oldLogDataState
+  endif
+
+  if Res = 0 then
+    SetObjHdrText RESULT_REG[1], "TestStatus", "Completed"
+  endif
+
+  ! Assign pass/fail
+  posChamb = val(tabtext$(RESULT_REG[1], TestResultTab,3, value))
+  negChamb = val(tabtext$(RESULT_REG[1], TestResultTab,4, value))
+
+! Add the passing criteria to the TestResultTab table itself..
+  row = TabHdrVal( RESULT_REG[1], "TestResultTab", "NumberOfRows" )
+  InsTabRow RESULT_REG[1], "TestResultTab"
+  InsTabRow RESULT_REG[1], "TestResultTab"
+  row = row + 2
+  SetTabText RESULT_REG[1], "TestResultTab", row, "Text", NlsMsDiag$("PassCriteria")
+  InsTabRow RESULT_REG[1], "TestResultTab"
+  row = row + 1
+  SetTabText RESULT_REG[1], "TestResultTab", row, "Text", NlsMsDiag$("Criteria")
+
+    if (posChamb > 5) and (negChamb > 5) then
+      Result$=NlsMsDiag$("Passed")
+      SetObjHdrText RESULT_REG[1], "TestResAll", Result$
+      settabtext RESULT_REG[1], TestResultTab, 3, Result, "Passed"
+      settabtext RESULT_REG[1], TestResultTab, 4, Result, "Passed"
+!4-02PR(PVCS1758) need wider column      PrintMac$="dgMsPrintTest LampReport, LampRes, LampChart, , ,5, ""%-20s"","""","""", ""%-58s"""
+      PrintMac$="dgMsPrintTest LampReport, LampRes, LampChart, , ,5, ""%-30s"","""","""", ""%-58s"""
+      Tmp$=dgMsGetTestResults$("LampChart", "LampRes", PrintMac$)
+    else
+      Result$=NlsMsDiag$("Failed")
+      SetObjHdrText RESULT_REG[1], "TestResAll", Result$
+      if (posChamp > 5) then
+      settabtext RESULT_REG[1], TestResultTab, 3, Result, "Passed"
+      else
+      settabtext RESULT_REG[1], TestResultTab, 3, Result, "Failed"
+      endif
+      if (negChamb > 5) then
+      settabtext RESULT_REG[1], TestResultTab, 4, Result, "Passed"
+      else
+      settabtext RESULT_REG[1], TestResultTab, 4, Result, "Failed"
+      endif
+      
+!4-02PR(PVCS1758) need wider column      PrintMac$="dgMsPrintTest LampReport, LampRes, LampChart, , ,5, ""%-20s"","""","""", ""%-58s"""
+      PrintMac$="dgMsPrintTest LampReport, LampRes, LampChart, , ,5, ""%-30s"","""","""", ""%-58s"""
+      Tmp$=dgMsGetTestResults$("LampChart", "LampRes", PrintMac$)
+    endif
+
+  dgMsLampTestCleanUp
+  return Result$
+
+!New:
+   errortrap:  
+     ON ERROR
+     dgMsPrintError    
+     SetObjHdrText RESULT_REG[1], "TestStatus", "Error"
+     SetObjHdrText RESULT_REG[1], "ErrMsg", _ErrMsg$
+     SetObjHdrText RESULT_REG[1], "ErrMacro", _ErrMacro$
+     dgMsLampTestCleanUp
+     Generate Error 55555,  "MSD Test ("+_ErrMacro$+"):"+_ErrMsg$
+    return Result$
+   
+ENDMACRO            ! end dgMsLampTest
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsLampTestExec
+
+! This macro executes the profiles and calculates the means.
+!
+! RETURN
+!   0: test completed
+!   1: error 
+!***************************************************************************!
+LOCAL evalStr$, ionMode$, Parm$, val$, i, result
+LOCAL IonPol1, IOnPol2, Pol1$, Pol2$, NumParms, dynError
+   ON ERROR GOTO errortrap
+
+   ! Ionpolarity of the current tune file
+   MsParm IonPolarity, IonPol1
+   if IonPol1 = 1 then
+     Pol1$=NlsMsDiag$("Negative")
+     IonPol2= 0
+     Pol2$=NlsMsDiag$("Positive")
+   else
+     Pol1$=NlsMsDiag$("Positive")
+     IonPol2= 1
+     Pol2$=NlsMsDiag$("Negative")
+   endif  
+   
+   ! This sets the calibrant setting in the tune file to the current value
+   ! This avoids a lengthy purge cycle if the CDS is on when test starts
+   MSCalValve  OldCDSstate
+   MSCalValve, OldCDSstate
+
+   ! Set spray chamber to test values in IonPol1:
+     ! Set the test condition variables:
+       dgNew$ = "350"
+       dgFlowNew$ = "13"
+       NebPresNew$ = "60"
+       VaporNew$ = "500"
+       VCapNew = 6000
+
+     ! Remember old settings:
+       MsScQuery "sens? dgas",dgOrig$
+       MsScQuery "sens? dgasflow",dgFlowOrig$
+       MsScQuery "sens? NebPres",NebPresOrig$
+       MsScQuery "sens? Vapor",VaporOrig$
+     ! Set test condtions:
+       MsScWrite ":zone:name dgas;:zone:ctl on;:zone:set "+dgNew$
+       MsScWrite ":zone:name dgasflow;:zone:ctl on;:zone:set "+dgFlowNew$
+       MsScWrite ":zone:name NebPres;:zone:ctl on;:zone:set "+NebPresNew$
+       MsScWrite ":zone:name Vapor;:zone:ctl on;:zone:set "+VaporNew$
+       MSParm VCap,VCapOrig,VCapNew
+
+     ! Perform the scans and retrieve the Capillary and Chamber currents
+       CapilCur = 0
+       ChambCur = 0
+	   for i=1 to 10
+         doprof = MSProfileAvg(5)
+         MsScquery "msc:sens? CapilCur",CapilCur$
+	       CapilCur= CapilCur + val(CapilCur$)
+         MsScquery "msc:sens? ChambCur",ChambCur$
+	       ChambCur = ChambCur + val(ChambCur$)
+       next i
+       CapilCurAvg = CapilCur/10
+       ChambCurAvg = ChambCur/10
+
+     ! Dump results into results table:
+       if IonPol1 = 1 then
+         settabtext RESULT_REG[1], TestResultTab, 2, "Value", Sprintf$(CapilCurAvg, "%3.3f")
+         settabtext RESULT_REG[1], TestResultTab, 4, "Value", Sprintf$(ChambCurAvg, "%3.3f")
+       else
+         settabtext RESULT_REG[1], TestResultTab, 1, "Value", Sprintf$(CapilCurAvg,  "%3.3f")
+         settabtext RESULT_REG[1], TestResultTab, 3, "Value", Sprintf$(ChambCurAvg, "%3.3f")
+       endif
+
+     ! Reset spray chamber values to original:
+       MsScWrite ":zone:name dgas;:zone:ctl on;:zone:set "+dgOrig$
+       MsScWrite ":zone:name dgasflow;:zone:ctl on;:zone:set "+dgFlowOrig$
+       MsScWrite ":zone:name NebPres;:zone:ctl on;:zone:set "+NebPresOrig$
+       MsScWrite ":zone:name Vapor;:zone:ctl on;:zone:set "+VaporOrig$
+       MSParm VCap,,VCapOrig
+
+   ! Change to next ion polarity for maximum test
+   MSGetTuneFile _tunepath$ + _DiagTuneFile$, IonPol2,,0
+
+   ! Set spray chamber to test values in IonPol2:
+     ! Remember old settings:
+       MsScQuery "sens? dgas",dgOrig$
+       MsScQuery "sens? dgasflow",dgFlowOrig$
+       MsScQuery "sens? NebPres",NebPresOrig$
+       MsScQuery "sens? Vapor",VaporOrig$
+     ! Set test condtions:
+       MsScWrite ":zone:name dgas;:zone:ctl on;:zone:set "+dgNew$
+       MsScWrite ":zone:name dgasflow;:zone:ctl on;:zone:set "+dgFlowNew$
+       MsScWrite ":zone:name NebPres;:zone:ctl on;:zone:set "+NebPresNew$
+       MsScWrite ":zone:name Vapor;:zone:ctl on;:zone:set "+VaporNew$
+       MSParm VCap,VCapOrig,VCapNew
+
+     ! Perform the scans and retrieve the Capillary and Chamber currents
+       CapilCur = 0
+       ChambCur = 0
+       for i=1 to 10
+         doprof = MSProfileAvg(5)
+         MsScquery "msc:sens? CapilCur",CapilCur$
+           CapilCur= CapilCur + val(CapilCur$)
+         MsScquery "msc:sens? ChambCur",ChambCur$
+           ChambCur = ChambCur + val(ChambCur$)
+       next i
+       CapilCurAvg = CapilCur/10
+       ChambCurAvg = ChambCur/10
+
+     ! Dump results into results table:
+       if IonPol2 = 1 then
+         settabtext RESULT_REG[1], TestResultTab, 2, "Value", Sprintf$(CapilCurAvg, "%3.3f")
+         settabtext RESULT_REG[1], TestResultTab, 4, "Value", Sprintf$(ChambCurAvg, "%3.3f")
+       else
+         settabtext RESULT_REG[1], TestResultTab, 1, "Value", Sprintf$(CapilCurAvg,  "%3.3f")
+         settabtext RESULT_REG[1], TestResultTab, 3, "Value", Sprintf$(ChambCurAvg, "%3.3f")
+       endif
+
+
+     ! Reset spray chamber values to original:
+       MsScWrite ":zone:name dgas;:zone:ctl on;:zone:set "+dgOrig$
+       MsScWrite ":zone:name dgasflow;:zone:ctl on;:zone:set "+dgFlowOrig$
+       MsScWrite ":zone:name NebPres;:zone:ctl on;:zone:set "+NebPresOrig$
+       MsScWrite ":zone:name Vapor;:zone:ctl on;:zone:set "+VaporOrig$
+       MSParm VCap,,VCapOrig
+
+   MSOff
+   
+   !Restore old ion polarity of the tune file
+   MSGetTuneFile _tunepath$ + _DiagTuneFile$, IonPol1 ,,0
+   Result = 0
+
+   return Result
+
+   errortrap:  
+     ON ERROR
+     dgMsPrintError
+     SetObjHdrText RESULT_REG[1], "TestStatus", "Error"
+     SetObjHdrText RESULT_REG[1], "ErrMsg", _ErrMsg$
+     SetObjHdrText RESULT_REG[1], "ErrMacro", _ErrMacro$
+     dgMsLampTestCleanUp
+     Generate Error 55555,  "MSD Test ("+_ErrMacro$+"):"+_ErrMsg$
+    return 1
+     
+ENDMACRO   ! end  dgMsLampTestExec
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsLampTestInit                                                       !
+!   Macro to initialize RESULT_REG[1].  Each test case will have a different!
+!   register to hold the test parameters and the test result.  The initial  !
+!   register will use the existing tune values; all tests will vary one or  !
+!   more parameters, acquire the data, and declare a pass/fail.             !
+!                                                                           !
+!   The following tables are defined:                                       !
+!       TestParms:     parameters used for each test                        !
+!       TestResultTab: detected faults and flat ramped parameters           !
+!       DynamicsParm:  all dynamically ramped parameters                    !
+!       ParmLimits:    parameter limits                                     !
+!                                                                           !
+!***************************************************************************!
+LOCAL  IonPol, val, rowNum, IonMode$
+
+   ! Hide the MS Tune display window
+   MSGDisplay 0
+
+   ! Initialize data logging
+   MSBufsize , 65064
+   MSLogData oldLogDataState, 1  ! msTuneData register is used
+
+   ! Define a user object with no data block
+   DelReg (RESULT_REG)
+   NewObj RESULT_REG[1], 1, 0, 0
+
+   ! Save ion polarity
+   IonPol = dgMsCheckTunePol()       ! Will switch to Standard scan mode if in Fast mode
+   SetObjHdrVal RESULT_REG[1], "IonPolarity", IonPol
+   if IonPol = 0 then
+      SetObjHdrText RESULT_REG[1], "IonPol", "Pos"
+   else
+      SetObjHdrText RESULT_REG[1], "IonPol", "Neg"
+   endif
+   MSGetMode IonMode$
+   SetObjHdrText RESULT_REG[1], "IonMode", IonMode$
+
+   ! Initialize test status
+     
+     SetObjHdrText RESULT_REG[1], "TestStatus", "Initialized"
+
+   ! Save Tune Fault Window settings
+   dgLampTestTuneWin = RowByText(_Config[1], Window,, "WinTitle", "=", \
+                               "MSD Tune")
+   clearWin dgLampTestTuneWin
+   val = TabVal(_Config[1], Window, dgLampTestTuneWin, "DefWXLow")
+   SetObjHdrVal RESULT_REG[1], "DefWXLow", val
+   SetTabVal    _Config[1], Window, dgLampTestTuneWin, "DefWXLow", 0
+
+   val = TabVal(_Config[1], Window, dgLampTestTuneWin, "DefWXHigh")
+   SetObjHdrVal RESULT_REG[1], "DefWXHigh", val
+   SetTabVal    _Config[1], Window, dgLampTestTuneWin, "DefWXHigh", 0
+   
+   val = TabVal(_Config[1], Window, dgLampTestTuneWin, "DefWYLow")
+   SetObjHdrVal RESULT_REG[1], "DefWYLow", val
+   SetTabVal    _Config[1], Window, dgLampTestTuneWin, "DefWYLow", 0
+   
+   val = TabVal(_Config[1], Window, dgLampTestTuneWin, "DefWYHigh")
+   SetObjHdrVal RESULT_REG[1], "DefWYHigh", val
+   SetTabVal    _Config[1], Window, dgLampTestTuneWin, "DefWYHigh", 0
+
+   ! Create object header items
+   dgMsTestInfo "LampChart", \
+                "dgMsDisplayTest LampChart, LampRes, LampReport", \
+                LampTestVer$,  "RESULT_REG[1]"
+
+   !***************************************
+   ! MS Results Table
+   !***************************************
+   ! Define the detailed test results table
+   NewTab     RESULT_REG[1], "TestResultTab"
+   NewColText RESULT_REG[1], TestResultTab, "Text", ""
+   NewColText RESULT_REG[1], TestResultTab, "Range", ""
+   NewColText RESULT_REG[1], TestResultTab, "Value", ""
+   NewColText RESULT_REG[1], TestResultTab, "Result", ""
+   InsTabRow RESULT_REG[1], "TestResultTab",1:4
+   SetTabText RESULT_REG[1], "TestResultTab", 1, "Text", "Capillary Current (Pos)"
+   SetTabText RESULT_REG[1], "TestResultTab", 2, "Text", "Capillary Current (Neg)"
+   SetTabText RESULT_REG[1], "TestResultTab", 3, "text", "Chamber Current (Pos)"
+   SetTabText RESULT_REG[1], "TestResultTab", 4, "text", "Chamber Current (Neg)"
+   SetTabText RESULT_REG[1], "TestResultTab", 3, "Range", "> 5 uA"
+   SetTabText RESULT_REG[1], "TestResultTab", 4, "Range", "> 5 uA"
+
+   ! Save CDS state and set no bottle to be used at next turn on
+   MsCalValve val, 0
+   SetObjHdrVal RESULT_REG[1], "MsCalValve", val
+
+   !print "dgMsLampTestInit done."
+   
+ENDMACRO       ! end dgMsLampTestInit
+!***************************************************************************!
+
+!***************************************************************************!
+NAME dgMsLampTestCleanUp
+
+! Clean up variables, restore instrument state
+! 
+! 04/21/03 JZ  Remove Lamp Test Cleanup routine from _ABORT$ string.
+!***************************************************************************!
+  LOCAL result$, val, valOld
+  Local AbortCmd$
+  Local Pos, LenAbort, LenCmd
+
+  ! dummy error trap to see no error during clean up
+  ON ERROR i=1
+
+  if CHECK( Variable, oldLogDataState) = 1 then
+    MSLogData ,oldLogDataState
+    remove oldLogDataState
+  endif
+  
+  ! Restore ionization mode
+  if dgMSNoiseIonMode$ <> "" then
+     MSMode dgMSNoiseIonMode$
+  endif
+  Remove dgMSNoiseIonMode$
+  
+  ! Clean up windows
+  MSGDisplay 1
+
+  ! Store test result
+  if RegSize(RESULT_REG) <> 0 then
+
+    ! Restore the original tune file (Gets ionization mode, polarity, assorted params)
+    MSGetTuneFile _tunepath$ + _DiagTuneFile$, dgOrigPol,,0
+
+    ! Restore CDS state
+    if ObjHdrType(RESULT_REG[1], "MsCalValve") <> 99 then
+      MsCalValve val
+      valOld = ObjHdrVal(RESULT_REG[1], "MsCalValve")
+      if valOld <> val then
+        MSCalValve ,valOld
+      endif
+    endif
+
+    clearWin dgLampTestTuneWin
+    if ObjHdrType(RESULT_REG[1], "DefWXLow") <> 99 then
+      val = ObjHdrVal (RESULT_REG[1], "DefWXLow")
+      SetTabVal    _Config[1], Window, dgLampTestTuneWin, "DefWXLow", val
+      val = ObjHdrVal (RESULT_REG[1], "DefWYLow")
+      SetTabVal    _Config[1], Window, dgLampTestTuneWin, "DefWYLow", val
+      val = ObjHdrVal (RESULT_REG[1], "DefWXHigh")
+      SetTabVal    _Config[1], Window, dgLampTestTuneWin, "DefWXHigh",val
+      val = ObjHdrVal (RESULT_REG[1], "DefWYHigh")
+      SetTabVal    _Config[1], Window, dgLampTestTuneWin, "DefWYHigh",val
+    endif
+
+    SaveObj RESULT_REG, _TunePath$+"dgLampt.reg",NEW
+  endif
+  WinUpdate
+
+  ! JZ DELETE CLEAN UP MACRO FROM _ABORT$ STRING
+  AbortCmd$="dgMsLampTestCleanUp;"
+  Pos=InStr(_abort$,Abortcmd$)
+  IF Pos>0 THEN
+    LenAbort=Len(_abort$)
+    LenCmd=Len(AbortCmd$)
+    if Pos=1 THEN
+      _abort$= _abort$[Pos+LenCmd:LenAbort]
+    else
+      if (Pos+LenCmd)<LenAbort
+        _abort$= _abort$[1:Pos-1] + _abort$[Pos+LenCmd:LenAbort]
+      else
+        _abort$= _abort$[1:Pos-1]
+      endif
+    endif
+  ENDIF
+  
+  ! Clean message line
+  print " "
+
+ENDMACRO
+!***************************************************************************!
+
+print "dgLampTst.mac v. " + LampTestVer$ + " loaded."
+
+!********* end of file ******************************************************

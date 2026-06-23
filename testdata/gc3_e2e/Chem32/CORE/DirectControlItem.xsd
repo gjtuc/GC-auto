@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2008 rel. 2 (http://www.altova.com) by DAVID CLOUSER (AGILENT TECHNOLOGIES) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified">
+	<xs:element name="ParamsXml" type="xs:string">
+		<xs:annotation>
+			<xs:documentation>The optional parameter string for the request.</xs:documentation>
+		</xs:annotation>
+	</xs:element>
+	<xs:element name="DirectControlItem">
+		<xs:annotation>
+			<xs:documentation>The item sent to the RCControlIF object to notify or request an action.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="ParamsXml" minOccurs="0"/>
+			</xs:sequence>
+			<xs:attribute name="Type" use="required">
+				<xs:simpleType>
+					<xs:restriction base="xs:NMTOKEN">
+						<xs:enumeration value="EzspUpdateResourceLayout"/>
+						<xs:enumeration value="EzspReplenishResources"/>
+						<xs:enumeration value="EzspRevokeReservations"/>
+						<xs:enumeration value="EzspResourceLibrary"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

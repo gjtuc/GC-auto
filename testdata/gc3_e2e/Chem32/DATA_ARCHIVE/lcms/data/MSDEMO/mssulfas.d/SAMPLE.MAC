@@ -1,0 +1,10 @@
+Name SAMPLEINFO
+CLRRPTSMPLINFO
+SAMPLECALISTD 1,0
+SAMPLECALAMT 0,1,1
+RPTSAMPLEINFO "100 ng/µl; Zorbax XDB-C8 4.6 x 50 mm 3.5 µm column; 1.5"
+RPTSAMPLEINFO " ml/min; Solvent A: 10 mM ammonium acetate in water, So"
+RPTSAMPLEINFO "lvent B: 10 mM ammonium acetqate in methanol;  Gradient"
+RPTSAMPLEINFO ": 10% B to 50% B in 3 min; vap. 400°C, frag 50V"
+REMOVE SAMPLEINFO
+RETURN

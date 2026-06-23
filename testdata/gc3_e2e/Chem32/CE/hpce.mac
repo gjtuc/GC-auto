@@ -1,0 +1,735 @@
+!*******************************************
+! FILE: HPCE.MC
+!
+! DESCRIPTION: for HPCE Software
+!
+!* $Header: /cag/DRIVERS/leodef/ce/release/hpce.mac 1.15 1998-04-14 02:00:26-07 hmgr Exp $
+!*******************************************
+
+
+
+name _HPCEMode$
+
+   local cemode$, msmode, pmode
+
+   on error print ""
+
+   if _ProductType$ = "CE" then
+      if Check(Function, RCListDevices$) = 1 Then
+         if instr(RCListDevices$(), "CE") > 0
+            cemode$ = RCGetResourceProviderText$("CE1", "Process", "config", "CEMode")
+            msmode = RCGetResourceProviderVal("CE1", "Process", "config", "IsMSInstalled")
+            pmode = RCGetResourceProviderVal("CE1", "Process", "config", "IsExternalPressureInstalled")
+		    !cemode$ = ObjHdrText$(rcCE1config[1], "CEMode")
+		    !msmode = ObjHdrVal(rcCE1config[1], "IsMSInstalled")
+		    !pmode = ObjHdrVal(rcCE1config[1], "IsExternalPressureInstalled")
+
+			if cemode$ = "CE" then
+               if msmode = 1 then
+                  if pmode = 1 then
+				     return "CEMSP"
+                  else
+				     return "CEMS"
+			      endif
+			   else
+                  if pmode = 1 then
+				     return "CEP"
+                  else
+				     return "CE"
+			      endif
+			   endif
+			else
+               if msmode = 1 then
+			      return "CECMS"
+			   else
+			      return "CEC"
+			   endif
+			endif
+		 endif
+      endif
+	  return ""
+   endif
+
+endmacro
+
+
+
+
+
+!******************************************************************************
+!   NAME
+!       BAND
+!
+!   DESCRIPTION
+!
+!   RETURN
+!       None
+!******************************************************************************
+NAME  BAND
+
+    PARAMETER  a,b
+    LOCAL      d,s
+
+    d = 128
+    s = 0
+
+    REPEAT
+
+        IF a - d >= 0  AND  b - d >= 0 THEN
+            s = s + d
+        ENDIF
+
+        IF  a - d  >= 0 THEN
+            a = a - d
+        ENDIF
+
+        IF  b - d >= 0  THEN
+            b = b - d
+        ENDIF
+
+	IF d = 1  THEN
+	    d = 0.5
+	ELSE
+            d = d / 2
+	ENDIF
+
+    UNTIL d < 1
+
+    RETURN s
+
+ENDMACRO
+
+
+
+
+!******************************************************************************
+!   NAME
+!       BOR
+!
+!   DESCRIPTION
+!
+!   RETURN
+!       None
+!******************************************************************************
+NAME  BOR
+
+    PARAMETER  a,b
+    LOCAL      s,d
+
+    d = 128
+    s = 0
+
+    REPEAT
+
+        IF a - d >= 0  OR  b - d >= 0  THEN
+            s = s + d
+        ENDIF
+
+        IF  a - d  >= 0
+            a = a - d
+        ENDIF
+
+        IF  b - d >= 0
+            b = b - d
+        ENDIF
+	
+	IF d = 1 THEN
+	    d = 0.5
+	ELSE
+            d = d / 2
+	ENDIF
+
+    UNTIL  d < 1
+
+    RETURN s
+
+ENDMACRO
+
+
+
+name DadAnalogOutputControl
+     local asc1$,asc2$,aze1$,aze2$
+     local asc1,asc2,aze1,aze2
+     local reply$
+      
+     print "Please wait! Reading from Module..."
+
+     ! Test if DAC Board is installed
+     On Error Goto DadErrModuleNotOnline
+     reply$ = SendModule$("DAD", "CONF?")
+
+     if InStr(reply$, "DAC") = 0 then
+        print "Analog-Board option not installed!"
+        return
+     endif
+
+     asc1$ = SendModule$("DAD", "ASC1?")
+     asc2$ = SendModule$("DAD", "ASC2?")
+     aze1$ = SendModule$("DAD", "AZE1?")
+     aze2$ = SendModule$("DAD", "AZE2?")
+
+     print " "
+
+     asc1 = Val(asc1$[14:len(asc1$)])+1
+     asc2 = Val(asc2$[14:len(asc2$)])+1
+     aze1 = Val(aze1$[14:len(aze1$)])
+     aze2 = Val(aze2$[14:len(aze2$)])
+
+!     beginDialog "AnalogCtrl", 30, 30, 270, 128, "DAD Analog Output Control: " + _InstName$
+
+     LoadDialog  NLSCeMacDLL$, "AnalogCtrl", "AnalogCtrl", "%s" + _InstName$
+
+         !*** output 1 ***
+         OptionGroupParm 10000, asc1
+         NumberBoxParm 10002, aze1, 0, 99
+
+         !*** output 2 ***
+         OptionGroupParm 10003,asc2
+         NumberBoxParm 10005, aze2, 0, 99
+     endDialog 
+
+     if ShowDialog ("AnalogCtrl") = 1 then
+         ! OK Button was pressed
+         print "Please wait! Transfering to Module..."
+
+         asc1$ = SendModule$("DAD", "ASC1 "+Val$(asc1-1))
+         asc2$ = SendModule$("DAD", "ASC2 "+Val$(asc2-1))
+         aze1$ = SendModule$("DAD", "AZE1 "+Val$(aze1))
+         aze2$ = SendModule$("DAD", "AZE2 "+Val$(aze2))
+
+         print " "
+     endif
+    
+     removeDialog "AnalogCtrl"
+     return
+
+DadErrModuleNotOnline:
+     print "DAD not online!"
+     asc1 = Alert ("DAD not online!", 3)
+     return
+
+endmacro
+
+!******************************************************************************
+!   NAME
+!       ResetLampLifeCount
+!
+!   DESCRIPTION
+!       provides  a dialog box  to allow the user to reset
+!       the lamp life count after the change of the lamp.
+!   RETURN
+!       None
+!******************************************************************************
+name ResetLampLifeCount
+    local reply$, ret, dllpath$
+     !NLSCeMacDLL$ = "C:\Chem32\CE\LANGUAGE\astxmac.enu"
+     LoadDialog  NLSCeMacDLL$, "ResetLampLifeCount", "ResetLampLifeCount", "%s " + _InstName$
+
+!    beginDialog "ResetLampLifeCount", 100, 100, 185, 133, "Reset Lamp Life Count: " + _InstName$
+    endDialog 
+
+    if ShowDialog ("ResetLampLifeCount")=1 then
+        ! Reset Button was pressed
+        removeDialog "ResetLampLifeCount"
+        On Error Goto ErrorResetLifeCount
+        reply$ = SendModule$("DAD", "llif 0,0")
+        return
+    endif
+    removeDialog "ResetLampLifeCount"
+    return
+
+ErrorResetLifeCount:
+    ret = Alert ("Error on resetting Lamp Life Count!", 3)
+endmacro
+
+
+!******************************************************************************
+!   NAME
+!       HpceAcqResHook
+!
+!   DESCRIPTION
+!       This macro is called after a run has finished. The ACQRES register
+!       exists and the state of the Indirect UV mode will be added to
+!       this register.
+!       
+!   RETURN
+!       None
+!******************************************************************************
+NAME HpceAcqResHook
+    LOCAL IndUVofs, reply$, len
+
+    ON ERROR RETURN
+
+    vtVtblAcqResHook
+
+    IF DEV1050DAD = 0 THEN
+        RETURN
+    ENDIF
+
+    reply$ = SendModule$("DAD","indd?");
+
+    IF reply$[1:2] = "RE" THEN
+        RETURN
+    ENDIF
+
+    ! => "RA 0000 INDD <value>"
+    len = Len(reply$)
+    IndUVofs = Val(reply$[14:len])
+
+    NewObjHdrVal  ACQRES, "IndirectUV", -IndUVofs
+
+    RETURN
+
+ENDMACRO
+
+!******************************************************************************
+!   NAME
+!       HpcePostReportHook
+!
+!   DESCRIPTION
+!       This macro is called after a report has finished and before the 
+!       text 'End Of Report' is printed.
+!       
+!   RETURN
+!       None
+!******************************************************************************
+NAME HpcePostReportHook
+    LOCAL IndUVofs
+
+    ON ERROR RETURN
+
+    vtVtblPostReportHook
+
+    IF ObjHdrType (CHROMRES, "IndirectUV") = 1 THEN ! test for double
+        IndUVofs = ObjHdrVal (CHROMRES, "IndirectUV")
+        IF IndUVOfs <> 0 THEN
+            ! port is always #5 (fix defined!)
+            PRINT  #5, ""
+            PRINT  #5, "Indirect UV-Mode activated: range from "+Val$(IndUVofs) + " mAU to max. absorbance"
+        ENDIF
+    ENDIF
+
+    RETURN
+
+ENDMACRO
+
+
+!******************************************************************************
+NAME INDUV_SetDlgControls
+
+  PARAMETER EventCause$    DEFAULT ""
+  PARAMETER EventLevel$    DEFAULT ""
+  PARAMETER EventSubjName$ DEFAULT ""
+  PARAMETER EventCP$       DEFAULT ""
+!******************************************************************************
+
+! ------- pseudo constants -------------------------------
+LOCAL Grayed,Enabled,Hidden
+
+Grayed    = 0
+Enabled   = 1
+Hidden    = 2
+
+!---- this is to handle a race condition of CP and CP2 if the Cancel button is pressed ----
+IF Check(VARIABLE, induv_nSelect) = 0
+  RETURN
+ENDIF
+
+ON ERROR Print
+
+IF induv_nSelect = 2 THEN
+  ! -- (x) on --
+  induv_offsetOnEditEnabled = Enabled
+  induv_offsetOnTextEnabled = Enabled
+  induv_offsetOnUnitEnabled = Enabled
+  induv_offsetOffTextEnabled  = Grayed
+ELSE
+  ! -- (x) off --
+  induv_offsetOnEditEnabled = Grayed
+  induv_offsetOnTextEnabled = Grayed
+  induv_offsetOnUnitEnabled = Grayed
+  induv_offsetOffTextEnabled  = Enabled
+ENDIF                      
+
+RETURN
+ENDMACRO
+
+!******************************************************************************
+!   NAME
+!       SelectIndirectUVmode
+!
+!   DESCRIPTION
+!       provides a dialog box to allow the user to select
+!       the indirect UV mode for the DAD
+!   RETURN
+!       None
+!******************************************************************************
+name SelectIndirectUVmode
+    local reply$, ret, dllpath$
+    local Pos,HelpID,HelpPathFile$
+    local IndUVofs, len, helpcmd$
+
+    !--- read out indirect UV-state from DAD ---
+    IF _offline <> 0 THEN
+        print #2, "in offline version not possible"
+        RETURN
+    ENDIF
+
+    IF DEV1050DAD = 0 THEN
+        print #2, "DAD not available"
+        RETURN
+    ENDIF
+
+    ON ERROR GOTO ErrorDadOffline
+    reply$ = SendModule$("DAD","indd?");
+
+    IF reply$[1:2] = "RE" THEN
+        ret = Alert ("Needs DAD firmware revision >= 1.2 !", 3)
+        RETURN
+    ENDIF
+
+    ON ERROR 
+
+    ! => "RA 0000 INDD <value>"
+    len = Len(reply$)
+    IndUVofs = Val(reply$[14:len])
+
+    IF IndUVofs = 0 THEN    ! select 'Off'
+       induv_nSelect = 1
+       induv_offsetEdit= -50 ! default value
+    ELSE
+       induv_nSelect = 2    ! select 'On'
+       induv_offsetEdit = -IndUVofs
+    ENDIF
+
+    induv_Enabled = 1
+
+    IF induv_nSelect = 2 THEN
+        ! on
+        induv_offsetOnEditEnabled = induv_Enabled
+        induv_offsetOnTextEnabled = induv_Enabled
+        induv_offsetOnUnitEnabled = induv_Enabled
+        induv_offsetOffTextEnabled  = 0
+    ELSE
+        ! off
+        induv_offsetOnEditEnabled = 0
+        induv_offsetOnTextEnabled = 0
+        induv_offsetOnUnitEnabled = 0
+        induv_offsetOffTextEnabled = induv_Enabled
+    ENDIF
+
+    ! identify the Help-ID for indirect UV selection
+    !-----------------------------------------------
+    Pos =Instr(_PRODUCTPATH$, "CE")
+    HelpPathFile$ = _PRODUCTPATH$[1:Pos-1] + "drivers\helpenu\hpce.hlp"
+    HelpID = HelpSubSystemTopic(HelpPathFile$, 4062)
+
+    LoadDialog  NLSCeMacDLL$, "SelectIndirectUVmode", "SelectIndirectUVmode", "%s: " + _InstName$
+
+    !*** On ***
+    OptionGroupParm  10000, induv_nSelect
+    OptionButtonParm 10000, induv_Enabled
+    OptionButtonParm 10001, induv_Enabled
+    NumberBoxParm    10002, induv_offsetEdit, -1000, -50,,1,induv_offsetOnEditEnabled
+    StaticTextParm   10004,,induv_offsetOffTextEnabled
+    StaticTextParm   10005,,induv_offsetOnTextEnabled
+    StaticTextParm   10006,,induv_offsetOnUnitEnabled
+
+    helpcmd$ = SPrintF$ (HelpID, "help %f")
+    ExecPushButtonParm 10003, "CP2", helpcmd$
+
+    endDialog 
+
+    ON ERROR GOTO ErrorIndUV
+
+    ! ---  set event macros for dynamic dialog layout ------
+    CpRequest "CP2", "OnEvent induv_nSelect,  INDUV_SetDlgControls, , CP" 
+
+    IF ShowDialog ("SelectIndirectUVmode",HelpID)=1 THEN
+        ! OK Button was pressed
+        IF induv_nSelect = 2 THEN
+            reply$ = SendModule$("DAD", "INDD "+Val$(ABS(induv_offsetEdit)))
+        ELSE
+            reply$ = SendModule$("DAD", "INDD 0")   ! switch off
+        ENDIF
+    ENDIF
+
+ErrorIndUV:
+    removeDialog "SelectIndirectUVmode"
+
+    ! clear event macros for dynamic dialog layout
+    !---------------------------------------------
+    OnEvent induv_nSelect, , , CP
+
+    ! --- remove global used vars ---
+    remove induv_Enabled
+    remove induv_offsetEdit
+    remove induv_offsetOnEditEnabled
+    remove induv_offsetOnTextEnabled
+    remove induv_offsetOnUnitEnabled
+    remove induv_offsetOffTextEnabled
+    remove induv_nSelect
+
+    RETURN
+
+ErrorDadOffline:
+    print #2, "DAD not online"
+    RETURN
+endmacro
+
+
+!******************************************************************************
+!   NAME
+!       EditCapillaryParms
+!
+!   DESCRIPTION
+!       name mapping only
+!       
+!   RETURN
+!       None
+!******************************************************************************
+name EditCapillaryParms
+     EditSysColumnParms
+endmacro
+
+!******************************************************************************
+!   NAME
+!       SelectCapillaryParms
+!
+!   DESCRIPTION
+!       name mapping only
+!       
+!   RETURN
+!       None
+!******************************************************************************
+name SelectCapillaryParms
+     EditSysColumnParms
+endmacro
+
+
+name Maintenance
+    local mod$
+    
+    IF DEVHPCE <> 0 THEN
+        mod$="HPCE"
+    ELSE
+    IF DEVHPCS <> 0 THEN
+        mod$="HPCS"
+    ENDIF
+    ENDIF
+    dum$ = SendModule$(mod$, "park 1")
+endmacro
+
+name hpib
+    parameter  parm$
+
+    local mod$
+    
+    IF DEVHPCE <> 0 THEN
+        mod$="HPCE"
+    ELSE
+    IF DEVHPCS <> 0 THEN
+        mod$="HPCS"
+    ENDIF
+    ENDIF
+    print SendModule$(mod$, parm$)
+endmacro
+
+
+name SCRT
+    parameter parms$, show default 0
+    local     cmd$, reply$
+    local mod$
+    
+    IF DEVHPCE <> 0 THEN
+        mod$="HPCE"
+    ELSE
+    IF DEVHPCS <> 0 THEN
+        mod$="HPCS"
+    ENDIF
+    ENDIF
+
+    if len(parms$) = 0
+       !----------------------------
+       ! no parameters were supplied
+       !----------------------------
+       print "missing parameters"
+       return
+    else
+       cmd$ = "scrt "+parms$
+       reply$ = SendModule$(mod$, cmd$)
+       if show = 0 then
+          ;  ! no reply printing
+       else
+          print reply$
+       endif
+    endif
+endmacro
+
+name gray
+    local reply$
+    local mod$
+    
+    IF DEVHPCE <> 0 THEN
+        mod$="HPCE"
+    ELSE
+    IF DEVHPCS <> 0 THEN
+        mod$="HPCS"
+    ENDIF
+    ENDIF
+
+    reply$ = SendModule$(mod$,"ndkt:rset;ndkt 0")
+endmacro
+
+!*********************************************
+!  special production test commands
+!*********************************************
+name INDEX
+    parameter parms$
+    local     cmd$
+
+    if len(parms$) = 0
+       !----------------------------
+       ! no parameters were supplied
+       !----------------------------
+       print "missing parameters"
+       return
+    else
+       cmd$ = "scrt -313,"+parms$+",0"
+       hpib cmd$
+    endif
+endmacro
+
+
+name SysReset
+    IF DEVHPCE <> 0 THEN
+        dum$=SendModule$("HPCE","stop")
+    ENDIF
+    IF DEVHPCS <> 0 THEN
+        dum$=SendModule$("HPCS","cler")
+    ENDIF
+    IF DEV1050DAD <> 0 THEN
+        dum$=SendModule$("DAD", "stop")
+    ENDIF
+endmacro
+
+name SysInit
+    local  reply$
+    local mod$
+    
+    IF DEVHPCE <> 0 THEN
+        mod$="HPCE"
+    ELSE
+    IF DEVHPCS <> 0 THEN
+        mod$="HPCS"
+    ENDIF
+    ENDIF
+
+    IF devHPCE <> 0 OR devHPCS<>0 THEN
+        firmware
+        reply$ = SendModule$(mod$,"rset")
+    ENDIF
+    IF DEV1050DAD <> 0 THEN
+        reply$ = SendModule$("DAD","lcur 0")
+        reply$ = SendModule$("DAD","lamp 1")
+        reply$ = SendModule$("DAD","prep")
+    ENDIF
+endmacro
+
+!******************************************************************************
+!   NAME
+!       Init_HPCE
+!
+!   DESCRIPTION
+!       Called once upon startup of ChemStation.
+!       
+!   RETURN
+!       None
+!******************************************************************************
+name Init_HPCE
+  LOCAL r
+
+  SetHook "AcqRes", "HpceAcqResHook"
+  SetHook "RepPreEnd", "HpcePostReportHook"
+
+  !*** load additional macros.. ***
+  if _offline =  0
+    ! load only if online copy
+    macro _ProductPath$+"firmware.mac"
+  endif
+  macro _ProductPath$+"cequant.mac"
+
+  SetHook "PInstrCondition","PInstrConditionCE"
+  
+  !=========< vial table support >=========
+ON ERROR GOTO RECOVER_1
+
+  If Check(Variable, DevRCCE)=0 Then
+     DevRCCE = 0
+  EndIf
+
+  IF DevRCCE = 0 AND _OFFLINE = 0 THEN
+      LoadObj  _INSTPATH$ + "vialtbl.reg",,VIALTABLE
+      EVALUATE "r=RegSize("+"VIALTABLE"+")"
+      IF r>1 THEN
+        EVALUATE "DelObj "+"VIALTABLE"+"[1]"
+      ENDIF
+      vtNotifyVialTableChanges
+  ENDIF
+ON ERROR;GOTO TRYEND_1;RECOVER_1:;ON ERROR
+  
+TRYEND_1:
+
+  IF RegSize(VIALTABLE)>0 THEN
+    IF ObjHdrType (VIALTABLE, "VialTable")=4 THEN
+       
+       IF TabHdrType (VIALTABLE, "VialTable", "vtwarnings") = 99 then
+          _VTWARNINGS = 0
+       ELSE
+          _VTWARNINGS = TabHdrVal (VIALTABLE, "VialTable", "vtwarnings")
+       ENDIF
+       IF TabHdrType (VIALTABLE, "VialTable", "vtsymbolic") = 99 then
+          _VTSYMBOLIC = 0
+       ELSE
+          _VTSYMBOLIC = TabHdrVal (VIALTABLE, "VialTable", "vtsymbolic")
+       ENDIF
+    ENDIF
+
+    macro _ProductPath$+"hpvtbl.mac"
+    SetHook "LoadMethodCheck", "vtLoadVialTable"
+    SetHook "SaveMethod", "vtSaveVialTable"
+    SetHook "LoadMethod", "vtCopyMethVT"
+    SetHook "PrintInstMethod", "vtPrintVtblMethodPart"
+    SetHook "CloseApp","vtCloseApp"
+    vtInitSequenceChanged
+  ENDIF
+
+  ! --- generate dummy macro for HPCEMode-call ------
+  if Check(Function, HPCEMode$) <> 1 then
+	CPRequest CP2, "name HPCEMode$; parameter mode$; return _HPCEMode$(); endmacro"
+  endif
+
+  ! --- load fraction collection macros ------
+  Macro _ProductPath$+"fractop.mac"
+
+  ! --- load CE-specific calibration macros ------
+  IF FileStat (MODE, _ProductPath$ + "MTCALIB.MCX") = 1
+    Print "Loading " + _ProductPath$ + "MTCALIB.MCX"
+    Macro _ProductPath$ + "MTCALIB.MCX" , GO
+  ENDIF
+
+  if TabHdrType (_Config[1], "MenusForViews", "FirstAdaptDone") = 99 then
+    ! ensure that the menus come up as Full Menus
+    SetTabHdrText _Config[1], "MenusForViews", "MenuCol", "FullMenuFile"
+
+    ! Create flag to prevent unnecessary adaption at next bootup
+    NewTabHdrVal _Config[1], "MenusForViews", "FirstAdaptDone", 1
+  endif
+
+  ! Initialize file name of the ce macro resource dialog dll
+  NLSCeMacDLL$ = _ProductPath$ + "language\astxmac." + _Lang$
+  if FileStat (Mode, NLSCeMacDLL$) = -1 then
+    NLSCeMacDLL$ = _ProductPath$ + "language\astxmac.enu" ! PVCS # 13451
+  endif
+
+endmacro

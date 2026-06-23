@@ -1,0 +1,171 @@
+This is four batch files to run to track down problems with LAN:
+
+	nextinfo: To see the computer LAN parameters
+	pingtest <MSD IP Address>: Check for communtication with MSD
+	rcptest <MSD IP Address>: Check with RCP and MSD
+	scq <MSD IP Address>: Get standard response from MSD
+____________________________________________________________________________________________
+
+Ping MS Failure
+
+(loopback has succeeded!)
+(Ping GC, if present, has succeeded)
+
+Possible causes
+
+1. incorrect IP address
+2. no physical connection
+3. MSD powered down
+4. bootp server not up
+4. MSD Controller card failure.
+5. PC NIC failure.
+6. bad cables.
+
+Solution...
+
+1. run bootp server
+2. verify IP and MAC address in bootp manager, leave CAG bootp server up and running.
+3. reboot the MSD from the Front Panel Display (Controller/Reboot Controller?)
+4. wait 60 seconds for the MSD to complete its bootup
+5. verify that the MSD sent a bootp request and that the bootp server delivered an 
+   IP address.  Verify that the MSD's MAC address and Bootp's IP are consistent 
+   with the instrument configuration in "HP Configuration Editor".
+6. run "HP Configuration Editor" and check for the MSD IP address.
+
+If the problem persists...
+
+-1. reinstall/reconfigure the system as an isolated LAN per the installation instructions.
+
+If the problem persists...
+
+
+if the system was installed and verified by HP and still under warranty, HP will 
+replace defective NIC, HUB, or networking cable.   If the system requires 
+reconfiguration or network troubleshooting, HP can provide these services for a FEE.
+
+________________________________________________________________________________________
+
+Ping MSD by Name failure
+
+(loopback has succeeded!)
+(Ping GC, if present, has succeeded)
+(Ping MSD, if present, has succeeded)
+
+If this test fails, the %systemroot%\system32\drivers\etc\hosts does not have 
+an entry for the MSD.  
+
+Solution
+
+Reconfigure the instrument in MSCONFIG and execute he Help/Check Networking item again.
+
+Warning
+
+If the %systemroot%\system32\drivers\etc\hosts is updated by an IT (information 
+technology) department, it is essential to reconfigure the instrument to ensure 
+that the network name and IP address of the MSD is correctly installed.
+
+________________________________________________________________________________________
+
+RPCINFO failure
+
+(loopback has succeeded!)
+(Ping GC, if present, has succeeded)
+(Ping MSD, if present, has succeeded)
+(Ping MSD by Name, if present, has succeeded)
+
+If this failure occurs, it generally implies that
+
+1) IP address is not an MSD
+2) MSD Controller card did not bootup completely
+3) MSD controller card requires new firmware to be downloaded
+
+Procedure
+
+1) verify that the IP address of the MSD is the same as the IP address .  
+
+If system was configured properly, reboot the MSD Controller and try again.
+
+_________________________________________________________________________________________
+
+SCQ failure
+
+(loopback has succeeded!)
+(Ping GC, if present, has succeeded)
+(Ping MSD, if present, has succeeded)
+(Ping MSD by Name, if present, has succeeded)
+(RPCTest has succeeded)
+
+If this fails it typically means that the SICL I/O libraries are not properly installed 
+and configured.  Refer to the installation and configuration instructions.
+
+__________________________________________________________________________________________
+Typical PCS information in WIN.INI for a Lan-based LC/MS
+
+
+[PCS]
+ReportFontName= 
+ReportFontSize=10
+Path=C:\HPCHEM
+Links=1,2
+Link1=HPBSICL,1,15,0,3
+UsePoll=Yes
+Applications=HP-LC,HP-MS
+Instruments=1
+REV=7.01.00
+Devices=1,2
+Device1=2,0,CLUSTER,IP:15.25.205.130,RAW
+Device2=2,1,SMARTCARD3,IP:15.25.205.129
+Link2=ARPALAN,9100
+
+[PCS,1]
+InstType=1050
+InstName=Po
+WinSize=Normal
+Start=Yes
+Program=C:\HPCHEM\CORE\HPCORE.EXE
+DEBackground=192 192 192
+DEChromatogram=255 255 255
+DEAxes=0 0 0
+DERtimes=0 0 0
+DEBaselines=255 0 255
+DEChrom1=0 0 255
+DEChrom2=255 0 0
+DEChrom3=0 128 0
+DEAnnotation=0 0 0
+DEFrame=255 0 0
+DETitle=255 0 255
+DEAxesTitle=0 0 0
+DECompounds=255 0 255
+DEChrom4=255 0 255
+DEChrom5=128 128 0
+DEChrom6=128 0 128
+DEChrom7=0 64 0
+DEChrom8=64 128 128
+_AUTOPATH$=C:\HPCHEM\CORE\
+_EXEPATH$=C:\HPCHEM\CORE\
+_DATAFILE$=DEFAULT.D
+_METHFILE$=MSEIINLI.M
+_DATAPATH$=C:\HPCHEM\1\DATA\
+_INSTPATH$=C:\HPCHEM\1\
+_CONFIGSEQPATH$=C:\HPCHEM\1\SEQUENCE\
+_CONFIGMETPATH$=C:\HPCHEM\1\METHODS\
+_SEQFILE$=SEQ_655.S
+_PRODUCT$=MS-LCMS-LC
+ADDONS=1
+ADDON1=C:\HPCHEM\MS\MSTOP.MAC
+Devices=2,1
+IV_SEQPATH$=C:\HPCHEM\1\SEQUENCE\
+IV_METHPATH$=C:\HPCHEM\1\METHODS\
+_LIBPATH$=C:\HPCHEM\SPECLIBS\
+_METHPATH$=C:\HPCHEM\1\METHODS\
+_SEQPATH$=C:\HPCHEM\1\SEQUENCE\
+_DATAFILE1$=FIA_MAN.D
+_DATAFILE2$=DEFAULTB.D
+MS_TYPE=6
+MSCONNECTION=0
+MS_ID=2
+_DDEOnLine=HPCORE4574
+_DATASEQSUBDIR$=BLD655
+_LIBFILE$=DEMODAD.UVL
+_DDEOffLine=HPCORE42926
+_DATASUBDIR$=BLD655

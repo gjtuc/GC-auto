@@ -1,0 +1,122 @@
+
+!ID_SUPPORTFILES_PEPTIDE_TOOLS_2                    =  17002  
+!##############################################################################
+name PTA_CheckLoadDLC
+
+! Load DLC if needed 
+
+  local CWD$
+
+  if check(command,ptmwcalc)=0 then
+    CWD$ = GetCWD$()
+    SetCWD _ExePath$+"..\peptools"
+    pt_commands=installcmds("HPPTA_00.DLC")
+    SetCWD CWD$
+    SetHook "CloseApp", "PTA_CloseDLC"
+  endif
+  return
+endmacro
+
+!##############################################################################
+name PTA_CloseDLC
+
+! Check if there are any message or dialog boxes open in Peptide Tools.
+! If the Peptide Tools window is hidden and there are boxes open, bring the
+! Peptide Tools windows into view.  Alert user to close boxes that are opened.
+! Checking again to be sure that all message and/or dialog boxes are closed.
+
+  local bDialogOpen
+  local temp
+  local msg$
+
+  Local  ID_SUPPORTFILES_CLOSE_ALL_MESS_1
+  Local  ID_SUPPORTFILES_PEPTIDE_TOOLS_2
+  
+  ID_SUPPORTFILES_CLOSE_ALL_MESS_1                   =  17001  
+  ID_SUPPORTFILES_PEPTIDE_TOOLS_2                    =  17002    
+  
+  repeat
+    if PTClose() = 0 then
+      bDialogOpen = 1
+    else
+      bDialogOpen = 0
+    endif
+    if bDialogOpen = 1 then
+      if PTA_MenuState = 1 then
+        PTMWCalc 1
+      endif
+      msg$ = ReadResource$("hta",ID_SUPPORTFILES_CLOSE_ALL_MESS_1)
+      temp = Alert(msg$, 3, ReadResource$("hta",ID_SUPPORTFILES_PEPTIDE_TOOLS_2))
+      ! sleep required to allow time for dialog box to be completely closed
+      sleep 1
+    endif
+  until (bDialogOpen = 0)
+endmacro
+
+
+
+!##############################################################################
+name PTA_Match
+
+  parameter PDTFile$     ! Fully qualified filename of Data Set file
+  parameter DataFile$    ! Fully qualified filename of data file.
+  parameter bPrint default 1  ! 1 = print, 0 = don't print
+  parameter bHide default 1   ! 1 = hide Peptide Tools window after matching
+                              ! 0 = leave Peptide Tools window open
+  parameter sLcmsautoFileName$ default ""  ! YD
+
+! Loads DLC if needed
+! Automatically runs and prints a peptide tools report.
+! Revision History:
+! 01/09/99 YD  Added multiple LCMSAUT?.RES support
+!##############################################################################
+
+  PTA_CheckLoadDLC
+  PTInteractive 0
+  PTMWCALC
+  PTLoadPTData PDTFile$
+  
+  if (sLcmsautoFileName$ = "") then
+     PTLoadMSData DataFile$ + "\lcmsauto.res"
+  else
+     PTLoadMSData sLcmsautoFileName$  ! YD
+  endif
+  
+  PTFindMasses
+  if bPrint <> 0 then
+    PTPrint 1
+    PTPrint 0
+  endif
+  if bHide <> 0 then
+    PTCloseMSData
+    PTMWCALC 0
+  endif
+  PTInteractive 1
+  return
+endmacro 
+
+!##############################################################################
+name PTA_MWCalc
+
+! If the Peptide Tools window is not visible,
+! load the DLC if needed and display the main window,
+! Otherwise, hide the window
+
+  if PTA_MenuState = 1 then
+    PTA_CheckLoadDLC
+    PTInteractive 1
+    PTMWCALC
+  else
+    PTMWCALC 0
+  endif
+  return
+endmacro
+
+!##############################################################################
+name PTA_Init
+
+  if Check(Variable, PTA_MenuState) = 0
+    PTA_MenuState = 1
+  endif
+
+endmacro

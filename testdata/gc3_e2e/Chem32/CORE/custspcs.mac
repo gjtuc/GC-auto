@@ -1,0 +1,153 @@
+! Macros to draw spectra in customized reports
+
+! Last altered by RZ 23-Jun-93
+
+!=============================================================================
+Name plotSpectrumPeak
+!-----------------------------------------------------------------------------
+ 
+! Plots and annotates the Peak  with widths at specified heights and
+! with  tangents at the inflection points
+
+  parameter destination$
+  parameter width, height
+  parameter peakNum       ! peak number of peak to be drawn
+
+  local retTime
+  local win, topic
+  local getSpecs, value
+  local doFullScale
+!.............................................................................
+
+  winUpdate no
+  SPC_chromObjNum = getObjNum(tabText$(chromRes[1], "signal", sigNum, "desc"))
+  retTime = tabVal(chromRes, "peak", peakNum, "measRetTime")
+  if retTime <= 0 then; return; endIf
+
+  if SPC_DoPeakSpectra = 1
+    getspecs = -SPC_UserSpecs
+  else
+    getspecs = SPC_PeakType
+  endif
+  value = GetPeakSpectra (retTime,getspecs,0,SPC_DoRefSpec,SPC_DoRefSpecType, \ 
+                        SPC_SpecRefTime1,SPC_SpecRefTime2,"SPC_",,0 )
+
+  if regsize(specreg) < 1 then; winUpdate; RETURN; endif
+
+  Win = 28
+ ! set the topics to draw
+  Topic = 0xFFFFFFFF      ! draw all annotations
+  SetTabVal _Config[1], "Window", Win, "Topic", Topic
+ ! set other window parameters
+  SetWinPrintParams win, destination$, width, height
+ ! draw the register
+ 
+ ! Do spectrum normalization
+  DoFullScale = DoSpecNorm(SPC_DoNormalize,SPC_NormRangeLow, \
+                          SPC_NormRangeHigh)
+
+  if freeWin(SPC_specWin) <> SPC_specWin then
+     drawSPCspecWin1; endIf
+  Draw win, specReg,,, DoFullScale,SPC_SeparatePlot-1
+  winUpdate
+
+  return
+
+endMacro ! plotSpectrumPeak
+
+
+!=============================================================================
+Name plotSpectrumPeakLib
+!-----------------------------------------------------------------------------
+ 
+  parameter destination$
+  parameter width, height
+  parameter peakNum       ! peak number of peak to be drawn
+  parameter LibNum,Name$  ! Library name and name of compound
+
+  local retTime, win, topic, value, doFullScale, entry
+Local match, SpecShift, Absthres
+  
+  Local ID_PHX3DSUPPORTFILES_SEARCH_RESULT_220
+  ID_PHX3DSUPPORTFILES_SEARCH_RESULT_220             =  17220  
+!.............................................................................
+
+  winUpdate no
+  SPC_chromObjNum = getObjNum(tabText$(chromRes[1], "signal", sigNum, "desc"))
+  retTime = tabVal(chromRes, "peak", peakNum, "measRetTime")
+  if retTime <= 0 then; return; endIf
+
+  value = GetPeakApexSpectrum (retTime,0,SPC_DoRefSpec,SPC_DoRefSpecType, \ 
+                               SPC_SpecRefTime1,SPC_SpecRefTime2,"SPC_")
+
+  if regsize(specreg) < 1 then; winUpdate; RETURN; endif
+  winUpdate
+  if freeWin(SPC_specWin) <> SPC_specWin then
+     drawSPCspecWin1; endIf
+  
+  ! see if correct library loaded
+  libName$ = tabText$(chromRes[1],autoIDParms,libNum,libraryName)
+  if LIBFilename$() <> libName$
+    if LoadLibrary(libName$,1)<>0
+      RETURN
+    endif
+  endif
+
+  Delreg SpecSearchReg
+  CopyObj specreg[1:1],specSearchreg
+
+  ! get the library entry number by the name
+  copytab _config[2],libsearchtemp,specSearchreg[1],libsearchtemp
+  settabHdrVal specSearchreg[1],libsearchtemp,compare_spec,0
+  settabHdrVal specSearchreg[1],libsearchtemp,Whole_Word,1
+  settabText specSearchreg[1],libsearchtemp,1,Search_String,name$
+  if libsearch(SpecReg[1],,,,,specSearchreg[1],1) < 1
+    RETURN
+  endif
+  entry = tabval(SpecReg[1],libsearchresult,1,entry)
+  match = tabval(SpecReg[1],libsearchresult,1,match)
+  ! get the spectrum shift and absorbance threshold
+  SpecShift= TabHdrVal(SpecLibReg[LIBinfoObject()],"LibSearchTemp","Wave_Shift")
+  AbsThres = TabHdrVal(SpecLibReg[LIBinfoObject()],"LibSearchTemp","Abs_Thres")
+
+  ! get first entry to merge with target
+  DelReg SpecMath
+  SetTabVal _ConFig[1],"Window",LIB_DiffWin,"DefWXlow",  \
+           TabVal(_config[1],"Window",LIB_SpecWin,"DefWXlow")
+  SetTabVal _ConFig[1],"Window",LIB_DiffWin,"DefWXHigh", \
+           TabVal(_config[1],"Window",LIB_SpecWin,"DefWXHigh")
+  GetNewCompareSpec entry,SpecShift, \
+    TabVal(_config[1],"Window",LIB_SpecWin,"DefWYlow"), \
+    TabVal(_config[1],"Window",LIB_SpecWin,"DefWYHigh"),absthres
+ 
+
+  Win = 28
+  ! set the topics to draw
+  Topic = 0xFFFFFFFE    ! draw all annotations without title
+  SetTabVal _Config[1], "Window", Win, "Topic", Topic
+  ! set other window parameters
+  SetWinPrintParams win, destination$, width, height
+  ! draw the register
+ 
+  getdataminmax specSearchReg,1
+  Draw Win,specSearchreg,,obj_min:obj_max,0,0
+  SetWinTitle Win,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_SEARCH_RESULT_220)+name$
+  winUpdate
+
+  return
+
+endMacro ! plotSpectrumPeakLib
+
+
+Name libShort
+
+  parameter dummy$
+
+! This is just a dummy macro to allow customized reports
+! with library search.
+! The identPeaks macro looks for "libShort" in the report style
+! and calls the idbylib macro if "libShort" exists.
+
+endMacro
+
+

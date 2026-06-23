@@ -1,0 +1,18 @@
+ 443 41e0 3830aa84  e5f
+Method       Method started:  line# 2 vial# 10 inj# 1       16:51:16 11/15/99
+  67 41e0 3830aa85    0
+Method       Instrument running sample vial# 10             16:51:17 11/15/99
+  67 41e0 3830b173    0
+Method       Instrument run completed                       17:20:51 11/15/99
+ 875 41e0 3830b175    0
+Method       Saving Method RUN.M                            17:20:53 11/15/99
+  70 41de 3830b176    0
+CP Macro     Analyzing rawdata inorgan6.D                   17:20:54 11/15/99
+  70 41de 3830b176    0
+CP Macro     Can't load DAD1 A, Sig=310,20 Ref=215,10       17:20:54 11/15/99
+  70 41de 3830b176    0
+CP Macro     Signal used in Calib. Table (Signal Details).  17:20:54 11/15/99
+  70 41de 3830b176    0
+CP Macro     Will load DAD1 A, Sig=350,80 Ref=245,10        17:20:54 11/15/99
+  67 41e0 3830b17c    0
+Method       Method completed                               17:21:00 11/15/99

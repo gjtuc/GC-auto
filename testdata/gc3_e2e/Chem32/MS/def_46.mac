@@ -1,0 +1,236 @@
+! def_46.mac:  Defaults for 1946 & 1956 Instruments
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the macros to set default values for G1946 and the 
+!  standard tuning compound mixture.
+!  IT IS STRONGLY RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+! File:   def_46.mac
+!
+! Macros:  MSSetDefaults            MSChangeDefs
+!          MSTuneFileRamps$         MSresetWidthMass
+!
+! GLOBAL VARIABLES:
+!
+! $Header: /cag/DRIVERS/sprite1b/macros/tune/def_46.mac 1.38 2003-04-04 14:17:16-08 pcormia Exp $
+!
+!=========================================================================
+name msSetDefaults
+  parameter ionPol default 0, setMode$ default "API_ES", delAtuneReg default 0
+! Set Tune parameters to default values used in default tune files
+!   installed by the ChemStation.
+!   The macro defaults are overwritten by those in the tunemix register.
+! Parameters:
+!   ionPol -     0 for positive standard scan mode
+!                1 for negative standard scan mode
+!                2 for positive fast scan mode
+!                3 for negative fast scan mode
+!   setMode$ -   No longer used. PHC 07/01/2004
+!   delAtuneReg
+!
+!=========================================================================
+  local regObjID, comparefile1$, comparefile2$
+
+  DEBUGMSTEMP=1  ! Allow setting temperature of host memory only
+Local  ID_TUNEMAC_GAINCURVE_REG_323
+ID_TUNEMAC_GAINCURVE_REG_323                       =  17323  
+  msDynamic clear
+
+  msParm ionPolarity,,ionPol    ! Set the polarity
+  msFreshtune
+
+  msat_SetMode ionPol           ! Reset msat_mode and msat_srctype globals
+  if (msat_srctype = 99) then                     ! source is "Unknown"
+    if (instr(ionMode$,"MM")<>0) then             ! A multimode ionization mode
+      msat_srctype = 3
+    else
+      msat_srctype = msat_mode
+    endif
+  endif
+
+!* Use known good WidthGain & Offset and MassGain & Offset, if available
+  if RegSize(GainCurve) = -1 then
+    !* Try loading the register from disk
+     if filestat(mode,_tunepath$ + "GainCurve.reg") = 1 then
+       LoadObj _tunepath$ + "GainCurve.reg",, GainCurve
+     else
+       AtunePrint ReadResource$("tunemac",ID_TUNEMAC_GAINCURVE_REG_323)
+     endif
+  endif
+  if ObjHdrType(GainCurve[1],"CE_SaveDefs") <> 99
+    MSresetWidthMass
+  endif
+
+!* Now update to tunemix register parameters
+  regObjID = msat_selecttunemix("auto")      ! With "auto" looks for first reg with correct
+  if (regObjID <> -1) then                   ! ionization mode and polarity.
+    msat_ApplyTuneMix regObjID,1
+  endif
+
+  if delAtuneReg = 0 then
+     !* Check if Atunes.tun is the current tune file, if so, delete atune.reg
+     comparefile1$ = ConvertText$( upper, tunefilename$ )
+     comparefile2$ = ConvertText$ (upper, "atunes.tun")
+     if instr(comparefile1$, comparefile2$) = 1 then
+        if filestat(Mode,_tunepath$ + "atune.reg") = 1 then
+           if regsize(atunereg) <> -1 then
+              delreg atunereg
+           endif  
+           delete _tunepath$ + "atune.reg",dontask
+        endif
+     endif
+  endif  !* if delAtuneReg = 0
+
+  return
+endmacro  !* msSetDefaults
+
+!==========================================================================
+name MSTuneFileRamps$
+!check for manually set ramps in the TuneFileReg
+  PARAMETER ParmNum default 21
+!==========================================================================
+local ParmRow,funcVal,param$,NumHiMass,i,ThisMz,ThisSet,LastSet
+
+  ParmRow = RowByVal (TuneFileReg[1],DynParm_Table,,"ParmID","=",ParmNum)
+  funcVal = 0
+  param$ = ""
+  if (MSD_VL = 1) then
+    NumHiMass=3
+  else
+    NumHiMass=5
+  endif
+  for i=1 to NumHiMass
+    evaluate "ThisMz = TabVal(TuneFileReg[1],DynParm_Table,ParmRow,funcValue"+val$(funcVal)+")"
+    evaluate "ThisSet = TabVal(TuneFileReg[1],DynParm_Table,ParmRow,funcValue"+val$(funcVal+1)+")"
+    if ThisSet = 0 then
+      LastSet = i-1
+      i=10         ! Force it to jump out of the loop
+    else
+      param$ = param$ + "," + val$(ThisMz)+ "," + val$(ThisSet)
+    endif
+    funcVal=funcVal+2
+  next i
+  return param$
+
+endmacro  !* MSTuneFileRamps$
+!
+!================================================================
+!
+!================================================================
+name MSChangeDefs
+! Added in for use by AE's and CE's:
+! save WidthGain & Offset and MassGain & Offset into GainCurve.reg
+!================================================================
+  local a$,b$,c$,d$,e$,f$
+  local saveWG,saveMG,saveWO,WOramp,WO$,saveMO,MOramp,MO$
+
+  ! Save WidthGain and MassGain:
+Local  ID_TUNEMAC_GAINCURVE_REG_323
+ID_TUNEMAC_GAINCURVE_REG_323                       =  17323  
+    MSParm WidthGain,saveWG
+    MSParm MassGain,saveMG
+
+  ! Find out if WO and/or MO are ramped
+    ! Initialize strings: 
+      a$=" "
+      b$=" "
+      c$=" "
+      d$=" "
+      e$=" "
+      f$=" "
+      MSDynamic list,a$,b$,c$,d$,e$,f$
+    ! Create one long list of lens
+      a$=a$+","+b$+","+c$+","+d$+","+e$+","+f$
+      a$=ConvertText$(upper,a$)
+      b$=ConvertText$(upper,"WidthOffset")
+      c$=ConvertText$(upper,"MassOffset")
+    ! Check to see if WidthOffset is in the list:
+      if instr(a$,b$) = 0 then            ! it has not been dynamically ramped
+        MSParm WidthOffset,saveWO
+        WOramp = 0
+      else
+        WO$=MSTuneFileRamps$(21)            ! parmID=21 for WO
+        WOramp = 1
+      endif
+    ! Check to see if MassOffset is in the list:
+      if instr(a$,c$) = 0 then            ! it has not been dynamically ramped
+        MSParm MassOffset,saveMO
+        MOramp = 0
+      else
+        MO$=MSTuneFileRamps$(23)            ! parmID=23 for WO
+        MOramp = 1
+      endif
+      
+  ! Save values into Gain_Coef.reg
+    if RegSize(GainCurve) = -1 then
+      !* Try loading the register from disk
+      if filestat(mode,_tunepath$ + "GainCurve.reg") = 1 then
+        LoadObj _tunepath$ + "GainCurve.reg",, GainCurve
+      else
+       AtunePrint ReadResource$("tunemac",ID_TUNEMAC_GAINCURVE_REG_323)
+       stop
+      endif
+    endif
+    SetObjHdrval GainCurve,CE_SaveDefs,1
+    SetObjHdrval GainCurve,WidthGain,saveWG
+    if WOramp = 1 then
+      SetObjHdrText GainCurve,WidthOffset,WO$
+    else
+      SetObjHdrval GainCurve,WidthOffset,saveWO
+    endif
+    SetObjHdrval GainCurve,MassGain,saveMG
+    if MOramp = 1 then
+      SetObjHdrText GainCurve,MassOffset,MO$
+    else
+      SetObjHdrval GainCurve,MassOffset,saveMO
+    endif
+
+endmacro  !* MSChangeDefs
+!
+!===========================================================================
+name MSresetWidthMass
+! reset WidthGain & Offset and MassGain & Offset from values in GainCurve.reg
+!===========================================================================
+local WGval,WO$,param$,WOval,MGval,MO$,MOval
+
+  WGval = ObjHdrVal(GainCurve[1],WidthGain)
+    MSParm WidthGain,,WGval
+  if ObjHdrType(GainCurve[1],WidthOffset)=0 then
+    WO$ = ObjHdrText$(GainCurve[1],WidthOffset)    ! It is ramped
+    MSDynamic WidthOffset, enable
+    param$ = "MSDynamic WidthOffset,set"+WO$
+  else
+    WOval = ObjHdrVal(GainCurve[1],WidthOffset)    ! Not ramped
+    MSParm WidthOffset,,WOval
+  endif
+  
+  MGval = ObjHdrVal(GainCurve[1],MassGain)
+    MSParm MassGain,,MGval
+  if ObjHdrType(GainCurve[1],MassOffset)=0 then
+    MO$ = ObjHdrText$(GainCurve[1],MassOffset)    ! It is ramped
+    MSDynamic MassOffset, enable
+    param$ = "MSDynamic MassOffset,set"+MO$
+  else
+    MOval = ObjHdrVal(GainCurve[1],MassOffset)    ! Not ramped
+    MSParm MassOffset,,MOval
+  endif
+
+endmacro  !* MSresetWidthMass

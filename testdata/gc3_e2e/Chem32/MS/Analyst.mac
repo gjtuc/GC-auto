@@ -1,0 +1,422 @@
+!*******************************************************************************
+!* FILE:  analyst.mac
+!* DESCRIPTION:  PE Sciex Analyst(TM) Support macros
+!* DISCUSSION:
+!* COPYRIGHT (C) AGILENT TECHNOLOGIES, 2002.  ALL RIGHTS ARE RESERVED   
+!* COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+!* PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+!* HEWLETT-PACKARD COMPANY.                                              
+!*                                                                       
+!*                     RESTRICTED RIGHTS LEGEND                          
+!*                                                                       
+!* Use, duplication, or disclosure by the Government is subject to       
+!* restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+!* Technical Data and Computer Software clause at 52.227-7013.           
+!*  Revision History:
+!*    May 29,2002 BW Original creation
+!*******************************************************************************
+!*******************************************************************************
+! Overwrite the old macro vWriteCSVHeader and vWriteCSVTable
+!*******************************************************************************
+name vRunPostMacro2
+  return
+endmacro
+name vWriteCSVHeader
+  return
+endmacro
+name vWriteCSVTable
+  return
+endmacro
+!*******************************************************************************
+! Since the CTC macro have full logic take care of WIFF Translate stuff, 
+! This macro will check the CTC CP variable, if the Sequence is start from CTC,
+! This whole macro will do nothing
+!*******************************************************************************
+!*******************************************************************************
+! Since the CTC macro have full logic take care of WIFF Translate stuff, 
+! This macro will check the CTC CP variable, if the Sequence is start from CTC,
+! This whole macro will do nothing
+!*******************************************************************************
+name AnalystHookPreSeq
+  on error print "AnalystHookPreSeq Error"
+  _CTC_RUNNING = 0
+  if Check(VARIABLE, CTC_BegSeqNum) = 1 then ! the CTC macro exist
+    if CTC_BegSeqNum > -1 then
+      _CTC_RUNNING = 1
+    endif
+  endif
+  ! Keep a door here for the future if CTC macro changed
+  ! set _CTC_SCIEXCLI = 1, CTC macro can use the same code
+  if Check(VARIABLE, _CTC_SCIEXCLI) = 1 then
+    if _CTC_SCIEXCLI = 1 then
+      _CTC_RUNNING = 0
+    endif
+  endif
+  if _CTC_RUNNING = 0 then
+    AnalystPreSeq
+  endif
+  on error
+endmacro
+name AnalystHookPostSeq
+  on error print "AnalystHookPostSeq Error"
+  if _CTC_RUNNING = 0 then
+    AnalystPostSeq
+  endif
+  _CTC_RUNNING = 0
+  on error
+endmacro
+name AnalystHookPreRun
+  on error print "AnalystHookPreRun Error"
+  if _CTC_RUNNING = 0 then
+    AnalystPreRun
+  endif
+  on error
+endmacro
+name AnalystHookPostRun
+  on error print "AnalystHookPostRun Error"
+  ! If running sequence with "Reprocessing Only" Option,
+  ! it will not run the HOOK "PostAcq" and "AcqRes"
+  ! Sowe got SCR #2614, Add every data here is a goo choices
+  ! _SeqMode = 2 Reprocessing Only
+  ! _SeqMode = 3 Reprocessing Only + Use sequence table info
+  if (_SequenceOn = 1) AND (_SeqMode = 2 OR _SeqMode = 3) then
+    AnalystHookAcqRes
+  endif
+  if _CTC_RUNNING = 0 then
+    AnalystPostRun
+  endif
+  on error
+endmacro
+name AnalystHookAcqRes
+  on error print "AnalystHookAcqRes Error"
+  if _CTC_RUNNING = 0 then
+    AnalystAddData
+  endif
+  on error
+endmacro
+name AnalystSaveMethod
+  parameter OldPath$
+  on error print "AnalystSaveMethod Error"
+  if FileStat (MODE, OldPath$+"\ANALYST.MS") = 1 AND \
+     (OldPath$ <> _METHPATH$+_METHFILE$) then
+    Copy OldPath$+"\ANALYST.MS", _METHPATH$+_METHFILE$+"\ANALYST.MS", DONTASK
+	endif
+	on error
+endmacro
+name InstallAnalystServer
+  local dlcPath$
+Local  ID_SUPPORTMACFILES_INSTALL_ANALYS_109
+ID_SUPPORTMACFILES_INSTALL_ANALYS_109              =  17109  
+  if AnalystInstalled() <> 1
+    return
+  endif
+  dlcPath$ = _AutoMSPath$ + "sciexcli.dlc"
+  on error goto ErrorExit
+  if FileStat(MODE, dlcPath$) = 1 then
+    print ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_INSTALL_ANALYS_109)
+    _AnalystServerDLL = InstallCMDs(_AutoMSPath$ + "sciexcli.dlc")
+  else
+    print "Missing Analyst support file: sciexcli.dlc"
+    return
+  endif
+  print ""
+  AnalystCheck
+  ! a new variable for CTC, this is a local variable. 
+  ! PLEASE DO NOT CHANGE IT OUT THIS FILE
+  _CTC_RUNNING = 0 
+  SetHook "PreSeq", AnalystHookPreSeq, 150 ! put this hook at end of table
+  SetHook "PreRun", AnalystHookPreRun, 50
+  SetHook "AcqRes", AnalystHookAcqRes, 50
+  SetHook "PostRun", AnalystHookPostRun, 50
+  SetHook "PostSeq", AnalystHookPostSeq, 50
+ErrorExit:
+  on error
+  ! Do not run this macro again
+  Remove InstallAnalystServer
+endmacro
+
+!*******************************************************************************
+! Write each line in CSV file, [Table] section, When running SEQUENCE
+!*******************************************************************************
+name AnalystSeqWriteCSVTable
+  parameter sFile$ default ""
+   local iVal
+   local sVal$, sVal1$
+   local iCal
+   local sSampleInfo$
+   on error return
+   if RegSize(_Sequence) < 1
+       return
+   endif
+   if ObjHdrType(_Sequence[1], "SeqParm") <> 4
+       return     ! if "SeqParm" table does not exist, exit
+   endif
+   if ObjHdrType(_Sequence[1], "SeqTable1") <> 4
+       return     ! if "SeqTable1" table does not exist, exit
+   endif
+   ! Do not write the same line again, if the current sequence
+   ! line is the same as the previous line.
+   if iSameAsPrev() = 1
+     return
+   endif
+   Open sFile$ For Append As #3
+   on error goto vWriteTableErr
+   if ObjHdrType(_Sequence[1], "SeqTable1") <> 4
+      goto vWriteTableErr
+   endif
+   if (TabHdrVal(_Sequence[1], "SeqTable1", "NumberOfRows") < _SEQINDEX)
+      goto vWriteTableErr
+   endif
+   ! Now, start to write one line of sequence   
+   if (TabVal(_Sequence[1], "SeqTable1", _SEQINDEX, "InjVial") > 1)
+       print Using #3, "%", " " + val$(_SEQINDEX) + "-" + val$(_REPLICATE) + ","
+   else
+       print Using #3, "%", " " + val$(_SEQINDEX) + ","
+   endif
+   iVal = TabVal(_Sequence[1], "SeqTable1", _SEQINDEX, "Vial")
+   sVal1$ = GetPlatePosString$(iVal)
+   ! Print Using #3, "%", val$(iVal) + ","
+   if Check(VARIABLE, _WellPlateSampler) = 1
+       if (_WellPlateSampler = 1)
+           sVal$ = sGetPlateNum$(iVal)
+           Print Using #3, "%", sVal1$ + "," + sGetPlateType$(sVal$) + "," + sVal$ + "," + sGetRackType$() + "," + sGetRackNum$() + ","
+       else
+           print Using #3, "%", sVal1$ + ",,,,,"
+       endif
+   else
+        print Using #3, "%", sVal1$ + ",,,,,"
+   endif
+   print Using #3, "%", TabText$(_Sequence[1], "SeqTable1", _SEQINDEX, "SampleName") + "," 
+   sSampleInfo$ = TabText$(_Sequence[1], "SeqTable1", _SEQINDEX, "SampleInfo")
+   sSampleInfo$ = sReplaceCRLF$(sSampleInfo$, " ")
+   print Using #3, "%", chr$(34) + sSampleInfo$ + chr$(34) + ","
+   if TabColType(_Sequence[1], "SeqTable1", "SampleID") = 99 then
+     print Using #3, "%", "," ! Not extended sequence, no this column
+   else
+     print Using #3, "%", TabText$(_Sequence[1], "SeqTable1", _SEQINDEX, "SampleID") + ","
+   endif
+   print Using #3, "%", TabText$(_Sequence[1], "SeqTable1", _SEQINDEX, "Method") + ","
+   ! We need to convert the sample type number into the string name
+   iCal = TabVal(_Sequence[1], "SeqTable1", _SEQINDEX, "SampleType")
+   print Using #3, "%", GetSampType$(iCal)
+   print Using #3, "%", ","
+   iVal = 0
+   iVal = TabVal(_Sequence[1], "SeqTable1", _SEQINDEX, "CalLevel")
+   if (iVal > 0) AND (iCal = 3)
+     print Using #3, "%", val$(iVal) + ","
+   else
+     print Using #3, "%", ","
+   endif
+   iVal = 0
+   iVal = TabVal(_Sequence[1], "SeqTable1", _SEQINDEX, "UpdateRF")
+   if (iVal = 1) AND (iCal = 3)
+     print Using #3, "%", "Average,"
+   else
+     print Using #3, "%", ","
+   endif
+   sVal$ = ""
+   sVal$ = TabText$(_Sequence[1], "SeqTable1", _SEQINDEX, "Dilution")
+   if (sVal$ <> "")
+     print Using #3, "%", sVal$ + ","
+   else
+     print Using #3, "%", "1,"
+   endif
+   if (Check(VARIABLE, _DataFile$) = 1)
+       print Using #3, "%", _DataFile$ + ","
+   else
+       print Using #3, "%", ","
+   endif
+   sVal$ = ""
+   sVal$ = TabText$(_Sequence[1], "SeqTable1", _SEQINDEX, "InjVolume")
+   if (sVal$ <> "")
+     print Using #3, "%", sVal$ + ","
+   else
+     print Using #3, "%", ","
+   endif
+   iTotal = TabHdrVal (_Sequence[1], "CompNames", "NumberOfRows")
+   if iTotal < 1
+      goto vWriteTableErr
+   endif   
+   for i=1 to iTotal
+      if (i < iTotal)
+          Print Using #3, "%", TabText$(_Sequence[1], "SeqTable1", _SEQINDEX, TabText$(_Sequence[1], "CompNames", i, "TabName")) + ","
+      else
+          Print Using #3, "%", TabText$(_Sequence[1], "SeqTable1", _SEQINDEX, TabText$(_Sequence[1], "CompNames", i, "TabName"))
+      endif
+   next i     
+vWriteTableErr:
+   on error print
+   Close #3 
+   if (Check(COMMAND, ConvertFileEncoding) = 1)
+      ConvertFileEncoding sFile$
+   endif
+   ! Write the 32 bit CRC
+   if (Check(FUNCTION, WriteCRC) = 1)
+      i = WriteCRC(sFile$)
+   endif        
+   on error
+endmacro  
+!*******************************************************************************
+! Write each line in CSV file, [Table] section, When running METHOD
+!*******************************************************************************
+!*******************************************************************************
+! Write each line in CSV file, [Table] section, When running METHOD
+!*******************************************************************************
+name AnalystMethWriteCSVTable
+  parameter sDataPath$ default ""
+  parameter sFile$ default ""
+  parameter nCmpd  default 0
+  parameter sCmpdV$ default ""
+   local iVal
+   local sVal$
+   local iCal
+   local sSampleInfo$
+   on error return
+   Open sFile$ For Append As #3
+   on error goto vWriteTableErr
+   
+   sVal$ = GetPlatePosString$(_ALSBottle)
+   print Using #3, "%", "1," + sVal$ + ",,,,,"
+   ! Sample Name
+   print Using #3, "%", _DATANAME$ + "," 
+   sSampleInfo$ = _SampInfo$ 
+   sSampleInfo$ = sReplaceCRLF$(sSampleInfo$, " ")
+   print Using #3, "%", chr$(34) + sSampleInfo$ + chr$(34) + ","
+   print Using #3, "%", "1," ! SampleID
+   print Using #3, "%", _METHFILE$
+   print Using #3, "%", ","
+   ! We need to convert the sample type number into the string name
+   print Using #3, "%", GetSampType$(_RunType)
+   print Using #3, "%", ","
+   if (_CalibLevel > 0) AND (_RunType = 3)
+     print Using #3, "%", val$(_CalibLevel) + ","
+   else
+     print Using #3, "%", ","
+   endif
+   if (_UpdRF = 1) AND (_RunType = 3)
+     print Using #3, "%", "Average,"
+   else
+     print Using #3, "%", ","
+   endif
+   print Using #3, "%", val$(_Dilution) + ","
+   if (Check(VARIABLE, _DataFile$) = 1)
+     print Using #3, "%", _DataFile$ + ","
+   else
+     print Using #3, "%", ","
+   endif
+   print Using #3, "%", GetInjVol$(sDataPath$)
+   if nCmpd > 0 AND sCmpdV$ <> "" then
+     print Using #3, "%", sCmpdV$
+   else
+     for i=1 to nCmpd
+       Print Using #3, "%", ","
+     next i
+   endif
+vWriteTableErr:
+   on error print
+   Close #3 
+   if (Check(COMMAND, ConvertFileEncoding) = 1)
+      ConvertFileEncoding sFile$
+   endif
+      
+   ! Write the 32 bit CRC
+   if (Check(FUNCTION, WriteCRC) = 1)
+      i = WriteCRC(sFile$)
+   endif        
+   on error
+endmacro  
+name GetInjVol$
+   parameter sDatapath$ default ""
+   local sLCdiag_reg$
+   local nVol
+   nVol = 1
+   on error return val$(nVol)
+   sLCdiag_reg$ = sDatapath$ + "\LCDIAG.REG"
+   if (filestat(MODE, sLCdiag_reg$) <> 1) then
+      print "Could not find " + sLCdiag_reg$
+      return val$(nVol)
+   endif
+   if RegSize(tempLCReg) > 0
+      delReg tempLCReg
+   endif
+   LoadObj sLCdiag_reg$, , tempLCReg
+   on error goto VOLERROR
+   if RegSize(tempLCReg) > 0 then
+     if ObjHdrType(tempLCReg[3], "ActInjVolume") = 99
+       goto VOLERROR
+     endif 
+     nVol = ObjHdrVal(tempLCReg[3], "ActInjVolume")
+     delReg tempLCReg
+   endif
+VOLERROR:
+   delReg tempLCReg
+   return val$(nVol)
+endmacro
+name GetSampType$
+   parameter iCal default 1
+   if iCal = 1
+     return "Unknown"
+   endif
+   if iCal = 3
+     return "Standard"
+   endif
+   if iCal = 4
+     return "QC"
+   endif
+   if iCal = 6
+     return "Blank"
+   endif
+   if iCal = 7
+     return "Double Blank"
+   endif
+   if iCal = 8
+     return "Solvent"
+   endif
+   return ""
+endmacro
+!############################################################################
+! This macro is generate infomation for the report, used by PageHeaderLine$
+! \phx3d\parts\macros\prntutil.mac
+!############################################################################
+! This macro is generate infomation for the report, used by PageHeaderLine$
+! \phx3d\parts\macros\prntutil.mac
+name WIFFHeaderLine$
+   parameter szFullPath$ default ""
+!############################################################################
+   local bAutoTrans
+   local szWiffFile$
+   szWiffFile$ = ""
+   on error goto WIFFHeaderLineExit
+   szFullPath$ = szFullPath$ + "\ACQRES.REG"
+   ! First, check if a ACQRES.REG exists in the given directory or not.
+   IF (FileStat(Mode,szFullPath$)<>1 OR FileStat(Size,szFullPath$)<=0) THEN
+     return szWiffFile$
+   endif     
+   ! Clean up the TEMPACQRES
+   if RegSize(TEMPACQRES) > 0
+     delreg TEMPACQRES
+   endif
+   ! Load the msdiag.reg file to the register
+   loadobj szFullPath$, , TEMPACQRES
+   if RegSize(TEMPACQRES) < 1
+     goto WIFFHeaderLineExit
+   endif
+   if (ObjHdrType(TEMPACQRES, "AnalystTable") <> 4)
+      goto WIFFHeaderLineExit
+   endif
+   if (TabHdrType(TEMPACQRES, "AnalystTable", "AutoTranslate") <> 99) then
+      bAutoTrans = TabHdrVal(TEMPACQRES, "AnalystTable", "AutoTranslate")
+      if bAutoTrans = 0 then ! No wiff file involved
+        goto WIFFHeaderLineExit
+      endif
+      szWiffFile$ = "WIFF File "
+      szWiffFile$ = szWiffFile$ + TabHdrText$ (TEMPACQRES, "AnalystTable", "WIFFDirectory")
+      szWiffFile$ = szWiffFile$ + "\"
+      szWiffFile$ = szWiffFile$ + TabHdrText$ (TEMPACQRES, "AnalystTable", "WIFFFilename")
+   endif
+WIFFHeaderLineExit:   
+  on error
+  delreg TEMPACQRES
+  return szWiffFile$
+endmacro
+

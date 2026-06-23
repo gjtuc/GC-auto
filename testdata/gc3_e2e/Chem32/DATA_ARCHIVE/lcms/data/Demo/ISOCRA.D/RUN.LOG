@@ -1,0 +1,26 @@
+  67 41e0 30951115    0
+Method       Method started                                 09:53:25 10/30/95
+  67 41e0 30951119    0
+Method       Instrument running calibration vial# 5         09:53:29 10/30/95
+   0 1da6 30951149  500
+1100 PMP   1 Pressure = 124.6 bar                           09:54:17 10/30/95
+   0 1da8 3095114a  500
+1100 THM   1 Temperature (left)  = 40.0 °C                  09:54:18 10/30/95
+   0 1da8 3095114a  500
+1100 THM   1 Temperature (right) = 40.0 °C                  09:54:18 10/30/95
+   0 1da6 309512b1  500
+1100 PMP   1 Pressure = 126.5 bar                           10:00:17 10/30/95
+   0 1da8 309512b1  500
+1100 THM   1 Temperature (left)  = 40.0 °C                  10:00:17 10/30/95
+   0 1da8 309512b1  500
+1100 THM   1 Temperature (right) = 40.0 °C                  10:00:17 10/30/95
+  67 41e0 309512ba    0
+Method       Instrument run completed                       10:00:26 10/30/95
+  70 41de 309512c0    0
+CP Macro     Analyzing rawdata ISOCRA1.D                    10:00:32 10/30/95
+  70 41de 309512c6    0
+CP Macro     Can't load DAD1 B, Sig=254,4 Ref=600,100       10:00:38 10/30/95
+  70 41de 309512c6    0
+CP Macro     Signal used in Calib. Table (Signal Details).  10:00:38 10/30/95
+  67 41e0 30951310    0
+Method       Method completed                               10:01:52 10/30/95

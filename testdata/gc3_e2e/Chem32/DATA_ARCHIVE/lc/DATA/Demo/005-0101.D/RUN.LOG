@@ -1,0 +1,42 @@
+ 443 1d59 2db3ee1d
+Method       Method started: line# 1 vial# 5 inj# 1         07:43:41 04/19/94
+  67 1d59 2db3ee1e
+Method       Instrument running sample vial# 5              07:43:42 04/19/94
+   0 1d45 2db3ee3e
+PUMP 1050  1 Pressure = 188.5 bar                           07:44:14 04/19/94
+   0 1d45 2db3ee3e
+PUMP 1050  1 Temperature = 40.0 Centigrade                  07:44:14 04/19/94
+   0 1d45 2db3efe3
+PUMP 1050  1 Pressure = 192.7 bar                           07:51:15 04/19/94
+   0 1d45 2db3efe3
+PUMP 1050  1 Temperature = 40.0 Centigrade                  07:51:15 04/19/94
+  67 1d59 2db3efe5
+Method       Instrument Run completed                       07:51:17 04/19/94
+  70 1d57 2db3efe5
+CP Macro     Analyzing rawdata 005-0101.D                   07:51:17 04/19/94
+  70 1d57 2db3efef
+CP Macro     Saving GLP Data for rawdata 005-0101.D         07:51:27 04/19/94
+  67 1d59 2db3eff9
+Method       Method completed                               07:51:37 04/19/94
+ 443 1d59 2db79359
+Method       Method started: line# 1 vial# 5 inj# 1         02:05:29 04/22/94
+  70 1d57 2db7935b
+CP Macro     Analyzing rawdata 005-0101.D                   02:05:31 04/22/94
+  67 1d59 2db79364
+Method       Method completed                               02:05:40 04/22/94
+ 443 1d59 2dbb8c04
+Method       Method started: line# 1 vial# 5 inj# 1         02:23:16 04/25/94
+  70 1d57 2dbb8c09
+CP Macro     Analyzing rawdata 005-0101.D                   02:23:21 04/25/94
+ 823 1d59 2dbb8c14
+Method       Postrun Macro evaluated                        02:23:32 04/25/94
+  67 1d59 2dbb8c14
+Method       Method completed                               02:23:32 04/25/94
+  67 1d59 2dbca220
+Method       Method started                                 22:09:52 04/25/94
+  70 1d57 2dbca221
+CP Macro     Analyzing rawdata 005-0101.D                   22:09:53 04/25/94
+ 823 1d59 2dbca229
+Method       Postrun Macro evaluated                        22:10:01 04/25/94
+  67 1d59 2dbca229
+Method       Method completed                               22:10:01 04/25/94

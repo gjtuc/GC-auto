@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <file name="IQTCore.dll" asmv2:size="671744">
+    <hash xmlns="urn:schemas-microsoft-com:asm.v2">
+      <dsig:Transforms>
+        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
+      </dsig:Transforms>
+      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" />
+      <dsig:DigestValue>yPkXCqywnXdhWHA0mZdRagWGtUA=</dsig:DigestValue>
+    </hash>
+    <typelib tlbid="{9006b9fc-6b05-48a3-a917-38fe33f2245b}" version="1.0" helpdir="" resourceid="0" flags="HASDISKIMAGE" />
+    <comClass clsid="{347c3ae3-af2c-43b2-a5d1-d05f95999abc}" threadingModel="Apartment" tlbid="{9006b9fc-6b05-48a3-a917-38fe33f2245b}" progid="IQTCore.IQTCheck.1" description="IQTCheck Class" />
+  </file>
+</assembly>

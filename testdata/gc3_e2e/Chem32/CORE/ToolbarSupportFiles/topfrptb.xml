@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 sp2 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="TopFrpTB" PosStyle="TOP" Caption='"TopFrpTB"' PanelName="Main">
+		<Static Name="Signals" Visible="1" Enable="1" Text="Signals" Border="NoBorder"/>
+		<PushButton Name="LoadSignal" Help="Load Signal(s) and Spectra of a Data File" Command='LoadFile "",0,,0' ImageName="Load_signal20" ImageNameDisabled="Load_signal20_d"/>
+		<PushButton Name="OverlaySignal" Help="Load Signal(s) of a Data File and overlay with current signals" Command='LoadFile "",1,,0' ImageName="Overlay_signal20" ImageNameDisabled="Overlay_signal20_d"/>
+		<NonEditCombobox Name="DataFile" Help="Select from most previously loaded Data Files" Enable="1" Table="_Config,1,DataFile" Selection="-1" Width="200"/>
+		<Static Name="Methods" Visible="1" Text="Methods" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadMethod" Help="Load a Method" Command="TLB_LoadMethod" ImageName="Load_method20" ImageNameDisabled="Load_method20_d"/>
+		<PushButton Name="SaveMethod" Help="Save current Method" Command="TLB_SaveCurrentMethod" ImageName="Save_method20" ImageNameDisabled="Save_method20_d"/>
+		<NonEditCombobox Name="MethodFile" Help="Select from most previously loaded Method Files" NewGroup="1" Enable="1" Width="200" Table="_Config,1,MethodFile" Selection="1"/>
+		<NonEditCombobox Name="SelectCalcType" Help="Set calculation type of current method" Enable="1" TextList="Percent|ESTD|Norm%|ISTD|ESTD%|ISTD%" Width="70" DefCmdParNumber="0" DefCommand="FRPTMenu_ChangeCalcType"/>
+		<NonEditCombobox Name="SelectCalcBase" Help="Set calculation base of current method" Enable="1" TextList="Area|Height" Width="70" DefCmdParNumber="0" DefCommand="FRPTMenu_ChangeCalcBase"/>
+		<NonEditCombobox Name="FRptLayout" Help="Select from most previously used Report Template" NewGroup="1" Enable="1" Width="100" Table="_Config,1,FrptFile" Selection="1"/>
+		<PushButton Name="NewReportTemplate" Help="New Report Template" Command="FRPT_DoNewReportTemplate" ImageName="Report_NewTemplate20" ImageNameDisabled="Report_NewTemplate20_d"/>
+		<PushButton Name="OpenReportTemplate" Help="Open a Report Template" Command="FRPT_DoOpenReportTemplate" ImageName="Report_OpenTemplate20" ImageNameDisabled="Report_OpenTemplate20_d"/>
+		<PushButton Name="SaveReportTemplate" Help="Save current Report Template" Command="value=FRPT_SaveReportTemplate()" ImageName="Report_SaveTemplate20" ImageNameDisabled="Report_SaveTemplate20_d"/>
+		<PushButton Name="ReportPreview" Help="Show Report Preview using current template, method and data file" Command="FRPT_Test SCREEN" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="ReportPrint" Help="Print report using current template, method and data file" Command="FRPT_Test SCREEN" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+	</toolbar>
+</graphical_object>

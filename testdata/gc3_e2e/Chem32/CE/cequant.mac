@@ -1,0 +1,431 @@
+! $Header: /cag/DRIVERS/leodef/ce/misc/cequant.mac 3.9 1999-08-12 23:59:30-07 fkremser Exp $
+
+!*****************************************************************
+! Creator: Alwin Ritzmann
+!    Date: Wed 9. Dec. 1992
+!
+! New for 3D Software
+! This macro contains evaluation functions for CE.
+! 
+!*****************************************************************
+
+
+
+!*******************************************************************
+!                     AddHpceErrorMessage
+!                     ===================
+! Adds an error message to the register specified by 'Reg$'
+! The default table name is 'ErrorReport'.
+!
+!*******************************************************************
+name AddHpceErrorMessage
+  parameter Reg$, Msg$, ErrLevel
+  local i
+
+  evaluate ("InsTabRow "+Reg$+", ""ErrorReport""")
+  evaluate ("i = TabHdrVal("+Reg$+",""ErrorReport"",""NumberOfRows"")")
+  evaluate ("SetTabText "+Reg$+", ""ErrorReport"","+Val$(i)+", ""Comment"","""+Msg$+"""")
+  evaluate ("SetTabVal "+Reg$+",""ErrorReport"","+Val$(i)+",""ErrorStatus"","+Val$(ErrLevel))
+endmacro
+
+
+!*******************************************************************
+!                     GetHpceObj
+!                     ==========
+! Find the Object specified by SignalId$ ("C","V","P","E","T")
+! and from the specified RawDataFile$
+!
+!*******************************************************************
+name GetHpceObject
+    parameter SignalId$ default " "
+
+    local i, NumObjs
+
+    ! find the object with the specified SignalId$ and RawDataFile$
+    NumObjs = RegSize(chromreg)
+
+    For i=1 To NumObjs
+      If ObjHdrType (chromreg[i],"Detector") <> 99 And \
+         ObjHdrType (chromreg[i],"SignalId") <> 99 Then
+        if ObjHdrText$(chromreg[i], "Detector") = "HPCE1" then
+          if ObjHdrText$(chromreg[i], "SignalId") = SignalId$ then
+             return i
+          endif
+        EndIf
+      EndIf
+    next i
+
+    return 0
+
+endmacro
+
+
+
+!*******************************************************************
+!                     GetCeDiagInfo
+!                     =============
+! This macro fills and creates header items in ChromRes[1].CeDiag 
+! table.
+!
+!
+!*******************************************************************
+name GetCeDiagInfo
+   local StartVal, StopVal
+   local ObjPos, LastIndex
+
+   ! Delete Table if exsistent
+   if ObjHdrType (chromres[1],"CeDiag") <> 99 then
+      DelTab chromres[1], "CeDiag"
+   endif
+
+   NewTab ChromRes[1], "CeDiag"
+
+   ObjPos = GetHpceObject ("P")
+   if ObjPos > 0 then
+      LastIndex= DataCols (ChromReg[ObjPos])
+      StartVal = Data (ChromReg[ObjPos],1,1)
+      StopVal  = Data (ChromReg[ObjPos],1,LastIndex)
+      NewTabHdrVal chromres[1],"CeDiag","StartPressure", StartVal
+      NewTabHdrVal chromres[1],"CeDiag","StopPressure", StopVal
+   endif
+
+   ObjPos = GetHpceObject ("T")
+   if ObjPos > 0 then
+      LastIndex= DataCols (ChromReg[ObjPos])
+      StartVal = Data (ChromReg[ObjPos],1,1)
+      StopVal  = Data (ChromReg[ObjPos],1,LastIndex)
+      NewTabHdrVal chromres[1],"CeDiag","StartTemp", StartVal
+      NewTabHdrVal chromres[1],"CeDiag","StopTemp", StopVal
+   endif
+
+   ObjPos = GetHpceObject ("C")
+   if ObjPos > 0 then
+      LastIndex= DataCols (ChromReg[ObjPos])
+      StartVal = Data (ChromReg[ObjPos],1,1)
+      StopVal  = Data (ChromReg[ObjPos],1,LastIndex)
+      NewTabHdrVal chromres[1],"CeDiag","StartCurrent", StartVal
+      NewTabHdrVal chromres[1],"CeDiag","StopCurrent", StopVal
+   endif
+
+   ObjPos = GetHpceObject ("V")
+   if ObjPos > 0 then
+      LastIndex= DataCols (ChromReg[ObjPos])
+      StartVal = Data (ChromReg[ObjPos],1,1)
+      StopVal  = Data (ChromReg[ObjPos],1,LastIndex)
+      NewTabHdrVal chromres[1],"CeDiag","StartVoltage", StartVal
+      NewTabHdrVal chromres[1],"CeDiag","StopVoltage", StopVal
+   endif
+
+   ObjPos = GetHpceObject ("E")
+   if ObjPos > 0 then
+      LastIndex= DataCols (ChromReg[ObjPos])
+      StartVal = Data (ChromReg[ObjPos],1,1)
+      StopVal  = Data (ChromReg[ObjPos],1,LastIndex)
+      NewTabHdrVal chromres[1],"CeDiag","StartPower", StartVal
+      NewTabHdrVal chromres[1],"CeDiag","StopPower", StopVal
+   endif
+
+endmacro
+
+!*******************************************************************
+!                     GetVoltAverage (StartTime, EndTime)
+!                     ===================================
+! This macro finds the volt object if existent and calculates the
+! average in the specified range.
+!
+! This macro needs the macro "macutil.mac" (->ObjMeanRange).
+!
+! Returns: The average voltage up to the specified time!
+!*******************************************************************
+
+name GetVoltAverage
+    parameter StartTime default 0, Endtime
+    local volt, ObjVolt
+
+    ! find the object which contains the voltage
+    ObjVolt = GetHpceObject ("V")
+
+    if ObjVolt > 0 then
+       volt=ObjMeanRange("chromreg["+Val$(ObjVolt)+"]",StartTime,EndTime)
+    else
+       volt = 0
+    endif
+
+    return volt
+
+endmacro
+
+
+!*******************************************************************
+!
+! This macro calculates for all peaks the mobility. A column with the
+! name "ua" must exist in the table "peak" in object "chromres[1]"
+!
+!                         chromres[1].peak
+!
+!*******************************************************************
+
+name CalcMobilities
+     local i,k,volt,iNumPeaks,mobility,MigTime,NumObjs,ObjVolt
+     local effLen, colLen
+
+     ! test if column/capillary information is available
+     If ObjHdrType (chromres[1],"Columns") <> 99 Then
+       If TabHdrVal(chromres[1],"Columns","NumberOfRows")>0 Then
+         effLen = TabVal (ChromRes[1],"Columns",1,"effLength")
+         colLen = TabVal (ChromRes[1],"Columns",1,"colLength")
+    
+         iNumPeaks = TabHdrVal (ChromRes[1],"peak","NumberOfRows")
+    
+         ! do for all peaks..
+         for i=1 to iNumPeaks
+             MigTime = TabVal (ChromRes[1],"peak",i,"MeasRetTime")
+             volt    = TabVal (ChromRes[1],"peak",i,"Voltage")
+             if (volt<>0) and (MigTime<>0) then
+                mobility = effLen * colLen / volt / MigTime / 60 / 1000
+                if mobility<>0 then
+                   SetTabVal ChromRes[1],"peak",i,"ua",mobility
+                endif
+             endif
+           Next i
+        Else
+          AddHpceErrorMessage "ChromRes[1]","No Capillary information! Mobility not calculated!",2
+        Endif
+     else
+        AddHpceErrorMessage "ChromRes[1]","No Capillary information! Mobility not calculated!",2
+     endif
+endmacro
+
+!*******************************************************************
+!
+! This macro calculates the average voltages for
+! each peak and stores the value in the chromres[1].peak table in 
+! column "Voltage".
+!
+!
+!*******************************************************************
+
+name CalcVolt
+  local sig, nSig, ObjVolt, FirstPeak, Peak, MigTime, Volt
+
+  nSig = TabHdrVal (ChromRes[1], "Signal", "NumberOfRows")
+  for sig = 1 to nSig
+    ! find the object which contains the voltage
+    ObjVolt = GetHpceObject ("V")
+    if ObjVolt = 0 then
+      AddHpceErrorMessage "ChromRes[1]", \
+                          "No voltage available for Signal " + val$(sig) + \
+                            "! Mobility not calculated!", \
+                          2
+    else
+      FirstPeak = TabVal (ChromRes[1], "Signal", sig, "FirstPeak")
+      If FirstPeak<>-1 Then
+        Peak = FirstPeak
+        repeat
+          MigTime  = TabVal (ChromRes[1], "Peak", Peak, "MeasRetTime")
+          if MigTime > 0 then
+            Volt = ObjMeanRange ("ChromReg["+Val$(ObjVolt)+"]", 0, MigTime)
+            SetTabVal ChromRes[1], "Peak", Peak, "Voltage", Volt
+          endif
+          Peak = TabVal (ChromRes[1], "Peak", Peak, "NextPeakSignal")
+        Until Peak = FirstPeak
+      EndIf
+    endif
+  next sig
+endmacro
+
+
+
+name HPCEquant
+parameter destination$
+    if TabColType (chromres[1],"peak","ua") = 99 then
+       ! needed columns not yet defined
+       NewColVal chromres[1],"peak","ua",0
+       NewColVal chromres[1],"peak","Voltage",0
+       CalcVolt
+       CalcMobilities
+    endif
+endmacro
+
+
+!*******************************************************************
+name PInstrConditionCE
+
+  parameter Destination$ default "PRINTER"
+!
+!*******************************************************************
+
+  local i, Dashes$, Diag$, nItems, nSolvents
+  local Format$
+  local found, S$
+  
+  print "PInstrStateCE"
+  if (Destination$ = "SCREEN") or (Destination$ = "PRINTER") or \
+     (Destination$ = "TXT") \
+  then
+    RPT_AnythingPrinted = 0
+    Dashes$ = "=====================================================================/"
+    
+    !*------------------------------------------------ 
+    !* Print CEDiag type data -- start/stop conditions
+    
+    print using #5, Dashes$
+
+    !* Print section title
+    format$ = "%/"
+    print using #5, format$, "CE Instrument Conditions:    At Start           At Stop"
+    Diag$ = "CEDiag"
+
+    RptPrintInstrItem Diag$, "StartTemp",     "StopTemp",     "InstrTemp"
+    RptPrintInstrItem Diag$, "StartPressure", "StopPressure", "InstrPressureCE"
+    RptPrintInstrItem Diag$, "StartCurrent",  "StopCurrent",  "InstrCurrent"
+    RptPrintInstrItem Diag$, "StartVoltage",  "StopVoltage",  "InstrVoltage"
+    RptPrintInstrItem Diag$, "StartPower",    "StopPower",    "InstrPower"
+
+
+    if ObjHdrType (ChromRes[1], "DADiag")=4 then
+        ! print Leo/1050 pump stuff if available
+        print using #5, "/"
+        RptPrintInstrItem "DADiag", "StartPressure", "StopPressure", "InstrPressure"
+        RptPrintInstrItem "DADiag", "StartFlow",     "StopFlow",     "InstrFlow"
+
+        nSolvents = TabHdrVal(ChromRes[1], "DADiag", "NumberOfRows")
+        if nSolvents > 0 then
+          print using #5, NLSCoreRpt$("InstrSolvTitle")
+          Format$ = NLSCoreRpt$("InstrSolvDesc")
+          for i = 1 to nSolvents
+            print using #5, Format$, \
+                            TabText$ (ChromRes[1], "DADiag", i, "Title"), \
+                            TabText$ (ChromRes[1], "DADiag", i, "Description")
+          next i
+        endif
+    endif
+
+    if RPT_AnythingPrinted = 0 then
+      print using #5, NLSCoreRpt$("InstrNotAvail")
+    endif
+    remove RPT_AnythingPrinted
+
+  endif
+
+endmacro
+
+
+!===================================================================
+!   macros to handle specific PeakTopType
+!===================================================================
+
+!************************************************************************MANBEG
+
+Name PeakTopType
+
+!
+!   DESCRIPTION			Shows the dialog-box and make changes to the DaMethod
+!						        Object
+!
+!   RETURN  <none>
+!
+!************************************************************************EndMAN
+
+ Local nReturn
+ Local Loop
+ PeakType = 1
+
+ If TabHdrType (_DAMETHOD[1], "IntMethod", "PeakTopType") = 99 Then
+   PeakType = 1
+ Else
+   PeakType = TabHdrVal (_DAMETHOD[1], "IntMethod", "PeakTopType") + 1
+
+   ! -------------------------------------------------------------
+   ! Building the Dialog-Box
+   ! -------------------------------------------------------------
+   If DialogExists ("PeakType") = 1 Then
+     RemoveDialog ("PeakType")
+   EndIf
+
+  	BeginDialog "PeakType", 100, 100, 190, 85, "Peak top type"
+     GroupBox       5,   5, 180,  55, "selected Method"
+     OptionGroup   PeakType
+     OptionButton  48,  15, 100,  12, "highest datapoint"
+     OptionButton  48,  25, 100,  12, "parabolic interpolation"
+     OptionButton  48,  35, 100,  12, "center of gravity"
+     OptionButton  48,  45, 100,  12, "gaussian fit"
+  	 OKButton       5,  65,  50,  14, "OK" 
+     CancelButton  70,  65,  50,  14, "Cancel"
+   	 ExecPushButton 135,65,  50 , 14, "&Help", "CP2", "PTT_Help"
+  	EndDialog
+
+  	nReturn = ShowDialog ("PeakType", 8373)
+
+   If nReturn=1 Then
+     ! -----------------------------------------------------------
+     ! OK-Button pressed...
+     ! -----------------------------------------------------------
+     SetTabHdrVal _DAMETHOD[1], "IntMethod", "PeakTopType", PeakType - 1
+
+   EndIf
+
+   RemoveDialog ("PeakType")
+
+ EndIf
+
+ Remove PeakType
+
+EndMacro
+
+
+Name PTT_Help
+
+    Help 8373
+	return
+
+EndMacro
+
+!*******************************************************************
+NAME CenterOfGravity
+  PARAMETER OnOff$ Default "ON"
+!*******************************************************************
+
+IF OnOff$ = "ON"
+  SetTabHdrVal _DAMethod[1], "IntMethod", "PeakTopType",  2
+ENDIF
+
+IF OnOff$ = "OFF"
+  SetTabHdrVal _DAMethod[1], "IntMethod", "PeakTopType",  1
+ENDIF
+   
+RETURN
+ENDMACRO
+
+
+
+!*******************************************************************
+NAME CEPrintIntType
+!
+! used in reputil.mac
+!*******************************************************************
+
+if TabHdrVal (_DAMethod[1], "IntMethod", "PeakTopType") = 0
+   Print #5,NLSCoreQnt$("TToneInteg")+" (highest datapoint)"
+else
+  if TabHdrVal (_DAMethod[1], "IntMethod", "PeakTopType") = 1
+     Print #5,NLSCoreQnt$("TToneInteg")+" (parabolic interpolation)"
+  else   
+    if TabHdrVal (_DAMethod[1], "IntMethod", "PeakTopType") = 2
+       Print #5,NLSCoreQnt$("TToneInteg")+" (center of gravity)"
+    else
+      if TabHdrVal (_DAMethod[1], "IntMethod", "PeakTopType") = 3
+        Print #5,NLSCoreQnt$("TToneInteg")+" (gaussian fit)"
+      endif
+    endif
+  endif
+endif
+    
+RETURN
+ENDMACRO
+
+
+
+print "Macro CEQUANT.MAC loaded!"
+
+!>>>>>>>>>>>>>>>>>>>>>>>> END OF MACRO CEQUANT.MAC <<<<<<<<<<<<<<<<<<<<

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="SignalF" PosStyle="TOP" DockRow="1" DockCol="0" Caption="信号处理" PanelName="Chem">
+		<PushButton Name="AlignXaxis" Help="对齐信号的时间轴" Command="SIG_AlignAxis 38,0" NewGroup="1" ImageName="Signal_AlignX20" ImageNameDisabled="Signal_AlignX20_d"/>
+		<PushButton Name="AlignYaxis" Help="对齐信号的吸光度轴" Command="SIG_AlignAxis 38,1" ImageName="Signal_Align_Y20" ImageNameDisabled="Signal_Align_Y20_d"/>
+		<PushButton Name="ResetSignalAxis" Help="重置已对齐的信号" Command="SIG_ResetSignalAxis 38" ImageName="Signal_AlignReset20" ImageNameDisabled="Signal_AlignReset20_d"/>
+		<PushButton Name="OverlaySignal" Help="“3D”信号重叠" Command="SIG_OverlaySignal" ImageName="Signal_3Doverlay20" ImageNameDisabled="Signal_3Doverlay20_d"/>
+		<PushButton Name="FlipSignal" Help="镜像信号" Command="SIG_FlipSignal 1" ImageName="Signal_Mirror20" ImageNameDisabled="Signal_Mirror20_d"/>
+		<PushButton Name="SubtractSignal" Help="从所有其他信号中扣除最后一个信号" Command="SIG_SubtractSignal" ImageName="Signal_Subtract20" ImageNameDisabled="Signal_Subtract20_d"/>
+		<PushButton Name="IntegrateAll" Help="积分所有色谱图" Command="INT_BTNDoIntegFun Integrate" ImageName="Int_Integrate20" ImageNameDisabled="Int_Integrate20_d"/>
+		<PushButton Name="SmoothSignal" Help="平滑所有信号" Command="MS_DoManualSmooth" Visible="0" ImageName="Signal_Smooth20" ImageNameDisabled="Signal_Smooth20_d"/>
+	</toolbar>
+</graphical_object>

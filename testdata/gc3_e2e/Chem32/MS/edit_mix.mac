@@ -1,0 +1,1053 @@
+!***************************************************************************!
+! edit_mix.mac  Macro to support editing the tune mix register
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!*
+!*  Supplemental macro to support editing the tune mix register.
+!* 
+!*   To edit the tune mix register tune_mix.reg:
+!*   1) Load this macro into memory by typing "macro" at the command line
+!*      and by selecting the edit_mix.mac file.
+!*   2) Type MSEditTuneMix at the command line.
+!*   3) Edit the appropriate tables.  Be aware that no limit checking
+!*      is done.  Change the values at your own risk!  The macro will
+!*      save the register to disk and will delete the previous autotune
+!*      results if you exit with 'OK'.
+!*
+!***************************************************************************!
+
+EditMixVer$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/edit_mix.mac 1.15 2002-12-19 13:27:23-08 pcormia Exp $"
+verIx = instr(EditMixVer$, ".mac ") + 5
+EditMixVer$ =  EditMixVer$[verIx:VerIx + instr(EditMixVer$[VerIx:len(EditMixVer$)]," ") - 1] 
+remove verIx
+
+!############################################################################
+name MSTMChkDelete
+PARAMETER RegObj$
+PARAMETER TableName$
+PARAMETER RowNumber
+PARAMETER ColumnNumber
+PARAMETER ColumnSource$
+
+!*  macro called by core when user presses delete button on table dialog
+!*  for tune ions table
+!*  
+!############################################################################
+local TableRows
+Local  ID_TUNEMAC_YOU_MUST_SPECI_453
+ID_TUNEMAC_YOU_MUST_SPECI_453                      =  17453  
+    
+    evaluate "TableRows = TabHdrVal("+RegObj$+",TableName$,NumberOfRows)"
+    if TableRows <= 1
+      print alert(ReadResource$("tunemac",ID_TUNEMAC_YOU_MUST_SPECI_453),3,"Error: Edit Tune Mix")
+      MSTMChkDeleteRetVal = 0
+    else
+      MSTMChkDeleteRetVal = 1
+    endif
+
+endmacro  !* MSTMChkDelete
+
+!############################################################################
+name MSTMChkAppend
+PARAMETER RegObj$
+PARAMETER TableName$
+PARAMETER RowNumber
+PARAMETER ColumnNumber
+PARAMETER ColumnSource$
+Local  ID_TUNEMAC_YOU_MAY_SPECIF_455
+ID_TUNEMAC_YOU_MAY_SPECIF_455                      =  17455  
+    
+!*  macro called by core when user presses append button on table dialog
+!*  for tune ions table
+!*  
+!############################################################################
+    evaluate "TableRows = TabHdrVal("+RegObj$+",TableName$,NumberOfRows)"
+    if TableRows > 5
+      print alert(ReadResource$("tunemac",ID_TUNEMAC_YOU_MAY_SPECIF_455),3,"Error: Edit Tune Mix")
+      MSTMChkAppendRetVal = 0
+    else
+      MSTMChkAppendRetVal = 1
+    endif
+
+endmacro  !* MSTMChkAppend
+
+!############################################################################
+name MSTMChkUpdate
+PARAMETER RegObj$
+PARAMETER TableName$
+PARAMETER RowNumber
+PARAMETER ColumnNumber
+PARAMETER ColumnSource$
+Local  ID_TUNEMAC_INVALID_ENTRY_456
+ID_TUNEMAC_INVALID_ENTRY_456                       =  17456  
+    
+!*  macro called by core when user presses append button on table dialog
+!*  for tune ions table
+!*  
+!############################################################################
+!* Check the parameter name
+local parm$, ok
+local action$
+    evaluate "parm$ = TabText$(" + RegObj$ + ",TableName$,RowNumber,""Parm"")"
+    
+    if parm$ = "" then
+    !* Skip checks
+      MSTMChkUpdateRetVal = 1
+    else
+    !* Check if this is a valid parameter
+       MSParmInfo parm$, ok  
+       if ok = 0 then
+          MSTMChkUpdateRetVal = 0
+       else
+          if convertText$(UPPER,ColumnSource$)="ACTION" then
+            evaluate "action$ = convertText$(UPPER,TabText$(" + RegObj$ + ",TableName$,RowNumber,ColumnSource$))"
+            
+            if action$ = "MANRAMP" OR action$ = "DYNAMIC" OR action$ = "LAST" OR \
+               action$ = "ZONE" OR action$ = "FIXED" OR action$ = "SIMRAMP" then
+                evaluate "SetTabText " + RegObj$ + ",TableName$,RowNumber,ColumnSource$," + action$
+                MSTMChkUpdateRetVal = 1
+            else    
+                print alert(ReadResource$("tunemac",ID_TUNEMAC_INVALID_ENTRY_456) +\
+                "choices are: DYNAMIC, FIXED, LAST, MANRAMP, SIMRAMP, ZONE",3,"Error: Edit Tune Mix")
+                evaluate "SetTabText " + RegObj$ + ",TableName$,RowNumber,ColumnSource$,""FIXED"""
+                MSTMChkUpdateRetVal = 0
+            endif
+          endif
+       endif
+    endif
+ 
+endmacro  !* MSTMChkUpdate
+
+
+!############################################################################
+name MSMRChkUpdate
+PARAMETER RegObj$
+PARAMETER TableName$
+PARAMETER RowNumber
+PARAMETER ColumnNumber
+PARAMETER ColumnSource$
+Local  ID_TUNEMAC_THE_MASS_MUST_457
+Local  ID_TUNEMAC_THE_SETTING_MU_459
+ID_TUNEMAC_THE_MASS_MUST_457                       =  17457  
+ID_TUNEMAC_THE_SETTING_MU_459                      =  17459  
+    
+!*  macro called by core when user presses append button on table dialog
+!*  for tune ions table
+!*  
+!############################################################################
+!* Check the parameter name
+local parm$, ok
+local mass, setting, low, high
+
+    evaluate "parm$ = TabText$(" + RegObj$ + ",TableName$,RowNumber,""Parm"")"
+    
+    if parm$ = "" then
+    !* Skip checks
+      MSMRChkUpdateRetVal = 1
+    else
+    !* Check if this is a valid parameter
+       MSParmInfo parm$, ok  
+       if ok = 0 then
+          MSMRChkUpdateRetVal = 0
+       else
+          if instr(convertText$(UPPER,ColumnSource$),"MASS") > 0 then
+            evaluate "mass = TabVal(" + RegObj$ + ",TableName$,RowNumber,ColumnSource$)"
+            high = MSInstrParm("maxmass")
+            low =  MSInstrParm("minmass")
+            if mass <= high AND mass >= low then
+                MSMRChkUpdateRetVal = 1
+            else
+                print alert(ReadResource$("tunemac",ID_TUNEMAC_THE_MASS_MUST_457) +val$(low)+ " and " + val$(high),3,"Error: Edit Tune Mix")
+                evaluate "SetTabVal " + RegObj$ + ",TableName$,RowNumber,ColumnSource$,0"
+                MSMRChkUpdateRetVal = 0
+            endif
+          endif
+          if instr(convertText$(UPPER,ColumnSource$),"SETTING") > 0 then
+           evaluate "setting = TabVal(" + RegObj$ + ",TableName$,RowNumber,ColumnSource$)"
+           MSParmInfo parm$,,low,high
+           if setting >= low AND setting <= high
+                MSMRChkUpdateRetVal = 1
+            else
+                print alert(ReadResource$("tunemac",ID_TUNEMAC_THE_SETTING_MU_459) +val$(low)+ " and " + val$(high),3,"Error: Edit Tune Mix")
+                evaluate "SetTabVal " + RegObj$ + ",TableName$,RowNumber,ColumnSource$,0"
+                MSMRChkUpdateRetVal = 0
+            endif
+          endif
+       endif
+    endif
+ 
+endmacro  !* MSMRChkUpdate
+
+
+
+!############################################################################
+name MSMakeTuneMixDDT$
+PARAMETER TableName$
+PARAMETER NumSettings default 0
+!
+! Generate a new TuneMixIonDDT, TuneMixParmDDT, or TuneMixBGDDT 
+! table and place it in _config[3] 
+!
+!############################################################################
+local NLSVial$, NLSSampleName$, NLSInjVial$
+local NumOfParams, i, GlobalId, ParamColHdr$ 
+local DDTName$, j
+    
+    if ConvertText$(upper,TableName$) = ConvertText$(upper,"TuneParms") then
+       DDTName$ = "TuneMixParmDDT"
+    else   
+       if ConvertText$(Upper,TableName$) = ConvertText$(upper,"TuneIons")
+         DDTName$ = "TuneMixIonDDT"
+       else
+         if ConvertText$(Upper,TableName$) = ConvertText$(UPPER,"BackGNDIons") then
+           DDTName$ = "TuneMixBGDDT"  
+         else
+           if ConvertText$(Upper,TableName$) = ConvertText$(UPPER,"ManRamp") then
+             DDTName$ = "TuneMixMRDDT"
+           else
+             return ""
+           endif
+         endif  
+       endif  
+    endif
+
+    ! Remove table if exists
+    if ObjHdrType( _config[3], DDTName$ ) <> 99 then
+        DelTab _config[3], DDTName$
+    endif
+
+    ! Generate new table
+    NewDescTable DDTName$, 0 !no protection
+
+    ! Add header items like events and buttons
+    if DDTName$ = "TuneMixIonDDT" then 
+      NewTabHdrText _config[3],DDTName$,"BtnDelRow","DeleteRow,0,0,0,0"
+      NewTabHdrText _config[3],DDTName$,"BtnInsRow","InsertRow,0,0,0,0"
+      NewTabHdrText _config[3],DDTName$,"BtnAppRow","AppendRow,0,0,0,0"
+      
+      SetTabHdrText _config[3],DDTName$,"EvPreInsRow","MSTMChkAppend"
+      SetTabHdrText _config[3],DDTName$,"EvPreDelRow","MSTMChkDelete"
+      
+      SetTabHdrVal _config[3],DDTName$,"SelectSingleRow",1
+      SetTabHdrText _config[3],DDTName$,"RowNumTitle","Mass"
+      SetTabHdrVal _config[3],DDTName$,"RowNumWidth",10
+
+      AddDescRow DDTName$, "MZ",,2,7, "%d",1, "mz"
+      AddDescRow DDTName$, "Name",,2,18,"%s",0, "Name"
+      AddDescRow DDTName$, "PW50",,2,6,"%d",1, "PW50"
+      AddDescRow DDTName$, "GPW50",,2,7,"%d",1, "GPW50"
+      AddDescRow DDTName$, "Iso1Ratio",,2,10,"%d",1, "Iso1Ratio"
+      AddDescRow DDTName$, "Iso2Ratio",,2,10,"%d", 1, "Iso2Ratio"
+      AddDescRow DDTName$, "charge",,2,8, "%d",1, "Charge"
+    else  
+      if DDTName$ = "TuneMixParmDDT" then
+        SetTabHdrVal _config[3],DDTName$,"DispRowNum",0
+        SetTabHdrText _config[3],DDTName$,"EvUpdCell",  "MSTMChkUpdate"
+        
+        AddDescRow DDTName$, "Parameter",,2,25, "%s",0, "Parm"
+        AddDescRow DDTName$, "Default",,2,7,"%d",1, "Default"
+        AddDescRow DDTName$, "Min",,2,5,"%d",1, "Min"
+        AddDescRow DDTName$, "Max",,2,5,"%d",1, "Max"
+        AddDescRow DDTName$, "Action",,2,15,"%s", 0, "Action"
+        AddDescRow DDTName$, "ActionParm",,2,15, "%s",0, "ActionParm"
+      else
+          if DDTName$ = "TuneMixBGDDT" then
+             NewTabHdrText _config[3],DDTName$,"BtnDelRow","DeleteRow,0,0,0,0"
+             NewTabHdrText _config[3],DDTName$,"BtnInsRow","InsertRow,0,0,0,0"
+             NewTabHdrText _config[3],DDTName$,"BtnAppRow","AppendRow,0,0,0,0"
+             AddDescRow DDTName$, "MZ",,2,7, "%d",1, "mz"
+             AddDescRow DDTName$, "Name",,2,18,"%s",0, "Name"
+          else
+            if DDTName$ = "TuneMixMRDDT" then
+              SetTabHdrText _config[3],DDTName$,"EvUpdCell",  "MSMRChkUpdate"
+              AddDescRow DDTName$, "Parameter",,2,25, "%s",0, "Parm"
+              for j = 1 to 10
+                evaluate "AddDescRow " + DDTName$ + ", ""Mass"+val$(j)+""",,2,7, ""%d"",1, ""Mass" +val$(j) + """"
+                evaluate "AddDescRow " + DDTName$ + ", ""Setting"+val$(j)+""",,2,10,""%d"",1, ""Setting" +val$(j) + """"
+              next j  
+            endif   
+          endif  
+      endif  
+    endif
+    return  DDTName$
+endmacro   !MSMakeTuneMixDDT$
+
+
+!############################################################################
+name MSEditTuneMixTable
+PARAMETER RegIndex default 0
+PARAMETER Table$
+PARAMETER ShortName$
+
+!############################################################################
+local retval, AllowRowInsert, AllowRowDelete
+local DDTName$
+local lens$, lensrow, i, numparms, enable
+Local  ID_TUNEMAC_TUNE_MIX_TABLE_460
+ID_TUNEMAC_TUNE_MIX_TABLE_460                      =  17460  
+   retval = 0
+   DDTName$ =  MSMakeTuneMixDDT$(Table$)
+   mstn_CPSafeStart "CP2"
+   if RegSize(TmpTuneMix) > 0 then   !* make sure the register's loaded
+     if ObjHdrType(TmpTuneMix[1],Table$)=4 then
+          if DialogExists ("EditTMDlg")<>0 then
+            RemoveDialog "EditTMDlg"
+          endif
+          BeginDialog "EditTMDlg", 10,20,350,220, "Edit "+ ShortName$
+            StaticText  10,5,100,12, ReadResource$("tunemac",ID_TUNEMAC_TUNE_MIX_TABLE_460) + Table$
+            if len(DDTName$) > 0 then
+              TableBox 10, 30, 330, 150, TmpTuneMix[1],Table$,DDTName$,CP2
+            else  
+              TableBox 10, 30, 330, 150, TmpTuneMix[1],Table$
+            endif  
+            OKButton 10, 185, 54,14
+            CancelButton 80, 185, 54,14
+          EndDialog
+          repeat 
+             retval = ShowDialog("EditTMDlg")
+          until retval < 2   
+          
+          RemoveDialog "editTMDlg"
+     endif   
+   endif 
+   
+   return retval
+endmacro  !MSEditTuneMixTable
+
+
+!############################################################################
+name MSCheckSetManRamp1
+PARAMETER lensrow
+! Internal function designed to be used by MSEditTuneMix
+! Do not call directly!
+!
+! Assumes existence of TmpTuneMix[1] and uses this as the relevant 
+! register
+!
+! Check to see if the masses are in ascending order
+!############################################################################
+local NumPairs, i, j
+local tmp1, tmp2
+!* global idx1, idx2, idx3, ... idxn, n = NumPairs
+on error print
+
+  NumPairs =  TabHdrVal(TmpTuneMix[1],"ManRamp","NumPairs")
+  for i = 1 to NumPairs
+    evaluate "idx" + val$(i) + " = 0"
+  next i
+  
+  !* "Sort" the indices based on the mass values
+  
+  idx1 = 1  
+  for i = 2 to NumPairs
+     evaluate "tmp1 = TabVal(TmpTuneMix[1],""ManRamp"",lensrow,""mass" + val$(i) + """)"
+     j = i
+     evaluate "tmp2 = TabVal(TmpTuneMix[1],""ManRamp"",lensrow,""mass" + val$(i-1) + """)"
+     
+     if tmp2 > tmp1 then
+      go_on = 1
+     else
+      go_on = 0
+     endif
+     
+     while go_on = 1
+        evaluate "idx" + val$(j) + " = idx" + val$(j-1)
+        j = j -1
+        if j > 1 then
+          evaluate "tmp2 = TabVal(TmpTuneMix[1],""ManRamp"",lensrow,""mass" + val$(j-1) + """)"
+          if tmp2 > tmp1 then
+           go_on = 1
+          else
+           go_on = 0
+          endif
+        else
+          go_on = 0
+        endif  
+     endwhile
+     if tmp1 > 0 then
+       evaluate "idx" +val$(j) +"  = i"
+     endif  
+  next i
+  show
+
+endmacro  !MSCheckSetManRamp1
+
+
+
+!############################################################################
+name MSEditManRampTable1
+PARAMETER ShortName$
+! Internal function designed to be used by MSEditTuneMix
+! Do not call directly!
+!
+! Assumes existence of TmpTuneMix[1] and uses this as the relevant 
+! register
+!############################################################################
+local retval, AllowRowInsert, AllowRowDelete
+local DDTName$, NumSettings
+Local  ID_TUNEMAC_TUNE_MIX_TABLE_460
+ID_TUNEMAC_TUNE_MIX_TABLE_460                      =  17460  
+   retval = 0
+   
+   NumSettings = TabHdrVal(TmpTuneMix[1],"ManRamp","NumPairs")
+   DDTName$ =  MSMakeTuneMixDDT$("ManRamp",NumSettings)
+   mstn_CPSafeStart "CP2"
+   if RegSize(TmpTuneMix) > 0 then   !* make sure the register's loaded
+     if ObjHdrType(TmpTuneMix[1],"ManRamp")=4 then
+          if DialogExists ("EditTMDlg")<>0 then
+            RemoveDialog "EditTMDlg"
+          endif
+          BeginDialog "EditTMDlg", 10,20,350,220, "Edit "+ ShortName$
+            StaticText  10,5,200,12, ReadResource$("tunemac",ID_TUNEMAC_TUNE_MIX_TABLE_460) + "Manual Dynamic Ramp"
+            if len(DDTName$) > 0 then
+              TableBox 10, 30, 330, 150, TmpTuneMix[1],"ManRamp",DDTName$,CP2
+            else  
+              TableBox 10, 30, 330, 150, TmpTuneMix[1],"ManRamp"
+            endif  
+            OKButton 10, 185, 54,14
+            CancelButton 80, 185, 54,14
+          EndDialog
+          repeat 
+             retval = ShowDialog("EditTMDlg")
+          until retval < 2   
+          RemoveDialog "editTMDlg"
+     endif   
+   endif 
+   
+   return retval
+
+endmacro  !* MSEditManRampTable
+
+!############################################################################
+name MSEditManRampTable
+PARAMETER ShortName$
+! Internal function designed to be used by MSEditTuneMix
+! Do not call directly!
+!
+! Assumes existence of TmpTuneMix[1] and uses this as the relevant 
+! register
+! This code will handle 10 mass/setting pairs because the number of variables
+! are hard-coded!
+!
+!############################################################################
+local retval
+local i,j, NumSettings
+local ErrorFlag
+local m0,m1,m2,m3,m4,m5,m6,m7,m8,m9,m10   !* variable for the dialog boxes
+local    s1,s2,s3,s4,s5,s6,s7,s8,s9,s10
+local minmass, maxmass, minset, maxset
+local numLens, lenslist$, lens$
+local lensRow, tmp1, tmp2, mass, tmps
+
+   retval = 0                              !* Default to Cancel
+Local  ID_TUNEMAC_MANUAL_RAMP__C_462
+Local  ID_TUNEMAC_MASS_463
+Local  ID_TUNEMAC_SETTING_464
+Local  ID_TUNEMAC_REDUDANT_MASS_465
+ID_TUNEMAC_MANUAL_RAMP__C_462                      =  17462  
+ID_TUNEMAC_MASS_463                                =  17463  
+ID_TUNEMAC_SETTING_464                             =  17464  
+ID_TUNEMAC_REDUDANT_MASS_465                       =  17465  
+   ErrorFlag = 0
+   
+   if ObjHdrType(TmpTuneMix[1],"ManRamp")=4 then
+     maxmass = MSInstrParm("maxmass")
+     minmass = MSInstrParm("minmass")
+     
+     NumLens = TabHdrVal(TmpTuneMix[1],"ManRamp","NumberOfRows")
+     lensList$ = ""
+     
+     lens$ = TabText$(TmpTuneMix[1],"ManRamp",1,"Parm")
+     if len(lens$) > 0 then
+        lenslist$ = lens$
+     endif   
+     for i = 2 to NumLens
+       lens$ = TabText$(TmpTuneMix[1],"ManRamp",i,"Parm")
+       if len(lens$) > 0 then
+         lenslist$ = lenslist$ + "|" + lens$
+       endif
+     next i
+     
+     
+     NumSettings = TabHdrVal(TmpTuneMix[1],"ManRamp","NumPairs")
+     
+     if NumSettings > 10 then
+       NumSettings = 10
+     endif
+     
+     on error ErrorFlag = _error                !* Ignore errors so code will
+                                                !* run to end of routine
+     
+     if RegSize(TmpTuneMix) > 0 then   !* make sure the register's loaded
+            if DialogExists ("PickLensDlg")<>0 then
+              RemoveDialog "PickLensDlg"
+            endif
+            BeginDialog "PickLensDlg", 50, 40, 130, 90,"Edit "+ ShortName$
+              StaticText  10, 5,  100, 20, ReadResource$("tunemac",ID_TUNEMAC_MANUAL_RAMP__C_462)
+              ListBox     10, 30, 100, 20, LensList$, lens$ 
+              OKButton    10,70,50,14
+              CancelButton 66,70,50,14
+            EndDialog
+            
+        repeat             
+            lens$ = substring$(LensList$,1)        
+            retval = ShowDialog("PickLensDlg")
+            if retval = 1 then
+              if DialogExists ("EditPairsDlg")<>0 then
+                RemoveDialog "EditPairsDlg"
+              endif
+              lensrow = RowByText (TmpTuneMix[1],"ManRamp",,"Parm","i=",lens$)
+              if lensrow > -1 then
+              MSParmInfo lens$ ,,minset,maxset
+              BeginDialog "EditPairsDlg", 50, 20, 182, (NumSettings*20)+30,"Edit "+ ShortName$
+                StaticText  35,0,50,12, ReadResource$("tunemac",ID_TUNEMAC_MASS_463)
+                StaticText  102,0,200,12, ReadResource$("tunemac",ID_TUNEMAC_SETTING_464)
+                for i = 1 to NumSettings               
+                  !* we can only handle up to 10
+           
+                  !* create the dialog components
+                  evaluate "m" + val$(i) + " = TabVal(TmpTuneMix[1],""ManRamp"",lensRow,""mass"+ val$(i) +""")"
+                  evaluate "s" + val$(i) + " = TabVal(TmpTuneMix[1],""ManRamp"",lensRow,""setting"+ val$(i) + """)"
+                  
+                  evaluate "NumberBox   35,-10+(i*20),50,12, m"+val$(i)+ ",minmass,maxmass,0,,,""%0.2f"""
+                  evaluate "NumberBox   102,-10+(i*20),50,12, s"+val$(i)+ ",minset,maxset,0,,,""%0.2f"""
+                next i  
+                  
+                OKButton    40,-8+(i*20),50,14
+                CancelButton 96,-8+(i*20),50,14
+              EndDialog
+              retval = ShowDialog ("EditPairsDlg")
+              endif
+            endif
+        until retval < 2   
+        if retval = 1 then
+!* Sort the pairs and store them into the table
+
+          !*Assert: At this point, masses 1 to count are all of the
+          !*        selected masses
+          !* Do insertion sort 
+          m0 = 0                  !*Sentinel key for insertion sort
+          for i = 2 to NumSettings
+             evaluate "tmp1 = m" + val$(i-1)
+             evaluate "tmp2 = m" + val$(i)
+             evaluate "tmps = s" + val$(i)
+             
+             if abs(tmp1-tmp2) < 0.1 then
+             !* Duplicate mass: shift remaining masses up
+                for j = i to NumSettings -1
+                  evaluate "m" + val$(j) + " = m" + val$(j+1)
+                  evaluate "s" + val$(j) + " = s" + val$(j+1)
+                next j
+                evaluate "m" + val$(NumSettings) + " = 0"
+                evaluate "s" + val$(NumSettings) + " = 0"
+                print Alert(ReadResource$("tunemac",ID_TUNEMAC_REDUDANT_MASS_465) + val$(tmp2) + " will be deleted.",2)
+                
+             else
+                j = i
+                while tmp1 > tmp2
+                !* Previous larger than current so 
+                   evaluate "m" + val$(j) + " = m" + val$(j-1)
+                   evaluate "s" + val$(j) + " = s" + val$(j-1)
+                   j = j - 1
+                   evaluate "tmp1 = m" + val$(j-1)
+                endwhile
+                evaluate "m" +val$(j) +"  = tmp2"
+                evaluate "s" +val$(j) +"  = tmps"
+             endif
+          next i
+          j = 1        
+          for i = 1 to NumSettings
+             evaluate "tmp1 = m" + val$(i)
+             if tmp1 > 0 then
+               evaluate "SetTabVal TmpTuneMix[1], ""ManRamp"",lensrow,""Mass" + val$(j) + """,tmp1"
+               evaluate "SetTabVal TmpTuneMix[1], ""ManRamp"",lensrow,""Setting" + val$(j) + """,s"+ val$(i) 
+               j = j + 1
+             endif  
+          next i
+          for i = j to NumSettings
+               evaluate "SetTabVal TmpTuneMix[1], ""ManRamp"",lensrow,""Mass" + val$(i) + """,0"
+               evaluate "SetTabVal TmpTuneMix[1], ""ManRamp"",lensrow,""Setting" + val$(i) + """,0" 
+          next i
+          
+          lensrow = RowByText(TmpTuneMix[1],"TuneParms",,"Parm","i=",lens$)
+          if convertText$(UPPER,TabText$(TmpTuneMix[1],"TuneParms",lensrow,"Action"))<> "MANRAMP" then
+            if alert("Change action for " + lens$ + " to MANRAMP?") = 1 then
+              SetTabText TmpTuneMix[1],"TuneParms",lensrow,"Action","MANRAMP"
+            endif
+          endif
+          
+        endif
+        RemoveDialog "PickLensDlg"
+        RemoveDialog "EditPairsDlg"
+       endif   
+   endif 
+ 
+   on error
+   if ErrorFlag <> 0 then
+     generate error ErrorFlag
+   endif
+   
+   return retval
+
+endmacro  !* MSEditManRampTable
+
+
+!############################################################################
+name MSErrEditTuneMix
+
+!############################################################################
+Local  ID_TUNEMAC_ERROR_467
+ID_TUNEMAC_ERROR_467                               =  17467  
+ on error print
+   print Alert(ReadResource$("tunemac",ID_TUNEMAC_ERROR_467)+_errmsg$ +".  Edit canceled.")
+   if DialogExists("EditTuneMixRegDlg")<> 0 then
+     RemoveDialog "EditTuneMixRegDlg"
+   endif  
+   if DialogExists("editTMDlg")<> 0 then
+     RemoveDialog "editTMDlg"
+   endif  
+   if RegSize(TmpTuneMix) > 0 then
+     DelReg TmpTuneMix
+   endif
+   stop
+   
+endmacro   !MSErrEditTuneMix
+
+
+!############################################################################
+name MSEditTuneMix
+PARAMETER RegIndex default 0
+PARAMETER SaveTuneMixFileName$ default ""
+!
+! Dialog box to view and edit the tune mix register items.  Also allows the
+! user to call up the tune mix tables for viewing and editing. 
+! Unless the user executes SaveTuneMix afterwards, changes will be ignored.  
+!
+!############################################################################
+local IPSelect, IonPol, IMSelect, IonMode, NumIons, editParms, editIons, GNumIons
+local _button, editBack
+local ShortName$, LongName$, PrepDate$, CDSBottle$, CDSList$, LastTuneDate$
+local text1$
+local ShowTuneIon,ShowTuneParm,ShowBGIon, ShowManRamp
+
+   print msat_initTuneMixReg()       !* Updates the tunemix register to the default version
+
+Local  ID_TUNEMAC_MSEDITTUNEMIX_469
+Local  ID_TUNEMAC_MSEDITTUNEMIX_470
+Local  ID_TUNEMAC_SHORT_NAME_471
+Local  ID_TUNEMAC_LONG_NAME_472
+Local  ID_TUNEMAC_CDS_BOTTLE_473
+Local  ID_TUNEMAC_NUMBER_OF_IONS_474
+Local  ID_TUNEMAC_EDIT_TABLES_475
+Local  ID_TUNEMAC_PARAMETERS_476
+Local  ID_TUNEMAC_TUNE_IONS_477
+Local  ID_TUNEMAC_BACKGROUND_ION_478
+Local  ID_TUNEMAC_MANUAL_DYNAMIC_479
+ID_TUNEMAC_MSEDITTUNEMIX_469                       =  17469  
+ID_TUNEMAC_MSEDITTUNEMIX_470                       =  17470  
+ID_TUNEMAC_SHORT_NAME_471                          =  17471  
+ID_TUNEMAC_LONG_NAME_472                           =  17472  
+ID_TUNEMAC_CDS_BOTTLE_473                          =  17473  
+ID_TUNEMAC_NUMBER_OF_IONS_474                      =  17474  
+ID_TUNEMAC_EDIT_TABLES_475                         =  17475  
+ID_TUNEMAC_PARAMETERS_476                          =  17476  
+ID_TUNEMAC_TUNE_IONS_477                           =  17477  
+ID_TUNEMAC_BACKGROUND_ION_478                      =  17478  
+ID_TUNEMAC_MANUAL_DYNAMIC_479                      =  17479  
+   if check(macro,msat_InitTuneMix)=0 then
+       macro _automspath$ + "enutnmix.mac"               
+   endif
+
+   EditTM$ = "EditTuneMixRegDlg"
+   if RegSize(TuneMixReg) <= 0 then   !* make sure the register's loaded
+      msat_InitTuneMix
+   endif 
+          
+   if RegIndex = 0 then               !* if a register number not passed, ask
+      RegIndex = msat_SelectTuneMix()
+print regindex
+      print ReadResource$("tunemac",ID_TUNEMAC_MSEDITTUNEMIX_469) + \
+            ObjHdrText$(TuneMixReg[RegIndex], "ShortName")
+      if RegIndex <= 1 then
+         Print ReadResource$("tunemac",ID_TUNEMAC_MSEDITTUNEMIX_470)
+         RETURN
+      endif
+   endif
+   if RegSize(TmpTuneMix) <> -1 then
+     DelReg TmpTuneMix
+   endif
+   CopyObj TuneMixReg[RegIndex], TmpTuneMix[1]
+   CopyObj TuneMixReg[RegIndex], TmpTuneMix[2]
+   
+   on error MSErrEditTuneMix
+   !* Get the contents of the selected tune mix register
+   ShortName$     = ObjHdrText$(TmpTuneMix[1], "ShortName")
+   LongName$      = ObjHdrText$(TmpTuneMix[1], "LongName")
+   PrepDate$      = ObjHdrText$(TmpTuneMix[1], "PrepDate") ! Date format?
+   CDSBottle$     = ObjHdrText$(TmpTuneMix[1], "CDS_Bottle")
+   CDSList$       = "None|A|B"
+   ! LastTuneDate$  = ObjHdrText$(TmpTuneMix[1], "LastTuneDate")
+   !IonMode        = ObjHdrVal  (TmpTuneMix[1], "IonMode") ! As per MSNews #159
+   IonPolarity    = ObjHdrVal  (TmpTuneMix[1], "IonPolarity")
+   NumIons        = ObjHdrVal  (TmpTuneMix[1], "NumIons")
+   GNumIons       = ObjHdrVal  (TmpTuneMix[1], "GNumIons")
+
+   EditTuneMixDlg = DialogExists(EditTM$)
+   if ObjHdrType(TmpTuneMix[1],"TuneParms")=4 then
+     if TabHdrVal(TmpTuneMix[1],"TuneParms","NumberOfRows") > 0 then
+        ShowTuneParm = 1
+     else   
+        ShowTuneParm = 0
+     endif  
+   endif  
+   if ObjHdrType(TmpTuneMix[1],"TuneIons")=4 then
+     if TabHdrVal(TmpTuneMix[1],"TuneIons","NumberOfRows") > 0 then
+        ShowTuneIon = 1
+     else   
+        ShowTuneIon = 0
+     endif  
+   endif   
+   if ObjHdrType(TmpTuneMix[1],"BackGndIons")= 4 then
+     if TabHdrVal(TmpTuneMix[1],"BackGndIons","NumberOfRows") > 0 then
+        ShowBGIon = 1
+     else   
+        ShowBGIon = 0
+     endif
+   endif
+   
+   if ObjHdrType(TmpTuneMix[1],"ManRamp")= 4 then
+     if TabHdrVal(TmpTuneMix[1],"ManRamp","NumberOfRows") > 0 then
+        ShowManRamp = 1
+     else   
+        ShowManRamp = 0
+     endif
+   endif
+   
+   if EditTuneMixDlg = 0 then         ! create dialog box
+   
+      BeginDialog EditTM$, 50, 50, 230, 190, "Edit " + 	ShortName$
+      StaticText   20,  10,  40, 10, ReadResource$("tunemac",ID_TUNEMAC_SHORT_NAME_471)
+      EditBox      60,  10,  50, 10,  ShortName$
+      StaticText   20,  26,  40, 10, ReadResource$("tunemac",ID_TUNEMAC_LONG_NAME_472)
+      EditBox      60,  26, 150, 10,  LongName$
+      StaticText   20,  42,  40, 10, ReadResource$("tunemac",ID_TUNEMAC_CDS_BOTTLE_473)
+      ListBox      60,  42,  40, 16,  CDSList$ , CDSBottle$
+      StaticText  110,  42,  40, 10, "PrepDate"
+      EditBox     150,  42,  60, 10,  PrepDate$
+      StaticText   20,  58,  60, 10, ReadResource$("tunemac",ID_TUNEMAC_NUMBER_OF_IONS_474)+val$(NumIons)
+      GroupBox     20, 70, 190,  105, ReadResource$("tunemac",ID_TUNEMAC_EDIT_TABLES_475)
+      PushButton   55, 85, 120, 15, ReadResource$("tunemac",ID_TUNEMAC_PARAMETERS_476),2,ShowTuneParm
+      PushButton   55, 101, 120, 15, ReadResource$("tunemac",ID_TUNEMAC_TUNE_IONS_477),3,ShowTuneIon
+      PushButton   55, 117, 120, 15, ReadResource$("tunemac",ID_TUNEMAC_BACKGROUND_ION_478),4,!ShowBGIon
+      PushButton   55, 133, 120, 15, ReadResource$("tunemac",ID_TUNEMAC_MANUAL_DYNAMIC_479),5,ShowManRamp
+      OKButton       63, 150, 32, 16
+      CancelButton 	130, 150, 32, 16
+
+      EndDialog
+   endif                               !* if dialog box was created
+   repeat                                     
+      _button = ShowDialog (EditTM$) 
+      if _button = 2 then
+         if MSEditTuneMixTable(1, "TuneParms",ShortName$) = 0 then
+             DelTab TmpTuneMix[1], "TuneParms"
+             !* Potentially confusing to copy TuneMixReg table
+!            CopyTab TuneMixReg[RegIndex], "TuneParms", TmpTuneMix[1],"TuneParms"
+             CopyTab TmpTuneMix[2], "TuneParms", TmpTuneMix[1],"TuneParms"
+         else    
+             DelTab TmpTuneMix[2], "TuneParms"
+             CopyTab TmpTuneMix[1], "TuneParms", TmpTuneMix[2],"TuneParms"
+         endif
+      else   
+        if _button = 3 then
+           if MSEditTuneMixTable(1, "TuneIons",ShortName$) = 0 then
+             DelTab TmpTuneMix[1], "TuneIons"
+             !* Potentially confusing to copy TuneMixReg table
+!             CopyTab TuneMixReg[RegIndex], "TuneIons", TmpTuneMix[1],"TuneIons"
+             CopyTab TmpTuneMix[2], "TuneIons", TmpTuneMix[1],"TuneIons"
+           else  
+             DelTab TmpTuneMix[2], "TuneIons"
+             CopyTab TmpTuneMix[1], "TuneIons", TmpTuneMix[2],"TuneIons"
+           endif
+        else   
+          if _button = 4 then
+              if MSEditTuneMixTable(1, "BackGNDIons",ShortName$)=0 then
+                DelTab TmpTuneMix[1], "BackGNDIons"
+                !* Potentially confusing to copy TuneMixReg table
+!                CopyTab TuneMixReg[RegIndex], "BackGndIons", TmpTuneMix[1],"BackGNDIons"
+                 CopyTab TmpTuneMix[2], "BackGndIons", TmpTuneMix[1],"BackGndIons"
+             else    
+                 DelTab TmpTuneMix[2], "BackGNDIons"
+                 CopyTab TmpTuneMix[1], "BackGndIons", TmpTuneMix[2],"BackGndIons"
+             endif
+          else   
+             if _button = 5 then
+                if MSEditManRampTable(ShortName$)=0 then
+                   DelTab TmpTuneMix[1], "ManRamp"
+                  !* Potentially confusing to copy TuneMixReg table
+!                  CopyTab TuneMixReg[RegIndex], "ManRamp", TmpTuneMix[1],"ManRamp"
+                   CopyTab TmpTuneMix[2], "ManRamp", TmpTuneMix[1],"ManRamp"
+                else    
+                   DelTab TmpTuneMix[2], "ManRamp"
+                   CopyTab TmpTuneMix[1], "ManRamp", TmpTuneMix[2],"ManRamp"
+                endif
+             endif
+          endif
+        endif  !* if _button = 3
+      endif  !* if _button = 2
+   until _button < 2 
+   
+   RemoveDialog EditTM$
+   if _button = 1 then
+      if SaveTuneMixFileName$ = "" then
+         if check(variable,TuneMixRegFileName$)=0 then
+           macro _automspath$ + "enutnmix.mac"               
+         endif
+         SaveTuneMixFileName$ = TuneMixRegFileName$
+      endif
+   !* Need a way to change the filename extension to .bak
+     BackupFileName$ = SaveTuneMixFileName$[1: \
+                 instr(SaveTuneMixFileName$,".reg")] + "bak"
+     SaveObj TuneMixReg, BackupFileName$, New
+     
+     DelObj TuneMixReg[RegIndex]
+     CopyObj TmpTuneMix[1], TuneMixReg[RegIndex]
+     
+   !* Update the tunemix register
+     SetObjHdrText TuneMixReg[RegIndex], "ShortName", ShortName$
+     SetObjHdrText TuneMixReg[RegIndex], "LongName", LongName$
+     SetObjHdrText TuneMixReg[RegIndex], "PrepDate", PrepDate$ 
+     SetObjHdrText TuneMixReg[RegIndex], "CDS_Bottle", CDSBottle$
+     SetObjHdrVal  TuneMixReg[RegIndex], "NumIons", NumIons
+     SetObjHdrVal  TuneMixReg[RegIndex], "NumIons", GNumIons
+    
+!* Must delete the atune.reg if it exists
+     if filestat(Mode,_tunepath$ + "atune.reg") = 1 then
+     on error print
+           if regsize(atunereg) <> -1 then
+             delreg atunereg
+           endif  
+           copy _tunepath$ + "atune.reg", _tunepath$ + "atune.bak",dontask
+           delete _tunepath$ + "atune.reg",dontask
+     endif  
+     SaveObj TuneMixReg, SaveTuneMixFileName$ , New
+   endif
+endmacro           !* end MSEditTuneMix
+
+
+!***************************************************************************!
+name PrintTuneMixIons
+PARAMETER TuneMixIndex default 0
+PARAMETER OutFileName$ default _tempPath$ + "tuneions.txt"
+!* This macro will genearate a report of the tune mix tune ions and background s
+! ions table for the specified tune mix.  0 means print all the tune mix 
+! objects.  To specify a certain tune mix, type: 
+!        PrintTuneMixIons msat_SelectTuneMix().
+! 
+!***************************************************************************!
+local NumTuneMixObjs, firstObj, lastObj, index, row
+local divider$
+
+Local  ID_TUNEMAC_TUNE_MIX_REGIS_480
+Local  ID_TUNEMAC_INSTRUMENT_481
+Local  ID_TUNEMAC_CALIBRANT_IONS_482
+Local  ID_TUNEMAC_EXPECTED_BACKG_483
+Local  ID_TUNEMAC_PRINTTUNEMIXIO_484
+ID_TUNEMAC_TUNE_MIX_REGIS_480                      =  17480  
+ID_TUNEMAC_INSTRUMENT_481                          =  17481  
+ID_TUNEMAC_CALIBRANT_IONS_482                      =  17482  
+ID_TUNEMAC_EXPECTED_BACKG_483                      =  17483  
+ID_TUNEMAC_PRINTTUNEMIXIO_484                      =  17484  
+   ON Error print
+   Close #7
+   ON Error goto PrintTuneMixIonsErr
+   
+   ! Initialize tune mix register if necessary
+   if RegSize(TuneMixReg) > 0 then
+       msat_inittunemix
+   endif
+   
+   ! Parameter Checking
+   if (NumTuneMixObjs < 1) or (NumTuneMixObjs > RegSize(TuneMixReg)) then
+      NumTuneMixObjs = RegSize(TuneMixReg) - 1 ! don't use first object
+      firstObj = 2
+      lastObj  = RegSize(TuneMixReg)
+   else
+      NumTuneMixObjs = 1
+      firstObj = TuneMixIndex
+      lastObj  = TuneMixIndex
+   endif
+   
+   divider$ = \
+      "------------------------------------------------------------------------"
+
+   Open OutFileName$ for output as #7
+   Print #7, ReadResource$("tunemac",ID_TUNEMAC_TUNE_MIX_REGIS_480) + Date$(1) + \
+                                                        " " + Time$(1)
+   Print #7, ReadResource$("tunemac",ID_TUNEMAC_INSTRUMENT_481) + _InstName$
+   Print #7, ""
+   
+   for index = firstObj to lastObj 
+      Print #7, ReadResource$("tunemac",ID_TUNEMAC_CALIBRANT_IONS_482) + \
+                 ObjHdrText$(TuneMixReg[index], "ShortName")
+      Print using #7, Divider$ + "/"
+      Print using #7, \
+          "     m\/z     Name                             Iso1    Iso2    PW50 Charge/"
+      !   "## ####.##  ssssssssssssssssssss   ##.#%   ##.#%   #.##  ##/"
+      for row = 1 to TabHdrVal(TuneMixReg[index], "TuneIons", "NumberOfRows")
+         Print using #7, "##  ####.##  30%   ##.#\%   ##.#\%   #.##  ##/", \
+             row, \
+             TabVal  (TuneMixReg[index], "TuneIons", row, "mz"), \
+             TabText$(TuneMixReg[index], "TuneIons", row, "name"), \
+             TabVal  (TuneMixReg[index], "TuneIons", row, "Iso1Ratio"), \
+             TabVal  (TuneMixReg[index], "TuneIons", row, "Iso2Ratio"), \
+             TabVal  (TuneMixReg[index], "TuneIons", row, "PW50"), \
+             TabVal  (TuneMixReg[index], "TuneIons", row, "Charge")
+      next row
+      Print using #7, "/" + Divider$ + "/"
+      
+      Print #7, ReadResource$("tunemac",ID_TUNEMAC_EXPECTED_BACKG_483) + \
+                 ObjHdrText$(TuneMixReg[index], "ShortName")
+      Print using #7, Divider$ + "/"
+      Print using #7, \
+          "     m\/z     Name/"
+      !   "##  ####.##  ssssssssssssssssssss"
+      for row = 1 to TabHdrVal(TuneMixReg[index], "BackGndIons", "NumberOfRows")
+         Print using #7, "##  ####.##  30%/", row, \
+             TabVal  (TuneMixReg[index], "BackGndIons", row, "mz"), \
+             TabText$(TuneMixReg[index], "BackGndIons", row, "name")
+      next row
+      Print using #7, "/" + Divider$ + "/" 
+   next index
+   
+
+PrintTuneMixIonsExit:
+   Close #7
+   ! Open up the file in the viewer
+!   execnowait "notepad.exe " + OutFileName$, 1
+    cmdpath$ = "notepad.exe " + chr$(34) + OutFileName$ + chr$(34) 
+	execnowait cmdpath$, 1
+
+   
+   RETURN
+   
+PrintTuneMixIonsErr:
+   On Error Print
+   print ReadResource$("tunemac",ID_TUNEMAC_PRINTTUNEMIXIO_484) + _ErrMsg$ + " occurred at line " + \
+          val$(_ErrLine)
+   goto PrintTuneMixIonsExit
+
+endmacro
+!***************************************************************************!
+
+!***************************************************************************!
+name PrintTuneMixParameters
+PARAMETER TuneMixIndex default 0
+PARAMETER OutFileName$ default _tempPath$ + "tuneparm.txt"
+! This macro will genearate a report of the tune mix parameters for the 
+! specified tune mix.  0 means print all the tune mix objects.  To specify 
+! a certain tune mix, type: 
+!        PrintTuneParameters msat_SelectTuneMix().
+! 
+!***************************************************************************!
+local NumTuneMixObjs, firstObj, lastObj, index, row
+local divider$
+
+Local  ID_TUNEMAC_INSTRUMENT_481
+Local  ID_TUNEMAC_PRINTTUNEMIXIO_484
+ID_TUNEMAC_INSTRUMENT_481                          =  17481  
+ID_TUNEMAC_PRINTTUNEMIXIO_484                      =  17484  
+   ON Error print
+   Close #7
+   ON Error goto PrintTuneMixParmsErr
+   
+   ! Initialize tune mix register if necessary
+   if RegSize(TuneMixReg) > 0 then
+       msat_inittunemix
+   endif
+   
+   ! Parameter Checking
+   if (NumTuneMixObjs < 1) or (NumTuneMixObjs > RegSize(TuneMixReg)) then
+      NumTuneMixObjs = RegSize(TuneMixReg) - 1 ! don't use first object
+      firstObj = 2
+      lastObj  = RegSize(TuneMixReg)
+   else
+      NumTuneMixObjs = 1
+      firstObj = TuneMixIndex
+      lastObj  = TuneMixIndex
+   endif
+   
+   divider$ = \
+      "------------------------------------------------------------------------"
+
+   Open OutFileName$ for output as #7
+   Print #7, "Tune Mix Register Parameters                " + Date$(1) + \
+                                                        " " + Time$(1)
+   Print #7, ReadResource$("tunemac",ID_TUNEMAC_INSTRUMENT_481) + _InstName$
+   Print #7, ""
+   
+   for index = firstObj to lastObj 
+      Print #7, "Parameter Table for " + \
+                 ObjHdrText$(TuneMixReg[index], "ShortName")
+      Print using #7, Divider$ + "/"
+      Print using #7, \
+          "    Parm               Default    Min     Max   Action         ActionParm/"
+      !   "## ####.##  ssssssssssssssssssss   ##.#%   ##.#%   #.##  ##/"
+      for row = 1 to TabHdrVal(TuneMixReg[index], "TuneParms", "NumberOfRows")
+         Print using #7, "##  17%  ####.#   ####.#  ####.#  15%  15%/", \
+             row, \
+             TabText$(TuneMixReg[index], "TuneParms", row, "Parm"), \
+             TabVal  (TuneMixReg[index], "TuneParms", row, "Default"), \
+             TabVal  (TuneMixReg[index], "TuneParms", row, "Min"), \
+             TabVal  (TuneMixReg[index], "TuneParms", row, "Max"), \
+             TabText$(TuneMixReg[index], "TuneParms", row, "Action"), \
+             TabText$(TuneMixReg[index], "TuneParms", row, "ActionParm")
+      next row
+      Print using #7, "/" + Divider$ + "/"
+      
+   next index
+   
+
+PrintTuneMixParmsExit:
+   Close #7
+   ! Open up the file in the viewer
+!    execnowait "notepad.exe " + OutFileName$, 1
+     cmdpath$ = "notepad.exe " + chr$(34) + OutFileName$ + chr$(34) 
+	 execnowait cmdpath$, 1
+
+   
+   RETURN
+   
+PrintTuneMixParmsErr:
+   On Error Print
+   print ReadResource$("tunemac",ID_TUNEMAC_PRINTTUNEMIXIO_484) + _ErrMsg$ + " occurred at line " + \
+          val$(_ErrLine)
+   goto PrintTuneMixParmsExit
+
+endmacro ! Print Tune Mix Parameters
+
+!***************************************************************************!
+!*********************** End of File ***************************************!
+
+

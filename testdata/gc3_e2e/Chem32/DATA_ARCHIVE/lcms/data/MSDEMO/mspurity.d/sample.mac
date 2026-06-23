@@ -1,0 +1,10 @@
+Name SAMPLEINFO
+CLRRPTSMPLINFO
+SAMPLECALISTD 1,0
+SAMPLECALAMT 0,1,1
+RPTSAMPLEINFO "100 ng/µl sulfa drug mix, fragmentor 50V, vaporizer 350"
+RPTSAMPLEINFO "°C, 0.8 ml/min; A=0.1% formic acid in water; B= 0.1% fo"
+RPTSAMPLEINFO "rmic acid in methanol; 10% A for 3 min then 20% B at 4 "
+RPTSAMPLEINFO "min; Zorbax SB-C18 2.1 x 50 mm, 5 µm column"
+REMOVE SAMPLEINFO
+RETURN

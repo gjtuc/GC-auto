@@ -1,0 +1,58 @@
+This data was acquired in Method&Run Control.
+The MSD parameters were saved in the msdiag register file.
+This msparms.txt file was built using the values from the msdiag register.
+Some parameters normally reported under MSData acquisition in Tune 
+may be missing from this msparms.txt file.  You may be able to read these 
+values from Data Analysis.  These items are marked with an asterisk (*).
+ 
+ 
+ 
+File                     :   C:\HPCHEM\2\DATA\MSDEMO\MSALIGN.D
+Operator                 :   C. Miller
+Date acquired            :   Mon Aug 16 13:54:58 1999
+Instrument               :   LC/MS
+ 
+ 
+Sample information
+----------------------------------
+Sample name              :   sulfa drug mix
+Misc info                :   100 ng/µl; Zorbax XDB-C8 4.6 x 50 mm 3.5 µm column; 1.5 ml/min; Solvent A: 10 mM ammonium acetate in water, Solvent B: 10 mM ammonium acetqate in methanol;  Gradient: 10% B to 50% B in 3 min; vap. 400°C, frag 50V
+ 
+ 
+MS parameters
+----------------------------------
+Tune File                   :    C:\HPCHEM\2\1946TUNE\atunes.tun
+Skim1                       :    Not Applicable
+Skim2                       :    11.0 V    
+Ion Energy                  :    5.0 V     
+Lens1                       :    2.2 V     
+Lens2                       :    43 V      
+Iris                        :    350 V     
+HED                         :    10000 V   
+Width Gain                  :    595       
+Width Offset                :    Variable  
+                                 Mass         :   Value    
+                                 --------------------------
+                                 118.08       :   -159     
+                                 622.03       :   -159     
+                                 922.01       :   -159     
+                                 1521.97      :   -159     
+                                 2121.93      :   -159     
+                                 --------------------------
+Mass Gain                   :    37.85     
+Mass Offset                 :    Variable  
+                                 Mass         :   Value    
+                                 --------------------------
+                                 118.08       :   0        
+                                 622.03       :   1        
+                                 922.01       :   1        
+                                 1521.97      :   0        
+                                 2121.93      :   0        
+                                 --------------------------
+Quad DC                     :    0.00 V    
+Octopole Peak               :    256 V     
+Octopole Knee               :    280 Da    
+Mass Filter                 :    Gaussian  
+Mass Filter Width           :    0.30 Da   
+Time Filter                 :    Gaussian  
+Time Filter Width           :    0.035 minutes

@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="SignalF" PosStyle="TOP" DockRow="1" DockCol="0" Caption="Signal Manipulation" PanelName="Chem">
+		<PushButton Name="AlignXaxis" Help="Align the time axis of the signals" Command="SIG_AlignAxis 38,0" NewGroup="1" ImageName="Signal_AlignX20" ImageNameDisabled="Signal_AlignX20_d"/>
+		<PushButton Name="AlignYaxis" Help="Align the Absorbance axis of the signals" Command="SIG_AlignAxis 38,1" ImageName="Signal_Align_Y20" ImageNameDisabled="Signal_Align_Y20_d"/>
+		<PushButton Name="ResetSignalAxis" Help="Reset the aligned signals" Command="SIG_ResetSignalAxis 38" ImageName="Signal_AlignReset20" ImageNameDisabled="Signal_AlignReset20_d"/>
+		<PushButton Name="OverlaySignal" Help="'3D' Signal Overlay" Command="SIG_OverlaySignal" ImageName="Signal_3Doverlay20" ImageNameDisabled="Signal_3Doverlay20_d"/>
+		<PushButton Name="FlipSignal" Help="Mirror the signals" Command="SIG_FlipSignal 1" ImageName="Signal_Mirror20" ImageNameDisabled="Signal_Mirror20_d"/>
+		<PushButton Name="SubtractSignal" Help="Subtract the last signal from all other signals" Command="SIG_SubtractSignal" ImageName="Signal_Subtract20" ImageNameDisabled="Signal_Subtract20_d"/>
+		<PushButton Name="IntegrateAll" Help="Integrate all Chromatogram(s)" Command="INT_BTNDoIntegFun Integrate" ImageName="Int_Integrate20" ImageNameDisabled="Int_Integrate20_d"/>
+		<PushButton Name="SmoothSignal" Help="Smooth all signal(s)" Command="MS_DoManualSmooth" Visible="0" ImageName="Signal_Smooth20" ImageNameDisabled="Signal_Smooth20_d"/>
+	</toolbar>
+</graphical_object>
+
+

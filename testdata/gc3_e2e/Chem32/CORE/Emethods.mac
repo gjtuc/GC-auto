@@ -1,0 +1,34 @@
+! **************************************************************************
+! EMethods
+! **************************************************************************
+Name Emethods
+Parameter Operation$
+  
+  If Operation$ = "Import" then
+    ImportEMethod
+  Else
+    ExportEMethod
+  EndIf
+  
+EndMacro
+
+Name ImportEMethod
+  EMETHODS_IM
+EndMacro
+
+Name ExportEMethod
+Local MethodPath$
+
+  If Check(SYSTEM_VARIABLE, _METHPATH$) = 1 Then
+    If Check(SYSTEM_VARIABLE, _METHFILE$) = 1 Then
+      MethodPath$ = _METHPATH$+_METHFILE$+"\eMeth_MthInfo.txt"
+      PrintMethod MethodPath$,,,1    
+      EMETHODS_EX
+      if FileStat(MODE, MethodPath$) = 1 Then
+        Delete MethodPath$,DONTASK
+      EndIf
+  EndIf
+  endif
+  
+  
+endmacro

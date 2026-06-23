@@ -1,0 +1,302 @@
+
+! Macros for handling the limits of repeatability                  EDITPERF.MAC
+
+! Last altered by RZ 18-May-93
+
+!==============================================================================
+Name printPerfLimits
+!------------------------------------------------------------------------------
+
+! Print performance limit parameters
+
+  local i, j
+  local yPos
+  local var$                 ! representing report item
+  local lowLimit, highLimit
+  local maxLimitNum, maxItemNum
+  
+  ID_PHX3DSUPPORTFILES_RANGE_LIMITS_F_161            =  17161  
+  ID_PHX3DSUPPORTFILES_162                           =  17162  
+  NLSFileName_phx3dsupport$="phx3dsupport"
+
+!..............................................................................
+  
+  
+  maxLimitNum = tabHdrVal(_DAMethod, "sysSuit", "numberOfRows")
+  maxItemNum = tabHdrVal(NLSCore[1], "PerfStat", "numberOfRows")
+  if maxLimitNum > 0 then
+    print using #5, "//%//", ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_RANGE_LIMITS_F_161)
+    print using #5, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_162)
+    print using #5, "                                         ---------       ----------/"
+    for i = 1 to maxItemNum 
+      var$ = tabText$(NLSCore[1], "PerfStat", i, "var")
+      j = rowByText(_DAMethod, "sysSuit",, "var", "=", var$)
+      if j > 0 then
+        print using #5, "35%", NLSCoreStatTitle$(i)
+        if tabColType(_DAMethod, "sysSuit", "lowLimit") <> 99 then
+          lowLimit = tabVal(_DAMethod, "sysSuit", j, "lowLimit")
+        else; lowLimit = -1; endIf
+        if lowLimit >= 0 then
+          print using #5, "11#.3#", lowLimit
+        else; print using #5, "               "; endIf  
+        if tabColType(_DAMethod, "sysSuit", "highLimit") <> 99 then
+          highLimit = tabVal(_DAMethod, "sysSuit", j, "highLimit")	
+        else; highLimit = -1; endIf
+        if highLimit >= 0 then
+          print using #5, "13#.3#", highLimit; endIf 
+        print using #5, "/"               
+      endif
+    next i
+  endIf
+  return
+
+endMacro ! printPerfLimits
+
+
+!==============================================================================
+Name doPrintPerfLimits
+!------------------------------------------------------------------------------
+
+  openDevice "PRINTER" as #5
+  printPerfLimits
+  close #5
+
+endMacro ! doPrintPerfLimits
+
+
+!==============================================================================
+Name DoEditPerfLimits
+!------------------------------------------------------------------------------
+
+! Edit performance limit parameters
+
+  local i, j, bReadOnly
+  local yPos
+  local var$                 ! representing report item
+  local lowLimit, highLimit, keepLow, keepHigh
+  local maxLimitNum, maxItemNum
+  local title$, _button, OK, dummy, Format$
+   ID_PHX3DSUPPORTFILES_PREPARING_TABL_163            =  17163 
+   ID_PHX3DSUPPORTFILES_SET_RANGE_LIMI_164            =  17164  
+   ID_PHX3DSUPPORTFILES_NOTE__VALUES_F_165            =  17165  
+   ID_PHX3DSUPPORTFILES_LOW_166                       =  17166  
+   ID_PHX3DSUPPORTFILES_HIGH_167                      =  17167  
+   ID_PHX3DSUPPORTFILES_LOW_166                       =  17166  
+   ID_PHX3DSUPPORTFILES_HIGH_167                      =  17167  
+   ID_PHX3DSUPPORTFILES_OK_168                        =  17168  
+   ID_PHX3DSUPPORTFILES_CANCEL_169                    =  17169  
+   ID_PHX3DSUPPORTFILES_HELP_170                      =  17170  
+   ID_PHX3DSUPPORTFILES_LOW_LIMIT_MUST_171            =  17171  
+   ID_PHX3DSUPPORTFILES_SAVING_PERFORM_174            =  17174  
+   ID_PHX3DSUPPORTFILES_PERFORMANCE_LI_175            =  17175  
+   ID_PHX3DSUPPORTFILES_AUDIT_NONE_398                =  17398
+   NLSFileName_phx3dsupport$="phx3dsupport"
+
+! === FS AudtTrail Begin ==============================================
+  local pMsg$, pFrom$, pTo$, EnuFile$, nTransactionID, bResult
+  local lowStart, highStart, lowActual, highActual 
+  local iControl
+  local ID_PHX3DSUPPORTFILES_AUDIT_ChangedRangeLinits_Low      
+  local ID_PHX3DSUPPORTFILES_AUDIT_ChangedRangeLinits_High     
+
+  EnuFile$ = "Phx3dSupport"
+  ID_PHX3DSUPPORTFILES_AUDIT_ChangedRangeLinits_Low       =  17371    
+  ID_PHX3DSUPPORTFILES_AUDIT_ChangedRangeLinits_High      =  17372
+
+  nTransactionID = AuditOpenTransaction()
+! === FS AuditTrail End ===============================================
+
+  If AS_IsPermitted_SystemSuitabilityEdit=0 then
+    bReadOnly = 1
+  Else
+    bReadOnly = 0
+  Endif
+
+!..............................................................................
+  
+  ! Load limits from system suitability table of _DAMethod
+
+  print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PREPARING_TABL_163)
+
+  maxLimitNum = tabHdrVal(_DAMethod, "sysSuit", "numberOfRows")
+  maxItemNum = tabHdrVal(NLSCore[1], "PerfStat", "numberOfRows")
+  for i = 1 to maxItemNum 
+    evaluate "local title"+val$(i)+"$"
+    evaluate "title"+val$(i)+"$ = NLSCoreStatTitle$(i)"
+    evaluate "local lowLimit"+val$(i)+", highLimit"+val$(i)+", lS"+val$(i)+", lA"+val$(i)+", hS"+val$(i)+", hA"+val$(i)   
+    evaluate "lowLimit"+val$(i)+" = -1"
+    evaluate "highLimit"+val$(i)+" = -1"
+    if maxLimitNum > 0 then
+      var$ = tabText$(NLSCore[1], "PerfStat", i, "var")
+      j = rowByText(_DAMethod, "sysSuit",, "var", "=", var$)
+      if j > 0 then
+        if tabColType(_DAMethod, "sysSuit", "lowLimit") <> 99 then
+          lowLimit = tabVal(_DAMethod, "sysSuit", j, "lowLimit")
+          if lowLimit >= 0 then
+            evaluate "lowLimit"+val$(i)+" = lowLimit"; endIf; endIf
+        if tabColType(_DAMethod, "sysSuit", "highLimit") <> 99 then
+          highLimit = tabVal(_DAMethod, "sysSuit", j, "highLimit")	
+          if highLimit >= 0 then
+            evaluate "highLimit"+val$(i)+" = highLimit"; endIf; endIf
+      endif
+    endIf
+    evaluate "local keepLow"+val$(i)+", keepHigh"+val$(i)
+    evaluate "keepLow"+val$(i)+" = lowLimit" + val$(i)
+    evaluate "keepHigh"+val$(i)+" = highLimit" + val$(i)
+    
+! === FS AuditTrail Begin =============================   
+    evaluate "lS"+val$(i)+" = lowLimit"+val$(i)
+    evaluate "lA"+val$(i)+" = lowLimit"+val$(i)
+    evaluate "hS"+val$(i)+" = highLimit"+val$(i)
+    evaluate "hA"+val$(i)+" = highLimit"+val$(i)
+! === FS AuditTrail End ===============================               
+
+  next i
+
+! display dialog box for limit parameters
+
+  lines = trunc((maxItemNum+1)/2)
+  beginDialog "perfLimitsBox", 1, 3, 360, 50+lines*14, \
+              ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SET_RANGE_LIMI_164) \
+              + _instName$
+  staticText 4, 5, 300, 9, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_NOTE__VALUES_F_165)
+  staticText 125, 20, 20, 9, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LOW_166); staticText 152, 20, 20, 9, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_HIGH_167)
+  staticText 300, 20, 20, 9, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LOW_166); staticText 325, 20, 20, 9, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_HIGH_167)
+  yPos = 21; i = 1
+  for i = 1 to lines
+    yPos = yPos + 13; j = 2 * i - 1
+    evaluate "staticText 4, "+val$(yPos+2)+", 110, 8, title"+val$(j)+"$"
+    evaluate "numberBox 112, "+val$(yPos)+",33,13, lowLimit"+val$(j)+",0,,-1"
+    evaluate "numberBox 147, "+val$(yPos)+",33,13, highLimit"+val$(j)+",0,,-1"
+    j = 2 * i
+    if j <= maxItemNum then
+      evaluate "staticText 183, "+val$(yPos+2)+", 110, 8, title"+val$(j)+"$"
+      evaluate "numberBox 287, "+val$(yPos)+",33,13, lowLimit"+val$(j)+",0,,-1"
+      evaluate "numberBox 322, "+val$(yPos)+",33,13, highLimit"+val$(j)+",0,,-1"
+    endIf
+  next i
+  yPos = yPos + 17
+  okButton 94, yPos, 44, 18, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_OK_168)
+  cancelButton 158, yPos, 44, 18, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_CANCEL_169)
+  ExecPushButton 228, yPos, 44, 18, ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_HELP_170), "CP2", "Help 8088",,9
+  endDialog 
+
+  print ""
+
+  repeat
+    OK = 1
+    _button = showDialog("perfLimitsBox", 8088,,bReadOnly)
+    If bReadOnly<>0 Then
+      _button = 0  ! always like cancel
+    EndIf
+    
+    if _button > 0 then
+      for i = 1 to maxItemNum
+        ! check for lowLimit < highLimit
+        evaluate "lowLimit = lowLimit"+val$(i)
+        evaluate "highLimit = highLimit"+val$(i)
+        evaluate "title$ = title"+val$(i)+"$"
+        if (lowLimit >= 0) and (highLimit >= 0) and (lowLimit >= highLimit) then
+          Format$ = ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_LOW_LIMIT_MUST_171)+"""%s"""
+          dummy = Alert (printf$(Format$, title$), 3, Alert3Title$)
+          OK = 0
+          goto EndLoop
+        endif
+
+! === FS AuditTrail Begin ==================================
+        evaluate "lA"+val$(i)+"= lowLimit"+val$(i)
+		evaluate "hA"+val$(i)+"= highLimit"+val$(i)
+
+        evaluate "lowStart = lS"+val$(i)
+		evaluate "highStart = hS"+val$(i)
+		evaluate "lowActual = lA"+val$(i)
+		evaluate "highActual = hA"+val$(i)
+
+		if lowStart <> lowActual then
+		  if(lowStart = -1)
+		    pFrom$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_NONE_398)
+	      else
+		    pFrom$ = ConvertText$(TRIM, val$(lowStart))
+		  endIf
+
+          if(lowActual = -1)
+		    pTo$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_NONE_398)
+		  else
+		    pTo$ = ConvertText$(TRIM, val$(lowActual))
+		  endIf
+		  
+		  pMsg$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ChangedRangeLinits_Low)
+	      pMsg$ = PrintF$(pMsg$, title$)
+		
+		  bResult = AuditLog(nTransactionID, 1, pMsg$, pFrom$, pTo$)
+        endif
+        
+        if highStart <> highActual then
+		  if(highStart = -1)
+		    pFrom$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_NONE_398)
+		  else
+		    pFrom$ = ConvertText$(TRIM, val$(highStart))
+		  endIf
+		  
+		  if(highActual = -1)
+		    pTo$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_NONE_398)
+		  else
+		    pTo$ = ConvertText$(TRIM, val$(highActual))
+		  endIf
+
+		  pMsg$ = ReadResource$(EnuFile$, ID_PHX3DSUPPORTFILES_AUDIT_ChangedRangeLinits_High)
+	      pMsg$ = PrintF$(pMsg$, title$)
+		 		
+		  bResult = AuditLog(nTransactionID, 1, pMsg$, pFrom$, pTo$)
+        endif 
+! === FS AuditTrail End ===============================================
+
+      next i
+
+      AuditCommitTransaction nTRansactionID  ! FS AuditTrail
+EndLoop:
+    else
+	  AuditCancelTransaction nTransactionID  ! FS AuditTrail
+    endif
+  until OK = 1
+
+  AuditCloseTransaction nTransactionID  ! FS AuditTrail
+
+  if _button > 0 then  
+    print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_SAVING_PERFORM_174)
+
+    for i = 1 to maxItemNum
+      ! save only values which were entered
+      evaluate "lowLimit = lowLimit"+val$(i)+"; keepLow = keepLow"+val$(i)
+      evaluate "highLimit = highLimit"+val$(i)+"; keepHigh = keepHigh"+val$(i)
+      if (keepLow <> lowLimit) or (keepHigh <> highLimit) then
+        if tabColType(_DAMethod, "sysSuit", "lowLimit")  = 99 then
+          newColVal _DAMethod, "sysSuit", "lowLimit", -1; endIf
+        if tabColType(_DAMethod, "sysSuit", "highLimit")  = 99 then
+          newColVal _DAMethod, "sysSuit", "highLimit", -1; endIf
+        var$ = tabText$(NLSCore[1], "PerfStat", i, "var")
+        j = rowByText(_DAMethod, "sysSuit",, "var", "=", var$)
+        if (lowLimit = -1) and (highLimit = -1) then
+          ! item is not set now but was set before
+          DelTabRow _DAMethod, "SysSuit", j
+        else
+          if j <=0 then ! item was not set before
+            insTabRow _DAMethod, "sysSuit"
+            j = tabHdrVal(_DAMethod, "sysSuit", "numberOfRows")
+            setTabText _DAMethod, "sysSuit", j, "var", tabText$(NLSCore[1], "PerfStat", i, "var")
+          endIf
+          setTabVal _DAMethod, "sysSuit", j, "lowLimit", lowLimit
+          setTabVal _DAMethod, "sysSuit", j, "highLimit", highLimit
+        endIf
+      endIf
+    next i
+    print ""  
+  else; print ReadResource$(NLSFileName_phx3dsupport$,ID_PHX3DSUPPORTFILES_PERFORMANCE_LI_175); endIf
+  removeDialog "perfLimitsBox"
+  return
+
+endMacro ! DoEditPerfLimits
+
+
+
+

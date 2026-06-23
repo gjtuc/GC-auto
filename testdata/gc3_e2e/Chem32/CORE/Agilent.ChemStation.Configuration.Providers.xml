@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ArrayOfProvider>
+  <Provider>
+    <Assembly>AgtChemRCNetAdapter.dll</Assembly>
+    <ClassName>Agilent.ChemStation.ConfigEditor.ConfigurationProvider.RCNetConfigurationProvider</ClassName>
+  </Provider>
+  <Provider>
+    <Assembly>GCIConfigurationProvider.dll</Assembly>
+    <ClassName>Agilent.ChemStation.ConfigEditor.ConfigurationProvider.GCIConfigurationProvider</ClassName>
+  </Provider>
+</ArrayOfProvider>

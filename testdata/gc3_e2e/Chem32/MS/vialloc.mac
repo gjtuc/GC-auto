@@ -1,0 +1,52 @@
+name vialLocationConvert
+  local index,retVial$,vialnum
+  index = 1
+  while SubString$(vialLocation$,index) <> "" do
+    retVial$ = SubString$(vialLocation$,index)
+    vialnum = GetPlatePosNumber(retVial$)
+    SetTabVal _sequence, seqtable1, index, Vial, vialnum
+    index = index + 1
+  endwhile
+endmacro
+name runImportCSV
+parameter header_format default 0 ! 0 for standard, 1 for extended
+  local button, file, fstat
+Local  ID_SUPPORTMACFILES_IMPORT_CSV_FIL_143
+Local  ID_SUPPORTMACFILES_IMPORT_CSV_CAN_145
+Local  ID_SUPPORTMACFILES_CANNOT_IMPORT_146
+ID_SUPPORTMACFILES_IMPORT_CSV_FIL_143              =  17143  
+ID_SUPPORTMACFILES_IMPORT_CSV_CAN_145              =  17145  
+ID_SUPPORTMACFILES_CANNOT_IMPORT_146               =  17146  
+  path$ = _seqPath$
+  _seqfile$ = ConvertText$( upper, _seqfile$ )
+  if Check(Variable, _analystinstalled) = 1 and instr(_seqfile$,".SE") > 0 then
+    if _analystinstalled = 1 then
+      if header_format <> 0 then
+        LoadSequence _seqPath$,"DEF_LC.SE"
+      else
+        LoadSequence _seqPath$,"DEF_LC.S"
+      endif
+    endif
+  endif
+  button=selectfile(1,(ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_IMPORT_CSV_FIL_143)+_INSTNAME$),"CSV(*.CSV)",path$,file$,fstat)
+  if button=0 THEN
+    PRINT ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_IMPORT_CSV_CAN_145)
+    RETURN
+  else
+    if fstat = 1 then
+      file$ = ConvertText$( upper, file$ )
+      if instr(file$,".CSV") <> 0 then
+        if header_format <> 0 then
+          importCSV path$+file$,"xtabhdr.txt" 
+        else
+          importCSV path$+file$,"stabhdr.txt"
+        endif
+      endif
+    else
+      PRINT ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_CANNOT_IMPORT_146)
+    endif
+  endif
+endmacro
+
+
+

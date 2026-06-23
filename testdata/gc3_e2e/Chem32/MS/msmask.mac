@@ -1,0 +1,57 @@
+!******************************************************************************
+!
+! File:  msMask.mac
+!
+! Description:
+! Macro to mask the fault reporting for LC/MSD hardware.
+!
+! If msMask is run with no parameter, a default fault mask is set
+! to enable reporting of all faults.  This macro can be modified
+! to provide a temporary workaround to disabe reporting of certain faults.
+!
+! If MaskOn is 0, then all masks are cleared.  This is for diagnostic
+! use only.  
+!
+! If the MS electronics are turned off, or an MSSCInit is executed, then
+! msMask should be executed again.
+!
+! This macro is executed when the file msMask.mac is loaded.
+!
+! Modified Oct 14, 2002 to mask cooling fan and zero cross missing faults
+! MSMaskVer$ modified to reflect current changes: MSMaskVer$ = "021014"
+
+
+!***********************************************************************
+NAME MSMask
+parameter MaskOn default 1
+! Set MS fault mask.  If MSMask = 0 all fault masking is turned off, 
+! otherwise the fault mask is set.
+!***********************************************************************
+LOCAL MaskStr$, MSMaskVer$, srcType$
+
+  MSMaskVer$ = "021014"
+
+  if CHECK(COMMAND, MsScQuery) =1 then
+    MaskStr$ = "0,0,0,0,0,0,0,0,0,0,0,57408,0,0,0,0"
+    
+    MsScQuery ":msc:sens? srctype", srcType$
+    if ( srcType$ = "9" OR srcType$ = "11") then
+      MaskStr$ = "0,1,0,0,0,0,0,0,0,0,0,57408,0,0,0,32768"
+    endif
+
+    if MaskOn = 0 then  ! clear mask
+      msscwrite "msc:flt:mask:full 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"
+      msscquery "msc:flt:mask:full?", MaskStr$
+      print "MSMask OFF (Ver. " + MSMaskVer$ + ")"
+    else      
+      msscwrite "msc:flt:mask:full " + MaskStr$
+      msscquery "msc:flt:mask:full?",  MaskStr$
+      print "MSMask set to " + MaskStr$ + "  (Ver. " + MSMaskVer$ + ")"   
+    endif
+  endif
+
+ENDMACRO   ! MSMask
+!***********************************************************************
+
+! Direct execution
+MSMask 1

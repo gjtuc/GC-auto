@@ -1,0 +1,228 @@
+<E2ETraceEvent xmlns="http://schemas.microsoft.com/2004/06/E2ETraceEvent"><System xmlns="http://schemas.microsoft.com/2004/06/windows/eventlog/system"><EventID>0</EventID><Type>3</Type><SubType Name="Error">0</SubType><Level>2</Level><TimeCreated SystemTime="2026-05-22T03:07:43.8716058Z" /><Source Name="CP" /><Correlation ActivityID="{00000000-0000-0000-0000-000000000000}" /><Execution ProcessName="ChemMain" ProcessID="3880" ThreadID="1" /><Channel/><Computer>USER-PC</Computer></System><ApplicationData><TraceData><DataItem><TraceRecord xmlns="http://schemas.microsoft.com/2004/10/E2ETraceEvent/TraceRecord"><TraceIdentifier /><Description>CPjpefaoiafvay: Invalid subdirectory name 260521_DRME_Ni_CVD0.1_IMP 5 1.5_Al2O3
+======================================
+&gt;&gt;&gt; Cp Stacks:
+======================================
+Stack of "CP2": _Idle
+
+Stack of "CP3": _Idle
+
+Stack of "CpPluginServ": _Idle
+
+Stack of "CPRCAdapter": _Idle
+
+Stack of "CPRC": _Idle
+
+Stack of "CPBatch": _Idle
+
+Stack of "CPBatchDraw": _Idle
+
+Stack of "AE_CP": _Idle
+
+Stack of "AEQ_CP": _Idle
+
+Stack of "CPNavTable": _Idle
+
+Stack of "CPjpefaoiafvay": _Busy
+  1: '='
+  2: SetSeqCpVars
+  3: direct_execution
+Local variables of "CPjpefaoiafvay"
+  SeqMode=0
+  ResetChanged=0
+
+Stack of "CP": _Busy
+  1: FOR
+  2: HPUIGetVialNums
+  3: direct_execution
+Local variables of "CP"
+  Vial=1
+  Table=1
+  SeqLine=2
+  HPUIVialsTemp$="1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+  EventReg$="_SEQUENCE"
+  EventPartName$="SEQPARM"
+  EventObj=1
+  EventLevel$="Tab"
+  EventIndex=0
+  EventCause$="Changed"
+
+&gt;&gt;&gt; Number of CP's: 12
+</Description></TraceRecord></DataItem><DataItem><SessionContextTraceRecord xmlns="http://agilent.chemstation.diagnostics/2008/11/SessionContextTraceRecord"><InstrumentName>Instrument 1</InstrumentName><SessionRole>Acquisition</SessionRole><UserName>이경석</UserName></SessionContextTraceRecord></DataItem></TraceData><System.Diagnostics xmlns="http://schemas.microsoft.com/2004/08/System.Diagnostics"><Timestamp>2966054048</Timestamp><Callstack>   위치: System.Environment.GetStackTrace(Exception e, Boolean needFileInfo)&#xD;&#xA;   위치: System.Environment.get_StackTrace()&#xD;&#xA;   위치: System.Diagnostics.TraceEventCache.get_Callstack()&#xD;&#xA;   위치: System.Diagnostics.XmlWriterTraceListener.WriteFooter(TraceEventCache eventCache)&#xD;&#xA;   위치: System.Diagnostics.XmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.Diagnostics.XmlWriterTraceListener2.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.Diagnostics.RollingXmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.XmlWriterTraceListener2.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.SessionContextXmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.SessionContextXmlWriterTraceListener.TraceEvent(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, String message)&#xD;&#xA;   위치: System.Diagnostics.TraceSource.TraceEvent(TraceEventType eventType, Int32 id, String message)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.CPForwarder.HPCoreInternal_CpMsgLineOutputEvent(Object sender, CoreEventArgs evarg)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApi.CoreEventHandler.Invoke(Object sender, CoreEventArgs evarg)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApiInternal.HpcoreInternal.OnCpMsgLineOutput(CoreEventArgs e)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApi.HpCore.WndProc(Message&amp; m)&#xD;&#xA;   위치: Agilent.ChemStation.Util.WinSDKLib.MessageWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.OnMessage(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.NativeWindow.Callback(IntPtr hWnd, Int32 msg, IntPtr wparam, IntPtr lparam)&#xD;&#xA;   위치: Agilent.ChemStation.Util.WinSDKLib.WinSDK.DispatchMessage(MSG&amp; msg)&#xD;&#xA;   위치: Agilent.ChemStation.Util.CpProxyLib.CpProxy.PumpMessages()&#xD;&#xA;   위치: Agilent.ChemStation.Util.CpProxyLib.CpProxy._execute(String sCommand, Boolean bWait, IntPtr hwnd, Int32 message)&#xD;&#xA;   위치: Agilent.ChemStation.Util.CpProxyLib.CpProxy.Execute(String sCommand, Boolean bWait)&#xD;&#xA;   위치: Agilent.ChemStation.AutomationPlugin.CPHandler.ExecCPMacro(String command, Boolean bWait, Boolean bNewThread)&#xD;&#xA;   위치: Agilent.ChemStation.AutomationPlugin.ConnectorHost.ExecCPMacro(String command, Boolean bWait, Boolean bNewThread)&#xD;&#xA;   위치: Agilent.ChemStation.AutomationPlugin.ConnectorPlugin.EdSequenceParms(String RegName, Int32 ObjIdx, Boolean bWizardMode, String TitelAppendix)&#xD;&#xA;   위치: Agilent.ChemStation.AutomationPlugin.ConnectorPlugin.EditSequenceParameters(String RegName, Int32 Obj)&#xD;&#xA;   위치: Agilent.ChemStation.AutomationPlugin.SeqParmsDlgHandler.MyWndProc(Message&amp; m)&#xD;&#xA;   위치: Agilent.ChemStation.Util.WinSDKLib.MessageWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.OnMessage(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.NativeWindow.Callback(IntPtr hWnd, Int32 msg, IntPtr wparam, IntPtr lparam)&#xD;&#xA;   위치: Agilent.ChemStation.Util.WinSDKLib.WinSDK.SendMessage(IntPtr hWnd, Int32 Msg, IntPtr wParam, IntPtr lParam)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApi.HpCore.SendMessage(Message&amp; m)&#xD;&#xA;   위치: Agilent.ChemStation.ChemMain.MainForm.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.OnMessage(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.NativeWindow.Callback(IntPtr hWnd, Int32 msg, IntPtr wparam, IntPtr lparam)&#xD;&#xA;   위치: DevExpress.Utils.Win.Hook.ControlWndHook.CallWindowProc(IntPtr pPrevProc, IntPtr hWnd, Int32 message, IntPtr wParam, IntPtr lParam)&#xD;&#xA;   위치: DevExpress.Utils.Win.Hook.ControlWndHook.WindowProc(IntPtr hWnd, Int32 message, IntPtr wParam, IntPtr lParam)&#xD;&#xA;   위치: System.Windows.Forms.UnsafeNativeMethods.DispatchMessageW(MSG&amp; msg)&#xD;&#xA;   위치: System.Windows.Forms.Application.ComponentManager.System.Windows.Forms.UnsafeNativeMethods.IMsoComponentManager.FPushMessageLoop(Int32 dwComponentID, Int32 reason, Int32 pvLoopData)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoopInner(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoop(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.Run(Form mainForm)&#xD;&#xA;   위치: Agilent.ChemStation.ChemMain.Program.Main(String[] args)</Callstack></System.Diagnostics></ApplicationData></E2ETraceEvent><E2ETraceEvent xmlns="http://schemas.microsoft.com/2004/06/E2ETraceEvent"><System xmlns="http://schemas.microsoft.com/2004/06/windows/eventlog/system"><EventID>0</EventID><Type>3</Type><SubType Name="Error">0</SubType><Level>2</Level><TimeCreated SystemTime="2026-06-09T02:44:00.6408981Z" /><Source Name="CP" /><Correlation ActivityID="{00000000-0000-0000-0000-000000000000}" /><Execution ProcessName="ChemMain" ProcessID="3880" ThreadID="1" /><Channel/><Computer>USER-PC</Computer></System><ApplicationData><TraceData><DataItem><TraceRecord xmlns="http://schemas.microsoft.com/2004/10/E2ETraceEvent/TraceRecord"><TraceIdentifier /><Description>Execution error in macro SaveMethod at level 1 in cmd/fct Copy
+======================================
+&gt;&gt;&gt; Cp Stacks:
+======================================
+Stack of "CP2": _Idle
+
+Stack of "CP3": _Idle
+
+Stack of "CpPluginServ": _Idle
+
+Stack of "CPRCAdapter": _Idle
+
+Stack of "CPRC": _Idle
+
+Stack of "CPBatch": _Idle
+
+Stack of "CPBatchDraw": _Idle
+
+Stack of "AE_CP": _Idle
+
+Stack of "AEQ_CP": _Idle
+
+Stack of "CPNavTable": _Idle
+
+Stack of "CP": _Busy
+  1: GENERATE ERROR
+  2: SaveMethod
+  3: direct_execution
+Local variables of "CP"
+  savepath$="C:\CHEM32\1\METHODS\20260608_REACTION.M"
+  saveAsNewMasterMethod=0
+  ret=0
+  path$="C:\CHEM32\1\METHODS\"
+  ok=0
+  NLSFileName_signal$="signal"
+  MethParmsError=0
+  IsComponent16Bit=0
+  ID_SIGNAL_THIS_METHOD_HA_396=17396
+  ID_SIGNAL_SAVING_METHOD_397=17397
+  ID_SIGNAL_SAVE_METHOD_CA_395=17395
+  ID_SIGNAL_SAVE_METHOD_AS_393=17393
+  ID_SIGNAL_MIGRATED_MTH_2163=19163
+  ID_SIGNAL_METHOD_374=17374
+  ID_SIGNAL_METHOD___M_378=17378
+  ID_SIGNAL_ILLEGAL_CHARAC_394=17394
+  ID_SIGNAL__SAVED_398=17398
+  fstat=2
+  FileList$=""
+  file$="20260608_REACTION.M"
+  evstat=0
+  error=41304
+  currpath$="C:\Chem32\1\METHODS\"
+  currfile$="20260608_REACTION.M"
+  Comment$=""
+  charerr=0
+  button=1
+  AlertMsg$=""
+
+&gt;&gt;&gt; Number of CP's: 11
+</Description></TraceRecord></DataItem><DataItem><SessionContextTraceRecord xmlns="http://agilent.chemstation.diagnostics/2008/11/SessionContextTraceRecord"><InstrumentName>Instrument 1</InstrumentName><SessionRole>Acquisition</SessionRole><UserName>이경석</UserName></SessionContextTraceRecord></DataItem></TraceData><System.Diagnostics xmlns="http://schemas.microsoft.com/2004/08/System.Diagnostics"><Timestamp>5028462769008</Timestamp><Callstack>   위치: System.Environment.GetStackTrace(Exception e, Boolean needFileInfo)&#xD;&#xA;   위치: System.Environment.get_StackTrace()&#xD;&#xA;   위치: System.Diagnostics.TraceEventCache.get_Callstack()&#xD;&#xA;   위치: System.Diagnostics.XmlWriterTraceListener.WriteFooter(TraceEventCache eventCache)&#xD;&#xA;   위치: System.Diagnostics.XmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.Diagnostics.XmlWriterTraceListener2.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.Diagnostics.RollingXmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.XmlWriterTraceListener2.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.SessionContextXmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.SessionContextXmlWriterTraceListener.TraceEvent(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, String message)&#xD;&#xA;   위치: System.Diagnostics.TraceSource.TraceEvent(TraceEventType eventType, Int32 id, String message)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.CPForwarder.HPCoreInternal_CpMsgLineOutputEvent(Object sender, CoreEventArgs evarg)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApi.CoreEventHandler.Invoke(Object sender, CoreEventArgs evarg)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApiInternal.HpcoreInternal.OnCpMsgLineOutput(CoreEventArgs e)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApi.HpCore.WndProc(Message&amp; m)&#xD;&#xA;   위치: Agilent.ChemStation.Util.WinSDKLib.MessageWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.OnMessage(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.NativeWindow.Callback(IntPtr hWnd, Int32 msg, IntPtr wparam, IntPtr lparam)&#xD;&#xA;   위치: System.Windows.Forms.UnsafeNativeMethods.DispatchMessageW(MSG&amp; msg)&#xD;&#xA;   위치: System.Windows.Forms.Application.ComponentManager.System.Windows.Forms.UnsafeNativeMethods.IMsoComponentManager.FPushMessageLoop(Int32 dwComponentID, Int32 reason, Int32 pvLoopData)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoopInner(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoop(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.Run(Form mainForm)&#xD;&#xA;   위치: Agilent.ChemStation.ChemMain.Program.Main(String[] args)</Callstack></System.Diagnostics></ApplicationData></E2ETraceEvent><E2ETraceEvent xmlns="http://schemas.microsoft.com/2004/06/E2ETraceEvent"><System xmlns="http://schemas.microsoft.com/2004/06/windows/eventlog/system"><EventID>0</EventID><Type>3</Type><SubType Name="Error">0</SubType><Level>2</Level><TimeCreated SystemTime="2026-06-09T02:44:00.6564981Z" /><Source Name="CP" /><Correlation ActivityID="{00000000-0000-0000-0000-000000000000}" /><Execution ProcessName="ChemMain" ProcessID="3880" ThreadID="1" /><Channel/><Computer>USER-PC</Computer></System><ApplicationData><TraceData><DataItem><TraceRecord xmlns="http://schemas.microsoft.com/2004/10/E2ETraceEvent/TraceRecord"><TraceIdentifier /><Description>loaded from C:\CHEM32\CORE\SIGNAL.MCX's line 1968 with CRC DEFF
+======================================
+&gt;&gt;&gt; Cp Stacks:
+======================================
+Stack of "CP2": _Idle
+
+Stack of "CP3": _Idle
+
+Stack of "CpPluginServ": _Idle
+
+Stack of "CPRCAdapter": _Idle
+
+Stack of "CPRC": _Idle
+
+Stack of "CPBatch": _Idle
+
+Stack of "CPBatchDraw": _Idle
+
+Stack of "AE_CP": _Idle
+
+Stack of "AEQ_CP": _Idle
+
+Stack of "CPNavTable": _Idle
+
+Stack of "CP": _Busy
+  1: GENERATE ERROR
+  2: SaveMethod
+  3: direct_execution
+Local variables of "CP"
+  savepath$="C:\CHEM32\1\METHODS\20260608_REACTION.M"
+  saveAsNewMasterMethod=0
+  ret=0
+  path$="C:\CHEM32\1\METHODS\"
+  ok=0
+  NLSFileName_signal$="signal"
+  MethParmsError=0
+  IsComponent16Bit=0
+  ID_SIGNAL_THIS_METHOD_HA_396=17396
+  ID_SIGNAL_SAVING_METHOD_397=17397
+  ID_SIGNAL_SAVE_METHOD_CA_395=17395
+  ID_SIGNAL_SAVE_METHOD_AS_393=17393
+  ID_SIGNAL_MIGRATED_MTH_2163=19163
+  ID_SIGNAL_METHOD_374=17374
+  ID_SIGNAL_METHOD___M_378=17378
+  ID_SIGNAL_ILLEGAL_CHARAC_394=17394
+  ID_SIGNAL__SAVED_398=17398
+  fstat=2
+  FileList$=""
+  file$="20260608_REACTION.M"
+  evstat=0
+  error=41304
+  currpath$="C:\Chem32\1\METHODS\"
+  currfile$="20260608_REACTION.M"
+  Comment$=""
+  charerr=0
+  button=1
+  AlertMsg$=""
+
+&gt;&gt;&gt; Number of CP's: 11
+</Description></TraceRecord></DataItem><DataItem><SessionContextTraceRecord xmlns="http://agilent.chemstation.diagnostics/2008/11/SessionContextTraceRecord"><InstrumentName>Instrument 1</InstrumentName><SessionRole>Acquisition</SessionRole><UserName>이경석</UserName></SessionContextTraceRecord></DataItem></TraceData><System.Diagnostics xmlns="http://schemas.microsoft.com/2004/08/System.Diagnostics"><Timestamp>5028462774764</Timestamp><Callstack>   위치: System.Environment.GetStackTrace(Exception e, Boolean needFileInfo)&#xD;&#xA;   위치: System.Environment.get_StackTrace()&#xD;&#xA;   위치: System.Diagnostics.TraceEventCache.get_Callstack()&#xD;&#xA;   위치: System.Diagnostics.XmlWriterTraceListener.WriteFooter(TraceEventCache eventCache)&#xD;&#xA;   위치: System.Diagnostics.XmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.Diagnostics.XmlWriterTraceListener2.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.Diagnostics.RollingXmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.XmlWriterTraceListener2.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.SessionContextXmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.SessionContextXmlWriterTraceListener.TraceEvent(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, String message)&#xD;&#xA;   위치: System.Diagnostics.TraceSource.TraceEvent(TraceEventType eventType, Int32 id, String message)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.CPForwarder.HPCoreInternal_CpMsgLineOutputEvent(Object sender, CoreEventArgs evarg)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApi.CoreEventHandler.Invoke(Object sender, CoreEventArgs evarg)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApiInternal.HpcoreInternal.OnCpMsgLineOutput(CoreEventArgs e)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApi.HpCore.WndProc(Message&amp; m)&#xD;&#xA;   위치: Agilent.ChemStation.Util.WinSDKLib.MessageWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.OnMessage(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.NativeWindow.Callback(IntPtr hWnd, Int32 msg, IntPtr wparam, IntPtr lparam)&#xD;&#xA;   위치: System.Windows.Forms.UnsafeNativeMethods.DispatchMessageW(MSG&amp; msg)&#xD;&#xA;   위치: System.Windows.Forms.Application.ComponentManager.System.Windows.Forms.UnsafeNativeMethods.IMsoComponentManager.FPushMessageLoop(Int32 dwComponentID, Int32 reason, Int32 pvLoopData)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoopInner(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoop(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.Run(Form mainForm)&#xD;&#xA;   위치: Agilent.ChemStation.ChemMain.Program.Main(String[] args)</Callstack></System.Diagnostics></ApplicationData></E2ETraceEvent><E2ETraceEvent xmlns="http://schemas.microsoft.com/2004/06/E2ETraceEvent"><System xmlns="http://schemas.microsoft.com/2004/06/windows/eventlog/system"><EventID>0</EventID><Type>3</Type><SubType Name="Error">0</SubType><Level>2</Level><TimeCreated SystemTime="2026-06-09T02:44:00.6564981Z" /><Source Name="CP" /><Correlation ActivityID="{00000000-0000-0000-0000-000000000000}" /><Execution ProcessName="ChemMain" ProcessID="3880" ThreadID="1" /><Channel/><Computer>USER-PC</Computer></System><ApplicationData><TraceData><DataItem><TraceRecord xmlns="http://schemas.microsoft.com/2004/10/E2ETraceEvent/TraceRecord"><TraceIdentifier /><Description>Cannot copy C:/Chem32/1/METHODS/20260608_REACTION.M/rpthead.txt to C:/CHEM32/1/METHODS/20260608_REACTION.M/rpthead.txt
+======================================
+&gt;&gt;&gt; Cp Stacks:
+======================================
+Stack of "CP2": _Idle
+
+Stack of "CP3": _Idle
+
+Stack of "CpPluginServ": _Idle
+
+Stack of "CPRCAdapter": _Idle
+
+Stack of "CPRC": _Idle
+
+Stack of "CPBatch": _Idle
+
+Stack of "CPBatchDraw": _Idle
+
+Stack of "AE_CP": _Idle
+
+Stack of "AEQ_CP": _Idle
+
+Stack of "CPNavTable": _Idle
+
+Stack of "CP": _Busy
+  1: GENERATE ERROR
+  2: SaveMethod
+  3: direct_execution
+Local variables of "CP"
+  savepath$="C:\CHEM32\1\METHODS\20260608_REACTION.M"
+  saveAsNewMasterMethod=0
+  ret=0
+  path$="C:\CHEM32\1\METHODS\"
+  ok=0
+  NLSFileName_signal$="signal"
+  MethParmsError=0
+  IsComponent16Bit=0
+  ID_SIGNAL_THIS_METHOD_HA_396=17396
+  ID_SIGNAL_SAVING_METHOD_397=17397
+  ID_SIGNAL_SAVE_METHOD_CA_395=17395
+  ID_SIGNAL_SAVE_METHOD_AS_393=17393
+  ID_SIGNAL_MIGRATED_MTH_2163=19163
+  ID_SIGNAL_METHOD_374=17374
+  ID_SIGNAL_METHOD___M_378=17378
+  ID_SIGNAL_ILLEGAL_CHARAC_394=17394
+  ID_SIGNAL__SAVED_398=17398
+  fstat=2
+  FileList$=""
+  file$="20260608_REACTION.M"
+  evstat=0
+  error=41304
+  currpath$="C:\Chem32\1\METHODS\"
+  currfile$="20260608_REACTION.M"
+  Comment$=""
+  charerr=0
+  button=1
+  AlertMsg$=""
+
+&gt;&gt;&gt; Number of CP's: 11
+</Description></TraceRecord></DataItem><DataItem><SessionContextTraceRecord xmlns="http://agilent.chemstation.diagnostics/2008/11/SessionContextTraceRecord"><InstrumentName>Instrument 1</InstrumentName><SessionRole>Acquisition</SessionRole><UserName>이경석</UserName></SessionContextTraceRecord></DataItem></TraceData><System.Diagnostics xmlns="http://schemas.microsoft.com/2004/08/System.Diagnostics"><Timestamp>5028462779389</Timestamp><Callstack>   위치: System.Environment.GetStackTrace(Exception e, Boolean needFileInfo)&#xD;&#xA;   위치: System.Environment.get_StackTrace()&#xD;&#xA;   위치: System.Diagnostics.TraceEventCache.get_Callstack()&#xD;&#xA;   위치: System.Diagnostics.XmlWriterTraceListener.WriteFooter(TraceEventCache eventCache)&#xD;&#xA;   위치: System.Diagnostics.XmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.Diagnostics.XmlWriterTraceListener2.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.Diagnostics.RollingXmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.XmlWriterTraceListener2.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.SessionContextXmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.SessionContextXmlWriterTraceListener.TraceEvent(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, String message)&#xD;&#xA;   위치: System.Diagnostics.TraceSource.TraceEvent(TraceEventType eventType, Int32 id, String message)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.CPForwarder.HPCoreInternal_CpMsgLineOutputEvent(Object sender, CoreEventArgs evarg)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApi.CoreEventHandler.Invoke(Object sender, CoreEventArgs evarg)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApiInternal.HpcoreInternal.OnCpMsgLineOutput(CoreEventArgs e)&#xD;&#xA;   위치: Agilent.ChemStation.hpcoreApi.HpCore.WndProc(Message&amp; m)&#xD;&#xA;   위치: Agilent.ChemStation.Util.WinSDKLib.MessageWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.OnMessage(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.NativeWindow.Callback(IntPtr hWnd, Int32 msg, IntPtr wparam, IntPtr lparam)&#xD;&#xA;   위치: System.Windows.Forms.UnsafeNativeMethods.DispatchMessageW(MSG&amp; msg)&#xD;&#xA;   위치: System.Windows.Forms.Application.ComponentManager.System.Windows.Forms.UnsafeNativeMethods.IMsoComponentManager.FPushMessageLoop(Int32 dwComponentID, Int32 reason, Int32 pvLoopData)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoopInner(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoop(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.Run(Form mainForm)&#xD;&#xA;   위치: Agilent.ChemStation.ChemMain.Program.Main(String[] args)</Callstack></System.Diagnostics></ApplicationData></E2ETraceEvent><E2ETraceEvent xmlns="http://schemas.microsoft.com/2004/06/E2ETraceEvent"><System xmlns="http://schemas.microsoft.com/2004/06/windows/eventlog/system"><EventID>0</EventID><Type>3</Type><SubType Name="Critical">0</SubType><Level>1</Level><TimeCreated SystemTime="2026-06-14T06:23:19.6102697Z" /><Source Name="LogbookUI" /><Correlation ActivityID="{00000000-0000-0000-0000-000000000000}" /><Execution ProcessName="ChemMain" ProcessID="3880" ThreadID="1" /><Channel/><Computer>USER-PC</Computer></System><ApplicationData><TraceData><DataItem><TraceRecord xmlns="http://schemas.microsoft.com/2004/10/E2ETraceEvent/TraceRecord"><TraceIdentifier /><Description>인덱스가 배열 범위를 벗어났습니다. -    위치: Agilent.ChemStation.UI.LogbookUI.CLbkHelper.ReadLogFile(String strFilePath, Boolean bIsSeqLbk, Int64 nOffset, EventRec[]&amp; structArrEventRec, Int64&amp; nFileSize)
+   위치: Agilent.ChemStation.UI.LogbookUI.CLogbookUI.ViewLogbook(String strPath, String strHeaderText, Boolean bIsSeqLbk, Int64 nOffset) - </Description></TraceRecord></DataItem><DataItem><SessionContextTraceRecord xmlns="http://agilent.chemstation.diagnostics/2008/11/SessionContextTraceRecord"><InstrumentName>Instrument 1</InstrumentName><SessionRole>Acquisition</SessionRole><UserName /></SessionContextTraceRecord></DataItem></TraceData><System.Diagnostics xmlns="http://schemas.microsoft.com/2004/08/System.Diagnostics"><Timestamp>6468169887577</Timestamp><Callstack>   위치: System.Environment.GetStackTrace(Exception e, Boolean needFileInfo)&#xD;&#xA;   위치: System.Environment.get_StackTrace()&#xD;&#xA;   위치: System.Diagnostics.TraceEventCache.get_Callstack()&#xD;&#xA;   위치: System.Diagnostics.XmlWriterTraceListener.WriteFooter(TraceEventCache eventCache)&#xD;&#xA;   위치: System.Diagnostics.XmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.Diagnostics.XmlWriterTraceListener2.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.Diagnostics.RollingXmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.XmlWriterTraceListener2.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.SessionContextXmlWriterTraceListener.TraceData(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, Object[] data)&#xD;&#xA;   위치: Agilent.ChemStation.Diagnostics.SessionContextXmlWriterTraceListener.TraceEvent(TraceEventCache eventCache, String source, TraceEventType eventType, Int32 id, String message)&#xD;&#xA;   위치: System.Diagnostics.TraceSource.TraceEvent(TraceEventType eventType, Int32 id, String message)&#xD;&#xA;   위치: Agilent.ChemStation.UI.LogbookUI.CLogbookUI.ViewLogbook(String strPath, String strHeaderText, Boolean bIsSeqLbk, Int64 nOffset)&#xD;&#xA;   위치: LogbookUIWrapper.ViewLogbook(LogbookUIWrapper* , Char* lpstrPath, Char* lpstrHeaderText, Boolean bIsSeqLogbook, Int32 loffset)&#xD;&#xA;   위치: cLogbookUIViewLogbook(Void* wrapper, Char* strPath, Char* strHeaderText, Boolean bIsSeqLogbook, Int32 lOffset)&#xD;&#xA;   위치: System.Windows.Forms.UnsafeNativeMethods.DispatchMessageW(MSG&amp; msg)&#xD;&#xA;   위치: System.Windows.Forms.Application.ComponentManager.System.Windows.Forms.UnsafeNativeMethods.IMsoComponentManager.FPushMessageLoop(Int32 dwComponentID, Int32 reason, Int32 pvLoopData)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoopInner(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoop(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.RunDialog(Form form)&#xD;&#xA;   위치: System.Windows.Forms.Form.ShowDialog(IWin32Window owner)&#xD;&#xA;   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.UserInterfaceAdapter.ShowModalMethodEditor(Boolean bReadOnly, String xmlBookmark)&#xD;&#xA;   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.SingleModuleAdapter.AppResourceContainer_OpenMethodUI(Object sender, BookmarkEventArgs e)&#xD;&#xA;   위치: Agilent.ChemStation.RapidControl.AgtChemRCNetAdapter.ApplicationDefaultResourcesContainer.ExecuteResourceAction(String resourceID, IRCKeyValueCollection inParameters, IRCKeyValueCollection&amp; outParameters)&#xD;&#xA;   위치: Agilent.Analytical.GC7890.Driver.GCInstrumentDiagram.RequestEdit(String target, String tabName)&#xD;&#xA;   위치: Agilent.Analytical.GC7890.Driver.GCInstrumentDiagram.OnDiagramClick(Object sender, EventArgs e)&#xD;&#xA;   위치: System.Windows.Forms.Control.OnClick(EventArgs e)&#xD;&#xA;   위치: System.Windows.Forms.Button.OnClick(EventArgs e)&#xD;&#xA;   위치: System.Windows.Forms.Button.OnMouseUp(MouseEventArgs mevent)&#xD;&#xA;   위치: System.Windows.Forms.Control.WmMouseUp(Message&amp; m, MouseButtons button, Int32 clicks)&#xD;&#xA;   위치: System.Windows.Forms.Control.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.ButtonBase.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Button.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.OnMessage(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.Control.ControlNativeWindow.WndProc(Message&amp; m)&#xD;&#xA;   위치: System.Windows.Forms.NativeWindow.Callback(IntPtr hWnd, Int32 msg, IntPtr wparam, IntPtr lparam)&#xD;&#xA;   위치: System.Windows.Forms.UnsafeNativeMethods.DispatchMessageW(MSG&amp; msg)&#xD;&#xA;   위치: System.Windows.Forms.Application.ComponentManager.System.Windows.Forms.UnsafeNativeMethods.IMsoComponentManager.FPushMessageLoop(Int32 dwComponentID, Int32 reason, Int32 pvLoopData)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoopInner(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.ThreadContext.RunMessageLoop(Int32 reason, ApplicationContext context)&#xD;&#xA;   위치: System.Windows.Forms.Application.Run(Form mainForm)&#xD;&#xA;   위치: Agilent.ChemStation.ChemMain.Program.Main(String[] args)</Callstack></System.Diagnostics></ApplicationData></E2ETraceEvent>

@@ -1,0 +1,752 @@
+  67 41e0 373fb204    0
+Method       Method started                                 13:07:00 05/17/99
+  67 41e0 373fb20e    0
+Method       Instrument run started                         13:07:10 05/17/99
+  70 41de 373fb33d    0
+CP Macro     Analyzing rawdata SIG10002.D                   13:12:13 05/17/99
+  67 41e0 373fb33f    0
+Method       Instrument run completed                       13:12:15 05/17/99
+  70 41de 373fb724    0
+CP Macro     CADS Transfer of: SIG10002.D                   13:28:52 05/17/99
+  67 41e0 373fb724    0
+Method       Method completed                               13:28:52 05/17/99
+ 443 41e0 373fb95c  202
+Method       Method started:  line# 1 vial# 1 inj# 1        13:38:20 05/17/99
+  70 41de 373fb95c    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:38:20 05/17/99
+   0 1da5 373fb95f    0
+ChemStore    Data spooled to 'hpcs'                         13:38:23 05/17/99
+  70 41de 373fb960    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:38:24 05/17/99
+  67 41e0 373fb960    0
+Method       Method completed                               13:38:24 05/17/99
+ 443 41e0 373fb961  202
+Method       Method started:  line# 2 vial# 2 inj# 1        13:38:25 05/17/99
+  70 41de 373fb961    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:38:25 05/17/99
+   0 1da5 373fb964    0
+ChemStore    Data spooled to 'hpcs'                         13:38:28 05/17/99
+  70 41de 373fb964    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:38:28 05/17/99
+  67 41e0 373fb964    0
+Method       Method completed                               13:38:28 05/17/99
+ 443 41e0 373fb968  202
+Method       Method started:  line# 4 vial# 4 inj# 1        13:38:32 05/17/99
+  70 41de 373fb968    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:38:32 05/17/99
+   0 1da5 373fb96b    0
+ChemStore    Data spooled to 'hpcs'                         13:38:35 05/17/99
+  70 41de 373fb96b    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:38:35 05/17/99
+  67 41e0 373fb96b    0
+Method       Method completed                               13:38:35 05/17/99
+ 443 41e0 373fb96c  202
+Method       Method started:  line# 5 vial# 5 inj# 1        13:38:36 05/17/99
+  70 41de 373fb96d    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:38:37 05/17/99
+   0 1da5 373fb96f    0
+ChemStore    Data spooled to 'hpcs'                         13:38:39 05/17/99
+  70 41de 373fb970    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:38:40 05/17/99
+  67 41e0 373fb970    0
+Method       Method completed                               13:38:40 05/17/99
+ 443 41e0 373fb971  202
+Method       Method started:  line# 6 vial# 6 inj# 1        13:38:41 05/17/99
+  70 41de 373fb971    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:38:41 05/17/99
+   0 1da5 373fb974    0
+ChemStore    Data spooled to 'hpcs'                         13:38:44 05/17/99
+  70 41de 373fb974    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:38:44 05/17/99
+  67 41e0 373fb974    0
+Method       Method completed                               13:38:44 05/17/99
+ 443 41e0 373fb975  202
+Method       Method started:  line# 7 vial# 7 inj# 1        13:38:45 05/17/99
+  70 41de 373fb976    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:38:46 05/17/99
+   0 1da5 373fb978    0
+ChemStore    Data spooled to 'hpcs'                         13:38:48 05/17/99
+  70 41de 373fb979    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:38:49 05/17/99
+  67 41e0 373fb979    0
+Method       Method completed                               13:38:49 05/17/99
+ 443 41e0 373fb97a  202
+Method       Method started:  line# 8 vial# 8 inj# 1        13:38:50 05/17/99
+  70 41de 373fb97a    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:38:50 05/17/99
+   0 1da5 373fb97d    0
+ChemStore    Data spooled to 'hpcs'                         13:38:53 05/17/99
+  70 41de 373fb97d    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:38:53 05/17/99
+  67 41e0 373fb97d    0
+Method       Method completed                               13:38:53 05/17/99
+ 443 41e0 373fb97f  202
+Method       Method started:  line# 9 vial# 9 inj# 1        13:38:55 05/17/99
+  70 41de 373fb97f    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:38:55 05/17/99
+   0 1da5 373fb982    0
+ChemStore    Data spooled to 'hpcs'                         13:38:58 05/17/99
+  70 41de 373fb982    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:38:58 05/17/99
+  67 41e0 373fb982    0
+Method       Method completed                               13:38:58 05/17/99
+ 443 41e0 373fb983  202
+Method       Method started:  line# 10 vial# 10 inj# 1      13:38:59 05/17/99
+  70 41de 373fb984    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:00 05/17/99
+   0 1da5 373fb986    0
+ChemStore    Data spooled to 'hpcs'                         13:39:02 05/17/99
+  70 41de 373fb987    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:03 05/17/99
+  67 41e0 373fb987    0
+Method       Method completed                               13:39:03 05/17/99
+ 443 41e0 373fb988  202
+Method       Method started:  line# 11 vial# 11 inj# 1      13:39:04 05/17/99
+  70 41de 373fb988    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:04 05/17/99
+   0 1da5 373fb98b    0
+ChemStore    Data spooled to 'hpcs'                         13:39:07 05/17/99
+  70 41de 373fb98b    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:07 05/17/99
+  67 41e0 373fb98b    0
+Method       Method completed                               13:39:07 05/17/99
+ 443 41e0 373fb98c  202
+Method       Method started:  line# 12 vial# 12 inj# 1      13:39:08 05/17/99
+  70 41de 373fb98c    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:08 05/17/99
+   0 1da5 373fb98f    0
+ChemStore    Data spooled to 'hpcs'                         13:39:11 05/17/99
+  70 41de 373fb990    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:12 05/17/99
+  67 41e0 373fb990    0
+Method       Method completed                               13:39:12 05/17/99
+ 443 41e0 373fb991  202
+Method       Method started:  line# 13 vial# 13 inj# 1      13:39:13 05/17/99
+  70 41de 373fb991    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:13 05/17/99
+   0 1da5 373fb994    0
+ChemStore    Data spooled to 'hpcs'                         13:39:16 05/17/99
+  70 41de 373fb994    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:16 05/17/99
+  67 41e0 373fb994    0
+Method       Method completed                               13:39:16 05/17/99
+ 443 41e0 373fb996  202
+Method       Method started:  line# 14 vial# 14 inj# 1      13:39:18 05/17/99
+  70 41de 373fb996    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:18 05/17/99
+   0 1da5 373fb999    0
+ChemStore    Data spooled to 'hpcs'                         13:39:21 05/17/99
+  70 41de 373fb999    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:21 05/17/99
+  67 41e0 373fb999    0
+Method       Method completed                               13:39:21 05/17/99
+ 443 41e0 373fb99a  202
+Method       Method started:  line# 15 vial# 15 inj# 1      13:39:22 05/17/99
+  70 41de 373fb99b    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:23 05/17/99
+   0 1da5 373fb99d    0
+ChemStore    Data spooled to 'hpcs'                         13:39:25 05/17/99
+  70 41de 373fb99e    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:26 05/17/99
+  67 41e0 373fb99e    0
+Method       Method completed                               13:39:26 05/17/99
+ 443 41e0 373fb99f  202
+Method       Method started:  line# 16 vial# 16 inj# 1      13:39:27 05/17/99
+  70 41de 373fb99f    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:27 05/17/99
+   0 1da5 373fb9a2    0
+ChemStore    Data spooled to 'hpcs'                         13:39:30 05/17/99
+  70 41de 373fb9a2    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:30 05/17/99
+  67 41e0 373fb9a2    0
+Method       Method completed                               13:39:30 05/17/99
+ 443 41e0 373fb9a4  202
+Method       Method started:  line# 17 vial# 17 inj# 1      13:39:32 05/17/99
+  70 41de 373fb9a4    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:32 05/17/99
+   0 1da5 373fb9a7    0
+ChemStore    Data spooled to 'hpcs'                         13:39:35 05/17/99
+  70 41de 373fb9a7    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:35 05/17/99
+  67 41e0 373fb9a7    0
+Method       Method completed                               13:39:35 05/17/99
+ 443 41e0 373fb9a8  202
+Method       Method started:  line# 18 vial# 18 inj# 1      13:39:36 05/17/99
+  70 41de 373fb9a8    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:36 05/17/99
+   0 1da5 373fb9ab    0
+ChemStore    Data spooled to 'hpcs'                         13:39:39 05/17/99
+  70 41de 373fb9ab    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:39 05/17/99
+  67 41e0 373fb9ab    0
+Method       Method completed                               13:39:39 05/17/99
+ 443 41e0 373fb9ad  202
+Method       Method started:  line# 19 vial# 19 inj# 1      13:39:41 05/17/99
+  70 41de 373fb9ad    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:41 05/17/99
+   0 1da5 373fb9b0    0
+ChemStore    Data spooled to 'hpcs'                         13:39:44 05/17/99
+  70 41de 373fb9b0    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:44 05/17/99
+  67 41e0 373fb9b0    0
+Method       Method completed                               13:39:44 05/17/99
+ 443 41e0 373fb9b1  202
+Method       Method started:  line# 20 vial# 20 inj# 1      13:39:45 05/17/99
+  70 41de 373fb9b1    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:39:45 05/17/99
+   0 1da5 373fb9b4    0
+ChemStore    Data spooled to 'hpcs'                         13:39:48 05/17/99
+  70 41de 373fb9b5    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:39:49 05/17/99
+  67 41e0 373fb9b5    0
+Method       Method completed                               13:39:49 05/17/99
+ 443 41e0 373fbb8c  202
+Method       Method started:  line# 1 vial# 1 inj# 1        13:47:40 05/17/99
+  70 41de 373fbb8d    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:47:41 05/17/99
+   0 1da5 373fbb8f    0
+ChemStore    Data spooled to 'hpcs'                         13:47:43 05/17/99
+  70 41de 373fbb90    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:47:44 05/17/99
+  67 41e0 373fbb90    0
+Method       Method completed                               13:47:44 05/17/99
+ 443 41e0 373fbb91  202
+Method       Method started:  line# 2 vial# 2 inj# 1        13:47:45 05/17/99
+  70 41de 373fbb91    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:47:45 05/17/99
+   0 1da5 373fbb94    0
+ChemStore    Data spooled to 'hpcs'                         13:47:48 05/17/99
+  70 41de 373fbb94    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:47:48 05/17/99
+  67 41e0 373fbb94    0
+Method       Method completed                               13:47:48 05/17/99
+ 443 41e0 373fbb98  202
+Method       Method started:  line# 4 vial# 4 inj# 1        13:47:52 05/17/99
+  70 41de 373fbb98    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:47:52 05/17/99
+   0 1da5 373fbb9b    0
+ChemStore    Data spooled to 'hpcs'                         13:47:55 05/17/99
+  70 41de 373fbb9b    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:47:55 05/17/99
+  67 41e0 373fbb9b    0
+Method       Method completed                               13:47:55 05/17/99
+ 443 41e0 373fbb9c  202
+Method       Method started:  line# 5 vial# 5 inj# 1        13:47:56 05/17/99
+  70 41de 373fbb9d    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:47:57 05/17/99
+   0 1da5 373fbb9f    0
+ChemStore    Data spooled to 'hpcs'                         13:47:59 05/17/99
+  70 41de 373fbba0    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:00 05/17/99
+  67 41e0 373fbba0    0
+Method       Method completed                               13:48:00 05/17/99
+ 443 41e0 373fbba1  202
+Method       Method started:  line# 6 vial# 6 inj# 1        13:48:01 05/17/99
+  70 41de 373fbba1    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:01 05/17/99
+   0 1da5 373fbba4    0
+ChemStore    Data spooled to 'hpcs'                         13:48:04 05/17/99
+  70 41de 373fbba5    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:05 05/17/99
+  67 41e0 373fbba5    0
+Method       Method completed                               13:48:05 05/17/99
+ 443 41e0 373fbba6  202
+Method       Method started:  line# 7 vial# 7 inj# 1        13:48:06 05/17/99
+  70 41de 373fbba6    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:06 05/17/99
+   0 1da5 373fbba9    0
+ChemStore    Data spooled to 'hpcs'                         13:48:09 05/17/99
+  70 41de 373fbba9    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:09 05/17/99
+  67 41e0 373fbba9    0
+Method       Method completed                               13:48:09 05/17/99
+ 443 41e0 373fbbaa  202
+Method       Method started:  line# 8 vial# 8 inj# 1        13:48:10 05/17/99
+  70 41de 373fbbaa    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:10 05/17/99
+   0 1da5 373fbbad    0
+ChemStore    Data spooled to 'hpcs'                         13:48:13 05/17/99
+  70 41de 373fbbae    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:14 05/17/99
+  67 41e0 373fbbae    0
+Method       Method completed                               13:48:14 05/17/99
+ 443 41e0 373fbbaf  202
+Method       Method started:  line# 9 vial# 9 inj# 1        13:48:15 05/17/99
+  70 41de 373fbbaf    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:15 05/17/99
+   0 1da5 373fbbb2    0
+ChemStore    Data spooled to 'hpcs'                         13:48:18 05/17/99
+  70 41de 373fbbb2    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:18 05/17/99
+  67 41e0 373fbbb2    0
+Method       Method completed                               13:48:18 05/17/99
+ 443 41e0 373fbbb3  202
+Method       Method started:  line# 10 vial# 10 inj# 1      13:48:19 05/17/99
+  70 41de 373fbbb4    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:20 05/17/99
+   0 1da5 373fbbb6    0
+ChemStore    Data spooled to 'hpcs'                         13:48:22 05/17/99
+  70 41de 373fbbb7    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:23 05/17/99
+  67 41e0 373fbbb7    0
+Method       Method completed                               13:48:23 05/17/99
+ 443 41e0 373fbbb8  202
+Method       Method started:  line# 11 vial# 11 inj# 1      13:48:24 05/17/99
+  70 41de 373fbbb8    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:24 05/17/99
+   0 1da5 373fbbbb    0
+ChemStore    Data spooled to 'hpcs'                         13:48:27 05/17/99
+  70 41de 373fbbbb    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:27 05/17/99
+  67 41e0 373fbbbb    0
+Method       Method completed                               13:48:27 05/17/99
+ 443 41e0 373fbbbd  202
+Method       Method started:  line# 12 vial# 12 inj# 1      13:48:29 05/17/99
+  70 41de 373fbbbd    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:29 05/17/99
+   0 1da5 373fbbc0    0
+ChemStore    Data spooled to 'hpcs'                         13:48:32 05/17/99
+  70 41de 373fbbc0    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:32 05/17/99
+  67 41e0 373fbbc0    0
+Method       Method completed                               13:48:32 05/17/99
+ 443 41e0 373fbbc1  202
+Method       Method started:  line# 13 vial# 13 inj# 1      13:48:33 05/17/99
+  70 41de 373fbbc2    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:34 05/17/99
+   0 1da5 373fbbc4    0
+ChemStore    Data spooled to 'hpcs'                         13:48:36 05/17/99
+  70 41de 373fbbc5    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:37 05/17/99
+  67 41e0 373fbbc5    0
+Method       Method completed                               13:48:37 05/17/99
+ 443 41e0 373fbbc6  202
+Method       Method started:  line# 14 vial# 14 inj# 1      13:48:38 05/17/99
+  70 41de 373fbbc6    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:38 05/17/99
+   0 1da5 373fbbc9    0
+ChemStore    Data spooled to 'hpcs'                         13:48:41 05/17/99
+  70 41de 373fbbc9    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:41 05/17/99
+  67 41e0 373fbbc9    0
+Method       Method completed                               13:48:41 05/17/99
+ 443 41e0 373fbbcb  202
+Method       Method started:  line# 15 vial# 15 inj# 1      13:48:43 05/17/99
+  70 41de 373fbbcb    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:43 05/17/99
+   0 1da5 373fbbcd    0
+ChemStore    Data spooled to 'hpcs'                         13:48:45 05/17/99
+  70 41de 373fbbce    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:46 05/17/99
+  67 41e0 373fbbce    0
+Method       Method completed                               13:48:46 05/17/99
+ 443 41e0 373fbbcf  202
+Method       Method started:  line# 16 vial# 16 inj# 1      13:48:47 05/17/99
+  70 41de 373fbbcf    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:47 05/17/99
+   0 1da5 373fbbd2    0
+ChemStore    Data spooled to 'hpcs'                         13:48:50 05/17/99
+  70 41de 373fbbd3    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:51 05/17/99
+  67 41e0 373fbbd3    0
+Method       Method completed                               13:48:51 05/17/99
+ 443 41e0 373fbbd4  202
+Method       Method started:  line# 17 vial# 17 inj# 1      13:48:52 05/17/99
+  70 41de 373fbbd4    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:52 05/17/99
+   0 1da5 373fbbd7    0
+ChemStore    Data spooled to 'hpcs'                         13:48:55 05/17/99
+  70 41de 373fbbd7    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:48:55 05/17/99
+  67 41e0 373fbbd7    0
+Method       Method completed                               13:48:55 05/17/99
+ 443 41e0 373fbbd8  202
+Method       Method started:  line# 18 vial# 18 inj# 1      13:48:56 05/17/99
+  70 41de 373fbbd9    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:48:57 05/17/99
+   0 1da5 373fbbdb    0
+ChemStore    Data spooled to 'hpcs'                         13:48:59 05/17/99
+  70 41de 373fbbdc    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:49:00 05/17/99
+  67 41e0 373fbbdc    0
+Method       Method completed                               13:49:00 05/17/99
+ 443 41e0 373fbbdd  202
+Method       Method started:  line# 19 vial# 19 inj# 1      13:49:01 05/17/99
+  70 41de 373fbbdd    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:49:01 05/17/99
+   0 1da5 373fbbdf    0
+ChemStore    Data spooled to 'hpcs'                         13:49:03 05/17/99
+  70 41de 373fbbe0    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:49:04 05/17/99
+  67 41e0 373fbbe0    0
+Method       Method completed                               13:49:04 05/17/99
+ 443 41e0 373fbbe1  202
+Method       Method started:  line# 20 vial# 20 inj# 1      13:49:05 05/17/99
+  70 41de 373fbbe1    0
+CP Macro     Analyzing rawdata LOADTEST.D                   13:49:05 05/17/99
+   0 1da5 373fbbe4    0
+ChemStore    Data spooled to 'hpcs'                         13:49:08 05/17/99
+  70 41de 373fbbe5    0
+CP Macro     CADS Transfer of: LOADTEST.D                   13:49:09 05/17/99
+  67 41e0 373fbbe5    0
+Method       Method completed                               13:49:09 05/17/99
+ 443 41e0 373fc0c6  202
+Method       Method started:  line# 1 vial# 1 inj# 1        14:09:58 05/17/99
+  70 41de 373fc0c6    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:09:58 05/17/99
+   0 1da5 373fc0ca    0
+ChemStore    Data spooled to 'hpcs'                         14:10:02 05/17/99
+  70 41de 373fc0cb    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:10:03 05/17/99
+  67 41e0 373fc0cb    0
+Method       Method completed                               14:10:03 05/17/99
+ 443 41e0 373fc0cc  202
+Method       Method started:  line# 2 vial# 2 inj# 1        14:10:04 05/17/99
+  70 41de 373fc0cc    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:10:04 05/17/99
+   0 1da5 373fc0d0    0
+ChemStore    Data spooled to 'hpcs'                         14:10:08 05/17/99
+  70 41de 373fc0d2    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:10:10 05/17/99
+  67 41e0 373fc0d2    0
+Method       Method completed                               14:10:10 05/17/99
+ 443 41e0 373fc0d3  202
+Method       Method started:  line# 3 vial# 3 inj# 1        14:10:11 05/17/99
+  70 41de 373fc0d4    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:10:12 05/17/99
+   0 1da5 373fc0d8    0
+ChemStore    Data spooled to 'hpcs'                         14:10:16 05/17/99
+  70 41de 373fc0d9    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:10:17 05/17/99
+  67 41e0 373fc0d9    0
+Method       Method completed                               14:10:17 05/17/99
+ 443 41e0 373fc0db  202
+Method       Method started:  line# 4 vial# 4 inj# 1        14:10:19 05/17/99
+  70 41de 373fc0db    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:10:19 05/17/99
+   0 1da5 373fc0e0    0
+ChemStore    Data spooled to 'hpcs'                         14:10:24 05/17/99
+  70 41de 373fc0e1    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:10:25 05/17/99
+  67 41e0 373fc0e1    0
+Method       Method completed                               14:10:25 05/17/99
+ 443 41e0 373fc0e2  202
+Method       Method started:  line# 5 vial# 5 inj# 1        14:10:26 05/17/99
+  70 41de 373fc0e3    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:10:27 05/17/99
+   0 1da5 373fc0e8    0
+ChemStore    Data spooled to 'hpcs'                         14:10:32 05/17/99
+  70 41de 373fc0e9    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:10:33 05/17/99
+  67 41e0 373fc0e9    0
+Method       Method completed                               14:10:33 05/17/99
+ 443 41e0 373fc0ea  202
+Method       Method started:  line# 6 vial# 6 inj# 1        14:10:34 05/17/99
+  70 41de 373fc0eb    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:10:35 05/17/99
+   0 1da5 373fc0ef    0
+ChemStore    Data spooled to 'hpcs'                         14:10:39 05/17/99
+  70 41de 373fc0f0    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:10:40 05/17/99
+  67 41e0 373fc0f0    0
+Method       Method completed                               14:10:40 05/17/99
+ 443 41e0 373fc0f1  202
+Method       Method started:  line# 7 vial# 7 inj# 1        14:10:41 05/17/99
+  70 41de 373fc0f2    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:10:42 05/17/99
+   0 1da5 373fc0f5    0
+ChemStore    Data spooled to 'hpcs'                         14:10:45 05/17/99
+  70 41de 373fc0f6    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:10:46 05/17/99
+  67 41e0 373fc0f7    0
+Method       Method completed                               14:10:47 05/17/99
+ 443 41e0 373fc0f8  202
+Method       Method started:  line# 8 vial# 8 inj# 1        14:10:48 05/17/99
+  70 41de 373fc0f9    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:10:49 05/17/99
+   0 1da5 373fc0fc    0
+ChemStore    Data spooled to 'hpcs'                         14:10:52 05/17/99
+  70 41de 373fc0fd    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:10:53 05/17/99
+  67 41e0 373fc0fd    0
+Method       Method completed                               14:10:53 05/17/99
+ 443 41e0 373fc0fe  202
+Method       Method started:  line# 9 vial# 9 inj# 1        14:10:54 05/17/99
+  70 41de 373fc0ff    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:10:55 05/17/99
+   0 1da5 373fc103    0
+ChemStore    Data spooled to 'hpcs'                         14:10:59 05/17/99
+  70 41de 373fc104    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:11:00 05/17/99
+  67 41e0 373fc104    0
+Method       Method completed                               14:11:00 05/17/99
+ 443 41e0 373fc105  202
+Method       Method started:  line# 10 vial# 10 inj# 1      14:11:01 05/17/99
+  70 41de 373fc106    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:11:02 05/17/99
+   0 1da5 373fc10a    0
+ChemStore    Data spooled to 'hpcs'                         14:11:06 05/17/99
+  70 41de 373fc10b    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:11:07 05/17/99
+  67 41e0 373fc10b    0
+Method       Method completed                               14:11:07 05/17/99
+ 443 41e0 373fc10c  202
+Method       Method started:  line# 11 vial# 11 inj# 1      14:11:08 05/17/99
+  70 41de 373fc10d    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:11:09 05/17/99
+   0 1da5 373fc110    0
+ChemStore    Data spooled to 'hpcs'                         14:11:12 05/17/99
+  70 41de 373fc111    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:11:13 05/17/99
+  67 41e0 373fc111    0
+Method       Method completed                               14:11:13 05/17/99
+ 443 41e0 373fc113  202
+Method       Method started:  line# 12 vial# 12 inj# 1      14:11:15 05/17/99
+  70 41de 373fc113    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:11:15 05/17/99
+   0 1da5 373fc117    0
+ChemStore    Data spooled to 'hpcs'                         14:11:19 05/17/99
+  70 41de 373fc118    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:11:20 05/17/99
+  67 41e0 373fc118    0
+Method       Method completed                               14:11:20 05/17/99
+ 443 41e0 373fc11a  202
+Method       Method started:  line# 13 vial# 13 inj# 1      14:11:22 05/17/99
+  70 41de 373fc11a    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:11:22 05/17/99
+   0 1da5 373fc11e    0
+ChemStore    Data spooled to 'hpcs'                         14:11:26 05/17/99
+  70 41de 373fc11f    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:11:27 05/17/99
+  67 41e0 373fc11f    0
+Method       Method completed                               14:11:27 05/17/99
+ 443 41e0 373fc121  202
+Method       Method started:  line# 14 vial# 14 inj# 1      14:11:29 05/17/99
+  70 41de 373fc121    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:11:29 05/17/99
+   0 1da5 373fc125    0
+ChemStore    Data spooled to 'hpcs'                         14:11:33 05/17/99
+  70 41de 373fc126    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:11:34 05/17/99
+  67 41e0 373fc126    0
+Method       Method completed                               14:11:34 05/17/99
+ 443 41e0 373fc127  202
+Method       Method started:  line# 15 vial# 15 inj# 1      14:11:35 05/17/99
+  70 41de 373fc128    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:11:36 05/17/99
+   0 1da5 373fc12b    0
+ChemStore    Data spooled to 'hpcs'                         14:11:39 05/17/99
+  70 41de 373fc12c    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:11:40 05/17/99
+  67 41e0 373fc12c    0
+Method       Method completed                               14:11:40 05/17/99
+ 443 41e0 373fc12e  202
+Method       Method started:  line# 16 vial# 16 inj# 1      14:11:42 05/17/99
+  70 41de 373fc12e    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:11:42 05/17/99
+   0 1da5 373fc132    0
+ChemStore    Data spooled to 'hpcs'                         14:11:46 05/17/99
+  70 41de 373fc134    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:11:48 05/17/99
+  67 41e0 373fc134    0
+Method       Method completed                               14:11:48 05/17/99
+ 443 41e0 373fc135  202
+Method       Method started:  line# 17 vial# 17 inj# 1      14:11:49 05/17/99
+  70 41de 373fc135    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:11:49 05/17/99
+   0 1da5 373fc13a    0
+ChemStore    Data spooled to 'hpcs'                         14:11:54 05/17/99
+  70 41de 373fc13b    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:11:55 05/17/99
+  67 41e0 373fc13b    0
+Method       Method completed                               14:11:55 05/17/99
+ 443 41e0 373fc13c  202
+Method       Method started:  line# 18 vial# 18 inj# 1      14:11:56 05/17/99
+  70 41de 373fc13d    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:11:57 05/17/99
+   0 1da5 373fc142    0
+ChemStore    Data spooled to 'hpcs'                         14:12:02 05/17/99
+  70 41de 373fc142    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:12:02 05/17/99
+  67 41e0 373fc142    0
+Method       Method completed                               14:12:02 05/17/99
+ 443 41e0 373fc144  202
+Method       Method started:  line# 19 vial# 19 inj# 1      14:12:04 05/17/99
+  70 41de 373fc145    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:12:05 05/17/99
+   0 1da5 373fc149    0
+ChemStore    Data spooled to 'hpcs'                         14:12:09 05/17/99
+  70 41de 373fc14a    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:12:10 05/17/99
+  67 41e0 373fc14a    0
+Method       Method completed                               14:12:10 05/17/99
+ 443 41e0 373fc14b  202
+Method       Method started:  line# 20 vial# 20 inj# 1      14:12:11 05/17/99
+  70 41de 373fc14c    0
+CP Macro     Analyzing rawdata LOADTEST.D                   14:12:12 05/17/99
+   0 1da5 373fc150    0
+ChemStore    Data spooled to 'hpcs'                         14:12:16 05/17/99
+  70 41de 373fc150    0
+CP Macro     CADS Transfer of: LOADTEST.D                   14:12:16 05/17/99
+  67 41e0 373fc150    0
+Method       Method completed                               14:12:16 05/17/99
+ 443 41e0 3785ad2e  202
+Method       Method started:  line# 1 vial# 1 inj# 1        15:05:02 07/09/99
+  70 41de 3785ad2e    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:02 07/09/99
+  70 41de 3785ad31    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:05 07/09/99
+  67 41e0 3785ad31    0
+Method       Method completed                               15:05:05 07/09/99
+ 443 41e0 3785ad32  202
+Method       Method started:  line# 2 vial# 2 inj# 1        15:05:06 07/09/99
+  70 41de 3785ad32    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:06 07/09/99
+  70 41de 3785ad35    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:09 07/09/99
+  67 41e0 3785ad35    0
+Method       Method completed                               15:05:09 07/09/99
+ 443 41e0 3785ad36  202
+Method       Method started:  line# 3 vial# 3 inj# 1        15:05:10 07/09/99
+  70 41de 3785ad36    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:10 07/09/99
+  70 41de 3785ad39    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:13 07/09/99
+  67 41e0 3785ad39    0
+Method       Method completed                               15:05:13 07/09/99
+ 443 41e0 3785ad3a  202
+Method       Method started:  line# 4 vial# 4 inj# 1        15:05:14 07/09/99
+  70 41de 3785ad3a    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:14 07/09/99
+  70 41de 3785ad3d    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:17 07/09/99
+  67 41e0 3785ad3d    0
+Method       Method completed                               15:05:17 07/09/99
+ 443 41e0 3785ad3f  202
+Method       Method started:  line# 5 vial# 5 inj# 1        15:05:19 07/09/99
+  70 41de 3785ad3f    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:19 07/09/99
+  70 41de 3785ad42    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:22 07/09/99
+  67 41e0 3785ad42    0
+Method       Method completed                               15:05:22 07/09/99
+ 443 41e0 3785ad43  202
+Method       Method started:  line# 6 vial# 6 inj# 1        15:05:23 07/09/99
+  70 41de 3785ad43    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:23 07/09/99
+  70 41de 3785ad46    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:26 07/09/99
+  67 41e0 3785ad46    0
+Method       Method completed                               15:05:26 07/09/99
+ 443 41e0 3785ad47  202
+Method       Method started:  line# 7 vial# 7 inj# 1        15:05:27 07/09/99
+  70 41de 3785ad47    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:27 07/09/99
+  70 41de 3785ad4a    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:30 07/09/99
+  67 41e0 3785ad4a    0
+Method       Method completed                               15:05:30 07/09/99
+ 443 41e0 3785ad4b  202
+Method       Method started:  line# 8 vial# 8 inj# 1        15:05:31 07/09/99
+  70 41de 3785ad4c    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:32 07/09/99
+  70 41de 3785ad4e    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:34 07/09/99
+  67 41e0 3785ad4e    0
+Method       Method completed                               15:05:34 07/09/99
+ 443 41e0 3785ad4f  202
+Method       Method started:  line# 9 vial# 9 inj# 1        15:05:35 07/09/99
+  70 41de 3785ad50    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:36 07/09/99
+  70 41de 3785ad52    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:38 07/09/99
+  67 41e0 3785ad52    0
+Method       Method completed                               15:05:38 07/09/99
+ 443 41e0 3785ad53  202
+Method       Method started:  line# 10 vial# 10 inj# 1      15:05:39 07/09/99
+  70 41de 3785ad54    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:40 07/09/99
+  70 41de 3785ad56    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:42 07/09/99
+  67 41e0 3785ad56    0
+Method       Method completed                               15:05:42 07/09/99
+ 443 41e0 3785ad57  202
+Method       Method started:  line# 11 vial# 11 inj# 1      15:05:43 07/09/99
+  70 41de 3785ad58    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:44 07/09/99
+  70 41de 3785ad5a    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:46 07/09/99
+  67 41e0 3785ad5a    0
+Method       Method completed                               15:05:46 07/09/99
+ 443 41e0 3785ad5c  202
+Method       Method started:  line# 12 vial# 12 inj# 1      15:05:48 07/09/99
+  70 41de 3785ad5c    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:48 07/09/99
+  70 41de 3785ad5e    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:50 07/09/99
+  67 41e0 3785ad5e    0
+Method       Method completed                               15:05:50 07/09/99
+ 443 41e0 3785ad60  202
+Method       Method started:  line# 13 vial# 13 inj# 1      15:05:52 07/09/99
+  70 41de 3785ad60    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:52 07/09/99
+  70 41de 3785ad62    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:54 07/09/99
+  67 41e0 3785ad62    0
+Method       Method completed                               15:05:54 07/09/99
+ 443 41e0 3785ad64  202
+Method       Method started:  line# 14 vial# 14 inj# 1      15:05:56 07/09/99
+  70 41de 3785ad64    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:05:56 07/09/99
+  70 41de 3785ad67    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:05:59 07/09/99
+  67 41e0 3785ad67    0
+Method       Method completed                               15:05:59 07/09/99
+ 443 41e0 3785ad68  202
+Method       Method started:  line# 15 vial# 15 inj# 1      15:06:00 07/09/99
+  70 41de 3785ad68    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:06:00 07/09/99
+  70 41de 3785ad6b    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:06:03 07/09/99
+  67 41e0 3785ad6b    0
+Method       Method completed                               15:06:03 07/09/99
+ 443 41e0 3785ad6c  202
+Method       Method started:  line# 16 vial# 16 inj# 1      15:06:04 07/09/99
+  70 41de 3785ad6c    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:06:04 07/09/99
+  70 41de 3785ad6f    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:06:07 07/09/99
+  67 41e0 3785ad6f    0
+Method       Method completed                               15:06:07 07/09/99
+ 443 41e0 3785ad70  202
+Method       Method started:  line# 17 vial# 17 inj# 1      15:06:08 07/09/99
+  70 41de 3785ad70    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:06:08 07/09/99
+  70 41de 3785ad73    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:06:11 07/09/99
+  67 41e0 3785ad73    0
+Method       Method completed                               15:06:11 07/09/99
+ 443 41e0 3785ad74  202
+Method       Method started:  line# 18 vial# 18 inj# 1      15:06:12 07/09/99
+  70 41de 3785ad74    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:06:12 07/09/99
+  70 41de 3785ad77    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:06:15 07/09/99
+  67 41e0 3785ad77    0
+Method       Method completed                               15:06:15 07/09/99
+ 443 41e0 3785ad78  202
+Method       Method started:  line# 19 vial# 19 inj# 1      15:06:16 07/09/99
+  70 41de 3785ad78    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:06:16 07/09/99
+  70 41de 3785ad7b    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:06:19 07/09/99
+  67 41e0 3785ad7b    0
+Method       Method completed                               15:06:19 07/09/99
+ 443 41e0 3785ad7c  202
+Method       Method started:  line# 20 vial# 20 inj# 1      15:06:20 07/09/99
+  70 41de 3785ad7c    0
+CP Macro     Analyzing rawdata LOADTEST.D                   15:06:20 07/09/99
+  70 41de 3785ad7f    0
+CP Macro     CADS Transfer of: LOADTEST.D                   15:06:23 07/09/99
+  67 41e0 3785ad7f    0
+Method       Method completed                               15:06:23 07/09/99

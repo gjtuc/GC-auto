@@ -1,0 +1,49 @@
+!
+! Mark2's mac 
+!
+
+  NAME Mark2Error
+    ON ERROR
+    IF MSNotIdle = 0 THEN
+      print MSExternalOpCall ("NOTIDLE_RESET")
+    ENDIF
+    Remove MSNotIdle
+    print Alert ("Mark2.mac failed", 2)
+    STOP
+  ENDMACRO
+
+! Disable the background tasks
+  On Error Mark2Error
+
+  MSNotIdle = MSExternalOpCall ("NOTIDLE_STATE")
+  IF MSNotIdle = 0 THEN
+    print MSExternalOpCall ("NOTIDLE_SET")
+  ENDIF
+
+  msscwrite ":run:rdy off"
+  msscwrite ":config:inst:cntl avoid"
+  msscwrite ":config:abund:amp log01"
+ 
+  IF CHECK (Variable, sctimeout) = 1 THEN
+    sctemp = sctimeout
+  ENDIF
+  sctimeout=40
+  msscwrite ":config:data:fake APESP"  
+!  msscwrite ":config:data:fake APESN"
+   msscwrite ":cal:abund:base:auto off;:msc:parm base0,-1"
+  IF CHECK (Variable, sctemp) = 0 THEN
+    remove sctimeout
+  ELSE
+    sctimeout = sctemp
+    remove sctemp
+  ENDIF
+  msscwrite ":run:rdy on"
+
+! Enable the back ground tasks
+  IF MSNotIdle = 0 THEN
+    print MSExternalOpCall ("NOTIDLE_RESET")
+  ENDIF
+
+  On Error 
+  Remove MSNotIdle
+  Remove Mark2Error

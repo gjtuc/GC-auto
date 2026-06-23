@@ -1,0 +1,17 @@
+
+name BuildProductSpecialMenus
+
+ID_ASTXDRIVERSMACFILES__VIEW_78                    =  17078  
+ID_ASTXDRIVERSMACFILES_REVIEW__DAD_TE_79           =  17079  
+ID_ASTXDRIVERSMACFILES_REVIEW_PREVIOU_80           =  17080  
+
+NLSFileName_astxmac$ = "astxmac"
+
+if DEV1050DAD<>0 or DEV1090DAD<>0
+ menuadd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__VIEW_78),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_REVIEW__DAD_TE_79),"LoadDADTest",,\
+         ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_REVIEW_PREVIOU_80),,118,,90017000
+endif
+
+endmacro
+
+

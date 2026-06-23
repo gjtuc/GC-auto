@@ -1,0 +1,82 @@
+[checksum],3479
+[CSV Format],CS_Analyst_1
+[Header],
+SeqName,ALPRSEQ1.SE
+SeqPath,D:\HPCHEM\1\SEQUENCE\
+SeqComment,Alprazolam Study
+Workstation,AppLCMS1
+DataPath,D:\HPCHEM\1\DATA\BM090800\
+Operator,Bryan Miller
+Instrument,AppSprite1 LC/MS
+IonMode,ESI
+PolarityMSD1,Pos
+MSModeMSD1,SIM
+GlobalConcUnit,pg/ul
+AutoConvert,Yes
+LaunchAnalyst,No
+LocalTargetDir,d:\pescie~1\projects\alpraz~1\,,,,,,,,,,,,,,,,
+RemoteTargetDir,,,,,,,,,,,,,,,,,
+[GLP],,,,,,,,,,,,,,,,,
+1100 Column Thermostat: G1316A  Serial number = US54000128  Firmware Revision = A.04.06,,,,,,,,,,,,,,,,,
+1100 Binary Pump: G1312A  Serial number = DE53500112  Firmware Revision = A.04.06,,,,,,,,,,,,,,,,,
+1100 Autosampler: G1313A  Serial number = DE00000000  Firmware Revision = A.04.06,,,,,,,,,,,,,,,,,
+1100 Diode Array Detector: G1315A  Serial number = DE53500161  Firmware Revision = A.04.06,,,,,,,,,,,,,,,,,
+HP Mass Spec Detector: G1946A  Serial number = US72900150  Firmware Revision = 3.01.57,,,,,,,,,,,,,,,,,
+ChemStation Version: Rev. A.08.04 [887] Copyright © Agilent Technologies,,,,,,,,,,,,,,,,,
+Sequence Version: 1.1.0.129,,,,,,,,,,,,,,,,,
+[Compounds],,,,,,,,,,,,,,,,,
+Cmpd1,alprazolam,,,,,,,,,,,,,,,,
+Cmpd2,alprazolam-d5,,,,,,,,,,,,,,,,
+[Table],,,,,,,,,,,,,,,,,
+Run,Location,PlateType,PlateNum,RackType,RackNum,SampleName,SampleInfo,SampleID,AcqMethod,SampleType,CalibLevel,CalibAction,Dilution,DataFileName,InjVol,Conc1,Conc2
+ 1-2,1,,,,,Double Blank,double blank,,ALP1_ESI,Double Blank,,,1,001-0102.D,10,0,0
+ 2-1,2,,,,,Blank,blank (w/ ISTD),,ALP1_ESI,Blank,,,1,002-0201.D,10,0,250
+ 2-2,2,,,,,Blank,blank (w/ ISTD),,ALP1_ESI,Blank,,,1,002-0202.D,10,0,250
+ 3-1,3,,,,,0.5 pg/uL,5pg,,ALP1_ESI,Standard,1,Average,1,003-0301.D,10,5,250
+ 3-2,3,,,,,0.5 pg/uL,5pg,,ALP1_ESI,Standard,1,Average,1,003-0302.D,10,5,250
+ 3-3,3,,,,,0.5 pg/uL,5pg,,ALP1_ESI,Standard,1,Average,1,003-0303.D,10,5,250
+4,3,,,,,0.5 pg/uL,5pg,,ALP1_ESI,Unknown,,,1,003-0401.D,10,5,250
+ 5-1,4,,,,,1.0 pg/uL,10pg,,ALP1_ESI,Standard,2,Average,1,004-0501.D,10,10,250
+ 5-2,4,,,,,1.0 pg/uL,10pg,,ALP1_ESI,Standard,2,Average,1,004-0502.D,10,10,250
+ 5-3,4,,,,,1.0 pg/uL,10pg,,ALP1_ESI,Standard,2,Average,1,004-0503.D,10,10,250
+6,4,,,,,1.0 pg/uL,10pg,,ALP1_ESI,Unknown,,,1,004-0601.D,10,10,250
+ 7-1,5,,,,,2.5 pg/uL,25pg,,ALP1_ESI,Standard,3,Average,1,005-0701.D,10,25,250
+ 7-2,5,,,,,2.5 pg/uL,25pg,,ALP1_ESI,Standard,3,Average,1,005-0702.D,10,25,250
+ 7-3,5,,,,,2.5 pg/uL,25pg,,ALP1_ESI,Standard,3,Average,1,005-0703.D,10,25,250
+8,5,,,,,2.5 pg/uL,25pg,,ALP1_ESI,Unknown,,,1,005-0801.D,10,25,250
+ 9-1,6,,,,,5.0 pg/uL,50pg,,ALP1_ESI,Standard,4,Average,1,006-0901.D,10,50,250
+ 9-2,6,,,,,5.0 pg/uL,50pg,,ALP1_ESI,Standard,4,Average,1,006-0902.D,10,50,250
+ 9-3,6,,,,,5.0 pg/uL,50pg,,ALP1_ESI,Standard,4,Average,1,006-0903.D,10,50,250
+10,6,,,,,5.0 pg/uL,50pg,,ALP1_ESI,Unknown,,,1,006-1001.D,10,50,250
+ 11-1,7,,,,,10 pg/uL,100pg,,ALP1_ESI,Standard,5,Average,1,007-1101.D,10,100,250
+ 11-2,7,,,,,10 pg/uL,100pg,,ALP1_ESI,Standard,5,Average,1,007-1102.D,10,100,250
+ 11-3,7,,,,,10 pg/uL,100pg,,ALP1_ESI,Standard,5,Average,1,007-1103.D,10,100,250
+12,7,,,,,10 pg/uL,100pg,,ALP1_ESI,Unknown,,,1,007-1201.D,10,100,250
+ 13-1,8,,,,,25 pg/uL,250pg,,ALP1_ESI,Standard,6,Average,1,008-1301.D,10,250,250
+ 13-2,8,,,,,25 pg/uL,250pg,,ALP1_ESI,Standard,6,Average,1,008-1302.D,10,250,250
+ 13-3,8,,,,,25 pg/uL,250pg,,ALP1_ESI,Standard,6,Average,1,008-1303.D,10,250,250
+14,8,,,,,25 pg/uL,250pg,,ALP1_ESI,Unknown,,,1,008-1401.D,10,250,250
+ 15-1,9,,,,,50 pg/uL,500pg,,ALP1_ESI,Standard,7,Average,1,009-1501.D,10,500,250
+ 15-2,9,,,,,50 pg/uL,500pg,,ALP1_ESI,Standard,7,Average,1,009-1502.D,10,500,250
+ 15-3,9,,,,,50 pg/uL,500pg,,ALP1_ESI,Standard,7,Average,1,009-1503.D,10,500,250
+16,9,,,,,50 pg/uL,500pg,,ALP1_ESI,Unknown,,,1,009-1601.D,10,500,250
+ 17-1,10,,,,,100 pg/uL,1000pg,,ALP1_ESI,Standard,8,Average,1,010-1701.D,10,1000,250
+ 17-2,10,,,,,100 pg/uL,1000pg,,ALP1_ESI,Standard,8,Average,1,010-1702.D,10,1000,250
+ 17-3,10,,,,,100 pg/uL,1000pg,,ALP1_ESI,Standard,8,Average,1,010-1703.D,10,1000,250
+18,10,,,,,100 pg/uL,1000pg,,ALP1_ESI,Unknown,,,1,010-1801.D,10,1000,250
+ 19-1,11,,,,,250 pg/uL,2500 pg,,ALP1_ESI,Standard,9,Average,1,011-1901.D,10,2500,250
+ 19-2,11,,,,,250 pg/uL,2500 pg,,ALP1_ESI,Standard,9,Average,1,011-1902.D,10,2500,250
+ 19-3,11,,,,,250 pg/uL,2500 pg,,ALP1_ESI,Standard,9,Average,1,011-1903.D,10,2500,250
+20,11,,,,,250 pg/uL,2500 pg,,ALP1_ESI,Unknown,,,1,011-2001.D,10,2500,250
+ 21-1,12,,,,,500 pg/uL,5000 pg,,ALP1_ESI,Standard,10,Average,1,012-2101.D,10,5000,250
+ 21-2,12,,,,,500 pg/uL,5000 pg,,ALP1_ESI,Standard,10,Average,1,012-2102.D,10,5000,250
+ 21-3,12,,,,,500 pg/uL,5000 pg,,ALP1_ESI,Standard,10,Average,1,012-2103.D,10,5000,250
+22,12,,,,,500 pg/uL,5000 pg,,ALP1_ESI,Unknown,,,1,012-2201.D,10,5000,250
+ 23-1,1,,,,,Double Blank,double blank,,ALP1_ESI,Double Blank,,,1,001-2301.D,10,0,0
+ 23-2,1,,,,,Double Blank,double blank,,ALP1_ESI,Double Blank,,,1,001-2302.D,10,0,0
+ 24-1,13,,,,,QC 5,QC 50pg,,ALP1_ESI,QC,,,1,013-2401.D,10,50,250
+ 24-2,13,,,,,QC 5,QC 50pg,,ALP1_ESI,QC,,,1,013-2402.D,10,50,250
+ 24-3,13,,,,,QC 5,QC 50pg,,ALP1_ESI,QC,,,1,013-2403.D,10,50,250
+ 25-1,14,,,,,QC 100,QC 1000 pg,,ALP1_ESI,QC,,,1,014-2501.D,10,1000,250
+ 25-2,14,,,,,QC 100,QC 1000 pg,,ALP1_ESI,QC,,,1,014-2502.D,10,1000,250
+ 25-3,14,,,,,QC 100,QC 1000 pg,,ALP1_ESI,QC,,,1,014-2503.D,10,1000,250

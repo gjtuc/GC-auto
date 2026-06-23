@@ -1,0 +1,27 @@
+;Firmware Release: Build_0046
+;07Aug2001 KK  Removed unreliable comments about file versions.
+;17Aug2001 KK  Derived this template file from a recent update.lst file
+;          The do_build.ksh script will use this file to generate an
+;          update.lst file for the published build output.
+;09Oct2007 KK  To avoid a confusing situation, I removed the BOOT.ASC
+;          line since msupdate has been effectively ignoring that line
+;          and creating a BOOT.ASC file on the SmartCard when needed.
+;09Mar2010 KK  Added SC3type column to this file format for use with 
+;          msupdate version 3.96 adding support for Smartcard3.2 .
+;          The msupdate "update" option will install only SC3type=anySC3 files.
+;
+;SC3type    PC File Name        SC3 File Name                  Comments            
+SC3         vxworks             /flash/VXWORKS                 ;1.2/22T
+SC3Plus     vxworks             /flash/VXWORKS                 ;1.2/22T
+SC3p2       vxworks.SC3p2       /flash/VXWORKS                 ;1.2/26T
+SC3         vxworks.sym         /flash/VXWORKS.sym             ;1.2/22T
+SC3Plus     vxworks.sym         /flash/VXWORKS.sym             ;1.2/22T
+SC3p2       vxworks.sym.SC3p2   /flash/VXWORKS.sym             ;1.2/26T
+SC3         fpga.hex            /flash/FPGA.HEX                ;XILINX FPGA CODE
+SC3Plus     fpga.hex            /flash/FPGA.HEX                ;XILINX FPGA CODE
+SC3p2       fpga.hex.SC3p2      /flash/FPGA.HEX                ;XILINX FPGA CODE
+anySC3      MSSC.O              /flash/MSSC.O                  ;3.02.42
+anySC3      startup             /flash/STARTUP                 ;STARTUP SCRIPT
+anySC3      httpd.o             /flash/httpd.o                 ;HTML SERVER 
+anySC3      wdsmall_run.o       /flash/wdsmall_run.o           ;HTML APPLICATION
+anySC3      blink.o             /flash/BLINK.O                 ;HEARTBEAT CODE

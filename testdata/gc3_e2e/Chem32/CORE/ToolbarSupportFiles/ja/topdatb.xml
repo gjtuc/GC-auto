@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="TopDaTB" PosStyle="TOP" Caption="データ解析" DockRow="0" DockCol="0" PanelName="Main">
+		<Static Name="Signals" Visible="1" Enable="1" Text="シグナル" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadSignal" Help="データ ファイルのシグナルとスペクトルの読み込み" Command="LoadFile" ImageName="Load_signal20" ImageNameDisabled="Load_signal20_d"/>
+		<PushButton Name="MergeSignal" Help="シグナルを読み込み、表示されているシグナルに重ね書きします" Command="LoadFile ,1" ImageName="Overlay_signal20" ImageNameDisabled="Overlay_signal20_d"/>
+		<Static Name="Methods" Visible="1" Enable="1" Text="メソッド" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadMethod" Help="メソッド読み込み" Command="TLB_LoadMethod &quot;DA&quot;" ImageName="Load_method20" ImageNameDisabled="Load_method20_d"/>
+		<PushButton Name="SaveMethod" Help="現在のメソッドを保存します" Command="TLB_SaveCurrentMethod" ImageName="Save_method20" ImageNameDisabled="Save_method20_d"/>
+		<PushButton Name="RunTimeChecklist" Help="ランタイム チェックリスト編集" Command="METH.EDRUNTIMECHKLST" ImageName="Edit_RunTimeChecklist20" ImageNameDisabled="Edit_RunTimeChecklist20_d"/>
+		<PushButton Name="MethodStatus" Help="メソッド更新ステータス" Command="" Enable="0" ImageName="Method20" ImageNameDisabled="Method20"/>
+		<!--  <NonEditCombobox Name="MethodFile" Help="Select from most previously loaded Method Files" Enable="1" Table="_Config,1,MethodFile" Selection="1" Width="200"/> -->
+		<StatusList Name="MethodFile" Text="" Font="Microsoft Sans Serif, 8, Regular" BkColor="white" Help="メソッド ファイル" Width="250" Enable="1" Border="NoBorder"/>
+		<StickyButton Name="HideNavtable" Help="ナビゲータ テーブル消去/表示" CmdList="NavTableShow Off|NavTableShow On" State="1" NewGroup="1" ImageName="Report_TableTool20" ImageNameDisabled="Report_TableTool20_d"/>
+		<PushButton Name="Preferences" Help="オープン プレファレンス ダイアログ" Command="CpRequest &quot;Cp2&quot;, &quot;DlgPreferences&quot;" Visible="1" ImageName="Preferences20" ImageNameDisabled="Preferences20_d"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="ChemstoreLock" Help="Chemstation セッションをロック" Command="ChemStoreLock.ChemStoreSessionLock 1,0" NewGroup="1" Visible="0" ImageName="Chemstore_Lock20" ImageNameDisabled="Chemstore_Lock20_d"/>
+		<PushButton Name="ChemstoreClient" Help="Chemstore レビュー クライアント" Command="ChemStoreShowReviewClient" Visible="0" ImageName="Chemstore_ReviewClient20" ImageNameDisabled="Chemstore_ReviewClient20_d"/>
+	</toolbar>
+</graphical_object>

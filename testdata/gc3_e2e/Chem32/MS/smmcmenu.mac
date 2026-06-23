@@ -1,0 +1,136 @@
+!******************************************************************************
+!*
+!* FILE:  smmcmenu.mac
+!*
+!* DESCRIPTION:  product independant macros for the short (and long) menu of the
+!*               MS Manual Calibrate view
+!*
+!* DISCUSSION:  A long/short menu is required of Manual MS Calibrate (MMC) view.
+!*              Since this view is a power user view short/long menus does
+!*              not make much sense.
+!*
+!*
+!*
+!* COPYRIGHT (C) HEWLETT-PACKARD COMPANY, 1992.  ALL RIGHTS ARE RESERVED   
+!* COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+!* PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+!* HEWLETT-PACKARD COMPANY.                                              
+!*                                                                       
+!*                     RESTRICTED RIGHTS LEGEND                          
+!*                                                                       
+!* Use, duplication, or disclosure by the Government is subject to       
+!* restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+!* Technical Data and Computer Software clause at 52.227-7013.           
+!*                                                                       
+!* HEWLETT-PACKARD COMPANY                                               
+!* California Analytical Division                                       
+!* 1601 California Avenue, Bldg. 17U                                     
+!* Palo Alto, CA  94304 
+!*
+!*            
+!* $Header: /cag/triath1b/partsmac/manmscal/smmcmenu.mac 1.35 1997-01-27 11:35:53-08 hmgr Exp $
+!******************************************************************************
+!*
+!* MACROS :     <none>  only direct execution calls.
+!*
+!* Pre-conditions:
+!* Post-conditions:
+!   Define global variables
+!            mmcMenuEnable      = 0 for offline
+!                               = 1 for online
+!            MSTuneTraceState   = 1 (default) for tracing off
+!                               = 3 for tracing on
+!            MSManCalOpenF      = 0 for file open for data acq in tune
+!                                 1 (default) no file open yet for data acq in tune 
+!            MSManCalCloseF     = 0 (default) for no file open yet for data acq in tune
+!                                 1 for file open for data acq in tune
+!            MSToggleScanState =  1 (default) normal data
+!                                 3 filtered raw data
+!
+!   Defines Manual MSD Calibration menus
+
+
+local ID_SUPPORTMACFILES__FILE_125
+local ID_SUPPORTMACFILES__VIEW_130
+local ID_SUPPORTMACFILES_LOAD_THE_INSTR_126
+local ID_SUPPORTMACFILES__ABORT_128
+local ID_SUPPORTMACFILES_ABORT_ANY_ACTI_129
+local ID_SUPPORTMACFILES_INSTRUMENT__AC_131
+local ID_SUPPORTMACFILES_SHOW_HIDE_INST_133
+local ID_SUPPORTMACFILES__COMMAND_LINE_134
+local ID_SUPPORTMACFILES_SHOW_HIDE_COMM_136
+
+ID_SUPPORTMACFILES__FILE_125 = 17125
+ID_SUPPORTMACFILES__VIEW_130 = 17130
+ID_SUPPORTMACFILES_LOAD_THE_INSTR_126 = 17126
+ID_SUPPORTMACFILES__ABORT_128 = 17128
+ID_SUPPORTMACFILES_ABORT_ANY_ACTI_129 = 17129
+ID_SUPPORTMACFILES_INSTRUMENT__AC_131 = 17131
+ID_SUPPORTMACFILES_SHOW_HIDE_INST_133 = 17133
+ID_SUPPORTMACFILES__COMMAND_LINE_134 = 17134
+ID_SUPPORTMACFILES_SHOW_HIDE_COMM_136 = 17136
+
+!* Initialize global MSD CP vars before end of file
+mstn_InitTuneMenuVars
+
+!* Try to load NLSMS from file if is not already in memory
+if RegSize(NLSMS) = -1 then
+  MSTop_BuildMenuTables
+endif
+
+!* Assume NLSMS register exists in memory
+if RegSize(NLSMS)>1 then
+!* register exists and has at least 2 objects in it
+!* menu table should be in second object
+   if objhdrtype(NLSMS[2],"BaseMmcMenu") = 4 then
+   !* menu table exists
+    DelTab _menu[1], "smmcmenu"              !* Assume menu register exists
+    CopyTab NLSMS[2], "BaseMmcMenu", _menu[1], "smmcmenu"
+   endif
+endif
+
+!* Build the dynamic part of the menu
+
+ for i=1 to 4
+    menuadd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125), \
+          "&"+val$(i)+" "+TabText$(_Config[1],"MSDCalFile",i,"Display"), \
+          "mstn_DoGetTuneFile TabText$(_Config[1],""MSDCalFile"","+\
+                      val$(i)+",""PathAndName"")",, \
+          ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_LOAD_THE_INSTR_126),,9009,"msd",1010000+i
+ next i
+ MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__FILE_125),, "SEPARATOR",,,,,,1011000
+ 
+   !the product specific menus are added here. (see file: lcsmdg.mac)
+ if check( macro, MSTN_BuildSpecialMenus ) = 1 then
+        MSTN_BuildSpecialMenus
+ endif
+ if check(macro, mstn_DebugMenu)=1 then
+     mstn_DebugMenu
+ endif
+!
+! standard parts of menus structure: Abort, Help and View addtions
+! 
+
+! WARNING: are these supposed to be at the end after all the other definitions
+
+MenuStop ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__ABORT_128),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__ABORT_128),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_ABORT_ANY_ACTI_129)
+
+! note that view, abort and help are handled by system, see below
+! now setup the 'standard' part
+ AddViewMenuBasic ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__VIEW_130)    ! set up menu items for Manual MS Calibrate view
+
+ ConfigureHelpMenu               ! set up the Help Menu
+ if _offline = 0 then
+    MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__VIEW_130),,"SEPARATOR"
+    MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__VIEW_130),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_INSTRUMENT__AC_131), "MSTN_Monitors",,\
+          ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SHOW_HIDE_INST_133),,
+ endif
+ MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__VIEW_130),,"SEPARATOR"
+ MenuAdd ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__VIEW_130),ReadResource$("supportmacfiles",ID_SUPPORTMACFILES__COMMAND_LINE_134),"CMDIO.CMDLINE",,ReadResource$("supportmacfiles",ID_SUPPORTMACFILES_SHOW_HIDE_COMM_136),,111,"msd"
+
+
+     
+     
+     
+     
+     

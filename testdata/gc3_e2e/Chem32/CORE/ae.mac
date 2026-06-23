@@ -1,0 +1,320 @@
+Name AEToggleQueueTab
+    ! implementation for the Sequence Queue entry in the view menu
+    parameter Label$
+    parameter Item$
+    
+    if (AEQueueTabState = 3)
+        clearwin 74
+        AEQueueTabState = 1
+    else
+        AEQueueWin 74, "AEQueueTabState"
+        AEQueueTabState = 3
+    EndIf
+    SetObjHdrVal _config[1], "AEQueueTabState", AEQueueTabState 
+EndMacro
+
+Name AEInstalledInjectors
+    ! returns 0 if offline or no injector installed
+    ! returns 1 for front only
+    ! returns 2 for back only
+    ! returns 3 for dual
+    return _MethodInjectors
+EndMacro
+
+Name AEEventHandler
+   ! called by NotifyAE macro in signal.mcx/sequence.mac
+   ! valid causes: STARTING, PAUSED, RESUMED, STOPPED, COMPLETED
+   parameter cause$
+   local err$
+   local errformat$
+   local KnownEvent
+  
+   errformat$ = "AEEventHandler encountered an error processing a %s event." + chr$(13) + chr$(10) + "%s: %s"
+   err$ = "AEEventHandler received unkown event: " + cause$
+        
+   on error goto _DEFAULT
+   evaluate "goto " + cause$
+STARTING:
+        KnownEvent = 1
+        SequenceRunEvent
+        return
+PAUSED:
+        KnownEvent = 1
+        SequencePauseEvent
+        return
+RESUMED:
+        KnownEvent = 1
+        SequenceResumeEvent
+        return
+STOPPED:
+        KnownEvent = 1
+        ! don't handle it here, COMPLETED comes later on, in COMPLETED SEQENDSTATUS is set.
+        return
+COMPLETED:
+        KnownEvent = 1
+        if check(variable,SEQENDSTATUS) = 0
+            SequenceEndEvent
+        else
+            SequenceEndEvent SEQENDSTATUS
+        EndIf
+        return
+_DEFAULT:
+        on error
+        if (KnownEvent = 1)
+            err$ = printf$(errformat$, cause$, _ErrCmd$, _ErrMsg$)
+        EndIf
+        KnownEvent=alert(err$,3,_INSTNAME$)
+EndMacro
+
+Name AEIsVialSourceShared
+    if _ProductType$ = "GC"
+        on error return 1
+        if ValidateVial(100,0) = 6
+            return 1
+        else
+            if ValidateVial(101,0) = 6 and ValidateVial(201,1) = 6
+                return 0
+            else
+                return 1
+            EndIf
+        EndIf
+    else
+        return 0
+    EndIf
+EndMacro
+
+Name AEValidateSequence
+    parameter RegName$    ! register where the sequence imported from AE is stored    
+    ! returns -1 the current configuration doesn't support the interface
+    ! returns  0 validation performed
+    local ret,row,err$
+
+    ret = 0
+    if (check(function,RCValidateAndReserveSequence) <> 0) Then
+        evaluate "on error goto CleanUp;" +\
+                 "ret=RCValidateAndReserveSequence("+RegName$+",""SeqTable"")"
+    Else
+        ret = 1 ! validation not supported for classic drivers
+    EndIf
+
+    return ret
+CleanUp:
+    err$ = _ERRMSG$
+    evaluate "if ObjHdrType("+RegName$+",""SeqTableValidationResult"") = 99;"+\
+                "NewTab "+RegName$+",""SeqTableValidationResult"";"+\
+                "NewColText "+RegName$+",""SeqTableValidationResult"",""Errors"";"+\
+                "InsTabRow "+RegName$+",""SeqTableValidationResult"",1;"+\
+             "endif;"+\
+             "InsTabRow "+RegName$+",""SeqTableValidationResult"";"+\
+             "row=TabHdrVal("+RegName$+",""SeqTableValidationResult"",""NumberOfRows"");"+\
+             "SetTabText "+RegName$+",""SeqTableValidationResult"",row,""Errors"",err$"
+
+    return ret
+EndMacro
+
+Name AEInvalidateSequence
+    parameter SeqID$			! SequenceID of the sequence
+    parameter ResourceInfo$		! Resources that should be removed
+    
+    if (check(command,RCInvalidateSequence) <> 0) Then
+		    RCInvalidateSequence SeqID$, ResourceInfo$
+    EndIf        
+EndMacro
+
+Name AEReadBarcode$
+    on error goto RetError
+    parameter pos$
+    
+    if (check(function, RCReadBarcode$) <> 0)
+        return RCReadBarcode$(RCGetInjector$(),pos$)
+    else
+        generate error 42,"cannot access barcode reader"
+    EndIf
+RetError:    
+    return "Error:"+_ERRMSG$
+EndMacro
+
+Name AERunSequence
+    parameter RegName$      ! register where the sequence imported from AE is stored
+    parameter SeqFolder$    ! target path to save the imported .s
+    parameter SeqName$      ! target file name to save the imported .s
+    parameter DoAsk         ! Show warning messages, e.g. for data file overwrites
+    parameter type          ! is it a native ChemStation Sequence (type = 1) scheduled 
+                            ! into the queue or an EasySequence (type = 0) or a
+                            ! single sample (type = 2)
+                            
+    ! this macro prepares the _sequence directory, saves and runs the sequence
+    ! prerequisite: the current sequence is not dirty, i.e. don't overwrite a change
+    !               (the adapter blocks the queue if this is not the case)
+    !               the AE sequence has been imported into RegName$, not saved yet or
+    !               the native ChemStation sequence is stored in SeqFolder$+SeqName$,
+    !               not loaded yet
+    
+    Local SeqEvt, ret, i, CurTopEnableStart, DataPath$, Method$
+
+    if (check(VARIABLE, TopEnableStart) = 0)      
+        TopEnableStart = 1
+    EndIf
+    if (_SequenceChanged <> 0) or ( (_MethodChanged <> 0))
+        return 0
+    EndIf
+
+    if (type <> 0)
+        ret = 1
+        if (TopEnableStart = 0)
+            return 0
+        else
+            CurTopEnableStart=TopEnableStart
+            TopEnableStart = 0
+            on error ret=0
+            if (type = 1)
+                LoadSequence SeqFolder$, SeqName$     ! native ChemStation sequence
+                on error
+                ret = CheckSequenceOK(DoAsk)
+                if (_SequenceChanged <> 0)
+                    SaveSequence SeqFolder$, SeqName$ ! Save the sequence
+                endif
+            Else
+                on error return 0
+                DelReg _SampleLoad
+                LoadObj SeqFolder$+SeqName$,,_SampleLoad  ! single sample
+                DataPath$ = TabHdrText$(_SampleLoad[1],"SampleInfo","DataPath")
+                Method$ = TabHdrText$(_SampleLoad[1],"SampleInfo","Method")
+                
+                LoadMethod SeqX_GetDir$(Method$), SeqX_GetFile$(Method$)
+                DIR_UseSingleSampleDataDir DataPath$ ! mark the data directory in the directories table
+                                                     ! for the next single sample                
+                SetSampleInfo _SampleLoad[1],"SampleInfo" 
+                DelReg _SampleLoad
+                
+                return RunMethodFct()
+            EndIf
+        EndIf        
+    else
+        ! The following statements move the contents of RegName$ into _Sequence
+        ! event must be switched off despite SaveSequence to avoid that the CP Request
+        ! queued for changes in the sequence register is executed after the save
+        SeqEvt = Event(_Sequence, OFF)
+        if (RegSize(_Sequence) < 1)
+            NewObj _Sequence[1],1,0,0 ! just to be safe, refer to Lock and DelObj in evaluate,
+        endif                         ! _Sequence register should always contain something
+        on error goto CleanUp
+        evaluate "on error goto CleanUp;" +\
+                 "ret=LockReg(""WAIT"",_Sequence,""WRITE"",_DAMethod,""WRITE"",EEV_Reg,""WRITE"","+RegName$+",""WRITE"");" +\
+                 "on error goto CleanUpWithUnlock;" +\
+                 "if (TopEnableStart = 0);UnlockReg;return 0;else;CurTopEnableStart=TopEnableStart;endif;TopEnableStart=0;" +\
+                 "if (VCS_INTEGRATION <> 0);SetTabHdrText "+RegName$+"[1],""SeqParm"",""DataSeqSubdir"","""";endif;" +\
+                 "DelObj _Sequence[1:RegSize(_Sequence)];MoveObj "+RegName$+"[1:2],_Sequence"    
+        UnlockReg
+
+        ret = CheckSequenceOK(DoAsk)
+                            ! caution: there are cases where CheckSequenceOK modifies the sequence
+                            ! CheckSequenceOK is called later in RunSequenceFct(), but it will
+                            ! not change anything if it was called successfully before                            
+                            
+        ! Sequence template is now available in _Sequence register. 
+        ! Next step is to write it to disk and execute it by ordinary ChemStation means.
+        ! SetSeqCpVars, SeqX_SeqPackageEnabled, SaveSequence, RunSequenceFct and 
+        ! SaveCurrentSequence can be found in signal.mcx/sequence.mac
+        SetSeqCpVars    ! Set global CP varibales according to _Sequence, will be used in SaveSequence
+        SaveSequence SeqFolder$, SeqName$ ! Save the sequence
+    EndIf
+    ! now the sequence is loaded into _Sequence and is stored in SeqFolder$+SeqName$
+    
+    If SeqEvt = 1 Then
+       i = Event(_Sequence, ON)
+       SeqEvt = 0
+    EndIf
+    if (ret = 0)
+        TopEnableStart = CurTopEnableStart
+        return 0
+    EndIf
+
+    If (SeqX_SeqPackageEnabled() = 0)
+        ! In case of unique folders off the data directory must exist in advance.
+        DataPath$ = TabHdrText$(_Sequence[1], "SeqParm", "DataDir")
+        if (DataPath$ = "")
+            DataPath$ = _DataPath$
+        EndIf
+        ! This needs to be checked in case that the subdirectory is specified
+        if (_DataSeqSubDir$ <> "")
+            ! If it doesn't exist try to create it
+            If (FileStat(MODE, DataPath$ + _DataSeqSubDir$) = -1)
+                MkDir DataPath$ + _DataSeqSubDir$
+            EndIf
+        EndIf
+    EndIf
+
+    ret = RunSequenceFct(0)           ! and run it (DoAsk = 0, CheckSequenceOK() has already asked if necessary)
+    if (ret = 0) then
+        TopEnableStart = CurTopEnableStart
+    EndIf
+    
+    return ret
+    
+CleanUpWithUnlock:
+    UnlockReg
+CleanUp:
+    on error
+    TopEnableStart = CurTopEnableStart
+    If SeqEvt = 1 Then
+       SeqEvt = Event(_Sequence, ON)
+    EndIf
+    return 0
+EndMacro
+
+Name AEShow
+parameter state default -1
+    if (state = -1) ! i.e. toggle
+        if (AEQueueTabState = 0)
+            AEQueueTabState = 1
+            state = 1
+            SetObjHdrVal _config[1], "AEQueueTabState", AEQueueTabState
+        else
+            if (AEQueueTabState = 3)
+                AEToggleQueueTab
+            EndIf
+            AEQueueTabState = 0
+            SetObjHdrVal _config[1], "AEQueueTabState", AEQueueTabState 
+            AESequenceTemplateTab off
+            AEQueueTab off
+            AESequenceTab off
+            return
+        EndIf
+    endif
+    if (state <> 0)
+        AESequenceTab on
+        if (_Offline = 0)
+            AEQueueTab on
+        EndIf
+        if (bManagerLevelAccess <> 0) and (AUTHORIZATIONSERVICE_ISPERMITTED(AS_Privilege_SequenceEdit) <> 0)
+            AESequenceTemplateTab on
+        EndIf
+    EndIf
+EndMacro
+
+Name AEInit
+    parameter initialstate default 1 ! initial state specifies whether EasySequence Queue shall be
+    if (_IsChemstore = 0)            ! shown if _config[1],"AEQueueTabState" is not yet created
+        if (ObjHdrType(_config[1],"AEQueueTabState") = 99)
+            if (_Offline = 0) and (initialstate <> 0)
+                SetTabVal _config[1],"window",74,"DefWYLow",0.2
+                SetTabVal _config[1],"window",74,"DefWYHigh",0.5
+                CPRequest CPName$(0),"AEQueueWin 74,""AEQueueTabState""" ! delay the window creation
+                AEQueueTabState = 3
+            else
+                AEQueueTabState = initialstate
+            EndIf
+            NewObjHdrVal _config[1], "AEQueueTabState", AEQueueTabState, 1
+        else
+            if (check(VARIABLE,AEQueueTabStat)=0)
+                AEQueueTabState = initialstate
+            EndIf
+        EndIf
+                
+        AEShow AEQueueTabState
+        CPStart "AEQ_CP"
+    EndIf
+EndMacro
+
+AEInit 1

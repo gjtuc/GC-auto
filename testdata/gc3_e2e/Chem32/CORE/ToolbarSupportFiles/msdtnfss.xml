@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 sp2 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="MSDTunes" PosStyle="TOP" Caption='"MSDTunes"' PanelName="Chem">
+		<Static Name="PolarityLabel" Text="Polarity" Help="Shows and sets the polarity of the current tune file"/>
+		<NonEditCombobox 
+        Name="Polarity" 
+        Help="Shows and sets the polarity of the current tune file" 
+        Enable="1" 
+        DefCommand='Print "Polarity undefined"' 
+        Width="100" 
+        TextList="Positive|Negative" 
+        CmdList='MSTN_ChangePolarity 0 | MSTN_ChangePolarity 1' 
+        DefCmdParNumber="0"/>
+		<Static Name="TuneIonModeLabel" Text="Mode" Help="Shows the ionization mode required by the tune file"/>
+		
+    <NonEditCombobox 
+        Name="TuneIonMode" 
+        Help="Shows and sets the ion source mode of the current tune file" 
+        Enable="1" 
+        DefCommand='Print ""Mode undefined"' 
+        Width="100"
+        TextList="1.API-ES|2.APCI|3.APPI|4.MM-ES+APCI|5.MM-ES|6.MM-APCI|7.NanoESI|8.ChipCube|9.AJS-ES"
+        CmdList='MSTN_ChangeIMode API_ES | MSTN_ChangeIMode APCI | MSTN_ChangeIMode APPI | MSTN_ChangeIMode "MM-ES+APCI" | MSTN_ChangeIMode "MM-ES" | MSTN_ChangeIMode "MM-APCI" | MSTN_ChangeIMode "NANOESI" | MSTN_ChangeIMode "CHIPCUBE" | MSTN_ChangeIMode "AJS-ES"'
+        DefCmdParNumber="0"/>
+    
+		<Static Name="InstIonModeLabel" Text="Source" Help="Shows the actual ionization mode read from the MSD"/>
+		<StatusList Name="InstIonMode" Text="unknown" Help='"Shows the actual ionization mode read from the MSD"' Width="100"/>
+		<Static Name="CalLabel" Text="Calibrant" Help="Selects the calibrant setting to be sent to the MSD at MSOn"/>
+		<NonEditCombobox 
+        Name="CalMode" 
+        Help='Selects the calibrant setting to be sent to the MSD at MSOn"' 
+        Enable="1" 
+        DefCommand="MSTN_Calibrant 1" 
+        Width="100" 
+        TextList=" None|A|B" 
+        CmdList="MSTN_Calibrant 1| MSTN_Calibrant 2 | MSTN_Calibrant 3" 
+        DefCmdParNumber="0"/>
+    <Static Name="ScanLabel" Text="Scan" Help="Selects the calibrant setting to be sent to the MSD at MSOn"/>		
+		<NonEditCombobox 
+        Name="ScanMode" 
+        Help="Shows and sets the Scan Mode of the current tune file" 
+        Enable="1" 
+        DefCommand= 'Print ""ScanMode undefined""' 
+        CmdList='MSTN_ChangeScanMode 0 | MSTN_ChangeScanMode 1' 
+        Width="100" 
+        TextList = "Standard | Fast" 
+        DefCmdParNumber="0"/>
+	</toolbar>
+</graphical_object>

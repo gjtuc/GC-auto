@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="IntegT" PosStyle="TOP" DockRow="1" DockCol="1" Caption="Integration Cursor Toolbar" PanelName="Chem">
+		<NonEditCombobox Name="Signal" Help="Signal(s) Displayed" NewGroup="1" Enable="1" DefCommand="TLB_DrawSignals " DefCmdParNumber="1" Width="200"/>
+		<StickyButton Name="AnnotOnOff" Help="Display the Graphics Toolbar" CmdList="ANN_CloseTask|ANN_InitTask" ImageName="Toggle_Graphic_Toolbar20" ImageNameDisabled="Toggle_Graphic_Toolbar20_d"/>
+		<RadioButton Name="ZoomInWindow" Help="Zoom in on Window" Command="TLB_SetToZoomInWindow" Group="1" NewGroup="1" ImageName="Zoomin20" ImageNameDisabled="Zoomin20_d"/>
+		<PushButton Name="ZoomOutWindow" Help="Zoom out active Window" Command="TLB_ZoomOutWindow 38" ImageName="Zoomout20" ImageNameDisabled="Zoomout20_d"/>
+		<RadioButton Name="NoSel" Help="Set to Selection mode" Command="INT_SetIntegMenuSelection NoSel,1" NewGroup="1" Group="2" ImageName="Select20" ImageNameDisabled="Select20_d"/>
+		<RadioButton Name="DrawBaseline" Help="Manual Integration: Draw Peak Baseline(s) and integrate" Command="INT_SetIntegMenuSelection DrawBaseline,1" Group="2" ImageName="Int_DrawBaseline20" ImageNameDisabled="Int_DrawBaseline20_d"/>
+		<RadioButton Name="NegatievePeaks" Help="Manual Integration: Draw Baseline for a negative Peak and integrate" Command="INT_SetIntegMenuSelection NegatievePeaks,1" Group="2" ImageName="Int_DrawBaseline_Negative20" ImageNameDisabled="Int_DrawBaseline_Negative20_d"/>
+		<RadioButton Name="TangentSkim" Help="Manual Integration: Tangent skim one Peak and integrate" Command="INT_SetIntegMenuSelection TangentSkim,1" Group="2" ImageName="Int_TangentSkim20" ImageNameDisabled="Int_TangentSkim20_d"/>
+		<RadioButton Name="SplitPeaks" Help="Manual Integration: Split manually integrated Peaks" Command="INT_SetIntegMenuSelection SplitPeaks,1" Group="2" ImageName="Int_SplitPeak20" ImageNameDisabled="Int_SplitPeak20_d"/>
+		<RadioButton Name="DeletePeaks" Help="Manual Integration: Remove integrated Peak(s) from the Integration Results" Command="INT_SetIntegMenuSelection DeletePeaks,1" Group="2" ImageName="Int_RemovePeak20" ImageNameDisabled="Int_RemovePeak20_d"/>
+		<PushButton Name="UndoEvent" Help="Manual Integration: Undo last Manual Integration Event from the current chromatogram. Enabled for particular signals only; choose a single signal from 'Signal(s) Displayed' list" Command="DFEvents_TLB_UndoEvents" ImageName="ManInt_Undo20" ImageNameDisabled="ManInt_Undo20_d"/>
+		<PushButton Name="RemoveEvents" Help="Manual Integration: Remove all events of currently shown chromatograms. It does not update a data file; use SAVE button to permanently remove the events from the corresponding data file(s)." Command="DFEvents_TLB_RemoveEvents" ImageName="ManInt_Del20" ImageNameDisabled="ManInt_Del20_d"/>
+		<PushButton Name="SaveEvents" Help="Manual Integration: Save events of currently shown chromatograms into the corresponding data file(s)" Command="DFEvents_TLB_SaveEvents" ImageName="ManInt_Save20" ImageNameDisabled="ManInt_Save20_d"/>
+
+	</toolbar>
+</graphical_object>
+

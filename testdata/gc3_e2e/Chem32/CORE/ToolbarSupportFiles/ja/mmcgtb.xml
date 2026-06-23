@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="MMCGTB" PosStyle="TOP" Caption="&quot;MMCGTB&quot;" PanelName="Main">
+		<NonEditCombobox Name="MMCGFile" Help="以前読み込まれたチューンファイルの選択" Enable="1" Table="_Config,1,MSDCalFile" Selection="1" Width="200"/>
+		<PushButton Name="LoadMMCg" Help="MSD チューンファイルの読み込み" Command="MSTN_DoGetTuneFile" Group="0" ImageName="Tune_LoadTuneFile20"/>
+		<PushButton Name="SaveMMCg" Help="現在の MSD チューンファイルの保存" Command="MSTN_DoSaveTuneFile tunefilepath$+tunefilename$" Group="0" ImageName="Tune_SaveTuneFile20"/>
+		<PushButton Name="PrintReport" Help="プロファイルおよびスキャンのレポートの作成" Command="mstn_DoGenReport" ImageName="Tune_GenReport20" NewGroup="1"/>
+		<PushButton Name="AutoTune" Help="MSD を自動的チューンおよびチューンレポートの印刷" Command="msat_auto" ImageName="Tune_Autotune20"/>
+		<PushButton Name="MassAxis" Help="マス軸のキャリブレーション" Command="MSAxis" ImageName="Tune_CalibMassAxis20"/>
+		<PushButton Name="SprayChamber" Help="スプレーチャンバー値の設定" Command="MSEdZone" ImageName="Tune_SprayChamber20"/>
+		<PushButton Name="EditMSParm" Help="MS パラメータの手動設定" Command="mstn_EdParms" ImageName="Tune_SetParams20"/>
+		<PushButton Name="Acquire" Help="データファイルの複数スキャンの取込" Command="mstn_Acquire" ImageName="Tune_AcquireMultipleScans20"/>		
+	</toolbar>
+</graphical_object>

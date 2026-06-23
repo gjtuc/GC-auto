@@ -1,0 +1,16 @@
+  67 41e0 34511eff    0
+Method       Method started                                 15:19:43 10/24/97
+  67 41e0 34511f00    0
+Method       Instrument running sample vial# 1              15:19:44 10/24/97
+   0 1da8 34511f53  500
+1100 PMP   1 Pressure = 59.5 bar                            15:21:07 10/24/97
+   0 1da7 34511f53  500
+1100 THM   1 Column temperature = 20.0 °C                   15:21:07 10/24/97
+   0 1da8 3451265a  500
+1100 PMP   1 Pressure = 19.4 bar                            15:51:06 10/24/97
+   0 1da7 3451265b  500
+1100 THM   1 Column temperature = 20.0 °C                   15:51:07 10/24/97
+  67 41e0 345127c3    0
+Method       Instrument run completed                       15:57:07 10/24/97
+  67 41e0 345127c3    0
+Method       Method completed                               15:57:07 10/24/97

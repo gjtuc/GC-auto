@@ -1,0 +1,21 @@
+CLEARMETHOD
+PRERUNPROGRAM 0
+POSTRUNPROGRAM 0
+ENABLEACQUISITION 1
+ENABLEANALYSIS 1
+CUSTOMANALYSIS 0
+COPYMETHOD 0
+SAVEGLPDATA 0
+PRERUNNAME ""
+POSTRUNNAME ""
+SIGNAL2METH ""
+ANALYSISMACRO ""
+METHODCOMMENT
+METHODCOMMENT "Method to demo HP 6890 parameter editing for Split/Splitless & Cool On\"
+METHODCOMMENT "-Column inlets plus NPD and ECD.  This method is for the purpose of OF\"
+METHODCOMMENT "FLINE demos only!"
+METHODCOMMENT ""
+METHODCOMMENT "In order to load this method use the macro ""6890demo.mac"" or copy th\"
+METHODCOMMENT "e file 'IQ1.MTH' from this methods' subdirectory to the instrument sub\"
+METHODCOMMENT "directory and rename it 'IQ1.cfg'.  The method can then be loaded"
+METHODCOMMENT "and will show appropriate parameters.\"

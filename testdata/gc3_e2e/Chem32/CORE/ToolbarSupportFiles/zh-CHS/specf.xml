@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="SpecF" PosStyle="TOP" DockRow="1" DockCol="0" Caption="光谱" PanelName="Chem">
+		<PushButton Name="Options" Help="编辑光谱显示和处理选项" Command="SPC_TLBFunction Options" NewGroup="1" ImageName="Spec_Options20" ImageNameDisabled="Spec_Options20_d"/>
+		<PushButton Name="LabelIons" Help="标记当前质谱中的离子" Command="LDMS_IntegrateSpectraforLabelIons" Visible="0" ImageName="Spec_LabelIons20" ImageNameDisabled="Spec_LabelIons20_d"/>
+		<PushButton Name="EditIonLabelOptions" Help="编辑离子标签的选项" Command="LDMS_EditSpIntegParms" Visible="0" ImageName="Spec_EditIons20" ImageNameDisabled="Spec_EditIons20_d"/>
+		<PushButton Name="Deconvolution" Help="进入解卷积工具" Command="DEC_DeconvUIMenuSel" Visible="0" ImageName="Spec_Deconvolution20" ImageNameDisabled="Spec_Deconvolution20_d"/>
+		<PushButton Name="LoadLibFile" Help="调用谱库文件" Command="SPC_TLBFunction LoadLibFile" ImageName="UVLib_Load20" ImageNameDisabled="UVLib_Load20_d"/>
+		<PushButton Name="SaveLibFile" Help="保存当前谱库文件" Command="SPC_TLBFunction SaveLibFile" ImageName="UVLib_Save20" ImageNameDisabled="UVLib_Save20_d"/>
+		<NonEditCombobox Name="LibraryFile" Help="从最近调用的谱库文件中选择" Enable="1" Table="_Config,1,SpecLibFile" Selection="1" Width="200"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="InfoLib" Help="编辑当前谱库的基本信息" Command="SPC_TLBFunction InfoLib" NewGroup="1" Enable="0" ImageName="UVLib_LibraryInfo20" ImageNameDisabled="UVLib_LibraryInfo20_d"/>
+		<PushButton Name="PrintLib" Help="打印选定的谱库条目" Command="SPC_TLBFunction PrintLib" Enable="0" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+		<PushButton Name="CloseLib" Help="关闭当前光谱库" Command="SPC_TLBFunction CloseLib" Enable="0" ImageName="Exit20" ImageNameDisabled="Exit20_d"/>
+		<PushButton Name="EditEntry" Help="更改当前谱库的光谱条目" Command="SPC_TLBFunction EditEntry" Enable="0" ImageName="UVLib_LibManager20" ImageNameDisabled="UVLib_LibManager20_d"/>
+		<PushButton Name="AddEntry" Help="将光谱条目添加到当前谱库" Command="SPC_TLBFunction AddEntry" Enable="0" ImageName="UVLib_AddSpectra20" ImageNameDisabled="UVLib_AddSpectra20_d"/>
+		<PushButton Name="SearchSpec" Help="在当前谱库中检索光谱" Command="SPC_TLBFunction SearchSpec" Enable="0" ImageName="UVLib_SearchSpectrum20" ImageNameDisabled="UVLib_SearchSpectrum20_d"/>
+		<PushButton Name="EditSearch" Help="编辑将用于谱库检索的检索模板" Command="SPC_TLBFunction EditSearch" Enable="0" ImageName="UVLib_SearchTemplate20" ImageNameDisabled="UVLib_SearchTemplate20_d"/>
+		<!-- ==================================================================== -->
+		<PushButton Name="NISTCreateFile" Help="创建或添加 MS NIST 文件" Command="MSSrchExport MSReg[1];print &quot;One spectrum was added to the NIST file.&quot;" Enable="1" Visible="0" ImageName="NIST_CreateFile20" ImageNameDisabled="NIST_CreateFile20_d"/>
+		<PushButton Name="NISTStartSearch" Help="关闭 MS NIST 文件并转到 NIST 程序" Command="MSSrchGotoNist" Enable="1" Visible="0" ImageName="NIST_StartSearch20" ImageNameDisabled="NIST_StartSearch20_d"/>
+	</toolbar>
+</graphical_object>

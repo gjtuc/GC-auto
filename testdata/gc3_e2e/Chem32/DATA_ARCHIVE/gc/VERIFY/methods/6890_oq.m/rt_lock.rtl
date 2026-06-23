@@ -1,0 +1,22 @@
+[RTL]
+K1=1.74476e+007
+K2=-1.31916e+006
+K3=26105.778282
+CorrCoeff=0
+P_units=psi
+Target_RT=21.750
+TargetName=linalool
+Press1=13
+RT1=23.214
+Press2=14.6
+RT2=22.242
+Press3=16.2
+RT3=21.75
+Press4=17.8
+RT4=21.161
+Press5=19.4
+RT5=20.638
+CalDateTime=Thu May 27 16:59:28 1999
+MinRLPress=68947.57
+MaxRLPress=1.65474e+006
+Column=1

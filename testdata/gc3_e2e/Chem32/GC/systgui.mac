@@ -1,0 +1,1173 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!  SYSTGUI.MAC  8/17/95
+!
+!  These are macros needed by the GC Graphical User Interface (GUI)
+!  There are several global CP variables used by these macros,
+!  some of which are hotlinked by the Visual Basic .exe for the GUI:
+!     ShowGCGUI$: Hotlinked by VB,
+!                 1st char = 1 means display Instrument diagram, = 0 hides.
+!                 2nd char = 1 means display Sample diagram,
+!                 3rd char = 1 means show tray, 0 means single-run.
+!                 4th char = 0 means shut down (to conserve resources).
+!
+!     HPUIVials$     Hotlinked by VB, for transferring vial positions.
+!     _GUISubView    Allows these macros to know which subview is active.
+!                    = 1 means Instrument display
+!                    = 2 means Online signals + sampling diagram
+!                    = 3 means actuals window,...
+!     _GCGUIRunning  Has the VB .exe been started?, 0 means no, 1 yes.
+!     GCGUISamp1|2|3 Values in the config reg. to save on|off state of screens.
+!     GCGUIInst1|2|3 Values in the config reg. to save on|off state of screens.
+!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!############################################################################
+name ShouldVBGUIbeRunning
+
+!This decides whether to start or terminate the Visual Basic GUI .exe 
+!It looks at several object header items in _CONFIG[1] to see if any 
+!VB screens are on in any subview.
+!If any are on (even if none on in current subview), the VB exe is started if
+!it isn't already running.
+!If no screens are on in any subview, the VB exe is terminated if running.
+!############################################################################
+
+local bAnyOn
+
+    !ARE ANY SCREENS ON IN ANY SUBVIEW?
+    bAnyOn = ObjHdrVal(_CONFIG[1], "GCGUISamp1") + ObjHdrVal(_CONFIG[1], "GCGUISamp2")
+    bAnyOn = bAnyOn  + ObjHdrVal(_CONFIG[1], "GCGUISamp3") + ObjHdrVal(_CONFIG[1], "GCGUIInst1")
+    bAnyOn = bAnyOn  + ObjHdrVal(_CONFIG[1], "GCGUIInst2") + ObjHdrVal(_CONFIG[1], "GCGUIInst3")
+    if bAnyOn = 0 then
+        !GUI SHOULDN'T BE RUNNING, SEND IT SIGNAL TO TERMINATE:
+        !IF IT ISN'T RUNNING, THIS WILL HAVE NO EFFECT, THAT'S OK.
+        ShowGCGUI$ = ShowGCGUI$[1:3] + "0"  !4th character of "0" means terminate, VB is hotlinked to this var.
+        _GCGUIRunning = 0
+        on error print  !Don't report an error if cp 'GCGUI' isn't running.
+        CpTerminate GCGUI  !This terminates the copy of the CP that the VB GUI sends commands to.
+        on error        !Go back to reporting errors.
+    else
+        !GUI SHOULD BE RUNNING, START IT IF IT ISN'T:
+        if _GCGUIRunning = 0 then
+            if (bVBInstGUINeeded = 0) and (bVBSamplingGUINeeded = 0) then
+                return
+            endif
+            !VB program isn't running, Start up the VB GUI program:
+            on error print  !Don't report an error if cp 'GCGUI' is already running.
+            CpStart GCGUI   !This starts the copy of the CP that the VB GUI sends commands to.
+            on error        !Go back to reporting errors.
+            _GCGUIRunning = 1
+            ShowGCGUI$ = ShowGCGUI$[1:3] + "1"   !Char 4 = "1" means run, "0" means shutdown.
+
+            !parm 1: handle to window to attach to.
+            !parm 2: DDE name that GUI will communicate with.
+            !Parm 3: Type of instrument to represent (eg, 68GC, 5890, 35900,...)
+			
+			cmdpath$ = chr$(34) + _DRIVERPATH$ + "HPGCUI00.EXE" + chr$(34) + " "			
+            SetCWD  _ExePath$
+
+            if TestForDevice("7890", 0, "") <> 0 then
+                !@1632@SYN@03/13/2003@@ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + VAL$(_HTOPWINDOW) + ", " + _DDENAME$ + ", 7890GC, HP68QK00.INI", 1
+              !  ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", 7890GC, HP78QK00.INI", 1
+ 				 ExecNoWait cmdpath$ + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", 7890GC, HP78QK00.INI", 1
+
+            else
+	    if TestForDevice("RC6850", 0, "") <> 0 then
+                !@1632@SYN@03/13/2003@@ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + VAL$(_HTOPWINDOW) + ", " + _DDENAME$ + ", 68GC, HP68QK00.INI", 1
+                !ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", RC68GC, HP68QK00.INI", 1
+              
+				ExecNoWait cmdpath$ + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", RC6850GC, HP68QK00.INI", 1
+            else
+            if TestForDevice("6850GC", 0, "") <> 0 then
+                !@1632@SYN@03/13/2003@@ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + VAL$(_HTOPWINDOW) + ", " + _DDENAME$ + ", 6850GC, HP68QK00.INI", 1
+              !  ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", 6850GC, HP68QK00.INI", 1
+			     
+				 ExecNoWait cmdpath$ + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", 6850GC, HP68QK00.INI", 1
+
+            else
+            if TestForDevice("RC6890", 0, "") <> 0 then
+                !@1632@SYN@03/13/2003@@ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + VAL$(_HTOPWINDOW) + ", " + _DDENAME$ + ", 68GC, HP68QK00.INI", 1
+                !ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", RC68GC, HP68QK00.INI", 1
+              
+				ExecNoWait cmdpath$ + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", RC68GC, HP68QK00.INI", 1
+            else
+            if TestForDevice("68GC", 0, "") <> 0 then
+                !@1632@SYN@03/13/2003@@ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + VAL$(_HTOPWINDOW) + ", " + _DDENAME$ + ", 68GC, HP68QK00.INI", 1
+                !ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", 68GC, HP68QK00.INI", 1
+              
+				ExecNoWait cmdpath$ + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", 68GC, HP68QK00.INI", 1
+            else
+
+            if TestForDevice("GC", 0, "") <> 0 then
+                HP7673_present = TestForDevice( "INJ",0,"")
+                !@1632@SYN@03/13/2003@@ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + VAL$(_HTOPWINDOW) + ", " + _DDENAME$ + ", 5890, HP5890.INI", 1
+                !ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", 5890, HP5890.INI", 1
+
+				ExecNoWait cmdpath$ + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ +   ", 5890, HP5890.INI", 1
+            else
+            if adcdevice >= 1 then 
+                HP7673_present = TestForDevice( "INJ",0,"")
+                !@1632@SYN@03/13/2003@@ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + VAL$(_HTOPWINDOW) + ", " + _DDENAME$ + ", 35900", 1
+                !ExecNoWait _DRIVERPATH$ + "HPGCUI00.EXE " + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ + ", 35900, ", 1
+
+				ExecNoWait cmdpath$ + SPrintF$(_HTOPWINDOW, "%d") + ", " + _DDENAME$ +   ", 35900, ", 1
+            endif
+            endif
+            endif
+            endif
+            endif
+            endif
+            endif
+        !else, VB already running, no need to do anything.
+        endif
+    endif
+
+endmacro
+
+
+!############################################################################
+name UpdateGCGUIDisplay
+!Turns the sampling and instrument screens on|off depending on how the
+!config.reg vars are set in the current subview.
+!Subview is either 1|2|3, corresponding vars: GCGUIInst1|2|3 & GCGUISamp1|2|3
+!############################################################################
+local row, iChecked
+
+ID_GCMISC__VIEW_1_81                      = 17081 
+ID_GCMISC__INSTRUMENT_DI_GC_2_82          = 17082 
+ID_GCMISC_S_AMPLING_DIAG_GC_3_83          = 17083 
+
+NLSFileName_astxmac$ = "astxmac"
+
+    if (bVBSamplingGUINeeded = 1) then
+        if ObjHdrVal (_CONFIG[1], "GCGUISamp"+Val$(_GUISubVIew)) = 0 then
+            GomDelete, "gsamples"   !Destroy window that samp|run diag is latched onto.
+        else
+            !Need to create this before VB gets ShowGCGUI$ change:
+            GomShowGui ,"gsamples", "DRIVERS"  !Create window for samp diag to latch onto.
+        endif
+    endif
+
+    if (bVBSamplingGUINeeded = 0) then
+        ShowGCGUI$ = Val$ (ObjHdrVal (_CONFIG[1], "GCGUIInst"+Val$(_GUISubVIew))) +\
+                 "0" +\
+                 ShowGCGUI$[3:LEN (ShowGCGUI$)]
+    else
+        ShowGCGUI$ = Val$ (ObjHdrVal (_CONFIG[1], "GCGUIInst"+Val$(_GUISubVIew))) +\
+                 Val$ (ObjHdrVal (_CONFIG[1], "GCGUISamp"+Val$(_GUISubVIew))) +\
+                 ShowGCGUI$[3:LEN (ShowGCGUI$)]     
+    endif
+             
+    !Update the menu checkmarks:
+    if (bVBInstGUINeeded = 1) then
+        if ShowGCGUI$[1:1] = "0" then
+            MenuState ReadResource$(NLSFileName_astxmac$,ID_GCMISC__VIEW_1_81), ReadResource$(NLSFileName_astxmac$,ID_GCMISC__INSTRUMENT_DI_GC_2_82), Unchecked
+        else
+            MenuState ReadResource$(NLSFileName_astxmac$,ID_GCMISC__VIEW_1_81), ReadResource$(NLSFileName_astxmac$,ID_GCMISC__INSTRUMENT_DI_GC_2_82), Checked
+        endif
+    endif
+
+    if Val$ (ObjHdrVal (_CONFIG[1], "GCGUISamp"+Val$(_GUISubVIew))) = "0" then
+        MenuState ReadResource$(NLSFileName_astxmac$,ID_GCMISC__VIEW_1_81), ReadResource$(NLSFileName_astxmac$,ID_GCMISC_S_AMPLING_DIAG_GC_3_83), Unchecked
+    else
+        MenuState ReadResource$(NLSFileName_astxmac$,ID_GCMISC__VIEW_1_81), ReadResource$(NLSFileName_astxmac$,ID_GCMISC_S_AMPLING_DIAG_GC_3_83), Checked
+    endif
+
+endmacro
+
+
+!############################################################################
+name ToggleInstGUI
+!Show or hide the Instrument's GUI,
+!############################################################################
+
+    Local OnOff
+
+    On Error Print ""
+
+    if ShowGCGUI$[1:1] = "1"
+        !Instrument GUI is currently displayed, turn it off in the current subview:
+        SetObjHdrVal _CONFIG[1], "GCGUIInst" + Val$(_GUISubView), 0
+        OnOff = 0
+    else
+        !Instrument GUI is currently off, turn it on in the current subview:
+        
+        ! Update the config items in case they have changed.  PVCS #19301
+        if (TestForDevice("RC6890",0,"") = 1) OR (TestForDevice("RC6850",0,"") = 1)
+            Write68XXConfigItems
+        endif
+        
+        SetObjHdrVal _CONFIG[1], "GCGUIInst" + Val$(_GUISubView), 1
+        OnOff = 1
+    endif
+
+
+    if (devrcnet > 0) and ((_InstType$ = "78GC") or (_InstType$ = "7820GC")) then
+            if OnOff = 0 then
+                RCExecuteItemAction "GC1", "InstrumentDiagram"
+            else
+                RCExecuteItemAction "GC1", "InstrumentDiagram"
+            endif																			  
+    else
+
+        if (bVBInstGUINeeded = 1)
+            UpdateGCGUIDisplay   !Turns instrument diag on|off for this subview.
+            ShouldVBGUIbeRunning !Starts or stops VB .exe as needed.
+        endif 
+    endif																			  
+
+endmacro
+
+
+
+!############################################################################
+name CheckForTrayAndTurrets
+!Show or hide the Sampler's GUI,
+!############################################################################
+
+   ! save the original values
+   bVBSamplingGUINeededSavedValue = bVBSamplingGUINeeded
+   bRCSamplingGUINeededSavedValue = bRCSamplingGUINeeded
+
+   if (TestForDevice("RC6850", 0, "") <> 0) then
+      ! do not use the VB sampling GUI if Spot is present
+      if (RCGetResourceVal("GC1", "Config", "ALS.fr.Present") = 1) AND (RCGetResourceText$("GC1","Config", "ALS.fr.Model") = "G4513A") then
+          bVBSamplingGUINeeded = 0
+          bRCSamplingGUINeeded = 1
+      else
+         if (RCGetResourceVal("GC1", "Config", "ALS.fr.Present") = 1)
+             bVBSamplingGUINeeded = 1
+             bRCSamplingGUINeeded = 0
+          else
+             bVBSamplingGUINeeded = 0
+             bRCSamplingGUINeeded = 1
+          endif
+      endif
+   else
+      if (TestForDevice("RC6890", 0, "") <> 0) then
+         ! Spot & Rover do not use the VB sampling gui
+         if ((RCGetResourceVal("GC1","config", "ALS.tray.present") = 1) AND (RCGetResourceVal("GC1","config", "ALS.tray.Capacity") = 150)) or \
+            ((RCGetResourceVal("GC1", "config", "ALS.fr.Present") = 1) AND (RCGetResourceText$("GC1","config", "ALS.fr.Model") = "G4513A"))  or \
+            ((RCGetResourceVal("GC1", "config", "ALS.bk.Present") = 1) AND (RCGetResourceText$("GC1","config", "ALS.bk.Model") = "G4513A")) then
+            bVBSamplingGUINeeded = 0
+            bRCSamplingGUINeeded = 1
+         else
+            if (RCGetResourceVal("GC1", "config", "ALS.fr.Present") = 1) or (RCGetResourceVal("GC1", "config", "ALS.bk.Present") = 1)
+               bVBSamplingGUINeeded = 1
+               bRCSamplingGUINeeded = 0
+            else
+               bVBSamplingGUINeeded = 0
+               bRCSamplingGUINeeded = 1
+            endif
+         endif
+      else
+         if (TestForDevice("7890",0,"") <> 0) then
+            iGCModule = GetModuleNumber("7890A");
+            if iGCModule = -1 then
+               ! check if this is a 7820
+               iGCModule = GetModuleNumber("7820A")
+            endif
+            if iGCModule <> -1 then
+               if ((GetMyItemDouble(iGCModule, "Als.tray.capacity") > 0) and (GetMyItem$(iGCModule, "ALS.tray.Model") <> "G4514A")) or \
+                    ((GetMyItemDouble(iGCModule, "Als.fr.capacity") > 0) and ((GetMyItem$(iGCModule, "ALS.fr.Model") <> "G4513A") and (GetMyItem$(iGCModule, "ALS.fr.Model") <> "G4567A"))) or \
+                    ((GetMyItemDouble(iGCModule, "Als.bk.capacity") > 0) and ((GetMyItem$(iGCModule, "ALS.bk.Model") <> "G4513A") and (GetMyItem$(iGCModule, "ALS.bk.Model") <> "G4567A"))) then
+                 bVBSamplingGUINeeded = 1
+                 bRCSamplingGUINeeded = 0
+               else
+                  bVBSamplingGUINeeded = 0
+        !          if (GetMyItemDouble(iGCModule, "Als.fr.capacity") > 0) or (GetMyItemDouble(iGCModule, "Als.bk.capacity") > 0) then
+                     bRCSamplingGUINeeded = 1
+         !         endif
+               endif
+            endif
+         endif
+      endif
+   endif
+
+   ! check for the HS device        
+   if (TestForDevice("7697", 0, "") <> 0)  or (TestForDevice("CTC", 0, "") <> 0) then
+      bRCSamplingGUINeeded = 1
+   endif
+
+   if bVBSamplingGUINeeded <> bVBSamplingGUINeededSavedValue then
+
+      if (TestForDevice("7890",0,"") <> 0)
+         WriteVialRange7890
+
+      else
+        if (TestForDevice("RC6890",0,"") = 1) OR (TestForDevice("RC6850",0,"") = 1)
+            Write68XXConfigItems
+        endif 
+      endif
+      if bVBSamplingGUINeededSavedValue = 1 then
+         ! turn off the VB sampling GUI since it is no longer needed
+         ! changing ShowGCGUI$ will alert VB sampling diagram to update.  Then reset ShowGCGUI$ to correct value for RC sampling diagram
+         ShowGCGUI$ = Val$ (ObjHdrVal (_CONFIG[1], "GCGUIInst"+Val$(_GUISubVIew))) +\
+                 "0" + ShowGCGUI$[3:LEN (ShowGCGUI$)]          
+          ! UpdateGCGUIDisplay   !Turns sampling diag on|off for this subview.
+         SetObjHdrVal _CONFIG[1], "GCGUISamp1", 0
+         SetObjHdrVal _CONFIG[1], "GCGUISamp2", 0
+         SetObjHdrVal _CONFIG[1], "GCGUISamp3", 0
+!         ShouldVBGUIbeRunning !Starts or stops VB .exe as needed.                  
+         GomDelete, "gsamples"
+      endif
+      
+      
+   endif
+
+   if (bRCSamplingGUINeeded <> bRCSamplingGUINeededSavedValue) and (bRCSamplingGUINeededSavedvalue = 1) then
+      ! turn off the RC Sampling Diagram because it is no longer needed
+      RemoveRCSamplingDiagram
+   endif
+endmacro       
+
+!############################################################################
+name ToggleSampGUI
+!Show or hide the Sampler's GUI,
+!############################################################################
+
+    Local OnOff
+
+    On Error Print ""
+
+    if Val$ (ObjHdrVal (_CONFIG[1], "GCGUISamp"+Val$(_GUISubVIew))) = "1"
+        !Sampling GUI is currently displayed, turn it off in the current subview:
+        SetObjHdrVal _CONFIG[1], "GCGUISamp" + Val$(_GUISubView), 0
+        OnOff = 0
+    else
+        !Sampling GUI is currently off, turn it on in the current subview:
+        SetObjHdrVal _CONFIG[1], "GCGUISamp" + Val$(_GUISubView), 1
+        OnOff = 1
+    endif
+
+    CheckForTrayAndTurrets
+
+    if (devrcnet > 0) then
+        if (bVBSamplingGUINeeded = 1) then
+            UpdateGCGUIDisplay   !Turns sampling diag on|off for this subview.
+            ShouldVBGUIbeRunning !Starts or stops VB .exe as needed.           
+        endif
+        if (bRCSamplingGUINeeded = 1) and (CHECK(Command, RCShowTray) = 1) then
+           if OnOff = 0 then
+               RCShowTray "GC1", 0
+           else
+               RCShowTray "GC1", 1
+           endif
+           UpdateGCGUIDisplay   !Turns sampling diag on|off for this subview.																			  
+        endif
+    else
+        if (bVBSamplingGUINeeded = 1)
+            UpdateGCGUIDisplay   !Turns sampling diag on|off for this subview.
+            ShouldVBGUIbeRunning !Starts or stops VB .exe as needed.
+        endif
+    endif																			  
+
+endmacro
+
+
+!############################################################################
+! Remove the RC Sampling Diagram from all TOP views
+
+Name RemoveRCSamplingDiagram
+
+local row
+
+   if Check( COMMAND, RCShowTray) = 1
+      RCShowTray "GC1", 0            
+   endif
+
+   row = RowByVal(_Config[1],"View_TopInstr",,"Winnum","=",72)
+   if (row <> -1)
+      SetTabVal _Config[1], "View_TopInstr", row, "Visible", 0
+   endif
+
+   row = RowByVal(_Config[1],"View_TopAll",,"Winnum","=",72)
+   if (row <> -1)
+      SetTabVal _Config[1], "View_TopAll", row, "Visible", 0
+   endif
+
+   row = RowByVal(_Config[1],"View_TopSignal",,"Winnum","=",72)
+   if (row <> -1)
+      SetTabVal _Config[1], "View_TopSignal", row, "Visible", 0
+   endif
+
+   row = RowByVal(_Config[1],"View_Top",,"Winnum","=",72)
+   if (row <> -1)
+      SetTabVal _Config[1], "View_Top", row, "Visible", 0
+   endif
+endmacro
+!############################################################################
+name TurnOffGUI
+!This removes both inst & samp GUIs, presumably because VB couldn't start up.
+!############################################################################
+
+    SetObjHdrVal _CONFIG[1], "GCGUIInst1", 0
+    SetObjHdrVal _CONFIG[1], "GCGUIInst2", 0
+    SetObjHdrVal _CONFIG[1], "GCGUIInst3", 0
+    SetObjHdrVal _CONFIG[1], "GCGUISamp1", 0
+    SetObjHdrVal _CONFIG[1], "GCGUISamp2", 0
+    SetObjHdrVal _CONFIG[1], "GCGUISamp3", 0
+
+    UpdateGCGUIDisplay   !Remove checks from menu items.
+    _GCGUIRunning = 0    !VB quits right after calling this macro.
+
+endmacro
+
+
+
+!############################################################################
+name GUIShowHide
+
+!Called by edit-all-method & others who want to hide the GUI screens during
+!an action, then turn it back on iff it was on before.
+!The parameter = 0 to initially turn gui off, = 1 to return it to previous
+!state (either on or off).
+!WARNING: if called twice with parm=0, initial state is lost.  This can be
+!solved by adding a count variable and not restoring initial state till
+!count goes to zero.  This deemed not necessary now. 8/25/95 KCB
+!The four !MenuState... commands in this macro can be used to PREVENT the
+!state of the GUI from changing between save and restore (by
+!graying/ungraying the menus).  I felt this was slightly more dangerous and
+!restrictive so I left them commented out. 2/13/97 KCB
+!############################################################################
+
+parameter SaveOrRestore
+
+    if SaveOrRestore = 0
+        !Record the present on/off state of GUI so it can be restored later:
+        PreviousShowGCGUI$ = ShowGCGUI$
+        ShowGCGUI$ = "00" + ShowGCGUI$[3:LEN(ShowGCGUI$)]
+        !MenuState "&View", "&Instrument Diagram", Insensitive  !Gray menu.
+        !MenuState "&View", "S&ampling Diagram", Insensitive    !Gray menu.
+    else
+        !Return on/off state of GUI, but only if it didn't change in the interim:
+        if ShowGCGUI$ = "00" + PreviousShowGCGUI$ [3:LEN(ShowGCGUI$)]
+            ShowGCGUI$ = PreviousShowGCGUI$
+        endif
+        !MenuState "&View", "&Instrument Diagram", Sensitive  !Reenable menu.
+        !MenuState "&View", "S&ampling Diagram", Sensitive    !Reenable menu.
+    endif
+
+endmacro
+
+
+
+!############################################################################
+name HPUIGetVialNums
+
+!Called whenever sequence table changes to find out which vials are in the sequence.
+!This macro sets characters in a string according to whether the corresponding
+!vial is present.  A "0" in the 5th character position means vial 5 is not present,
+! "1" means present.
+!The VB GUI is hotlinked to HPUIVials$ and hence catches any change.
+!############################################################################
+
+parameter EventCause$, EventLevel$, EventReg$, EventObj, EventPartName$,EventIndex
+local Table, Vial, SeqLine, HPUIVialsTemp$
+
+HPUIVialsTemp$= "0000000000000000000000000000000000000000000000000000"  !52 chars
+HPUIVialsTemp$= HPUIVialsTemp$ + HPUIVialsTemp$ + HPUIVialsTemp$ + HPUIVialsTemp$   !208 0s now.
+
+FOR Table = 1 to 2
+    FOR SeqLine = 1 to TabHdrVal(_SEQUENCE[1], "SeqTable"+Val$(Table), "NumberOfRows")
+        Vial = TabVal (_SEQUENCE[1], "SeqTable"+Val$(Table), SeqLine, "Vial")
+        IF ((Vial > 0) AND (Vial <= LEN(HPUIVialsTemp$)))
+            !Vial is in a range we can handle with HPUIVialsTemp$ 
+            IF Vial = 1
+                !Vial position first in string, no need to split it:
+                HPUIVialsTemp$= "1" + HPUIVialsTemp$[2:LEN(HPUIVialsTemp$)]
+            ELSE
+                IF Vial = LEN(HPUIVialsTemp$)
+                    !Vial position last in string, no need to split it:
+                    HPUIVialsTemp$= HPUIVialsTemp$[1:(LEN(HPUIVialsTemp$) - 1)] + "1"
+                ELSE
+                    !Split string, put "1" in correct position:
+                    HPUIVialsTemp$= HPUIVialsTemp$[1:(Vial - 1)] + "1" + HPUIVialsTemp$[(Vial + 1):LEN(HPUIVialsTemp$)]
+                ENDIF
+            ENDIF
+        ENDIF
+    NEXT SeqLine
+NEXT Table
+
+HPUIVials$ = HPUIVialsTemp$  ! This should trigger the HPUI to display correct sequence vials.
+
+endmacro
+
+
+
+
+!############################################################################
+name GUIShowSamplingDiagram
+
+parameter  RequestedTaskMode$ default ""  !means reinstall last one used
+                                         !find out from view tbl hdr CurrentTask
+                                         !values: TOPSEQ, TOPRUN
+parameter  ShowType   default  0  ! 0 is show in switch view (test if applicable)
+                                  ! others may be defined by product specific macros
+                                  ! example 1 create and show , 2 destroy, 3 toggle
+
+!The VB GUI is hotlinked to ShowGCGUI$, it automatically picks up the change.
+!The 3rd character is for single-run vs multi-run mode.
+!############################################################################
+
+local CurrentDisplay$
+
+if RequestedTaskMode$ = "TOPSEQ"
+    !We're switching to multi-run mode:
+    ShowGCGUI$ = ShowGCGUI$[1:2] + "1" + ShowGCGUI$[4:LEN(ShowGCGUI$)]
+endif
+
+if RequestedTaskMode$ = "TOPRUN"
+    !We're switching to single-run mode:
+    ShowGCGUI$ = ShowGCGUI$[1:2] + "0" + ShowGCGUI$[4:LEN(ShowGCGUI$)]
+endif
+
+if (RequestedTaskMode$ = "")   ! and (ShowType = 0)
+    if (bVBSamplingGUINeeded = 1)
+        !We're switching away from Method & Run Control view, hide both diags:
+        GomDelete, "gsamples"   !Destroy window that samp|run diag is latched onto.
+        ShowGCGUI$ = "00" + ShowGCGUI$[3:LEN(ShowGCGUI$)]
+        MenuState ReadResource$(NLSFileName_astxmac$,ID_GCMISC__VIEW_1_81), ReadResource$(NLSFileName_astxmac$,ID_GCMISC_S_AMPLING_DIAG_GC_3_83), Unchecked
+    else 
+       if _GCGUIRunning = 1 then
+          ShowGCGUI$ = "0" + ShowGCGUI$[2:LEN(ShowGCGUI$)]
+       endif
+    endif
+    
+    
+else    
+
+    if (ShowType = 2)
+       ToggleSampGUI
+    else
+
+       CurrentDisplay$ = TabHdrText$(_config[1], "VIEW_Top", "CurrentDisplay")
+       on error goto DefaultCase
+       evaluate "GoTo "+ CurrentDisplay$
+           Instr:;on error
+               _GUISubView = 1
+               UpdateGCGUIDisplay   !Turns sampling & instrument diags on|off for this subview.
+               goto endswitch
+  
+           Signal:;on error
+               _GUISubView = 2
+               UpdateGCGUIDisplay   !Turns sampling & instrument diags on|off for this subview.
+               goto endswitch
+
+           All:;on error
+               _GUISubView = 3
+               UpdateGCGUIDisplay   !Turns sampling & instrument diags on|off for this subview.
+               goto endswitch
+
+           DefaultCase:;on error
+               !Don't recognize display state, do nothing.
+               goto endswitch
+       endswitch:
+   endif
+endif
+
+endmacro
+        
+    
+    
+!############################################################################
+name GUINotifyGCConfigChanged
+
+!Called whenever a new method has been loaded,
+!Changes a variable that VB GUI is hotlinked to so it knows of the new method.
+!This variable is also set by 6890 ILD whenever the GC method changes.
+!############################################################################
+
+    if GUIGCConfigChanged = 0
+        !If var ever gets set to 0, simply negating it doesn't change it.
+        GUIGCConfigChanged = 1
+    endif
+    
+    ! Update the config items in case they have changed.  PVCS #19301
+    if (TestForDevice("RC6890",0,"") = 1) OR (TestForDevice("RC6850",0,"") = 1)
+        Write68XXConfigItems
+    endif
+    GUIGCConfigChanged = -GUIGCConfigChanged   !Just so the value changes.
+    
+    
+endmacro
+
+
+!############################################################################
+name Init_systgui
+
+!This brings up the instrument graphical user interface.
+!It is a VB (Visual Basic) program.
+!############################################################################
+   local row, iTrayPresent
+
+   !pvcs 7694@Define these variables else it will give an error for offline data analysis
+   If Check ( VARIABLE, GUIDiagramStateForMenu ) = 0
+      GUIDiagramStateForMenu =1
+   EndIf
+ 
+   If Check ( VARIABLE, GUISampleAreaStateForMenu ) = 0
+      GUISampleAreaStateForMenu =1
+   EndIf
+  !pvcs 7694@Define these variables else it will give an error for offline data analysis
+   
+   HPUIGetVialNums  !Just to get var initialized for when GUI starts up.
+
+
+    if (_INSTTYPE$ = "78GC") or (_INSTTYPE$ = "7820GC") then   !Setup the config file for 7890
+         WriteVialRange7890
+    endif
+
+    if (TestForDevice("RC6890",0,"") = 1) OR (TestForDevice("RC6850",0,"") = 1)
+ 	 WriteVialRange "HP68QK00", _INSTPATH$ + "HP68QK00.ini"
+         Write68XXConfigItems
+    endif
+
+    !HotLink to sequence table so GUI knows when sample table changes:
+    OnEvent "_Sequence[1]", "HPUIGetVialNums"
+    dummy = Event("_Sequence[1]", ON)
+
+    !Ask for notification when new method loaded, 6890 GUI needs updated config info:
+    GUIGCConfigChanged = 1  !This var also changed from ILD when method dirty.
+    SetHook "LoadMethod", "GUINotifyGCConfigChanged"
+
+    !By default, don't run or show VB GC GUI:
+    _GCGUIRunning = 0   !False, not running.
+    _GUISubView = 1     !Just to initialize it.
+    ShowGCGUI$ = "0000"  !Later it will be set the way it was at last shutdown.
+
+    if (bRCSamplingGUINeeded = 0)
+       RemoveRCSamplingDiagram
+    endif
+
+    !Put vars in the config register to keep track on screens on/off between
+    !runnings, but only if they aren't there already:
+    if ObjHdrType (_CONFIG[1], "GCGUISamp1") = 99 then
+
+        if (bNoTrayOrTurretsInstalled = 0) then
+            NewObjHdrVal _CONFIG[1], "GCGUISamp1", 1
+        else
+            NewObjHdrVal _CONFIG[1], "GCGUISamp1", 0
+            ! get the row for the trayui
+            row = RowByVal(_Config[1],"View_TopInstr",,"Winnum","=",72)
+            if (row <> -1)
+               SetTabVal _Config[1], "View_TopInstr", row, "Visible", 0
+            endif
+        endif
+         
+        if (devrcnet > 0)
+           
+           ! PVCS # 19914- setting default size for actuals window
+           SetTabVal _Config[1], "Window",73, "DefWXLow", .67
+           SetTabVal _Config[1], "Window",73, "DefWXHigh", .87
+           SetTabVal _Config[1], "Window",73, "DefWYLow", .56
+           SetTabVal _Config[1], "Window",73, "DefWXHigh", .96
+ 
+           ! PVCS #19915 - saving instrument actuals location/size
+           ! check to see if the actuals window already exists in DEF_TOP table
+           row = RowByVal (_Config[1],"DEF_TOP",,"winnum","=",73)
+           if (row = -1)
+              InsTabRow    _CONFIG[1], "DEF_TOP",
+              row = TabHdrVal (_Config[1],"Def_TOP","NumberOfRows")
+              SetTabVal    _CONFIG[1], "DEF_TOP", row, "WINNUM",73   !status
+              SetTabVal    _CONFIG[1], "DEF_TOP", row, "WINSTYLE",31
+              SetTabVal    _CONFIG[1], "DEF_TOP", row, "WXLOW",.62
+              SetTabVal    _CONFIG[1], "DEF_TOP", row, "WXHIGH",1
+              SetTabVal    _CONFIG[1], "DEF_TOP", row, "WYLOW",0.58
+              SetTabVal    _CONFIG[1], "DEF_TOP", row, "WYHIGH",0.99
+              SetTabVal    _CONFIG[1], "DEF_TOP", row, "Visible", 1
+
+              ! add the status window to the TOP window
+              InsTabRow _CONFIG[1],"View_Top",
+              row=TabHdrVal(_Config[1],"View_Top","NumberOfRows")
+              SetTabVal _CONFIG[1],"View_Top",row,"WINNUM",73
+              SetTabVal _CONFIG[1],"View_Top",row,"WINSTYLE",31
+              SetTabVal _CONFIG[1],"View_Top",row,"WXLOW",0.62
+              SetTabVal _CONFIG[1],"View_Top",row,"WXHIGH",1
+              SetTabVal _CONFIG[1],"View_Top",row,"WYLOW",0.58
+              SetTabVal _CONFIG[1],"View_Top",row,"WYHIGH",0.99
+              SetTabVal _CONFIG[1],"View_Top",row,"Visible",1	
+
+              ! add the status window to the default top-instr view
+	      InsTabRow    _CONFIG[1], "View_TopInstr",
+              row = TabHdrVal (_Config[1],"View_TopInstr","NumberOfRows")
+              SetTabVal    _CONFIG[1], "View_TopInstr", row, "WINNUM",73   !status
+              SetTabVal    _CONFIG[1], "View_TopInstr", row, "WINSTYLE",31
+              SetTabVal    _CONFIG[1], "View_TopInstr", row, "WXLOW",.62
+              SetTabVal    _CONFIG[1], "View_TopInstr", row, "WXHIGH",1
+              SetTabVal    _CONFIG[1], "View_TopInstr", row, "WYLOW",0.58
+              SetTabVal    _CONFIG[1], "View_TopInstr", row, "WYHIGH",0.99
+              SetTabVal    _CONFIG[1], "View_TopInstr", row, "Visible", 1
+
+              ! add the status window to the default top-signal view
+	      InsTabRow    _CONFIG[1], "View_TopSignal",
+              row = TabHdrVal (_Config[1],"View_TopSignal","NumberOfRows")
+              SetTabVal    _CONFIG[1], "View_TopSignal", row, "WINNUM",73   !status
+              SetTabVal    _CONFIG[1], "View_TopSignal", row, "WINSTYLE",31
+              SetTabVal    _CONFIG[1], "View_TopSignal", row, "WXLOW",.62
+              SetTabVal    _CONFIG[1], "View_TopSignal", row, "WXHIGH",.1
+              SetTabVal    _CONFIG[1], "View_TopSignal", row, "WYLOW",0.58
+              SetTabVal    _CONFIG[1], "View_TopSignal", row, "WYHIGH",0.99
+              SetTabVal    _CONFIG[1], "View_TopSignal", row, "Visible", 0
+
+              ! add the status window to the default top-all view
+	      InsTabRow    _CONFIG[1], "View_TopAll",
+              row = TabHdrVal (_Config[1],"View_TopAll","NumberOfRows")
+              SetTabVal    _CONFIG[1], "View_TopAll", row, "WINNUM",73   !status
+              SetTabVal    _CONFIG[1], "View_TopAll", row, "WINSTYLE",31
+              SetTabVal    _CONFIG[1], "View_TopAll", row, "WXLOW",.62
+              SetTabVal    _CONFIG[1], "View_TopAll", row, "WXHIGH",1
+              SetTabVal    _CONFIG[1], "View_TopAll", row, "WYLOW",0.58
+              SetTabVal    _CONFIG[1], "View_TopAll", row, "WYHIGH",0.99
+              SetTabVal    _CONFIG[1], "View_TopAll", row, "Visible", 0
+           endif
+
+           ! get the row for the trayui
+           row = RowByVal(_Config[1],"View_TopInstr",,"Winnum","=",72)
+
+           if (bRCSamplingGUINeeded = 1)
+              iTrayPresent = 0
+
+              ! Check if the 6890 has a tray
+              if (TestForDevice("RC6890", 0, "") <> 0)
+                 if (RCGetResourceVal("GC1","config", "ALS.tray.Present") = 1)
+                    iTrayPresent = 1
+                 endif
+              endif
+
+              ! Check if 7890 has a tray
+              if (TestForDevice("7890", 0, "") <> 0) 
+                 iGCModule = GetModuleNumber("7890A");
+                 if iGCModule = -1 then
+                    ! check if this is a 7820
+                    iGCModule = GetModuleNumber("7820A")
+                 endif
+                 if iGCModule = -1 then
+                    iTrayPresent = 0
+                 else
+                    if (GetMyItem$(iGCModule, "ALS.tray.Model") <> "")
+                       iTrayPresent = 1
+                    endif
+                 endif
+              endif
+
+              ! make sure the initial value of GCGUISamp1 matches the default one so the menu check/unchecked is consistent
+              ! display the sampling diagram in the top-instr view
+              if (row <> -1)
+                 SetObjHdrVal _CONFIG[1],"GCGUISamp1",TabVal(_Config[1],"View_TopInstr",row,"Visible")
+                 SetTabVal _Config[1],"view_TopInstr",row,"WXLow",0
+       	         SetTabVal _Config[1],"view_TopInstr",row,"WYHigh",1
+                 if (iTrayPresent = 1)
+                    SetTabVal _Config[1],"view_TopInstr",row,"WXHigh",.61
+                    SetTabVal _Config[1],"view_TopInstr",row,"WYLow",.40  
+                 else
+                    SetTabVal _Config[1],"view_TopInstr",row,"WXHigh",.14
+                    SetTabVal _Config[1],"view_TopInstr",row,"WYLow",.40  
+                 endif
+              endif
+
+              row = RowByVal(_Config[1],"View_Top",,"Winnum","=",72) 
+              if (row <> -1)
+                 SetTabVal _Config[1],"view_Top",row,"WXLow",0
+      	         SetTabVal _Config[1],"view_Top",row,"WYHigh",1     
+                 if (iTrayPresent = 1)
+                    SetTabVal _Config[1],"view_Top",row,"WXHigh",.61
+                    SetTabVal _Config[1],"view_Top",row,"WYLow",.40  
+                 else
+                    SetTabVal _Config[1],"view_Top",row,"WXHigh",.14
+                    SetTabVal _Config[1],"view_Top",row,"WYLow",.40  
+                 endif       
+              endif
+
+            endif
+
+            if (bRCSamplingGUINeeded = 0) or (bNoTrayOrTurretsInstalled = 1) then
+              ! make sure that the new TrayUI window doesn't appear - window # 72 - since we have the old sampling diagram
+              if (row <> -1)
+                 SetTabVal _Config[1],"View_TopInstr", row, "Visible",0     
+              endif
+
+              row = RowByVal(_Config[1],"View_Top",,"Winnum","=",72)     
+              if (row <> -1)
+                 SetTabVal _Config[1],"View_Top", row, "Visible",0  
+              endif
+           endif
+
+
+
+           ! turn the vb sampling diagram on initially
+           if (bvBSamplingGUINeeded = 1)
+              SetObjHdrVal _Config[1],"GCGUISamp1",1
+           endif
+
+           ! show/arrange signal plot 1 window
+           row = RowByVal(_config[1],"View_TopInstr",,"winnum","=",33)
+           if (row <> -1)
+              SetTabVal _Config[1],"view_topInstr",row,"WXHigh",1
+              SetTabVal _Config[1],"view_topInstr",row,"WXLow",0
+              SetTabVal _Config[1],"view_topInstr",row,"WYHigh",.3
+             SetTabVal _Config[1],"view_topInstr",row,"WYLow",0
+           endif
+
+           ! show/arrange the signal plot 1 window
+           row = RowByVal(_Config[1],"view_TOP",,"Winnum","=",33)     
+           if (row <> -1)
+              SetTabVal _Config[1],"view_top",row,"WXHigh",1
+              SetTabVal _Config[1],"view_top",row,"WXLow",0
+              SetTabVal _Config[1],"view_top",row,"WYHigh",.3
+              SetTabVal _Config[1],"view_top",row,"WYLow",0
+           endif
+
+        endif
+    endif
+
+    if ObjHdrType (_CONFIG[1], "GCGUISamp2") = 99 then
+
+        if (bNoTrayOrTurretsInstalled = 0) then
+            NewObjHdrVal _CONFIG[1], "GCGUISamp2", 1
+        else
+            NewObjHdrVal _CONFIG[1], "GCGUISamp2", 0
+        endif
+        
+        if (devrcnet > 0) 
+           row = RowByVal(_Config[1],"View_TopSignal",,"Winnum","=",72)
+           if (bRCSamplingGUINeeded = 1) and (bNoTrayOrTurretsInstalled = 0)
+              if (row <> -1)
+                 SetTabVal _Config[1],"View_TopSignal",row,"Visible",1
+                 ! make sure the initial value of GCGUISamp2 matches the default one so the menu check/unchecked is consistent
+                 SetObjHdrVal _CONFIG[1],"GCGUISamp2",TabVal(_Config[1],"View_TopSignal",row,"Visible")
+                 SetTabVal _Config[1],"View_TopSignal",row,"WXLow",0
+                 SetTabVal _Config[1],"View_TopSignal",row,"WYHigh",1
+                 if (iTrayPresent = 1)
+                    SetTabVal _Config[1],"view_TopSignal",row,"WXHigh",.3
+                    SetTabVal _Config[1],"view_TopSignal",row,"WYLow",.5  
+                 else
+                    SetTabVal _Config[1],"view_TopSignal",row,"WXHigh",.2
+                    SetTabVal _Config[1],"view_TopSignal",row,"WYLow",0 
+                 endif
+
+              endif
+           else
+              ! make sure the new TrayUI window doesn't ever appear - window #72 - since we have the old sampling diagram
+              if (row <> -1)
+                 SetTabVal _Config[1],"View_TopSignal", row, "Visible",0
+              endif
+           endif
+        endif
+
+        if (bvBSamplingGUINeeded = 1)
+           SetObjHdrVal _Config[1],"GCGUISamp2",1
+        endif
+
+        ! move signal plot 1 window
+        row = RowByVal(_config[1],"View_TopSignal",,"winnum","=",33)
+        if (row <> -1)
+           SetTabVal _Config[1],"View_TopSignal",row,"WXLow",.2
+           SetTabval _config[1],"View_TopSignal",row,"WXHigh",1
+           SetTabVal _Config[1],"View_topSignal",row,"WYHigh",.5
+           SetTabVal _Config[1],"View_topSignal",row,"WYLow",0
+        endif
+
+        ! hide signal plot 2 window
+        row = RowByVal(_config[1],"View_TopSignal",,"winnum","=",34)
+        if (row <> -1)
+           SetTabVal _Config[1],"View_topSignal",row,"visible",0
+        endif
+    endif
+
+    if ObjHdrType (_CONFIG[1], "GCGUISamp3") = 99 then
+
+        if (bNoTrayOrTurretsInstalled = 0) then
+            NewObjHdrVal _CONFIG[1], "GCGUISamp3", 1
+        else
+            NewObjHdrVal _CONFIG[1], "GCGUISamp3", 0
+        endif
+        
+        if (devrcnet > 0)
+
+           row = RowByVal(_Config[1],"View_TopAll",,"Winnum","=",72)
+           if (bRCSamplingGUINeeded = 1) and (bNoTrayOrTurretsInstalled = 0)
+
+              if (row <> -1)
+                 SetTabVal _Config[1],"View_TopAll",row,"Visible",1
+                 ! make sure the initial value of GCGUISamp3 matches the default one so the menu check/unchecked is consistent
+                 SetObjHdrVal _CONFIG[1],"GCGUISamp3",TabVal(_Config[1],"View_TopAll",row,"Visible")
+                 
+                 SetTabVal _Config[1],"View_TopAll",row,"WXLow",0
+                 SetTabVal _Config[1],"View_TopAll",row,"WXHigh",1
+                 SetTabVal _Config[1],"View_TopAll",row,"WYLow",.5
+                 SetTabVal _Config[1],"View_TopAll",row,"WYHigh",1
+                 if (iTrayPresent = 1)
+                    SetTabVal _Config[1],"view_TopAll",row,"WXHigh",.61
+                    SetTabVal _Config[1],"view_TopAll",row,"WYLow",.40  
+                 else
+                    SetTabVal _Config[1],"view_TopAll",row,"WXHigh",.14
+                    SetTabVal _Config[1],"view_TopAll",row,"WYLow",.40  
+                 endif
+              endif
+           else
+              ! make sure the new TrayUI window doesn't ever appear - window #72 - since we have the old sampling diagram
+              if (row <> -1)
+                 SetTabVal _Config[1],"View_TopAll", row, "Visible",0
+              endif
+           endif
+        endif
+        if (bvBSamplingGUINeeded = 1)
+           SetObjHdrVal _Config[1],"GCGUISamp3",1
+        endif
+        row = RowByVal(_config[1],"View_Topall",,"winnum","=",34)
+        if (row <> -1)
+           SetTabVal _Config[1],"View_topall",row,"visible",0
+        endif
+
+        ! turn off ChemStation status
+        row = RowByVal(_Config[1],"View_TopAll",,"Winnum","=",37)
+        if (row <> -1)
+           SetTabVal _Config[1],"view_topAll",row,"visible",0
+        endif
+
+        ! move signal plot 1 window
+        row = RowByVal(_config[1],"View_TopAll",,"winnum","=",33)
+        if (row <> -1)
+           SetTabVal _config[1], "View_TopAll", row,"Visible",1
+           setTabVal _config[1], "View_TopAll", row, "WXLow", 0
+           SetTabVal _config[1], "View_Topall", row,"WXHigh",1
+           SetTabval _config[1], "View_Topall", row, "WYLow",0
+           SetTabVal _Config[1], "View_topAll", row,"WYHigh",.3
+        endif
+
+        row = RowByVal (_Config[1],"View_TopAll",,"winnum","=",73)
+        if (row = -1)
+              SetTabVal    _Config[1], "View_TopAll", row, "Visible",0
+              SetTabVal    _CONFIG[1], "View_TopAll", row, "WXLOW",.7
+              SetTabVal    _CONFIG[1], "View_Topall", row, "WXHIGH",1
+              SetTabVal    _CONFIG[1], "View_TopAll", row, "WYLOW",0.5
+              SetTabVal    _CONFIG[1], "View_TopAll", row, "WYHIGH",1
+              SetTabHdrVal _config[1], "view_topall", "ActualsOn", 0
+        endif
+    endif
+
+    if ObjHdrType (_CONFIG[1], "GCGUIInst1") = 99 then
+        NewObjHdrVal _CONFIG[1], "GCGUIInst1", 0
+    endif
+    if ObjHdrType (_CONFIG[1], "GCGUIInst2") = 99 then
+        NewObjHdrVal _CONFIG[1], "GCGUIInst2", 0
+    endif
+    if ObjHdrType (_CONFIG[1], "GCGUIInst3") = 99 then
+        NewObjHdrVal _CONFIG[1], "GCGUIInst3", 1
+    endif
+
+    !Decide whether to start up the VB GUI program:
+    ShouldVBGUIbeRunning
+
+endmacro
+
+
+name InitGCViews
+
+if ObjHdrType(_config[1],"GCInitViews") <> 99
+
+   AEToggleQueueTab
+
+           if (TestForDevice("7890",0,"") <> 0)
+              RCExecuteItemAction GC1, "InstrumentDiagram"
+           endif
+
+   DelObjHdr _Config[1], "GCInitViews"
+endif
+
+endmacro
+
+
+!############################################################################
+name WriteVialRange7890
+
+!Setup the Vial ranges in the hp78qk00.ini
+!Needs 7890 Driver version 1.11.004 which includes  Hardware item als.pos.capacity
+!############################################################################
+local uppervialFr, lowervialFr, uppervialBk, lowervialBk
+local section$, szConfigFile$, iGCModule
+
+	upperVialFr = 999
+	lowerVialFr = 0	
+	upperVialBk = 999
+	lowerVialBk = 0
+
+        section$ = "HP78QK00"
+	
+	szConfigFile$ = _INSTPATH$ + "HP78QK00.ini"
+
+        On error goto EndWritevialRange7890
+
+        iGCModule = GetModuleNumber("7890A");
+        if iGCModule = -1 then
+           ! check if this is a 7820
+           iGCModule = GetModuleNumber("7820A")
+        endif
+        if iGCModule = -1 then
+           return
+        endif
+
+        if _offline = 0 then
+            if (GetMyItemDouble(iGCModule, "ALS.tray.Present") = 1)
+	        lowerVialFr = 1
+	        upperVialFr = GetMyItemDouble(iGCModule, "ALS.tray.Capacity")
+
+                SetPrivateProfileInt "HP78QK00", "FrLowerVial", 1, _INSTPATH$ + "HP78QK00.ini"
+	        SetPrivateProfileInt "HP78QK00", "FrUpperVial", upperVialFr, _INSTPATH$+"HP78QK00.ini"
+
+                SetPrivateProfileInt "HP78QK00", "BkLowerVial", 1, _INSTPATH$ + "HP78QK00.ini"
+	        SetPrivateProfileInt "HP78QK00", "BkUpperVial", upperVialFr, _INSTPATH$+"HP78QK00.ini"
+            Else
+	        if (GetMyItemDouble(iGCModule, "ALS.Fr.Present") = 1)
+		   lowerVialFr = 101
+		   upperVialFr = lowerVialFr + GetMyItemDouble(iGCModule, "ALS.Fr.Capacity") - 1
+
+                   SetPrivateProfileInt "HP78QK00", "FrLowerVial", lowerVialFr, _INSTPATH$ + "HP78QK00.ini"
+	           SetPrivateProfileInt "HP78QK00", "FrUpperVial", upperVialFr, _INSTPATH$+"HP78QK00.ini"
+                Else
+		   SetPrivateProfileInt "HP78QK00", "FrLowerVial", lowerVialFr, _INSTPATH$ + "HP78QK00.ini"
+	           SetPrivateProfileInt "HP78QK00", "FrUpperVial", upperVialFr, _INSTPATH$+"HP78QK00.ini"
+	        EndIf
+
+
+                if (GetMyItemDouble(iGCModule, "ALS.Bk.Present") = 1)
+	            lowerVialBk = 201
+	            upperVialBk = lowerVialBk + GetMyItemDouble(iGCModule, "ALS.Bk.Capacity") - 1
+
+                    SetPrivateProfileInt "HP78QK00", "BkLowerVial", lowerVialBk, _INSTPATH$ + "HP78QK00.ini"
+                    SetPrivateProfileInt "HP78QK00", "BkUpperVial", upperVialBk, _INSTPATH$+"HP78QK00.ini"
+ 	        Else
+	            SetPrivateProfileInt "HP78QK00", "BkLowerVial", lowerVialBk, _INSTPATH$ + "HP78QK00.ini"
+	            SetPrivateProfileInt "HP78QK00", "BkUpperVial", upperVialBk, _INSTPATH$+"HP78QK00.ini"
+                EndIf
+	     EndIf
+
+        else
+           if FileStat(Mode, szConfigFile$ ) = -1 then
+	    	SetPrivateProfileInt "HP78QK00", "FrLowerVial", lowerVialFr, _INSTPATH$ + "HP78QK00.ini"
+	    	SetPrivateProfileInt "HP78QK00", "FrUpperVial", upperVialFr, _INSTPATH$+"HP78QK00.ini"
+            	SetPrivateProfileInt "HP78QK00", "BkLowerVial", lowerVialBk, _INSTPATH$ + "HP78QK00.ini"
+	    	SetPrivateProfileInt "HP78QK00", "BkUpperVial", upperVialBk, _INSTPATH$+"HP78QK00.ini"
+           endif
+        endif
+
+EndWriteVialRange7890:
+
+endmacro
+
+!############################################################################
+name WriteVialRange
+parameter section$, szConfigFile$
+
+!Setup the Vial ranges in the hp68qk00.ini
+! Parameters:
+!	section$ - name of section in .ini file
+!	szConfigFile$ - name of the config file to write the items to
+!
+!############################################################################
+local uppervialFr, lowervialFr, uppervialBk, lowervialBk
+
+	upperVialFr = 999
+	lowerVialFr = 0	
+	upperVialBk = 999
+	lowerVialBk = 0
+
+        
+        if _offline = 0 then
+            if (testForDevice("RC6850", 0,"") <> 0) then
+	        if (RCGetResourceVal("GC1","config", "ALS.Fr.Present") = 1)
+		   lowerVialFr = 1
+		   upperVialFr = lowerVialFr + RCGetResourceVal("GC1","config",  "ALS.Fr.Capacity") - 1
+
+                   SetPrivateProfileInt section$, "FrLowerVial", lowerVialFr, szConfigFile$
+	           SetPrivateProfileInt section$, "FrUpperVial", upperVialFr, szConfigFile$
+                Else
+		   SetPrivateProfileInt section$, "FrLowerVial", lowerVialFr, szConfigFile$
+	           SetPrivateProfileInt section$, "FrUpperVial", upperVialFr, szConfigFile$
+	        EndIf
+            else
+
+                if (RCGetResourceVal("GC1","config", "ALS.tray.Present") = 1)
+	           lowerVialFr = 1
+	           upperVialFr = RCGetResourceVal("GC1","config", "ALS.tray.Capacity")
+
+                   SetPrivateProfileInt section$, "FrLowerVial", 1, szConfigFile$
+                   SetPrivateProfileInt section$, "FrUpperVial", upperVialFr, szConfigFile$
+
+                   SetPrivateProfileInt section$, "BkLowerVial", 1, szConfigFile$
+                   SetPrivateProfileInt section$, "BkUpperVial", upperVialFr, szConfigFile$
+                Else
+	           if (RCGetResourceVal("GC1","config", "ALS.Fr.Present") = 1)
+		      lowerVialFr = 101
+		      upperVialFr = lowerVialFr + RCGetResourceVal("GC1","config",  "ALS.Fr.Capacity") - 1
+
+                      SetPrivateProfileInt section$, "FrLowerVial", lowerVialFr, szConfigFile$
+                      SetPrivateProfileInt section$, "FrUpperVial", upperVialFr, szConfigFile$
+                   Else
+		      SetPrivateProfileInt section$, "FrLowerVial", lowerVialFr, szConfigFile$
+	              SetPrivateProfileInt section$, "FrUpperVial", upperVialFr, szConfigFile$
+                   EndIf
+
+                   if (RCGetResourceVal("GC1","config", "ALS.Bk.Present") = 1)
+                      lowerVialBk = 201
+	              upperVialBk = lowerVialBk + RCGetResourceVal("GC1","config",  "ALS.Bk.Capacity") - 1
+
+                      SetPrivateProfileInt section$, "BkLowerVial", lowerVialBk, szConfigFile$
+                      SetPrivateProfileInt section$, "BkUpperVial", upperVialBk, szConfigFile$
+                   Else
+	              SetPrivateProfileInt section$, "BkLowerVial", lowerVialBk, szConfigFile$
+	              SetPrivateProfileInt section$, "BkUpperVial", upperVialBk, szConfigFile$
+	           EndIf
+                endif 
+            endif
+        else
+           if FileStat(Mode, szConfigFile$ ) = -1 then
+	    	SetPrivateProfileInt section$, "FrLowerVial", lowerVialFr, szConfigFile$
+	    	SetPrivateProfileInt section$, "FrUpperVial", upperVialFr, szConfigFile$
+            	SetPrivateProfileInt section$, "BkLowerVial", lowerVialBk, szConfigFile$
+	    	SetPrivateProfileInt section$, "BkUpperVial", upperVialBk, szConfigFile$
+           endif
+        endif
+
+
+endmacro
+
+!############################################################################
+name Write68XXConfigItems
+
+local iAuxH1, iAuxH2, iAuxP3, iAuxP4, iAuxP5, section, szConfigFile$
+    section$ = "HP68QK00"
+    szConfigFile$ = _INSTPATH$ + "HP68QK00.ini"
+
+    if (_offline = 0)
+
+        SetPrivateProfileInt section$, "FrontDetType", RCGetResourceVal("GC1", "config", "Det.fr.Type"), szConfigFile$
+        SetPrivateProfileInt section$, "FrontInletType", RCGetResourceVal("GC1", "config", "Inlet.fr.Type"), szConfigFile$
+
+        SetPrivateProfileInt section$, "Col1DetConn", RCGetResourceVal("GC1", "config", "Column.1.DetConn"), szConfigFile$
+        SetPrivateProfileInt section$, "Col1InletConn", RCGetResourceVal("GC1", "config", "Column.1.InletConn"), szConfigFile$
+        SetPrivateProfileInt section$, "FrontInjector", RCGetResourceVal("GC1", "config", "ALS.fr.Present"), szConfigFile$
+ 
+        if TestForDevice("68GC", 0, "") = 1
+            SetPrivateProfileInt section$, "Col2DetConn", RCGetResourceVal("GC1", "config", "Column.2.DetConn"), szConfigFile$
+            SetPrivateProfileInt section$, "Col2InletConn", RCGetResourceVal("GC1", "config", "Column.2.InletConn"), szConfigFile$
+            SetPrivateProfileInt section$, "BackDetType", RCGetResourceVal("GC1", "config", "Det.bk.Type"), szConfigFile$
+            SetPrivateProfileInt section$, "BackInletType", RCGetResourceVal("GC1", "config", "Inlet.bk.Type"), szConfigFile$
+            SetPrivateProfileInt section$, "BackInjector", RCGetResourceVal("GC1", "config", "ALS.bk.Present"), szConfigFile$
+        endif
+
+
+        iAuxH1 = RCGetResourceVal("GC1","config","AuxH.1.Present")
+        if TestForDevice("68GC", 0, "") = 1
+            iAuxH2 = RCGetResourceVal("GC1","config","AuxH.2.Present")
+        else
+            iAuxH2 = 0
+        endif
+        iAuxP3 = RCGetResourceVal("GC1","config","AuxP.3.Present")
+        iAuxP4 = RCGetResourceVal("GC1","config","AuxP.4.Present")
+        iAuxP5 = RCGetResourceVal("GC1","config","AuxP.5.Present")
+        SetPrivateProfileString section$, "AuxPresence", Val$(iAuxH1) + Val$(iAuxH2) + val$(iAuxP3) + val$(iAuxP4) + val$(iAuxP5), szConfigFile$
+
+    endif
+endmacro

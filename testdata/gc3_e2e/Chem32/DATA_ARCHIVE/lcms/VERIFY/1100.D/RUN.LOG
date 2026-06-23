@@ -1,0 +1,32 @@
+  67 41e0 34d642ed    0
+Method       Method started                                 14:04:29 02/02/98
+  70 41de 34d642ed    0
+CP Macro     PreRun macro                                   14:04:29 02/02/98
+1c2a 1da8 34d642ed  500
+1100 DAD   1 Preparing for a simulation                     14:04:29 02/02/98
+1c2a 1da6 34d642ee  500
+1100 VWD   1 Preparing for a simulation                     14:04:30 02/02/98
+1c2a 1da7 34d642ee  500
+1100 FLD   1 Preparing for a simulation                     14:04:30 02/02/98
+  67 41e0 34d642ef    0
+Method       Instrument run started                         14:04:31 02/02/98
+1c2b 1da8 34d64303  500
+1100 DAD   1 Simulation started                             14:04:51 02/02/98
+1c2b 1da6 34d64303  500
+1100 VWD   1 Simulation started                             14:04:51 02/02/98
+1c2b 1da7 34d64303  500
+1100 FLD   1 Simulation started                             14:04:51 02/02/98
+1c2c 1da6 34d6455c  500
+1100 VWD   1 Simulation finished                            14:14:52 02/02/98
+1c2c 1da7 34d6455c  500
+1100 FLD   1 Simulation finished                            14:14:52 02/02/98
+1c2c 1da8 34d6455c  500
+1100 DAD   1 Simulation finished                            14:14:52 02/02/98
+  67 41e0 34d6455e    0
+Method       Instrument run completed                       14:14:54 02/02/98
+ 875 41e0 34d64561    0
+Method       Saving Method RUN.M                            14:14:57 02/02/98
+  70 41de 34d64567    0
+CP Macro     Analyzing rawdata SYSVERIF.D                   14:15:03 02/02/98
+  67 41e0 34d6457d    0
+Method       Method completed                               14:15:25 02/02/98

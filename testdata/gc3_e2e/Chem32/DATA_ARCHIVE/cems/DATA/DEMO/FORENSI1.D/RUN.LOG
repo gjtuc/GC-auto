@@ -1,0 +1,12 @@
+ 443 41e0 382a2418  e5f
+Method       Method started:  line# 1 vial# 20 inj# 1       18:04:08 11/10/99
+  67 41e0 382a2419    0
+Method       Instrument running sample vial# 20             18:04:09 11/10/99
+  67 41e0 382a28f5    0
+Method       Instrument run completed                       18:24:53 11/10/99
+ 875 41e0 382a28f7    0
+Method       Saving Method RUN.M                            18:24:55 11/10/99
+  70 41de 382a28f8    0
+CP Macro     Analyzing rawdata forensi1.D                   18:24:56 11/10/99
+  67 41e0 382a28fe    0
+Method       Method completed                               18:25:02 11/10/99

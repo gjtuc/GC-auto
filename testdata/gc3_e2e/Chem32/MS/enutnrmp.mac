@@ -1,0 +1,899 @@
+!*****************************************************************************
+!  enutnrmp.mac:  Obtain and plot the SIMRamps for the following parameters:
+!                 Fragmentor, Skim1, Skim2, Octopole peak, Ion Energy, Lens1, 
+!                 Lens2/Lens2DC, Lens2DC Amplitude, Lens2DC Phase, QuadDC, 
+!                 Iris, and HED
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+  SRampVer$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/enutnrmp.mac 1.11 2003-04-22 13:23:48-07 pcormia Exp $"
+  verIx = instr(SRampVer$, ".mac ") + 5
+  SRampVer$ =  SRampVer$[verIx:VerIx + instr(SRampVer$[VerIx:len(SRampVer$)]," ") - 1] 
+  remove verIx
+!
+!*****************************************************************************
+!
+!  Calling syntax:
+!      To run a ramp report from the current tune file, saving no changes:
+!          MSAT_MSRampReport 
+!      or:
+!          ShowRamp 
+!
+!      There are several alternatives for ion polarity and tune file 
+!      handling.  
+!          ShowRamp [ionIndex], [tune file name]
+!
+!         ionIndex = 0: positive ion.
+!         ionIndex = 1: negative ion.
+!         ionIndex = 2: both pos and neg ions.
+!         ionIndex = 9: current ion.  (default)
+!
+!      If both ion polarities are requested, the tune file will be saved
+!      and reloaded.  If the requested ion polarity is not the current one,
+!      the tune file will be saved and reloaded.  If the current ion 
+!      polarity is specified, the tune file will not be saved
+!
+!
+!*****************************************************************************
+
+name MSAT_MSRampReport
+
+   LOCAL Firstline$,SPRITETune$, x_WorkingIon$, x_IonPolarity, x_IonPolarity$
+   LOCAL Comments$,Now,Now$,Rev$, button, numMasses, DynRowNum, DynStr$
+   LOCAL Frame3A$, Frame3B$, Frame3C$, tempStr$, ParmStr$, field, oldOpolKnee
+   LOCAL i, lastprint$, whichDyn, margin1, margin2, firstline, dynX, dynY
+   LOCAL ProdEnv
+Local  ID_TUNEMAC_MS_RAMP_REPORT_851
+Local  ID_TUNEMAC_MS_RAMP_REPORT_852
+Local  ID_TUNEMAC_MS_RAMP_REPORT_853
+Local  ID_TUNEMAC_MS_RAMP_REPORT_854
+Local  ID_TUNEMAC_MS_RAMP_REPORT_855
+Local  ID_TUNEMAC_MS_RAMP_REPORT_856
+
+Local  ID_TUNEMAC_MS_RAMP_REPORT_857
+Local  ID_TUNEMAC_MS_RAMP_REPORT_858
+Local  ID_TUNEMAC_MS_RAMP_REPORT_859
+Local  ID_TUNEMAC_MS_RAMP_REPORT_860
+Local  ID_TUNEMAC_MS_RAMP_REPORT_861
+Local  ID_TUNEMAC_MS_RAMP_REPORT_862
+Local  ID_TUNEMAC_MS_RAMP_REPORT_863
+Local  ID_TUNEMAC_MS_RAMP_REPORT_864
+Local  ID_TUNEMAC_MS_RAMP_REPORT_865
+Local  ID_TUNEMAC_MS_RAMP_REPORT_866
+Local  ID_TUNEMAC_ERROR_OCCURRED_867
+Local  ID_TUNEMAC_PROFILE__12_SA_868
+Local  ID_TUNEMAC_MS_RAMP_REPORT_869
+Local  ID_TUNEMAC_MS_RAMP_REPORT_870
+Local  ID_TUNEMAC_FOREVAC___5_1F_871
+Local  ID_TUNEMAC_HIVAC__3_1E_872
+Local  ID_TUNEMAC__DYNAMIC_RAMP_873
+Local  ID_TUNEMAC______M_Z_874
+Local  ID_TUNEMAC_____7_2F_875
+ID_TUNEMAC_MS_RAMP_REPORT_851                      =  17851  
+ID_TUNEMAC_MS_RAMP_REPORT_852                      =  17852  
+ID_TUNEMAC_MS_RAMP_REPORT_853                      =  17853  
+ID_TUNEMAC_MS_RAMP_REPORT_854                      =  17854  
+ID_TUNEMAC_MS_RAMP_REPORT_855                      =  17855  
+ID_TUNEMAC_MS_RAMP_REPORT_856                      =  17856  
+ID_TUNEMAC_MS_RAMP_REPORT_855                      =  17855  
+ID_TUNEMAC_MS_RAMP_REPORT_857                      =  17857  
+ID_TUNEMAC_MS_RAMP_REPORT_858                      =  17858  
+ID_TUNEMAC_MS_RAMP_REPORT_859                      =  17859  
+ID_TUNEMAC_MS_RAMP_REPORT_860                      =  17860  
+ID_TUNEMAC_MS_RAMP_REPORT_861                      =  17861  
+ID_TUNEMAC_MS_RAMP_REPORT_862                      =  17862  
+ID_TUNEMAC_MS_RAMP_REPORT_863                      =  17863  
+ID_TUNEMAC_MS_RAMP_REPORT_864                      =  17864  
+ID_TUNEMAC_MS_RAMP_REPORT_865                      =  17865  
+ID_TUNEMAC_MS_RAMP_REPORT_866                      =  17866  
+ID_TUNEMAC_ERROR_OCCURRED_867                      =  17867  
+ID_TUNEMAC_PROFILE__12_SA_868                      =  17868  
+ID_TUNEMAC_MS_RAMP_REPORT_869                      =  17869  
+ID_TUNEMAC_MS_RAMP_REPORT_870                      =  17870  
+ID_TUNEMAC_FOREVAC___5_1F_871                      =  17871  
+ID_TUNEMAC_HIVAC__3_1E_872                         =  17872  
+ID_TUNEMAC__DYNAMIC_RAMP_873                       =  17873  
+ID_TUNEMAC______M_Z_874                            =  17874  
+ID_TUNEMAC_____7_2F_875                            =  17875  
+    
+   _Abort$ = "MSAT_SIMRamp_Stop -1"
+   ON ERROR MSAT_SIMRamp_Stop 0
+   
+   ProdEnv = Check(Variable, PRTestVer$)
+
+   ! Turn off ramp details if more than four masses
+   MSMassValue 0, numMasses
+   MSRampPrint oldRampPrintState, 1
+   if numMasses > 4 then
+      ! turn off mass 3 and 5 so print stats work
+      MSMassValue 3,,,mass3Sel,0                     ! global
+      if numMasses = 6 then   ! If there are six masses, turn off mass 5
+         MSMassValue 5,,,mass5Sel,0                  ! global
+      else
+         MSMassValue 5,,,mass5Sel, 1                 ! global
+      endif
+   endif
+
+   ! Set up the MS
+   MSGDISPLAY ON  
+   MSScanprint oldScanPrintState, 1      !  Turn on scan stats display   
+   MSAverages prevAverages
+   MSAT_SRampInitDynamics  !  Read all dynamically ramped parameters
+   MSAT_Set_Ramps          !  Set MSSIMRAMP parameters
+
+   ! define 3-window dimensions
+   Frame3A$ = " 0.05,0.07,0.90,0.30"
+   Frame3B$ = " 0.05,0.38,0.90,0.30"
+   if ProdEnv = 1 then
+      Frame3C$ = " 0.05,0.69,0.90,0.25"
+   else
+      Frame3C$ = " 0.05,0.69,0.90,0.30"
+   endif
+
+   msat_SRampHeader 1
+   
+   MSON
+   PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_851)
+   SLEEP 5
+
+ !  Page 1 -- Fragmentor, Skimmer1, and Skimmer2 , unlinked --
+    ! Not done for SL models
+
+   if (MSD_SL = 0) and (MSD_HT = 0) then        ! Fragmentor and Skim1 are linked
+     MSUnlinkParms 1         !  Do unlinked ramps first
+     Print ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_852)
+     MSAT_do_SRamp "Fragment"
+     evaluate "MSDispprint " + Frame3A$
+
+     PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_853)
+     MSAT_do_SRamp "Skim1"
+     evaluate "MSDispprint " + Frame3B$
+
+     PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_854)
+     MSAT_do_SRamp "Skim2Unl"
+     evaluate "MSDispprint " + Frame3C$
+
+     MSAT_SRampHeader
+   endif
+
+! Page 2 -- Fragmentor, Skimmer1, and Skimmer2 , linked --
+
+   if (MSD_SL = 0) and (MSD_HT = 0) then        ! Fragmentor and Skim1 are linked
+     MSUnlinkParms 0        ! turn off Skim1 linking
+
+     Print ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_855)
+     MSAT_do_SRamp "Fragmentor"
+     evaluate "MSDispprint " + Frame3A$
+
+     PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_856)
+     MSAT_do_SRamp "Skim2"
+     evaluate "MSDispprint " + Frame3B$
+   else                                      ! SL models
+     Print ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_855)
+     MSAT_do_SRamp "Fragment"
+     evaluate "MSDispprint " + Frame3A$
+
+     PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_857)
+     MSAT_do_SRamp "Skim1"
+     evaluate "MSDispprint " + Frame3B$
+   endif
+
+   PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_858)
+   if MSD_46 = 1 then
+     MSParm OpolKnee, oldOpolKnee, 0
+   endif
+   MSAT_do_SRamp "OpolPeak"
+   if MSD_46 = 1 then
+     MSParm OpolKnee,, oldOpolKnee
+   endif
+   evaluate "MSDispprint " + Frame3C$
+
+   MSAT_SRampHeader
+
+! Page 3 -- Ion Energy, Lens1 and Lens2 --
+
+   PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_859)
+   MSAT_do_SRamp Energy
+   evaluate "MSDispprint " + Frame3A$
+
+   PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_860)
+   MSAT_do_SRamp Lens1
+   evaluate "MSDispprint " + Frame3B$
+
+   if (MSD_SL = 0) and (MSD_HT = 0) then        ! Fragmentor and Skim1 are linked
+     PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_861)
+     MSAT_do_SRamp Lens2
+     evaluate "MSDispprint " + Frame3C$
+   else                                             ! Sl model
+     PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_862)
+     MSAT_do_SRamp Lens2DC
+     evaluate "MSDispprint " + Frame3C$
+   endif
+
+   MSAT_SRampHeader
+
+! Page 3b -- Lens2DCRFAmp and Lens2DCRFPhase --
+
+   if MSD_RF = 1 then                               ! SL model with L2RF
+     PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_863)
+     MSAT_do_SRamp Lens2RFAmplitude
+     evaluate "MSDispprint " + Frame3A$
+
+     PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_864)
+     MSAT_do_SRamp Lens2RFPhase
+     evaluate "MSDispprint " + Frame3B$
+   endif
+
+   MSAT_SRampHeader
+
+! Page 4 -- Quad DC and Iris (HED discontinued) --
+
+   On Error SetPageLoc 4, 10; print \
+          "Error occurred when SIMRamping Quad DC Offset"
+   PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_865)
+   MSAT_do_SRamp QuadDC
+   evaluate "MSDispprint " + Frame3A$
+   On Error MSAT_SIMRamp_Stop
+
+   PRINT ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_866)
+   MSAT_do_SRamp Iris
+   evaluate "MSDispprint " + Frame3B$
+
+   On Error SetPageLoc 4, 45; print ReadResource$("tunemac",ID_TUNEMAC_ERROR_OCCURRED_867)
+   MSAT_do_SRamp HED
+   evaluate "MSDispprint " + Frame3C$
+   On Error MSAT_SIMRamp_Stop
+   
+   MSAT_SRampHeader
+   
+! Page 5 -- MS Profile, and Scan--
+
+   ! define 2-window dimensions
+   Frame2A$ = "0.05,0.10,0.90,0.43"
+   Frame2B$ = "0.05,0.55,0.90,0.38"
+
+   if ProdEnv = 0 then
+      SetPageLoc 4, 5
+   endif
+   PRINT# 5, ReadResource$("tunemac",ID_TUNEMAC_PROFILE__12_SA_868)
+   PRINT  ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_869)
+   MSAverages , 3            !  Set Averages
+   MSProfile 0
+   evaluate "MSDispprint " + Frame2A$
+   
+   PRINT  ReadResource$("tunemac",ID_TUNEMAC_MS_RAMP_REPORT_870)
+   MSAverages ,1
+   MSScanprint , 1      !  Turn on scan stats display   
+   MSScan 50, 3000, 8, 0 
+   evaluate "MSDispprint " + Frame2B$
+
+   MSAT_SRampHeader
+
+! Page 6 -- MS Parameters
+
+   ! Print MS Parameters
+   MSPRINT 5
+   ! Add vacuum readings
+   MSSCQuery "sens? forepres", foreVac$
+   MSSCQuery "sens? highpres", hiVac$
+   TempStr$ = SPrintF$(val(foreVac$), ReadResource$("tunemac",ID_TUNEMAC_FOREVAC___5_1F_871))
+   TempStr$ = TempStr$ + SPrintF$(val(hiVac$), ReadResource$("tunemac",ID_TUNEMAC_HIVAC__3_1E_872))
+   SetPageLoc 25, YLoc() + 3
+   Print #5, TempStr$
+
+   ! List first four dynamic ramps 
+   Line1 = YLoc() + 3; Line2 = Line1 + 10
+   Margin1 = 10; Margin2 = Margin1 + 36
+   whichDyn = 1; rowNum = 1
+   repeat
+      ParmStr$ = TabText$(TuneFileReg[1], SRampDynamics, rowNum, "Parameter")
+      if  ParmStr$ <> "" then
+         DynStr$ = TabText$(TuneFileReg[1], SRampDynamics, rowNum, "ParmString")
+         print ParmStr$, DynStr$
+         ! Set up page location
+         if mod(whichDyn, 2) = 1 then
+            DynX = Margin1
+         else 
+            DynX = Margin2
+         endif
+         if whichDyn > 2 then 
+            DynY =  Line2
+         else 
+            DynY = Line1
+         endif
+         
+         SetPageLoc DynX, DynY
+         Print #5, ParmStr$ + ReadResource$("tunemac",ID_TUNEMAC__DYNAMIC_RAMP_873)
+         SetPageLoc Dynx, DynY + 1
+         Print #5, ReadResource$("tunemac",ID_TUNEMAC______M_Z_874)
+         field = 1
+         repeat 
+            DynVal$ = SubString$(DynStr$, field,,",")
+            TempStr$ = SPrintF$(val(DynVal$), ReadResource$("tunemac",ID_TUNEMAC_____7_2F_875))
+            DynVal$ = SubString$(DynStr$, field + 1,,",")
+            TempSTr$ = TempStr$ + SPrintF$(val(DynVal$), "%7.2f")
+            if DynVal$ <> "" then
+               SetPageLoc DynX, DynY + 2 + floor((field)/2)
+               Print #5, TempStr$
+            endif
+            field = field + 2
+         until Dynval$ = ""
+         whichDyn = whichDyn + 1
+      endif
+      rowNum = rowNum + 1
+   until (rowNum = TabHdrVal(TuneFileReg, SRampDynamics, "NumberOfRows")) or \
+         (whichDyn = 5)
+   
+   MSAT_SIMRamp_Stop 1                    ! Normal termination
+ 
+   RETURN
+   
+endmacro ! MSAT_MSAT_MSRampReport
+
+!*****************************************************************************
+name MSAT_Do_SRamp
+PARAMETER Parm$
+
+   LOCAL DynRowNum, FragRowNum, oldFrag, charge
+   
+   DynRowNum = RowByText(TuneFileReg[1], SRampDynamics,, "Parameter", "=", \
+                         Parm$)
+   if DynRowNum > 0 then
+      evaluate "MSDynamic " + Parm$ + ", DISABLE"
+   endif
+
+   if Parm$ = "Skim2" then ! disable fragmentor ramp
+      FragRowNum = RowByText(TuneFileReg[1],SRampDynamics,, "Parameter", \
+                             "=", "Fragmentor")
+      if FragRowNum > 0 then    ! Frag is dynamic; disable it
+         MSDynamic fragmentor, disable
+      endif
+      msparm polarity,charge
+      if charge = 0 then
+         MSParm fragmentor, oldFrag, 125
+      else
+         MSParm fragmentor, oldFrag, 150
+      endif
+   endif
+
+   if Parm$ = "HED" then
+      MSMassValue 3,,,,1
+      MSSimramp HED,3
+      MSMassValue 3,,,,0
+   else
+      evaluate "MSSimramp " + Parm$
+   endif
+
+   if DynRowNum > 0 then    ! re-enable the dynamic ramp
+      evaluate "MSDynamic " + Parm$ + ", enable"
+      evaluate "MSDynamic " + Parm$ + ",set, " + TabText$(TuneFileReg[1], \
+               SRampDynamics, DynRowNum, "ParmString")
+   endif
+
+   if FragRowNum > 0 then   ! re-enable the fragmentor dynamic ramp
+      MSParm fragmentor, oldFrag
+      MSDynamic fragmentor, enable
+      evaluate "MSDynamic fragmentor,set, " + TabText$(TuneFileReg[1], \
+               SRampDynamics, FragRowNum, "ParmString")
+   endif
+   
+   RETURN
+   
+endmacro !MSAT_do_SRamp
+!*****************************************************************************
+
+!*****************************************************************************
+name MSAT_SIMRamp_Stop 
+PARAMETER ExitMode DEFAULT 0 
+! ExitMode > 0 means normal termination; ExitMode < 0 means user aborted
+! ExitMode = 0 means an error occurred.
+LOCAL lastPrint$, ExitMsg$
+
+Local  ID_TUNEMAC____ERROR_876
+Local  ID_TUNEMAC____MESSAGE_877
+Local  ID_TUNEMAC____MACRO_878
+Local  ID_TUNEMAC____LINE_879
+Local  ID_TUNEMAC____FILE_880
+
+
+ID_TUNEMAC____ERROR_876                            =  17876  
+ID_TUNEMAC____MESSAGE_877                          =  17877  
+ID_TUNEMAC____MACRO_878                            =  17878  
+ID_TUNEMAC____LINE_879                             =  17879  
+ID_TUNEMAC____FILE_880                             =  17880  
+
+   ON ERROR print
+   
+   MSOFF
+   
+   if ExitMode < 0 then 
+      ExitMsg$ = "MS Ramp Report:  Aborted by operator"
+   else
+      if ExitMode = 0 then
+         ExitMsg$ = "MS Ramp Report: " + _ErrMsg$ + " occurred"
+      else 
+         if ExitMode > 0 then
+            ExitMsg$ = "MS Ramp Report:  Completed"
+         endif
+      endif
+   endif
+ 
+   if ExitMode = 0 then
+      SETPAGELOC 8,YLogMax()-2
+      PRINT# 5, ExitMsg$
+      SetPageLoc 8,31
+      print ReadResource$("tunemac",ID_TUNEMAC____ERROR_876), _ERROR
+      SetPageLoc 8,32
+      print ReadResource$("tunemac",ID_TUNEMAC____MESSAGE_877), _ERRMSG$
+      SetPageLoc 8,33
+      print ReadResource$("tunemac",ID_TUNEMAC____MACRO_878), _ERRMacro$
+      SetPageLoc 8,34
+      print ReadResource$("tunemac",ID_TUNEMAC____LINE_879), _ERRLine
+      SetPageLoc 8,35
+      print ReadResource$("tunemac",ID_TUNEMAC____FILE_880), _ERRFile$
+                   
+      print ">>>>>>>>>>>>>>>>>>>>>>>"
+      print ReadResource$("tunemac",ID_TUNEMAC____ERROR_876), _ERROR
+      print ReadResource$("tunemac",ID_TUNEMAC____MESSAGE_877), _ERRMSG$
+      print ReadResource$("tunemac",ID_TUNEMAC____MACRO_878), _ERRMacro$
+      print ReadResource$("tunemac",ID_TUNEMAC____LINE_879), _ERRLine
+      print ReadResource$("tunemac",ID_TUNEMAC____FILE_880), _ERRFile$
+      print ">>>>>>>>>>>>>>>>>>>>>>>"
+      FORMFEED
+      ! error occurred; try to go back and finish macro
+      RETURN
+      
+   endif
+
+   ! Abort or end
+   On Error print
+   if (MSD_SL = 0) and (MSD_HT = 0) then
+     MSUnlinkParms 0
+   endif
+   MSScanPrint, oldScanPrintState
+   MSRampPrint, oldRampPrintState
+   MSAverages , PrevAverages
+   MSMassValue 3,,,,mass3Sel
+   MSMassValue 5,,,,mass5Sel
+   
+   remove oldRampPrintState, oldScanPrintState
+   remove PrevAverages, mass3Sel, mass5Sel
+   _Abort$ = ""
+   DelTab TuneFileReg[1], SRampDynamics
+   
+   EndJob
+   Close #5
+   SetHeader    !Unset the header and footer
+   SetFooter
+   Print ExitMsg$
+   
+   if ExitMode < 0 then    ! stop on Abort
+      STOP
+   endif
+   
+   RETURN
+  
+endmacro !MSAT_SIMRamp_Stop
+
+!*****************************************************************************
+name MSAT_Build_SR_Header
+
+   PARAMETER first$, second$ DEFAULT "", third$ DEFAULT ""
+   LOCAL header$
+   LOCAL PgWidth, W$,L$,M$
+
+   PgWidth = XLogMax()  ! Numerical value of the max page width
+   W$ = val$(PgWidth)   ! String value of the max page width
+
+   L$ = VAL$(LEN(first$))
+   M$ = "%-" + W$ + "." + L$ + "s"  ! Using the full width pads the string
+   first$ = SPRINTF$(first$,M$)     ! to be wrapped by the WRAPTEXT command
+
+   L$ = VAL$(LEN(second$))
+   M$ = "%-" + W$ + "." + L$ + "s"  ! Using the full width pads the string
+   second$ = SPRINTF$(second$,M$)   ! to be wrapped by the WRAPTEXT command
+
+   L$ = VAL$(LEN(third$))
+   M$ = "%-" + W$ + "." + L$ + "s"  ! Using the full width pads the string
+   third$ = SPRINTF$(third$,M$)     ! to be wrapped by the WRAPTEXT command
+
+   header$ = first$+second$+third$       ! Join all three lines together
+   header$ = WRAPTEXT$(header$,PgWidth)  ! Then wrap them to form three lines
+
+   SETHEADER  header$, 4,1   ! The X and Y values, 8 characters and 1 line
+
+endmacro  !MSAT_Build_SR_Header
+!*****************************************************************************
+!*****************************************************************************
+name msat_Justify$
+PARAMETER text1$, text2$
+!  Returns a string as long as the pagewidth, setting text1$ at the left edge
+!  and text2$ at the right edge
+LOCAL i, return$
+
+   n = XLogMax() - (len(text1$) + len(text2$)) - 1
+   return$ = text1$
+   for i = 1 to n
+      return$ = return$ + " " 
+   next i
+   
+   RETURN return$ + text2$
+   
+endmacro     !msat_Justify
+!*****************************************************************************
+
+!*****************************************************************************
+name MSAT_SRampHeader
+PARAMETER FirstPage default 0
+LOCAL ProdEnv, Now$, FirstLine$, SecondLine$, LastPrint$
+LOCAL IonPolarity, IonMode, IonMode$ , SerialNo$
+Local  ID_TUNEMAC_WED_JAN_02_02_881
+ID_TUNEMAC_WED_JAN_02_02_881                       =  17881  
+   
+
+   On Error msat_SIMRamp_Stop 0
+   GetCurrentPrinterSetup                !3-02PR utilize current printer setup
+      
+   ProdEnv = Check(Variable, PRTestVer$)
+   
+   if ProdEnv = 1 then   ! Production Environment
+      if FirstPage = 1 then
+         if Check(macro, MfgHeaderMain) = 0 then
+            macro _AutoMSPath$ + "header.mac"
+         endif
+         MfgHeaderMain "LC/MSD SIMRamp Report", 1, "tune"
+         SetFooter  "MS Ramp Report Version " + SRampVer$, 4, ylogmax()
+      else
+         FormFeed
+         MfgHeaderPrint
+      endif
+   else  
+      if FirstPage = 1 then
+         ! Get print header set up 
+         
+         ! Get some instrument info
+         MSSCQuery "config:id:desc? serialnum", SerialNo$
+         MSParm IonPolarity, IonPolarity
+         MSGetMode IonMode$
+         if IonPolarity = 0 then
+            IonMode$ = IonMode$ + " Positive ion"
+         endif
+         if IonPolarity = 1 then
+            IonMode$ = IonMode$ + " Negative ion"
+         endif
+         if IonPolarity = 2 then
+            IonMode$ = IonMode$ + " Positive ion - Fast Scan"
+         endif
+         if IonPolarity = 3 then
+            IonMode$ = IonMode$ + " Negative ion - Fast Scan"
+         endif
+         SerialNo$ = ConvertText$(Trim, SerialNo$)
+         
+         ! Time stamp
+         Lastprint$ = Time$() !  24 Character String ReadResource$("tunemac",ID_TUNEMAC_WED_JAN_02_02_881)
+         Now = len(Lastprint$)!  Count number of characters in string
+         Now$ = "("           !  Time ie., "(02:03) WED JAN 02, 1980"
+         Now$ = Now$ + Lastprint$[12:16] + ") " + Lastprint$[1:10] + ", " + \
+                Lastprint$[21:24]
+
+         SetMargin 4,1,0
+         FirstLine$  = msat_Justify$("LC/MSD SIMRamp Report", Now$)
+         SecondLine$ = msat_Justify$(TuneFilePath$ + TuneFileName$, IonMode$)
+         ThirdLine$  = msat_Justify$("Instrument: " + _InstName$, \
+                                     "Serial Number: " + SerialNo$ )
+         On Error Print
+!!         Close #5
+!!         EndJob
+         On Error MSAT_SIMRamp_Stop
+         if DevNum() <> 5 then
+            On Error CloseDeviceBeforeOpenDevice  !3-02PR close only if error on OpenDevice
+            OpenDevice "Printer" as #5
+            On Error Print
+         endif
+         BeginJob "Page "," of ",xlogmax()-11, ylogmax()
+
+         MSAT_Build_SR_Header FirstLine$, SecondLine$, ThirdLine$
+         SetFooter  "MS Ramp Report Version " + SRampVer$, 4, ylogmax()
+      else
+         FormFeed
+      endif !* if FirstPage = 1
+   endif !* if ProdEnv = 1
+   
+   RETURN   
+
+endmacro  !MSAT_SRampHeader
+
+!*****************************************************************************
+name MSAT_Set_Ramps   ! Set ~100 data points per lens over necessary range
+                      ! 10/22/09 CPL change to ~50 points over ramp range.
+
+   MSRampsmooth , 11
+   MSSetramp Energy,       0.00,    15.00,  0.20    ! Ion Energy
+   MSSetramp Opolp,        0.00,   300.00,  5.00    ! Octopole Peak
+   MSSetramp Lens1,       -5.00,     5.00,  0.20    ! Lens 1
+   MSSetramp QuadDC,     -12.00,    12.00,  0.50    ! Quad DC Offset
+   MSSetramp Iris,      -400.00,   400.00,  16.0    ! Iris
+   MSSetramp HED,       5000.00, 10000.00,100.0     ! HED
+   
+   if (MSD_SL = 1) or (MSD_HT = 1) then    ! SL models
+     MSSetramp FRAGMENT,     0.00,   400.00,  8.0     ! Linked fragmentor
+     MSSetramp Skim1,        0.00,    25.00,  1.0     ! Skimmer 1
+     MSSetramp Lens2DC,      0.00,    30.00,  0.75    ! Lens 2DC
+     MSSetRamp Lens2RFPhase, 0.00,   360.00,  18      ! Lens 2RF Phase
+     MSSetRamp Lens2RFAmplitude,10,  400.00  ,5.0     ! Lens 2RF Amplitude
+   else                             ! All other models - frag/Sk1 linked
+     MSSetramp FRAGMENTOR, 0.00,   400.00,  8.00    ! Fragmentor
+     MSSetramp Skim2,      0.00,    25.00,  0.50    ! Skimmer 2
+     MSSetramp Lens2,      0.00,   150.00,  2.00    ! Lens 2
+
+     MSUnlinkParms 1
+     MSSetRamp Fragment,   0.00,   400.00, 8.00     ! Unlinked fragmentor
+     MSSetRamp Skim1,      0.00,   100.00, 2.00     ! Unlinked Skim1
+     MSSetRamp Skim2Unl,   0.00,    25.00, 0.50     ! Unlinked Skim2
+     MSUnlinkParms 0
+   endif
+   
+endmacro !MSAT_Set_Ramps
+!*****************************************************************************
+
+!*****************************************************************************
+name MSAT_SRampInitDynamics
+LOCAL parm1$, parm2$, parm3$, parm4$, parm5$, parm6$, parm7$, parm8$
+
+   ! Find out which parms are dynamically ramped
+   DelTab TuneFileReg[1], SRampDynamics
+   NewTab TuneFileReg[1], SRampDynamics
+   NewColText TuneFileReg[1], SRampDynamics, "Parameter"
+   NewColText TuneFileReg[1], SRampDynamics, "ParmString"
+   InsTabRow  TuneFileReg[1], SRampDynamics, 1:8
+    parm1$ = ""
+    parm2$ = ""
+    parm3$ = ""               !* Initialize to empty string
+    parm4$ = ""               !* because MSDynamic won't reset
+    parm5$ = ""               !* lens strings that are not active
+    parm6$ = ""
+    parm7$ = ""
+    parm8$ = ""
+   MSDynamic list, parm1$, parm2$, parm3$, parm4$, parm5$, parm6$, \
+             parm7$, parm8$
+   if parm1$ <> "" then
+      SetTabText TuneFileReg[1], SRampDynamics, 1, "Parameter", parm1$ 
+      MSAT_SRampReadDyn 1
+   endif
+   if parm2$ <> "" then
+      SetTabText TuneFileReg[1], SRampDynamics, 2, "Parameter", parm2$ 
+      MSAT_SRampReadDyn 2
+   endif
+   if parm3$ <> "" then
+      SetTabText TuneFileReg[1], SRampDynamics, 3, "Parameter", parm3$ 
+      MSAT_SRampReadDyn 3
+   endif
+   if parm4$ <> "" then
+      SetTabText TuneFileReg[1], SRampDynamics, 4, "Parameter", parm4$ 
+      MSAT_SRampReadDyn 4
+   endif
+   if parm5$ <> "" then
+      SetTabText TuneFileReg[1], SRampDynamics, 5, "Parameter", parm5$ 
+      MSAT_SRampReadDyn 5
+   endif
+   if parm6$ <> "" then
+      SetTabText TuneFileReg[1], SRampDynamics, 6, "Parameter", parm6$ 
+      MSAT_SRampReadDyn 6
+   endif
+   if parm7$ <> "" then
+      SetTabText TuneFileReg[1], SRampDynamics, 7, "Parameter", parm7$ 
+      MSAT_SRampReadDyn 7
+   endif  
+   if parm8$ <> "" then
+      SetTabText RESULT_REG[1], dnNoiseDynamics, 8, "Parameter", parm1$ 
+      MSAT_SRampReadDyn 8
+   endif
+   
+endmacro    ! end SRampDynamics
+!*****************************************************************************
+
+!***************************************************************************!
+!*****************************************************************************
+!***************************************************************************!
+name MSAT_SRampReadDyn
+PARAMETER ParmNum
+! This macro reads a dynamic list and stores it in the SRampDynamics table
+! as a string
+!***************************************************************************!
+LOCAL nPoints, mass, setting
+LOCAL Parm$, ParmStr$, temp$
+
+    ! get the parameter name
+    Parm$ = TabText$(TuneFileReg[1], SRampDynamics, ParmNum, "Parameter")
+
+    MSDynamic Parm$, read, 0, nPoints
+    if nPoints = 0 then
+       RETURN
+    endif
+    for i = 1 to nPoints
+        MSDynamic Parm$, read, i, mass, setting
+        ParmStr$ = ParmStr$ + 	val$(mass) + "," + val$(setting) + ","
+    next i
+    ! strip the trailing comma
+    ParmStr$ = ParmStr$[1:len(ParmStr$)-1]
+    ! store it in the table
+    SetTabText TuneFileReg[1], SRampDynamics, ParmNum, "ParmString", ParmStr$
+
+endmacro      ! MSAT_SRampReadDyn
+!***************************************************************************!
+
+!***************************************************************************!
+!***************************************************************************!
+!***************************************************************************!
+name ShowRamp
+PARAMETER ionIndex DEFAULT 9
+PARAMETER TuneFile$ 
+!***************************************************************************!
+
+   ! Run ShowRamp using the ion(s) specified by ionIndex
+   !   ionIndex = 0: positive ion.
+   !   ionIndex = 1: negative ion.
+   !   ionIndex = 2: both pos and neg ions.
+   !   ionIndex = 9: current ion.
+   !Syntax: ShowRamp [<0/1/2/9>, <tune file name>]
+
+   LOCAL x_WorkingIon
+   LOCAL x_SCQP$, x_QuadPol$
+   LOCAL IonMode$, Calibrant, doEvalRamp
+
+   ! Get the correct calibrant bottle 
+Local  ID_TUNEMAC_SHOWRAMP__EVAL_882
+ID_TUNEMAC_SHOWRAMP__EVAL_882                      =  17882  
+   MSGetMode IonMode$
+   if (IonMode$ = "APCI") or (IonMode$ = "APPI") then
+      ! set to calibrant "A"
+      Calibrant = 1
+   else     ! must be ESI or MM-ES+APCI
+      ! set to calibrant "B"   
+      Calibrant = 2
+   endif
+   
+   if Check(Variable, PRTestVer$) = 1 then   
+      ! Try to load the EvalRamp macro
+      if Check(macro, EvalRamp) = 0 then
+         if FileStat(MODE, _AutoMSpath$ + "evalramp.mac") = 1 then
+            macro _AutoMSpath$ + "evalramp.mac"
+            doEvalRamp = 1
+         else
+            print ReadResource$("tunemac",ID_TUNEMAC_SHOWRAMP__EVAL_882)
+            doEvalRamp = 0
+         endif
+      else 
+         doEvalRamp = 1
+      endif
+   else
+      doEvalRamp = 0
+   endif
+
+   ! read the current ion polarity
+   msparm ionPolarity, x_WorkingIon
+    
+   ! If the requested tune file is not the current tune file, save the current 
+   ! tune file and load the requested one
+   if TuneFile$ <> "" and TuneFile$ <> TuneFileName$ then
+      MSSaveTuneFile _TunePath$ + TuneFileName$
+      MSGetTuneFile  _TunePath$ + TuneFile$, x_WorkingIon, 0, 1
+   else
+      TuneFile$ = TuneFileName$
+   endif
+    
+   !-------------------------------------------------------------
+   !Get specified ion mode and its matching best quad polarity.
+   !-------------------------------------------------------------
+   if ionIndex = 9 then ! Current ion only
+      if x_WorkingIon= 0 then
+         msscquery "msc:parm? quadpolp", x_QuadPol$
+      else
+         msscquery "msc:parm? quadpoln", x_QuadPol$
+      endif
+   endif
+
+   if ionIndex = 0 then !Pos ion only
+      msscquery "msc:parm? quadpolp", x_QuadPol$
+   endif
+
+   if ionIndex = 1 then !Neg ion only
+      msscquery "msc:parm? quadpoln", x_QuadPol$
+   endif
+
+   !-------------------------------------------------------------
+   !Current ion only
+   !-------------------------------------------------------------
+   if (ionIndex = 9) then
+      MSCalValve, Calibrant
+      MSAT_MSRampReport
+      if doEvalRamp = 1 then 
+         evalRamp "Iris"
+      endif
+   endif
+    
+   if (ionIndex = 0) OR (ionIndex = 1) then
+      ! if the other polarity is requested, save then load the
+      ! tune file in the requested polarity
+      if ionIndex <> x_WorkingIon then
+         MSSaveTuneFile _tunePath$ + TuneFileName$
+         MSGetTuneFile  _tunepath$ + TuneFile$, ionIndex, 0, 1
+         ! Update GUI
+         mstn_updateSTATUSbar
+         ! Set the correct calibrant
+         MSCalValve, Calibrant
+      endif
+      ! Run SIMRamp test
+      MSAT_MSRampReport 
+      ! Run EvalRamp for the Iris
+      if doEvalRamp = 1 then 
+         evalRamp "Iris"
+      endif
+   endif
+
+   !-------------------------------------------------------------
+   !Both ions case handled here.
+   !-------------------------------------------------------------
+   if ionIndex = 2 then ! Both Pos and Neg ions.
+      for x_WorkingIon = 0 to 1
+         If x_WorkingIon = 0 then
+            x_SCQP$ = "quadpolp"
+         Else
+            x_SCQP$ = "quadpoln"
+         endif
+         msscquery "msc:parm? " + x_SCQP$, x_QuadPol$ 
+            
+         ! Save tune file to preserve changes
+         MSSaveTuneFile _TunePath$ + TuneFile$
+            
+         ! Load tune file immediately.
+         MSGetTuneFile _TunePath$ + TuneFile$, x_WorkingIon, 0, 1	
+
+         ! Update GUI
+         mstn_updateStatusbar 
+
+         ! Set the correct calibrant
+         MSCalValve, Calibrant
+
+         ! Run SIMRamp test
+         MSAT_MSRampReport 
+
+         if doEvalRamp = 1 then 
+            evalRamp "Iris"
+         endif
+      next x_WorkingIon
+   endif
+   
+   RETURN
+
+endmacro      ! ShowRamp
+
+!***************************************************************************!
+
+if Check(Variable, PRTestVer$) = 1 or Check(Variable, mstnUtilVer$) = 1 then
+   Print "Ramp report macro ver. " + SRampVer$ + " loaded."
+endif
+
+!********** end of file ****************************************************!

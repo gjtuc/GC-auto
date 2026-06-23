@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="MMCGTB" PosStyle="TOP" Caption="&quot;MMCGTB&quot;" PanelName="Main">
+		<NonEditCombobox Name="MMCGFile" Help="选择以前调用的调谐文件" Enable="1" Table="_Config,1,MSDCalFile" Selection="1" Width="200"/>
+		<PushButton Name="LoadMMCg" Help="调用 MSD 调谐文件" Command="MSTN_DoGetTuneFile" Group="0" ImageName="Tune_LoadTuneFile20"/>
+		<PushButton Name="SaveMMCg" Help="保存当前 MSD 调谐文件" Command="MSTN_DoSaveTuneFile tunefilepath$+tunefilename$" Group="0" ImageName="Tune_SaveTuneFile20"/>
+		<PushButton Name="PrintReport" Help="生成轮廓图和扫描的报告" Command="mstn_DoGenReport" ImageName="Tune_GenReport20" NewGroup="1"/>
+		<PushButton Name="AutoTune" Help="自动调谐 MSD 并打印调谐报告" Command="msat_auto" ImageName="Tune_Autotune20"/>
+		<PushButton Name="MassAxis" Help="校正质心轴" Command="MSAxis" ImageName="Tune_CalibMassAxis20"/>
+		<PushButton Name="SprayChamber" Help="设置雾化室值" Command="MSEdZone" ImageName="Tune_SprayChamber20"/>
+		<PushButton Name="EditMSParm" Help="手动设置 MS 参数" Command="mstn_EdParms" ImageName="Tune_SetParams20"/>
+		<PushButton Name="Acquire" Help="在数据文件中采集多次扫描" Command="mstn_Acquire" ImageName="Tune_AcquireMultipleScans20"/>		
+	</toolbar>
+</graphical_object>

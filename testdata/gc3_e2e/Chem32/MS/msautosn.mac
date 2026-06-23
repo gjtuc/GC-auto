@@ -1,0 +1,3622 @@
+!******************************************************************************
+!*
+!* FILE:  MSautoSN.mac 
+!*
+!* 
+!* DESCRIPTION:
+!*    Signal to noise macro for MS chromatographic or FIA data
+!     Used in auto mode for LC/MSD performance verification methods
+!*
+!******************************************************************************
+!
+!******************************************************************************
+!*
+!* Purpose:
+!*    Calculate signal-to-noise ratio for one or more extracted ions.  If 
+!*    the data file was acquired in FIA mode, the largest peak from each 
+!*    injection is evaluated.  
+!*    Optionally, each peak can be deconvoluted, reporting the molecular 
+!*    weight and % MW error, if an expected molecular weight is supplied.
+!*    For multiple injection data files, replicate injections from the 
+!*    same vial, using the same FIA conditions, are averaged together.
+!*    
+!*    For the purposes of the LC/MSD performance verification methods, the
+!*    average background-subtracted peak-to-peak signal-to-noise ratio is 
+!*    evaluated and reported.  The predefined tests can be specified from
+!*    the command line or in a dialog box.
+!*
+!* ------------
+!* 1. Assumptions:
+!*    In an FIA data file, the injections are regularly spaced.  Auto_SN 
+!*    assumes that the largest peak in each time interval is the desired peak,
+!*    and estimates the void volume time to identify the peaks.  If the 
+!*    void volume time is greater than the injection interval, the peaks 
+!*    may be assigned to the incorrect injection.
+!*
+!* 2. Command line parameters
+!*
+!* Auto_SN Dialog, Injections, Test$, Signal$, ReloadEIC, IntegOffTime, 
+!*         Smooth, NoiseMethod$, NoiseStart, NoiseEnd, ToPrinter, 
+!*         Deconvolute, MaxPeaks
+!*
+!* Dialog:
+!*    -1 : No dialog box presented
+!*     1 : Dialog Box with predefined tests are presented, default
+!* 
+!* Injections:
+!*         Number of FIA injections. Default: Number of injections in FIA table
+!*
+!* "Test" : 
+!*          specify in quotes the ion to be extracted; if more than one ion
+!*          should be extracted use the "|" sign  as separator; Example : To
+!*          extract ions 506 and 809 use "506|809";  To extract only one ion
+!*          you must specify the "|" sign after the number, eg. to extract only
+!*          ion 609.3 use "609.3|"
+!*        - You may also enter the name of the test, eg, "Reserpine",
+!*          "Myoglobin", etc.
+!*        - By default the macro reads the sample name of the datafile and
+!*          selects the predefined tests are stored in the macro
+!*
+!* "Signal" :
+!*        - If data file has multiple signals, the specified signal is used
+!*          Default: "MSD1"
+!*
+!* ReloadEIC :
+!*       0: Existing signal(s) and integration are used
+!*       1: Signals are reloaded and reintegrated
+!*
+!* AutoIntegrate :
+!*       0: Use existing integration (ReloadEIC = 0) or use method integration
+!*          (ReloadEIC = 1)
+!*       1: Adjust integration parameters to detect the expected number of peaks
+!*
+!* IntegOffTime:
+!*        - Any peaks before this time are excluded from integration. 
+!*          Ignored if AutoIntegrate is set to 0. Default: 0.0 min.
+!*          
+!*        - Discussion: When using air-blanks in the beginning of a FIA-series,
+!*          specify this parameter to avoid integration of a "air-peak" which
+!*          would  possibly interfere with the statistics
+!* Smooth: 
+!*       0: Do not smooth the chromatograms (default)
+!*       1: Use smoothing to smooth the extracted ion chromatograms 
+!*          Discussion: Smoothing should only be used if the data is acquired
+!*          with the Time Filter off.
+!*
+!* "NoiseMethod":
+!*   Individual:  Each peak has its own noise region, relative to the peak 
+!*          retention time.  If a peak's noise region is invalid (outside the
+!*          time limits of the chromatogram), the average of all the other 
+!*          noise regions is substituted.  (default)
+!*   Averaged:  A noise region is evaluated for each peak, relative to the peak
+!*          retention time.  All of the noise regions are averaged, and the 
+!*          average value is used for all peaks.
+!*   Single:  A single, absolute noise region is used to calculate signal to 
+!*          noise for all peaks.  Note that the noise region must be 
+!*          > 0.
+!*
+!* NoiseStart:
+!*          Beginning of noise region.  If NoiseMethod$ is "Single", then this
+!*          is the absolute retention time; otherwise it is relative to the
+!*          peak retention time.
+!*
+!* NoiseEnd: 
+!*          End of noise region.  See NoiseStart.
+!*
+!* ToPrinter: 
+!*       0: Don't print report
+!*       1: Print report (default)
+!*
+!* Deconvolute: 
+!*       0: Don't perform deconvolution (default)
+!*       1: Deconvolute, report mean deconvoluted MW for each group
+!*      >1: Deconvolute, using this value as the expected molecular weight.
+!*          Calculate % MW error.
+!*          Discussion: The deconvolution parameter is coupled to the
+!*          "test" parameter; eg. a "Reserpine" test will not run
+!*          deconvolution, whereas a "myoglobin" will.
+!*
+!* MaxPeaks: 
+!*          Specify the maximum number of integrated peaks for an average
+!*          spectrum (default 15)
+!*
+!* Retention Time:
+!*          The time after the injection that the signal is expected to show
+!*          up at.  It is used as the initial delay time in SelectPeaks if
+!*          specified.  If set to -1 it is ignored and the largest peak is
+!*          assumed to have the correct retention time.
+!*
+!*****************************************************************************
+!*
+!* MACROS:
+!*    Auto_SN 
+!*    MSAutoSNdlgBox$   
+!*    CheckParams       
+!*    GuessTest$
+!*    GetSignals$
+!*    AutoSNRegManager  
+!*    Auto_SN_Error
+!*
+!*    FirstIntegration$
+!*    set_int_params
+!*    AdjustIntegrationParameter
+!*
+!*    GetFIAinjections
+!*    MakePeakTable     
+!*    FindCommonDelay
+!*    SelectPeaks       
+!*    GenerateClusters  
+!*    GetClusterStats   
+!*
+!*    DoNoiseCalcs      
+!*    CalcNoiseStats    
+!*    CalcRMSnoise      
+!*    CalcColAverage    
+!*    DrawNoiseGraphics
+!*
+!*    Check_Deconvolution
+!*    PlotMSReg
+!*    GetPeakSpecAverage
+!*
+!*    AutoSNReport      
+!*    ReportHeader
+!*    decon_report_part1
+!*    decon_report_part2
+!*
+!*****************************************************************************
+
+!*****************************************************************************
+name DrawNoiseGraphics
+PARAMETER ChromIx   default 1
+PARAMETER ShowNoise default 1
+PARAMETER ShowPeak  default 1
+! Draws a box defining the noise region for each peak and a vertical bar
+! showing the peak height, with lines between them.
+!*****************************************************************************
+LOCAL Inj, NumInjs, AnnIx, x1, x2, y1, y2, PeakRT, PeakWidth
+LOCAL Color, Hatch, BrushStyle, Topic, LineStyle
+
+   if RegSize(ChromReg) < 1 then
+      RETURN
+   endif
+
+   WinUpdate off
+   Color = 0        ! black 
+   Hatch = 3        ! Vertical bars if BrushStyle = 2
+   BrushStyle = 1   ! Hollow
+   Topic = 9        ! 
+   
+   NumInjs = TabHdrVal(AutoSNReg, "PeakTable", "NumberOfRows")
+   
+   for Inj = 1 to NumInjs
+   
+      if ShowNoise = 1 then
+         LineStyle = 0    ! 0 = solid
+         x1 = TabVal(AutoSNReg, "PeakTable", Inj, "NoiseStart")
+         x2 = TabVal(AutoSNReg, "PeakTable", Inj, "NoiseEnd")
+         y1 = TabVal(AutoSNReg, "PeakTable", Inj, "MaxNoise")
+         y2 = TabVal(AutoSNReg, "PeakTable", Inj, "MinNoise")
+         ! print x1, x2, y1, y2
+         
+         if x1 > 0 then
+            AnnIx = NewPolyAnn(ChromReg[ChromIx], LineStyle,,,, Topic,, Color, \
+                               BrushStyle, Hatch)
+            SetPolyAnnVal ChromReg[ChromIx], AnnIx, 1, x1, y1
+            SetPolyAnnVal ChromReg[ChromIx], AnnIx, 2, x2, y1
+            SetPolyAnnVal ChromReg[ChromIx], AnnIx, 3, x2, y2
+            SetPolyAnnVal ChromReg[ChromIx], AnnIx, 4, x1, y2
+            SetPolyAnnVal ChromReg[ChromIx], AnnIx, 5, x1, y1
+         endif
+      endif
+
+      if ShowPeak = 1 then
+         LineStyle = 0    ! 0 = solid
+         PeakRT = TabVal(AutoSNReg, "PeakTable", Inj, "ActRT")
+         PeakWidth = TabVal(AutoSNReg, "PeakTable", Inj, "Width")
+         x1 = PeakRT - (PeakWidth/2)
+         x2 = PeakRT + (PeakWidth/2)
+         y1 = TabVal(AutoSNReg, "PeakTable", Inj, "Baseline")
+         y2 = TabVal(AutoSNReg, "PeakTable", Inj, "Height") + y1
+         ! print x1, x2, y1, y2
+
+         AnnIx = NewPolyAnn(ChromReg[ChromIx], LineStyle,,,, Topic,, Color, \
+                            BrushStyle, Hatch)
+         SetPolyAnnVal ChromReg[ChromIx], AnnIx, 1, x1, y1
+         SetPolyAnnVal ChromReg[ChromIx], AnnIx, 2, x2, y1
+         SetPolyAnnVal ChromReg[ChromIx], AnnIx, 3, PeakRT, y1
+         SetPolyAnnVal ChromReg[ChromIx], AnnIx, 4, PeakRT, y2
+         SetPolyAnnVal ChromReg[ChromIx], AnnIx, 5, x1, y2
+         SetPolyAnnVal ChromReg[ChromIx], AnnIx, 6, x2, y2
+      endif
+      
+      ! Draw connecting line
+      if (ShowPeak = 1) and (ShowNoise = 1) then
+         LineStyle = 2    ! 2 = Dotted line
+         ! Is noise region to the right or left of the peak?
+         if TabVal(AutoSNReg, "PeakTable", Inj, "NoiseStart") > PeakRT then
+            x1 = TabVal(AutoSNReg, "PeakTable", Inj, "NoiseStart")
+         else 
+            x1 = TabVal(AutoSNReg, "PeakTable", Inj, "NoiseEnd")
+         endif
+         x2 = PeakRT
+         
+         y1 = (TabVal(AutoSNReg, "PeakTable", Inj, "MaxNoise") + \
+               TabVal(AutoSNReg, "PeakTable", Inj, "MinNoise")) / 2
+         y2 =  TabVal(AutoSNReg, "PeakTable", Inj, "Baseline") 
+         
+         if x2 > 0 then
+            AnnIx = NewPolyAnn(ChromReg[ChromIx], LineStyle,,,, Topic,, Color, \
+                               BrushStyle, Hatch)
+            SetPolyAnnVal ChromReg[ChromIx], AnnIx, 1, x1, y1
+            SetPolyAnnVal ChromReg[ChromIx], AnnIx, 2, x2, y1
+            SetPolyAnnVal ChromReg[ChromIx], AnnIx, 3, x2, y2
+         endif
+
+      endif
+   next Inj
+
+   WinUpdate On
+
+endmacro    ! end DrawNoiseGraphics
+!*****************************************************************************
+
+!*****************************************************************************
+!*****************************************************************************
+!*****************************************************************************
+name GetClusterStats
+PARAMETER ColName$
+PARAMETER FromRow, ToRow, Cluster
+! Calculate stats for a set of replicates
+! Uses the temporary register TempClusterReg
+!*****************************************************************************
+LOCAL Inj, NumRows, NumInjs, Mean, StdDev, RSD
+
+Local  ID_TUNEMAC_GETCLUSTERSTAT_910
+ID_TUNEMAC_GETCLUSTERSTAT_910                      =  17910  
+   On Error Auto_SN_Error "Error calculating statistics for " + ColName$, 5
+
+   ! Print ReadResource$("tunemac",ID_TUNEMAC_GETCLUSTERSTAT_910) + ColName$, FromRow, ToRow, Cluster
+   NumRows = ToRow - FromRow + 1
+   NumInjs = TabHdrVal(AutoSNReg, "PeakTable", "NumberOfRows")
+
+   if (ToRow < 1) or (FromRow < 1) or (ToRow > NumInjs) or (NumRows < 2) then
+      Auto_SN_Error "Can't calculate stats on PeakTable rows " + \
+                     val$(FromRow) + " to " + val$(ToRow)
+   endif
+   
+   if TabColType(AutoSNReg, "PeakTable", ColName$) = 99 then
+      Auto_SN_Error "Can't calculate stats on " + ColName$
+   endif
+   
+   DelReg TempClusterReg
+   NewObj TempClusterReg, 1, 1, NumRows
+  
+   if NumRows >= 2 then
+      
+      ! Read specified parameter from PeakTable into the data block
+      for Inj = FromRow to ToRow
+         SetData TempClusterReg, 1, Inj - FromRow + 1, \
+            TabVal(AutoSNReg, "PeakTable", Inj, ColName$)
+      next Inj
+       
+      ! Calculate mean & std deviation 
+      RegressObj TempClusterReg, 1,,,TempClusterReg, 0
+      Mean   = TabHdrVal(TempClusterReg[2], "Regress", "K1")
+      StdDev = TabHdrVal(TempClusterReg[2], "Regress", "tStdDevK1") !CPL 03/03/2010
+      RSD    = TabHdrVal(TempClusterReg[2], "Regress", "RelStdDevK1")
+      if RSD < 0 then
+         RSD = 0
+      endif
+      
+      DelObj TempClusterReg[2]
+   
+   else  ! Two injections only, just calculate mean
+      Mean   = TabVal(AutoSNReg, "PeakTable", FromRow, ColName$)
+      Mean   = TabVal(AutoSNReg, "PeakTable", FromRow, ColName$) + Mean 
+      Mean   = Mean/2
+      StdDev = 0
+      RSD    = 0
+   endif
+   
+   SetTabVal AutoSNReg, "Clusters", Cluster, "Mean"   + ColName$, Mean
+   SetTabVal AutoSNReg, "Clusters", Cluster, "StdDev" + ColName$, StdDev
+   SetTabVal AutoSNReg, "Clusters", Cluster, "RSD"    + ColName$, RSD
+
+endmacro    ! end GetClusterStats
+
+!*****************************************************************************
+!*****************************************************************************
+name GenerateClusters
+! Calculate stats for replicates
+! Uses the temporary register TempClusterReg
+!*****************************************************************************
+LOCAL NumInjs, NumClusters, ReturnVal, i, Inj, Cluster, PrevCluster
+LOCAL FromRow, ToRow, NewCluster
+
+   ReturnVal   = AutoSNRegManager("Newtable","Clusters")
+   
+   NumInjs     = TabHdrVal(AutoSNReg, "PeakTable", "NumberOfRows")
+   NumClusters = TabHdrVal(AutoSNReg, "PeakTable", "NumClusters")
+   Cluster     = 0
+   PrevCluster = 0
+   
+   ! Step through the peak table, getting stats on each Cluster of injections
+   for i = 1 to NumInjs
+      Cluster = TabVal(AutoSNReg, "PeakTable", i, "Cluster")
+      Print i, Cluster, PrevCluster
+      if Cluster > 0 then  ! Cluster = 0 is a unique injection, not considered
+
+         if PrevCluster = Cluster then
+            ToRow = i
+            NewCluster = 0
+         else
+            NewCluster = 1
+         endif
+
+         ! It's a new cluster!
+         if (NewCluster = 1) or (i = NumInjs) then  
+
+            ! Close out previous cluster
+            if (PrevCluster <> 0) or (i = NumInjs) then  
+               SetTabVal AutoSNReg, "Clusters", PrevCluster, "NumInjs", \
+                                    ToRow - FromRow + 1
+
+               GetClusterStats "Height",  FromRow, ToRow, PrevCluster
+               GetClusterStats "PPNoise", FromRow, ToRow, PrevCluster
+               GetClusterStats "PkPkSNR", FromRow, ToRow, PrevCluster
+               GetClusterStats "RMSSNR",  FromRow, ToRow, PrevCluster
+            endif
+            
+            ! Start a new cluster
+            FromRow = i
+            ToRow   = i 
+
+            ! Set sample name, vial number, parameters
+            SetTabVal   AutoSNReg, "Clusters", Cluster, "Cluster", Cluster
+            SetTabText  AutoSNReg, "Clusters", Cluster, "SampleName", \
+               TabText$(AutoSNReg, "PeakTable", i, "SampleName")
+            SetTabVal   AutoSNReg, "Clusters", Cluster, "VialNumber", \
+               TabVal  (AutoSNReg, "PeakTable", i, "VialNumber")
+            !*#$-TODO:Add FIA parameter support-$#*!
+            ! SetTabVal   AutoSNReg, "Clusters", Cluster, "Parm1", \
+            !    TabVal  (AutoSNReg, "PeakTable", i, "Parm1")
+            ! SetTabVal   AutoSNReg, "Clusters", Cluster, "Parm2", \
+            !    TabVal  (AutoSNReg, "PeakTable", i, "Parm2")
+
+         endif
+      else    ! if Cluster = 0
+         ! if Cluster = 0 and it's the last injection, close out previous cluster
+         if (i = NumInjs) and (PrevCluster <> 0) then 
+            SetTabVal AutoSNReg, "Clusters", PrevCluster, "NumInjs", \
+                                 ToRow - FromRow + 1
+
+            GetClusterStats "Height",  FromRow, ToRow, PrevCluster
+            GetClusterStats "PPNoise", FromRow, ToRow, PrevCluster
+            GetClusterStats "PkPkSNR", FromRow, ToRow, PrevCluster
+            GetClusterStats "RMSSNR",  FromRow, ToRow, PrevCluster
+         endif
+      endif    ! if Cluster > 0
+      PrevCluster = Cluster
+
+   next i
+
+endmacro    ! end GenerateClusters
+!*****************************************************************************
+
+!*****************************************************************************
+!*****************************************************************************
+!*****************************************************************************
+name DoNoiseCalcs
+PARAMETER ChromIx      default 1
+PARAMETER NoiseMethod$ default "Individual"
+PARAMETER NoiseStart   default -0.6
+PARAMETER NoiseEnd     default -0.15
+!*****************************************************************************
+LOCAL MaxNoise, MinNoise, ppNoise, FileStart, FileEnd, Inj
+LOCAL AbsNoiseStart, AbsNoiseEnd, PeakRT, RetVal, PeakHt, Noise
+
+   NoiseMethod$ = ConvertText$(lower, NoiseMethod$)
+   NumInjs = ObjHdrVal(AutoSNReg, "NumInjects")
+   FileStart = ObjHdrVal(ChromReg[ChromIx], "Start")
+   FileEnd   = ObjHdrVal(ChromReg[ChromIx], "End")
+   
+   !--------------------------------------------------------------
+   ! Determine the appropriate noise region for each peak
+   
+   for Inj = 1 to NumInjs
+      ! Single, absolute noise region used for all peaks
+      if (NoiseMethod$ = "single") and (Inj = 1) then
+         GetDataMinMax ChromReg[ChromIx], 1, NoiseStart:NoiseEnd
+         AbsNoiseStart = NoiseStart
+         AbsNoiseEnd   = NoiseEnd
+      endif
+      
+      !*#$-TODO:Adjust noise regions to avoid identified peaks-$#*!
+      ! if Individual or Average, calculate as Individual
+      if (NoiseMethod$ <> "single") then  
+         PeakRT = TabVal(AutoSNReg, "PeakTable", Inj, "ActRT")
+         AbsNoiseStart = PeakRT + NoiseStart 
+         AbsNoiseEnd   = PeakRT + NoiseEnd
+         ! Print "AbsNoiseStart:", AbsNoiseStart, "; AbsNoiseEnd:", AbsNoiseEnd
+
+         ! check for noise region out of bounds, set MaxNoise to -1
+         if ((AbsNoiseStart) < FileStart) or \
+            ((AbsNoiseEnd)   > FileEnd) then
+               MaxNoise = -1
+         else
+            GetDataMinMax ChromReg[ChromIx], 1, absNoiseStart:AbsNoiseEnd
+            MaxNoise = Obj_Max
+         endif
+      endif
+
+      if MaxNoise = -1 then
+         SetTabVal AutoSNReg, "PeakTable", Inj, "MaxNoise", -1
+         SetTabVal AutoSNReg, "PeakTable", Inj, "MinNoise", -1
+         SetTabVal AutoSNReg, "PeakTable", Inj, "NoiseStart", -1
+         SetTabVal AutoSNReg, "PeakTable", Inj, "NoiseEnd", -1
+      else
+         SetTabVal AutoSNReg, "PeakTable", Inj, "MaxNoise",   Obj_Max
+         SetTabVal AutoSNReg, "PeakTable", Inj, "MinNoise",   Obj_Min
+         SetTabVal AutoSNReg, "PeakTable", Inj, "NoiseStart", AbsNoiseStart
+         SetTabVal AutoSNReg, "PeakTable", Inj, "NoiseEnd",   AbsNoiseEnd
+      endif
+
+    next Inj
+
+   !--------------------------------------------------------------
+   ! Calculate the peak-peak, mean and rms noise for each noise region
+   CalcNoiseStats ChromIx
+   
+   ! Calculate average noise values, replace any missing values with average
+   Print SPrintF$(CalcColAverage("PeakTable", "MaxNoise", 1), "Mean Max Noise: %6.0f")
+   Print SPrintF$(CalcColAverage("PeakTable", "MinNoise", 1), "Mean Min Noise: %6.0f")
+   Print SPrintF$(CalcColAverage("PeakTable", "AvgNoise", 1), "Mean Avg Noise: %6.0f")
+   Print SPrintF$(CalcColAverage("PeakTable", "ppNoise",  1), "Mean p-p Noise: %6.0f")
+   Print SPrintF$(CalcColAverage("PeakTable", "RMSNoise", 1), "Mean RMS Noise: %6.0f")
+
+   !--------------------------------------------------------------
+   ! Calculate average noise values; substitute in cells with no noise values
+   if NoiseMethod$ = "averaged"
+      for Inj = 1 to NumInjs
+         SetTabVal AutoSNReg, "PeakTable", Inj, "MaxNoise", \
+                   TabHdrVal(AutoSNReg, "PeakTable", "MeanMaxNoise")
+         SetTabVal AutoSNReg, "PeakTable", Inj, "MinNoise", \
+                   TabHdrVal(AutoSNReg, "PeakTable", "MeanMinNoise")
+         SetTabVal AutoSNReg, "PeakTable", Inj, "PpNoise", \
+                   TabHdrVal(AutoSNReg, "PeakTable", "MeanPpNoise")
+         SetTabVal AutoSNReg, "PeakTable", Inj, "AvgNoise", \
+                   TabHdrVal(AutoSNReg, "PeakTable", "MeanAvgNoise")
+         SetTabVal AutoSNReg, "PeakTable", Inj, "RMSNoise", \
+                   TabHdrVal(AutoSNReg, "PeakTable", "MeanRMSNoise")
+      next Inj
+   endif    ! end if Averaged
+
+   !--------------------------------------------------------------
+   ! Calculate Signal-to-noise values
+   for Inj = 1 to NumInjs
+      PeakHt = TabVal(AutoSNReg, "PeakTable", Inj, "Height")
+
+      Noise  = TabVal(AutoSNReg, "PeakTable", Inj, "ppNoise")
+      if Noise <> 0 then
+         SetTabVal AutoSNReg, "PeakTable", Inj, "PkPkSNR", PeakHt / Noise
+      else
+         SetTabVal AutoSNReg, "PeakTable", Inj, "PkPkSNR", 0
+      endif
+   
+      Noise  = TabVal(AutoSNReg, "PeakTable", Inj, "RMSNoise")
+      if Noise <> 0 then
+         SetTabVal AutoSNReg, "PeakTable", Inj, "RMSSNR", PeakHt / Noise
+      else
+         SetTabVal AutoSNReg, "PeakTable", Inj, "RMSSNR", 0
+      endif
+
+   next Inj
+   
+
+endmacro
+!*****************************************************************************
+
+!*****************************************************************************
+!*****************************************************************************
+!*****************************************************************************
+name CalcNoiseStats
+PARAMETER ChromIx default 1
+! Calculates mean, peak-peak and RMS noise for each noise region in the 
+! PeakTable.  Called by DoNoiseCalcs.
+!*****************************************************************************
+LOCAL Inj, NumInjs, NoiseStart, NoiseEnd, MaxNoise, MinNoise, StartIx, EndIx
+LOCAL Ix, RMSnoise, ppNoise
+
+Local  ID_TUNEMAC_CALCULATING_NO_911
+ID_TUNEMAC_CALCULATING_NO_911                      =  17911  
+   NumInjs = ObjHdrVal(AutoSNReg, "NumInjects")
+   
+   for Inj = 1 to NumInjs
+      Print ReadResource$("tunemac",ID_TUNEMAC_CALCULATING_NO_911), val$(Inj)
+      if TabVal(AutoSNReg, "PeakTable", Inj, "MaxNoise") <> -1 then
+         NoiseStart = TabVal(AutoSNReg, "PeakTable", Inj, "NoiseStart")
+         NoiseEnd   = TabVal(AutoSNReg, "PeakTable", Inj, "NoiseEnd")
+         MaxNoise   = TabVal(AutoSNReg, "PeakTable", Inj, "MaxNoise")
+         MinNoise   = TabVal(AutoSNReg, "PeakTable", Inj, "MinNoise")
+         ppNoise    = MaxNoise - MinNoise
+         if ppNoise = 0 then
+            ppNoise = 1
+         endif
+         
+         StartIx = DataIndex(ChromReg[ChromIx], NoiseStart)
+         EndIx   = DataIndex(ChromReg[ChromIx], NoiseEnd)
+         if StartIx < 1 then
+            StartIx = 1
+         endif
+         if EndIx > DataCols(ChromReg[ChromIx]) then
+            EndIx = DataCols(ChromReg[ChromIx])
+         endif
+
+         ! Calculate mean and standard deviation
+         DelReg TempNoiseReg
+         NewObj TempNoiseReg, 1, 1, EndIx - StartIx + 1
+         
+         ! Get standard deviation of the noise (RMS noise)
+         CopyDataRow ChromReg[ChromIx], 1, StartIx:EndIx, TempNoiseReg, 1
+         !RegressObj TempNoiseReg, 1,,, TempNoiseReg, 0   
+         RegressObj TempNoiseReg, 1,,, TempNoiseReg, 0,1,99.995   !CPL 02/02/2010
+         
+         SetTabVal AutoSNReg, "PeakTable", Inj, "ppNoise", ppNoise
+         SetTabVal AutoSNReg, "PeakTable", Inj, "AvgNoise", \
+                    TabHdrVal(TempNoiseReg[2], "Regress", "K1")
+         RMSnoise = TabHdrVal(TempNoiseReg[2], "Regress", "tStdDevK1")
+         if RMSnoise = 0 then
+            RMSnoise = 1
+         endif
+         SetTabVal AutoSNReg, "PeakTable", Inj, "RMSnoise", RMSNoise
+      else
+        ppNoise  = -1
+        RMSnoise = -1
+      endif
+
+   next Inj
+
+endmacro    ! CalcNoiseStats
+
+!*****************************************************************************
+!*****************************************************************************
+name CalcColAverage
+PARAMETER TableName$ default "PeakTable"
+PARAMETER ColName$
+PARAMETER Replace default 1
+! Returns the average of all rows in a column, excluding values of -1
+! Optionally replaces any -1 values with the average if replace = 1
+! Also stores the value as a table header item called "Mean" + ColName$
+!*****************************************************************************
+LOCAL NumRows, NumVals, SumVal, Num
+   
+   On Error Auto_SN_Error "CalcColAverage: " + _ErrMsg$, 5
+
+   if ObjHdrType(AutoSNReg, TableName$) <> 4 then
+      Auto_SN_Error "Table " + TableName$ + " not found", 5
+      RETURN -1
+   endif
+   
+   if TabColType(AutoSNReg, TableName$, ColName$) = 99 then
+      Auto_SN_Error "Column " + ColName$ + " not found", 5
+      RETURN -1
+   endif
+   
+   if TabColType(AutoSNReg, TableName$, ColName$) < 1  then
+      Auto_SN_Error "Column " + ColName$ + " is not numeric", 5
+      RETURN -1
+   endif
+   
+   SumVal = 0; NumVals = 0
+   NumRows = TabHdrVal(AutoSNReg, TableName$, "NumberOfRows")
+   for Row = 1 to NumRows
+      Num = TabVal(AutoSNReg, TableName$, Row, ColName$)
+      if Num <> -1 then
+         SumVal = SumVal + Num
+         NumVals = NumVals + 1
+      endif
+   next Row
+   
+   if NumVals = 0 then
+      SumVal = -1
+   else
+      SumVal = SumVal/NumVals
+   endif
+   ! Print SumVal, NumVals
+   
+   SetTabHdrVal AutoSNReg, TableName$, "Mean" + ColName$, SumVal
+   
+   if Replace = 1 then
+      for Row = 1 to NumRows
+         if TabVal(AutoSNReg, TableName$, Row, ColName$) = -1 then
+            SetTabVal AutoSNReg, TableName$, Row, ColName$, SumVal
+         endif
+      next Row
+   endif
+   
+   RETURN SumVal
+
+endmacro
+!*****************************************************************************
+
+!*****************************************************************************
+!*****************************************************************************
+!*****************************************************************************
+name MakePeakTable
+! Determine the number of clusters and whether the injection interval is 
+! regular.  Returns the number of clusters found and sets the ObjHdrVal
+! "InjInterval" and "InjRegular" in AutoSNReg.  There should be at least one 
+! cluster unless there are no injections.
+! The table "PeakTable" is created, with the "FIASeriesInfo" columns, plus:
+! "Cluster", "PredRT"
+! 
+!*****************************************************************************
+LOCAL NumberofPeaks, InjInterval, InjRegular, i, InjVial, PrevVial, ClusterNum
+LOCAL NewCluster
+
+   ! default of return value set to 0
+Local  ID_TUNEMAC_PREV_CLUSTER_912
+ID_TUNEMAC_PREV_CLUSTER_912                        =  17912  
+   NumberOfPeaks = 1
+
+   ! check whether signal has been processed and report fail if not
+   if RegSize(ChromRes) < 1 then
+      Auto_Sn_Error "No datafile exists or no integration done ", 5
+      RETURN 0
+   endif
+
+   ! look for table FIASeriesInfo and report fail if not existent
+
+   on error Auto_SN_Error "Error analyzing injection intervals", 5
+
+   ! Create the PeakTable table from the FIASeriesInfo table
+   DelTab AutoSNReg, "PeakTable"
+   if ObjHdrVal(ChromRes, "FIARun") = 1 then
+      CopyTab ChromRes, "FIASeriesInfo", AutoSNreg, "PeakTable"
+      NumberOfPeaks = TabHdrVal(AutoSNReg, "PeakTable", "NumberOfRows")
+   else  ! Single injection file
+      NumberOfPeaks = 1
+
+      NewTab AutoSNReg, "PeakTable"
+      NewColVal  AutoSNReg, "PeakTable", RetTime
+      NewColVal  AutoSNReg, "PeakTable", VialNumber
+      NewColText AutoSNReg, "PeakTable", SampleName
+      InsTabRow  AutoSNReg, "PeakTable", 1
+      
+      SetTabText AutoSNReg, "PeakTable", 1, SampleName, \
+                 ObjHdrText$(ChromReg, "SampleName")
+      SetTabVal  AutoSNReg, "PeakTable", 1, RetTime, 0  ! injection time
+      SetTabVal  AutoSNReg, "PeakTable", 1, VialNumber, \
+                 ObjHdrVal(ChromReg, "Vial")
+      
+   endif
+   
+   ! Determine whether there are variable parameters in the FIA table
+   !*#$-TODO:Add Optimization Parms-$#*!
+
+   NewColVal AutoSNReg, "PeakTable", "InjNum"
+   NewColVal AutoSNReg, "PeakTable", "InjTime"
+   NewColVal AutoSNReg, "PeakTable", "ActRT", -1
+   NewColVal AutoSNReg, "PeakTable", "PredRT", 0
+   NewColVal AutoSNReg, "PeakTable", "Cluster", 0
+   NewColVal AutoSNReg, "PeakTable", "Height"
+   NewColVal AutoSNReg, "PeakTable", "Width"
+   NewColVal AutoSNReg, "PeakTable", "Baseline"
+   NewColVal AutoSNReg, "PeakTable", "TimeStart"
+   NewColVal AutoSNReg, "PeakTable", "TimeEnd"
+   NewColVal AutoSNReg, "PeakTable", "NoiseStart"
+   NewColVal AutoSNReg, "PeakTable", "NoiseEnd", 
+   NewColVal AutoSNReg, "PeakTable", "MaxNoise", -1
+   NewColVal AutoSNReg, "PeakTable", "MinNoise", -1
+   NewColVal AutoSNReg, "PeakTable", "ppNoise",  -1
+   NewColVal AutoSNReg, "PeakTable", "AvgNoise", -1
+   NewColVal AutoSNReg, "PeakTable", "RMSNoise", -1
+   NewColVal AutoSNReg, "PeakTable", "PkPkSNR"
+   NewColVal AutoSNReg, "PeakTable", "RMSSNR"
+   NewColVal AutoSNReg, "PeakTable", "MW",       -1
+   NewColVal AutoSNReg, "PeakTable", "MWerror",  -1
+   
+   for i = 1 to NumberOfPeaks
+      ! Add an injection number column to allow sorting of the table
+      SetTabVal AutoSNReg, "PeakTable", i, "InjNum", i
+      ! Move "RetTime" to "InjTime"
+      SetTabVal AutoSNReg, "PeakTable", i, "InjTime", TabVal(AutoSNReg, \
+                "PeakTable", i, "RetTime")
+   next i
+   DelTabCol AutoSNReg, "PeakTable", "RetTime"
+
+   if NumberOfPeaks > 1 then
+      ! Analyze to get mean injection interval
+      DelReg TempFIAReg
+      NewObj TempFIAReg, 1, 1, NumberOfPeaks - 1
+
+      for i = 1 to NumberOfPeaks - 1
+         SetData TempFIAReg, 1, i, \
+               TabVal(AutoSNReg, "PeakTable", i + 1, "InjTime") - \
+               TabVal(AutoSNReg, "PeakTable", i,     "InjTime")
+      next i
+
+      ! Get Mean, Min & Max
+      ! RegressObj TempFIAReg, 1,,, TempFIAReg, 0
+      RegressObj TempFIAReg, 1,,, TempFIAReg, 0,1,99.995    ! CPL 02/09/2010
+      GetDataMinMax TempFIAReg, 1
+      InjInterval = TabHdrVal(TempFIAReg[2], "Regress", "k1")
+      Print NumberOfPeaks, SPrintF$(InjInterval, \
+            " injections detected, mean interval: %3.1f")
+
+      ! See if the injection intervals are regular
+      MaxInjDev = Max(Obj_Max - InjInterval, InjInterval - Obj_Min)
+      if (MaxInjDev > ObjHdrVal(AutoSNReg, "RTwindow") * 2) then
+         InjRegular = 0
+      else
+         InjRegular = 1
+      endif
+   else
+      InjInterval = 0
+      InjRegular  = 0
+   endif
+   
+   SetObjHdrVal AutoSNReg, "InjInterval", InjInterval
+   SetObjHdrVal AutoSNReg, "InjRegular",  InjRegular
+   
+   !---------------------------------------------------------------
+   ! Analyze Clusters
+   ! Clusters are sets of injections whose signal-to-noise results
+   ! should be averaged together.  These are all injections that are 
+   ! replicates, using the same vial and the same FIA parameters.
+   ! Any non-replicate injection gets assigned to cluster 0, a special 
+   ! cluster which doesn't get statistical summary.
+
+   ClusterNum = 0
+   NewCluster = 1
+   for i = 2 to NumberOfPeaks
+      InjVial = TabVal(AutoSNReg, "PeakTable", i, "VialNumber")
+      ! Print "PeakNum:", i, "; InjVial", InjVial      !<<<
+      if InjVial > 0 then
+
+         PrevVial    = TabVal(AutoSNReg, "PeakTable", i - 1, "VialNumber")
+         PrevCluster = TabVal(AutoSNReg, "PeakTable", i - 1, "Cluster")
+         !*#$-TODO:Test for variable parms-$#*!
+         ! Print ReadResource$("tunemac",ID_TUNEMAC_PREV_CLUSTER_912), PrevCluster, "; PrevVial:", PrevVial, \
+         !       "; Cluster:", ClusterNum      !<<<
+
+         ! Compare vial numbers; 
+         if (InjVial = PrevVial) then
+            ! We have a cluster!
+            if NewCluster = 1 then
+               ClusterNum = ClusterNum + 1
+               SetTabVal AutoSNReg, "PeakTable", i - 1, "Cluster", ClusterNum
+               NewCluster = 0
+            endif
+            SetTabVal AutoSNReg, "PeakTable", i, "Cluster", ClusterNum
+
+         else      ! if InjVial <> PrevVial, then there's a new cluster
+            NewCluster = 1
+            if i = NumberOfPeaks
+               SetTabVal AutoSNReg, "PeakTable", i, "Cluster", 0
+            else
+               SetTabVal AutoSNReg, "PeakTable", i, "Cluster", ClusterNum
+            endif
+         endif
+         
+      endif
+   next i            ! 1 = 1 to NumberOfPeaks
+
+   ! Record the number of clusters
+   if ClusterNum = 0 then
+      ClusterNum = 1
+   endif
+   SetTabHdrVal AutoSNReg, "PeakTable", "NumClusters", ClusterNum
+
+   DelReg TempFIAReg
+      
+   RETURN NumberOfPeaks
+   
+endmacro            ! end MakePeakTable
+
+!*****************************************************************************
+!*****************************************************************************
+name FindCommonDelay
+PARAMETER NumInjs
+PARAMETER DelayTolerance
+!   Finds the most common delay time for the max peak after each injection.
+!   This assumes that there are a low number of noise spikes in the data and
+!   that the max peaks for the blank injections are randomly distrubuted so
+!   that their count will be one.
+!*****************************************************************************
+LOCAL ii, jj, CDTLines, InjNum, InjTime, PeakRT, TempRT, TempCount, Found, NumBlanks
+   
+   ! ininitialize and setup the temp table
+   On Error Auto_SN_Error "Error analyzing retention times", 5
+   CDTLines = 0
+   NumBlanks = GetBlankFIAinjections()
+   if ObjHdrType(AutoSNReg, "CDTable") <> 99 then
+      DelTab AutoSNReg, "CDTable"
+   endif
+   NewTab AutoSNReg, "CDTable"
+   NewColVal  AutoSNReg, "CDTable", "RetTime"
+   NewColVal  AutoSNReg, "CDTable", "Count"
+
+   ! go throught the first n peaks, where n is the number of injections
+   for ii = 1 to NumInjs - NumBlanks
+      PeakRT  = TabVal(AutoSNReg, "IntResults", ii, "RetTime")
+      InjNum  = RowByVal(AutoSNReg, "PeakTable",, "InjTime", "~<", PeakRT)
+      InjTime = TabVal(AutoSNReg, "PeakTable", InjNum, "InjTime")
+!      jj     = trunc(PeakRT/ ObjHdrVal(AutoSNReg, "InjInterval")) + 1
+!      TempRT = TabVal(AutoSNReg, "PeakTable", jj, "InjTime")
+      PeakRT  = PeakRT - InjTime;
+      
+      Found = 0
+      for jj = 1 to CDTLines ! This will be skipped when CDTLines = 0
+         TempRT = TabVal(AutoSNReg, "CDTable", jj, "RetTime")
+         if (PeakRT < (TempRT + DelayTolerance)) AND (PeakRT > (TempRT - DelayTolerance)) then
+            Found     = 1
+            TempCount = TabVal(AutoSNReg, "CDTable", jj, "Count")
+            Temp      = ((TempRT * TempCount) + PeakRT) / (TempCount+1)
+            SetTabVal  AutoSNReg, "CDTable", jj, "Count", TempCount + 1
+            SetTabVal  AutoSNReg, "CDTable", jj, "RetTime", Temp
+         endif
+      next jj
+
+      if (Found = 0) then
+         CDTLines = CDTLines + 1
+         InsTabRow  AutoSNReg, "CDTable", CDTLines
+         SetTabVal  AutoSNReg, "CDTable", CDTLines, "RetTime", PeakRT
+         SetTabVal  AutoSNReg, "CDTable", CDTLines, "Count", 1
+      endif
+   next ii
+
+   ! Get the retention time with the highest count
+   TempCount = 0
+   for ii = 1 to CDTLines
+      if (TabVal(AutoSNReg, "CDTable", ii, "Count") > TempCount) then
+         TempCount = TabVal(AutoSNReg, "CDTable", ii, "Count")
+         TempRT    = TabVal(AutoSNReg, "CDTable", ii, "RetTime")
+      endif
+   next ii
+
+   if ObjHdrType(AutoSNReg, "CDTable") <> 99 then
+      DelTab AutoSNReg, "CDTable"
+   endif
+   on error
+   RETURN TempRT
+   
+endmacro            ! end FindCommonDelay
+!*****************************************************************************
+
+
+!*****************************************************************************
+!*****************************************************************************
+!*****************************************************************************
+name SelectPeaks
+PARAMETER ChromIx default 1
+!  Determines dead volume delay for FIA injections using the specified
+!  chromatogram and uses it to calculate the predicted retention time 
+!  for each peak.  The largest peak per injection is assigned to each
+!  injection as long as it's within the retention time tolerance.f
+!*****************************************************************************
+LOCAL NumInjs, InjInterval, InjRegular, NumPeaks, InitDelay, PeakRT, WhichInj
+LOCAL Delay, DelayTolerance, MeanDelay, sumDelay, nDelays, PredRT, i, j
+
+Local  ID_TUNEMAC_NUMINJS_914
+Local  ID_TUNEMAC_PEAKRT_917
+ID_TUNEMAC_NUMINJS_914                             =  17914  
+ID_TUNEMAC_PEAKRT_917                              =  17917  
+   On Error Auto_SN_Error "Error analyzing retention times", 5
+   
+   DelayTolerance = 0.2
+   ! DelayTolerance = 0.1  ! PHC  - changed back to 0.2 to match
+                           !        the RTWindow variable.   PHC 06/00
+
+   NumInjs =     ObjHdrVal(AutoSNReg, "NumInjects")
+   InjInterval = ObjHdrVal(AutoSNReg, "InjInterval")
+   InjRegular  = ObjHdrVal(AutoSNReg, "InjRegular")
+   RTtolerance = ObjHdrVal(AutoSNReg, "RTwindow")
+   InitDelay   = ObjHdrVal(AutoSNReg, "RetentionTime")
+
+   ! Print ReadResource$("tunemac",ID_TUNEMAC_NUMINJS_914), NumInjs, "; InjInterval: ", InjInterval, "; InjRegular", InjRegular
+   
+   ! Copy integration table to AutoSNReg
+   DelTab  AutoSNReg, "IntResults"
+   CopyTab ChromReg[ChromIx], "IntResults", AutoSNReg, "IntResults"
+   NumPeaks = TabHdrVal(AutoSNReg, "IntResults", "NumberOfRows")
+
+   ! Sort by peak height
+   SortTabRows AutoSNReg, "IntResults", "Height", ">="
+   
+   ! If this is a 1-injection file, simply pick the largest peak
+   if NumInjs = 1 then
+
+      PeakRT = TabVal (AutoSNReg, "IntResults", 1, "RetTime")
+      SetTabVal AutoSNReg, "PeakTable", 1, "PredRT", PeakRT
+      SetObjHdrVal AutoSNReg, "Delay", PeakRT
+      SetTabVal AutoSNReg, "PeakTable", 1, "ActRT", PeakRT
+      SetTabVal AutoSNReg, "PeakTable", 1, "Height", \
+         TabVal(AutoSNReg, "IntResults", 1, "Height")
+      SetTabVal AutoSNReg, "PeakTable", 1, "Width", \
+         TabVal(AutoSNReg, "IntResults", 1, "Width")
+      SetTabVal AutoSNReg, "PeakTable", 1, "Baseline", \
+         TabVal(AutoSNReg, "IntResults", 1, "Baseline")
+      SetTabVal AutoSNReg, "PeakTable", 1, "TimeStart", \
+         TabVal(AutoSNReg, "IntResults", 1, "TimeStart")
+      SetTabVal AutoSNReg, "PeakTable", 1, "TimeEnd", \
+         TabVal(AutoSNReg, "IntResults", 1, "TimeEnd")
+      
+   else   
+      ! find the most common retention time among the injections.
+      ! This overrides the use of the largest peak as having the
+      ! best estimate of the retention time.
+      if (InitDelay < 0.0) then  ! find the retention time only if the user
+                                 ! didn't specify one.
+         InitDelay = FindCommonDelay (NumInjs, DelayTolerance)
+      endif
+
+      ! Calculate mean delay
+      MeanDelay = InitDelay ! initial values
+      SumDelay  = InitDelay
+      if (InitDelay > 0.0) then
+         numDelays = 1
+      else
+         numDelays = 0
+      endif
+
+      for i = 1 to NumPeaks
+         PeakRT = TabVal(AutoSNReg, "IntResults", i, "RetTime")
+         WhichInj = RowByVal(AutoSNReg, "PeakTable",, "InjTime", "~<", PeakRT)
+!         WhichInj = trunc(PeakRT/InjInterval) + 1
+         InjRT = TabVal(AutoSNReg, "PeakTable", WhichInj, "InjTime")
+         Delay = PeakRT - InjRT
+         
+         ! If a common delay wasn't found or the expected retention time (InitDelay)
+         ! wasn't set,
+         ! then presume that the first delay is the most likely to be correct
+         ! Keep averaging delay as long as it's within tolerance
+         ! Check if an initial delay is not specified
+         if ((i = 1) AND (InitDelay < 0.0)) then 
+            MeanDelay = Delay
+            SumDelay  = Delay
+            numDelays = 1
+         ! else use the initial delay and tolerence
+         else
+            if abs(Delay - MeanDelay) < DelayTolerance then
+               SumDelay = SumDelay + Delay
+               numDelays = NumDelays + 1
+               MeanDelay = SumDelay / NumDelays
+            endif
+         endif
+
+         Print ReadResource$("tunemac",ID_TUNEMAC_PEAKRT_917), PeakRT, "; WhichInj: ", WhichInj, "; Delay: ", Delay,  \
+               "MeanDelay:", MeanDelay
+      next i      ! Next peak
+      SetObjHdrVal AutoSNReg, "Delay", MeanDelay
+
+      ! Calculate predicted retention times and assign peak
+      for i = 1 to NumPeaks
+         PeakRT = TabVal(AutoSNReg, "IntResults", i, "RetTime")
+         WhichInj = RowByVal(AutoSNReg, "PeakTable",, "InjTime", "~<", PeakRT)
+!         WhichInj = trunc(PeakRT/InjInterval) + 1
+         PredRT = TabVal(AutoSNReg, "PeakTable", WhichInj, "InjTime") + MeanDelay
+         
+         if TabVal(AutoSNReg, "PeakTable", WhichInj, "ActRT") = -1 then
+            if abs(PeakRT - PredRT) <= RTtolerance then
+               SetTabVal AutoSNReg, "PeakTable", WhichInj, "ActRT", PeakRT
+               SetTabVal AutoSNReg, "PeakTable", WhichInj, "Height", \
+                  TabVal(AutoSNReg, "IntResults", i, "Height")
+               SetTabVal AutoSNReg, "PeakTable", WhichInj, "Width", \
+                  TabVal(AutoSNReg, "IntResults", i, "Width")
+               SetTabVal AutoSNReg, "PeakTable", WhichInj, "Baseline", \
+                  TabVal(AutoSNReg, "IntResults", i, "Baseline")
+               SetTabVal AutoSNReg, "PeakTable", WhichInj, "TimeStart", \
+                  TabVal(AutoSNReg, "IntResults", i, "TimeStart")
+               SetTabVal AutoSNReg, "PeakTable", WhichInj, "TimeEnd", \
+                  TabVal(AutoSNReg, "IntResults", i, "TimeEnd")
+
+            endif
+         endif
+
+         SetTabVal AutoSNReg, "PeakTable", WhichInj, "PredRT", PredRT
+
+      next i      ! next peak
+   endif
+
+endmacro
+
+!*****************************************************************************
+!*****************************************************************************
+name CheckParams
+PARAMETER Injections
+PARAMETER Ion
+PARAMETER NoiseMethod$
+PARAMETER NoiseStart
+PARAMETER NoiseEnd
+PARAMETER ReloadEIC
+!*****************************************************************************
+
+   ! Check whether at least one injection has been specified
+Local  ID_TUNEMAC_CAN_T_EXTRACT_920
+ID_TUNEMAC_CAN_T_EXTRACT_920                       =  17920  
+   If injections < 1 then
+     Auto_Sn_Error "No injections specified"
+   Endif
+
+   !Check whether a datafile has been loaded
+   If Len(Dadatafile$)<3 or RegSize(ChromReg) < 1 or \
+      RegSize(ChromRes) < 1 then
+      Auto_SN_Error "No datafile loaded"
+   Endif
+
+   ! Check whether the first ion to be extracted makes sense
+   if ((Ion < 50) or (Ion > 3000)) and (ReloadEIC = 1) then
+      if Ion = 0 then
+         Auto_SN_Error "No ion specified"
+      else
+         Auto_SN_Error SprintF$(Ion, ReadResource$("tunemac",ID_TUNEMAC_CAN_T_EXTRACT_920)), 5
+      endif
+   endif
+   
+   ! Check if noise parms make sense
+   ! Noise range must be positive with Single noise method
+   if NoiseMethod$ = "Single" then
+      if (NoiseStart < 0) or (NoiseEnd < 0) then
+         Auto_SN_Error "Noise regions must be greater than zero with " + \
+                       "Single noise method."
+      endif
+   endif
+   
+   ! Noise range must be within range of data file
+   
+   ! NoiseStart must be lower than NoiseEnd
+   if NoiseStart >= NoiseEnd then
+      Auto_SN_Error "Noise region (" + val$(NoiseStart) + " to " + \
+                     val$(NoiseEnd) + ") is incorrect."
+   endif
+
+endmacro
+
+!*****************************************************************************
+!*****************************************************************************
+name GetFIAinjections
+PARAMETER Returnval default 1
+! defines the return value if no FIA table is found
+!*****************************************************************************
+LOCAL NumberofPeaks
+
+   ! default if return value set to 0
+   NumberOfPeaks = ReturnVal
+
+   ! check whether signal has been processed and report fail if not
+   if Regsize(ChromRes) < 1 then
+      Auto_Sn_Error "No datafile exists or no integration done ",5
+   
+
+   ! look for table FIASeriesInfo and report fail if not existent
+   else
+      on error print
+      if ObjHdrType(ChromRes, "FIArun") = 99 then
+         NumberOfPeaks = ReturnVal 
+      else
+         if objhdrval(ChromRes,"FiaRun") <> 1 Then
+            NumberOfPeaks = ReturnVal
+         else
+
+            ! The number of injections is number of rows
+            NumberOfPeaks=TabHdrVal(Chromres,FIASeriesInfo,"NumberOfRows")
+         endif
+      endif
+      on error
+   endif
+      
+   RETURN NumberOfPeaks
+   
+endmacro
+!*****************************************************************************
+
+!*****************************************************************************
+!*****************************************************************************
+!*****************************************************************************
+name GetBlankFIAinjections
+! defines the return value if no FIA table is found
+!*****************************************************************************
+LOCAL NumberOfBlanks, ii, Injections, TempString$
+
+   ! default if return value set to 0
+   NumberOfBlanks = 0
+
+   ! check whether signal has been processed and report fail if not
+   if Regsize(ChromRes) < 1 then
+      Auto_Sn_Error "No datafile exists or no integration done ",5
+   
+   ! look for table FIASeriesInfo and report fail if not existent
+   else
+      on error print
+      if ObjHdrType(ChromRes, "FIArun") <> 99 then
+         if objhdrval(ChromRes,"FiaRun") = 1 Then
+            ! The number of injections is number of rows
+            Injections=TabHdrVal(Chromres,FIASeriesInfo,"NumberOfRows")
+            for ii = 1 to Injections
+               TempString$ = ConvertText$(lower, TabText$(Chromres[1],FIASeriesInfo,ii,"SampleName"))
+               if (Instr(TempString$, "blank") > 0) then
+                  NumberOfBlanks = NumberOfBlanks + 1
+               endif
+            next ii
+         endif
+      endif
+      on error
+   endif
+      
+   RETURN NumberOfBlanks
+   
+endmacro
+!*****************************************************************************
+
+!*****************************************************************************
+!*****************************************************************************
+!*****************************************************************************
+name FirstIntegration$
+PARAMETER min_peaks default 5 ! Number of flow injections
+PARAMETER sn_ion default 609.3 ! Mass range is sn_ion-0.2:sn_ion+0.2
+PARAMETER Signal$ default "MSD1"
+PARAMETER FileStart default 0 ! Time range, default is full time range
+PARAMETER FileEnd default 0
+PARAMETER Integ_off_time default 0
+PARAMETER smooth default 0 ! Smooth datafile 1: yes / 0 :no
+! Extract selected ion chromatogram, smooth,  and integrate
+! Modified version from original Sig_N:
+! Modification:
+! Two integration adjustement routines; the first (original) will try to
+! adjust the slope sensitivity until number of expected peaks (min_peaks)
+! will be lower than the number of integrated peaks
+! The second routine will try to lower any excess of integrated peaks
+! This is accomplished by reevaluating the height reject value
+! See details in macro Ajustintegratioparameter
+!*******************************************************************************
+LOCAL threshold, objnum, loopout, npeaks, TryEvTab$, lwidth, lstep
+! GLOBAL evtab$
+
+   ! Extract selected ion chromatogram
+   ! print sn_ion, signal$
+   LoadEIC ChromReg, file_start:file_end, sn_ion-0.2:sn_ion+0.2, Signal$
+   objnum = RegSize(ChromReg)
+
+   ! Use Gaussian time filter to smooth the data
+   ! (Controlled by parameter: smooth)
+   if smooth=1  then
+      lstep = (File_End-File_Start)/DataCols(ChromReg[ObjNum])
+      lwidth = 3*(File_End-File_Start)/DataCols(ChromReg[ObjNum])
+      
+      Print "StepSize", lstep
+      Print "Width", lwidth
+      
+      !GSmoothObj ChromReg[ObjNum],,0.05, \
+          !(File_End-File_Start)/DataCols(ChromReg[ObjNum])
+               
+      GSmoothObj ChromReg[ObjNum],,lwidth, lstep
+   endif
+
+
+   ! Work with the most specific integration events table that is available
+!   evtab$ = "EVENT_MSD1" + EICCalcSignalID$(sn_ion - 0.3:sn_ion + 0.7)
+!   if objhdrtype(_damethod[1],evtab$) <> 4 then
+!     evtab$ = "EVENT_MSD"
+!     if objhdrtype(_damethod[1],evtab$) <> 4 then
+!       evtab$ = "EVENT"
+!     endif
+!   endif
+   EvTab$ = "EVENT"
+   TryEvTab$ = "EVENT_MSD"
+   if (ObjHdrType(_damethod[1],TryEvTab$) = 4) then
+       if (TabHdrVal(_damethod[1],TryEvTab$,"UseForInteg") = 1) then
+         EvTab$ = TryEvTab$
+       endif
+   endif
+   TryEvTab$ = "EVENT_MSD1" + EICCalcSignalID$(sn_ion - 0.3:sn_ion + 0.7)
+   if (ObjHdrType(_damethod[1],TryEvTab$) = 4) then
+       if (TabHdrVal(_damethod[1],TryEvTab$,"UseForInteg") = 1) then
+         EvTab$ = TryEvTab$
+       endif
+   endif
+
+    set_int_params evtab$, 0.04, 1.7, 1, , integ_off_time
+   ! Try slope sensitivity starting at half of maximum signal
+   getdataminmax chromreg[objnum], 1
+   threshold = obj_max / 2
+   npeaks = 0
+   loopout = 0
+
+   ! If less than expected number of peaks detected then
+   ! slope sensitivity is lowered until minimum set of peaks is detected.
+   while npeaks<min_peaks and loopout=0 do
+     settabhdrval _damethod[1], evtab$, initthresh, threshold
+     integrateobj chromreg[objnum], filestart:fileend
+     on error npeaks = 0
+     npeaks = tabhdrval(chromreg[objnum], intresults, "numberofrows")
+     on error
+     threshold = threshold/2
+     ! If minimum threshold is reached loop out
+     if threshold < 1e2 then
+       loopout = 1
+     endif
+   endwhile
+
+
+   RETURN evTab$
+
+endmacro
+!*****************************************************************************
+
+!*****************************************************************************
+!*****************************************************************************
+!*****************************************************************************
+name AdjustIntegrationparameter
+PARAMETER Min_Peaks
+PARAMETER evtab$ default evtab$  ! Global variable
+PARAMETER file_start
+PARAMETER file_end
+PARAMETER objnum default Regsize(Chromreg)
+PARAMETER Exp_Peaks default 0
+PARAMETER IntegPar$ default "Initheight"
+!! identifies the peaks with the lowest parameter variable (height/area).
+!! Performs parameter adjustement (increases the parameter)
+!! until number of integrated peaks matches the expected number of
+!! peaks defined under Exp_Peaks
+!*****************************************************************************
+
+LOCAL Row,Var$,npeaks
+LOCAL NumberToDelete,Min_Val,i
+
+
+   !! Select  variables for specific parameter adjustement
+
+   If ConvertText$(upper,IntegPar$)="INITHEIGHT" then
+      Var$="Height"
+   Endif
+
+   If ConvertText$(upper,IntegPar$)="INITAREA" then
+      Var$="Area"
+   Endif
+
+
+   ! determine how many peaks are to be deleted
+   npeaks=TabHdrVal(Chromreg[objnum],Intresults,"NumberOfRows")
+
+   NumberToDelete=npeaks-Exp_peaks
+   If Exp_Peaks=0 then
+      NumberToDelete=ROUND(npeaks-2.5*Min_Peaks)
+   Endif
+
+   Row=RowByVal(Chromreg[objnum],Intresults,,Var$,"min")
+   Min_Val=TabVal(Chromreg[objnum],Intresults,Row,Var$)
+
+
+   For i=1 to NumberToDelete-1
+
+      Row=RowByVal(Chromreg[objnum],Intresults,,Var$,"~>",Min_Val)
+      Min_Val=TabVal(Chromreg[objnum],Intresults,Row,Var$)
+
+   Next i
+
+
+   settabhdrval _damethod[1],evtab$,IntegPar$,Min_Val
+   integrateobj Chromreg[objnum], file_start:file_end
+
+   npeaks=TabHdrVal(Chromreg[objnum],Intresults,"NumberOfRows")
+
+   RETURN npeaks
+endmacro
+!*****************************************************************************
+
+!****************************************************************************
+!*****************************************************************************
+!****************************************************************************
+name AutoSN_PrintError
+!****************************************************************************
+Local  ID_TUNEMAC____ERROR_876
+Local  ID_TUNEMAC____COMMAND_921
+Local  ID_TUNEMAC____MESSAGE_877
+Local  ID_TUNEMAC____MACRO_878
+Local  ID_TUNEMAC____LINE_879
+Local  ID_TUNEMAC____FILE_880
+ID_TUNEMAC____ERROR_876                            =  17876  
+ID_TUNEMAC____COMMAND_921                          =  17921  
+ID_TUNEMAC____MESSAGE_877                          =  17877  
+ID_TUNEMAC____MACRO_878                            =  17878  
+ID_TUNEMAC____LINE_879                             =  17879  
+ID_TUNEMAC____FILE_880                             =  17880  
+  print ">>>>>>>>>>>>>>>>>>>>>>>"
+  print ReadResource$("tunemac",ID_TUNEMAC____ERROR_876), _ERROR
+  print ReadResource$("tunemac",ID_TUNEMAC____COMMAND_921), _ERRCMD$
+  print ReadResource$("tunemac",ID_TUNEMAC____MESSAGE_877), _ERRMSG$
+  print ReadResource$("tunemac",ID_TUNEMAC____MACRO_878), _ERRMacro$
+  print ReadResource$("tunemac",ID_TUNEMAC____LINE_879), _ERRLine
+  print ReadResource$("tunemac",ID_TUNEMAC____FILE_880), _ERRFile$
+  print ">>>>>>>>>>>>>>>>>>>>>>>"
+endmacro
+
+!***************************************************************************!
+!*****************************************************************************
+name Auto_SN_Error
+PARAMETER Message$ default "Unspecified error occured"
+   !! Report serious failures
+   !! 1: Serious / no comment
+   !! 2: Critical / interrupts normal operation
+   !! 3: Affects data/ result output
+   !! 4: Affects macro operation
+   !! 5: Anticipated error occured
+PARAMETER Level default 5
+PARAMETER File$ default Dadatapath$+Dadatafile$ + "\SN_Error.txt"
+PARAMETER Remove$ default "OFF"
+!*****************************************************************************
+LOCAL _button
+! If in run suppress any nasty messages
+
+Local  ID_TUNEMAC_CHEMSTATION_SO_367 
+Local  ID_TUNEMAC_ERROR_467
+!Local  ID_TUNEMAC_MS_AUTO_SN_922                             CPL 08/2006
+Local  ID_TUNEMAC_ERROR_REPORT_F_923
+
+ID_TUNEMAC_CHEMSTATION_SO_367                      =  17367
+ID_TUNEMAC_ERROR_467                               =  17467  
+!ID_TUNEMAC_MS_AUTO_SN_922                          =  17922  CPL 08/2006  
+ID_TUNEMAC_ERROR_REPORT_F_923                      =  17923  
+   if _methodon<> 1 or _sequenceon<> 1 then
+      AutoSN_PrintError
+
+      Print ReadResource$("tunemac",ID_TUNEMAC_ERROR_467) + Message$
+      _button= Alert(Message$,3, ReadResource$("tunemac",ID_TUNEMAC_CHEMSTATION_SO_367))
+!      _button= Alert(Message$,3, ReadResource$("tunemac",ID_TUNEMAC_MS_AUTO_SN_922))
+
+   else
+     open File$ for output as # 4
+     Print # 4,ReadResource$("tunemac",ID_TUNEMAC_ERROR_REPORT_F_923)
+     Print # 4
+     Print # 4, Message$
+     Print # 4
+     Print # 4, _Errormsg$
+     Close # 4
+   endif
+
+   !!  Here clean up memory !!
+   if Remove$="ON" then
+      On error print
+         !*#$-TODO:Update macro list-$#*!
+         Remove Auto_SN 
+         Remove MSAutoSNdlgBox$   
+         Remove CheckParams       
+         Remove GuessTest$
+         Remove GetSignals$
+         Remove AutoSNRegManager  
+
+         Remove FirstIntegration$
+         Remove set_int_params
+         Remove AdjustIntegrationParameter
+
+         Remove GetFIAinjections
+         Remove MakePeakTable     
+         Remove SelectPeaks       
+         Remove GenerateClusters  
+         Remove GetClusterStats   
+
+         Remove DoNoiseCalcs      
+         Remove CalcNoiseStats    
+         Remove CalcRMSnoise      
+         Remove CalcColAverage    
+         Remove DrawNoiseGraphics
+
+         Remove Check_Deconvolution
+         Remove PlotMSReg
+         Remove GetPeakSpecAverage
+
+         Remove AutoSNReport      
+         Remove ReportHeader
+         Remove decon_report_part1
+         Remove decon_report_part2
+
+      On error
+         Remove Auto_SN_error
+   endif
+
+   ! 09/30/99 YD, copied here 28Feb2000 RMC
+   if (RegSize(ASNChromTemp) > 0)
+	   if (RegSize(ChromReg) >= 0)
+		   delreg ChromReg
+	   endif
+	   copyobj ASNChromTemp, ChromReg
+	   delreg ASNChromTemp
+	   draw 38, ChromReg[1:0], , , 1, 1
+	   winupdate
+   endif
+
+   STOP
+
+endmacro
+
+!*****************************************************************************
+!*****************************************************************************
+name GuessTest$
+PARAMETER Selected_Test$ default ""
+! Checks the sample name field and the method name for keywords.  If not
+! found, the test name is passed back unchanged.
+!*****************************************************************************
+LOCAL MethodFile$, MethodKey$, SampleName$, SampleKey$
+LOCAL NumTests, i
+
+Local  ID_TUNEMAC_TEST_924
+ID_TUNEMAC_TEST_924                                =  17924  
+   On Error Auto_Sn_Error "GuessTest: Error reading test parameters table",5
+
+   NumTests = TabHdrVal(AutoSNReg, "TestParms", "NumberOfRows")
+   MethodFile$ = convertText$(upper, objhdrtext$(ChromReg, "MethodFile"))
+   SampleName$ = convertText$(upper, objhdrtext$(ChromReg, "SampleName"))
+   
+   for i = 1 to NumTests
+      ! First, search by Method key 1
+      MethodKey$ = TabText$(AutoSNReg, "TestParms", i, "MethodKey1")
+      ! Print MethodFile$, MethodKey$
+      if (MethodKey$ <> "") then
+         if InStr(MethodFile$, MethodKey$) > 0 then
+            RETURN TabText$(AutoSNReg, "TestParms", i, "Name")
+         endif
+      endif
+
+      ! Next, search by Method key 2
+      MethodKey$ = TabText$(AutoSNReg, "TestParms", i, "MethodKey2")
+      ! Print MethodFile$, MethodKey$
+      if (MethodKey$ <> "") then
+         if InStr(MethodFile$, MethodKey$) > 0 then
+            RETURN TabText$(AutoSNReg, "TestParms", i, "Name")
+         endif
+      endif
+
+      ! Next, search by Method key 3
+      MethodKey$ = TabText$(AutoSNReg, "TestParms", i, "MethodKey3")
+      ! Print MethodFile$, MethodKey$
+      if (MethodKey$ <> "") then
+         if InStr(MethodFile$, MethodKey$) > 0 then
+            RETURN TabText$(AutoSNReg, "TestParms", i, "Name")
+         endif
+      endif
+
+      ! Last, search by Sample key
+      SampleKey$ = TabText$(AutoSNReg, "TestParms", i, "SampleKey")
+      ! Print SampleName$, SampleKey$
+      if (SampleKey$ <> "") then
+         if InStr(SampleName$, SampleKey$) > 0 then
+            RETURN TabText$(AutoSNReg, "TestParms", i, "Name")
+         endif
+      endif
+      
+   next i     ! next Test
+   
+   Print ReadResource$("tunemac",ID_TUNEMAC_TEST_924), Selected_Test$
+   RETURN Selected_Test$
+
+endmacro    ! GuessTest
+
+!*****************************************************************************
+!*****************************************************************************
+name GetSignals$
+! Returns a string with the available mass signals in the currently loaded
+! datafile.
+!*****************************************************************************
+LOCAL SigList$, temp$, Signal$, i
+
+   temp$ = FindFile$(DADataPath$ + DADataFile$ + "\MSD?.MS")
+   ! print Temp$
+   
+   Signal$ = "MSD1"
+   i = 1
+   while Signal$ <> "" 
+      Signal$ = SubString$(temp$, i)
+      ! print Signal$, len(Signal$)
+      i = i + 1
+      if len(Signal$) > 0 then
+         SigList$ = Siglist$ + Signal$[1:4] + "|"
+      endif
+   endwhile
+   SigList$ = SigList$[1:len(SigList$) -1]
+   Print SigList$
+
+   RETURN SigList$
+
+endmacro    ! end GetSignals$
+!*****************************************************************************
+
+!*****************************************************************************
+!*****************************************************************************
+!*****************************************************************************
+name MSAutoSNdlgBox$
+!
+!*****************************************************************************
+LOCAL TestList$, Selected_Test$, Test, i, UseTest
+LOCAL IonExtract1$, IonExtract2$, IonExtract3$
+LOCAL ExpInj$, IntegOFFtime$
+LOCAL NoiseModes$, NoiseMethod$, NoiseStart$, NoiseEnd$
+LOCAL RetentionTime$
+LOCAL LoadSignals, AutoInt, Smooth, ToPrinter
+LOCAL Deconvolute, DoDeconvolute, IntPeakInSPec$, SigList$, Sig$, ExpMW$
+LOCAL Control, ReturnString$, HelpIndex
+LOCAL NumberOfIons, SampleName$, MethodFile$, TestNum
+
+   !! Initialization of variables
+
+Local  ID_TUNEMAC_NUMBER_OF_FIA_925
+Local  ID_TUNEMAC_EXPECTED_NUMBE_926
+Local  ID_TUNEMAC_SMOOTH_CHROMAT_927
+Local  ID_TUNEMAC_AUTO_INTEGRATE_928
+Local  ID_TUNEMAC_INTEGRATION_OF_929
+Local  ID_TUNEMAC_NOISE_METHOD_930
+Local  ID_TUNEMAC_NOISE_RANGE__M_931
+Local  ID_TUNEMAC_TO_932
+Local  ID_TUNEMAC_RETENTION_TIME_933
+Local  ID_TUNEMAC_DECONVOLUTE_934
+Local  ID_TUNEMAC_EXPECTED_MW_935
+Local  ID_TUNEMAC_NUMBER_OF_MASS_936
+Local  ID_TUNEMAC_HELP_937
+ID_TUNEMAC_NUMBER_OF_FIA_925                       =  17925  
+ID_TUNEMAC_EXPECTED_NUMBE_926                      =  17926  
+ID_TUNEMAC_SMOOTH_CHROMAT_927                      =  17927  
+ID_TUNEMAC_AUTO_INTEGRATE_928                      =  17928  
+ID_TUNEMAC_INTEGRATION_OF_929                      =  17929  
+ID_TUNEMAC_NOISE_METHOD_930                        =  17930  
+ID_TUNEMAC_NOISE_RANGE__M_931                      =  17931  
+ID_TUNEMAC_TO_932                                  =  17932  
+ID_TUNEMAC_RETENTION_TIME_933                      =  17933  
+ID_TUNEMAC_DECONVOLUTE_934                         =  17934  
+ID_TUNEMAC_EXPECTED_MW_935                         =  17935  
+ID_TUNEMAC_NUMBER_OF_MASS_936                      =  17936  
+ID_TUNEMAC_HELP_937                                =  17937  
+   On Error Auto_Sn_Error "MSautoSNdlgBox: Please reload data file",5
+   HelpIndex = 5026
+
+   ExpInj$=Val$(GetFIAInjections()) 
+   
+   if RegSize(ChromReg) < 1 then
+      Auto_Sn_Error "Please reload data file", 5
+   endif
+
+   Selected_Test$ = ""
+   Selected_Test$ = GuessTest$(Selected_Test$)
+   if len(Selected_Test$) > 0 then
+      UseTest = 1
+   else
+      UseTest = 2
+   endif
+   On Error
+
+   if RegSize(AutoSNReg) > 0 then
+      TestList$      = TabHdrText$(AutoSNReg, "TestParms", "TestList")
+
+      ! Get values from previous execution
+      UseTest        =          ObjHdrVal  (AutoSNReg, "UseTest")
+      ToPrinter      =          ObjHdrVal  (AutoSNReg, "ToPrinter")
+      Sig$           =          ObjHdrText$(AutoSNReg, "Signal")
+      AutoInt        =          ObjHdrVal  (AutoSNReg, "AutoInt")
+      Deconvolute    =          ObjHdrVal  (AutoSNReg, "Deconvolute")
+      NoiseStart$    = SprintF$(ObjHdrVal  (AutoSNReg, "NoiseStart"), "%3.2f")
+      NoiseEnd$      = SprintF$(ObjHdrVal  (AutoSNReg, "NoiseEnd"), "%3.2f")
+      NoiseMethod$   =          ObjHdrText$(AutoSNReg, "NoiseMethod")
+      NoiseModes$    =          ObjHdrText$(AutoSNReg, "NoiseModes")
+      IntegOfftime$  = SprintF$(ObjHdrVal  (AutoSNReg, "IntOffTime"), "%3.1f")
+      IntPeakInSpec$ = Val$(trunc(ObjHdrVal(AutoSNReg, "MSpeaks")))
+      LoadSignals    =          ObjHdrVal  (AutoSNReg, "ReloadEIC") + 1
+      RetentionTime$ = SprintF$(ObjHdrVal  (AutoSNReg, "RetentionTime"), "%3.2f")
+      
+      ! If a GuessTest thinks it found a match, set the test parameters 
+      ! as defaults for the dialog box
+      TestNum = RowByText(AutoSnReg, TestParms,, "Name", "i=", Selected_Test$)
+      ! Print TestNum
+      if TestNum > 0 then
+         NoiseStart$   = SprintF$(TabVal(AutoSNReg, "TestParms", TestNum, \
+                                 "NoiseStart"), "%3.2f")
+         NoiseEnd$     = SprintF$(TabVal(AutoSNReg, "TestParms", TestNum, \
+                                 "NoiseEnd"), "%3.2f")
+         NoiseMethod$  = TabText$(AutoSNReg, "TestParms", TestNum, "NoiseMethod")
+         IntegOfftime$ = SprintF$(TabVal (AutoSNReg, "TestParms", TestNum, \
+                                 "IntegOff"), "%3.1f")
+         Deconvolute   = TabVal  (AutoSNReg, "TestParms", TestNum, "Deconvolute")
+         IntPeakInSpec$= SprintF$(TabVal (AutoSNReg, "TestParms", TestNum, \
+                                  "MassPeaks"),"%1.0f")
+         RetentionTime$= SprintF$(TabVal(AutoSNReg, "TestParms", TestNum, \
+                                 "RetentionTime"), "%3.2f")
+      endif
+
+   else             ! defaults: should never be needed! 
+      TestList$      = "Reserpine-SL|Reserpine|Myoglobin|Acid Red 4|4-Nitrophenol"
+      Sig$           = "MSD1"
+      ToPrinter      = 1
+      AutoInt        = 1
+      Deconvolute    = 0
+      NoiseStart$    = "-0.6"
+      NoiseEnd$      = "-0.15"
+      NoiseMethod$   = "Individual"
+      NoiseModes$    = "Single|Individual|Averaged"
+      RetentionTime$ = "-1.0"
+      IntegOfftime$  = "0"
+      IntPeakInSpec$ = "10"
+   endif
+
+   if Deconvolute >= 1 then 
+      doDeconvolute = 1
+      expMW$ = val$(Deconvolute)
+   else
+      doDeconvolute = 0
+      expMW$ = ""
+   endif
+   
+   RemoveDialog "AutoSN"
+
+   BeginDialog  "AutoSN", 100, 10, 220, 385, "MS Auto SN Parameters"
+
+      ! Load signals option buttons
+      GroupBox  10, 10, 200,  60, "MS Signals"
+      LoadSignals = 2             ! Load signals by default
+      OptionGroup LoadSignals
+      
+      OptionButton 18, 20, 80, 12, "Use Loaded Signals"
+      OptionButton 18, 35, 60, 12, "Load Signals:"
+
+      if Val(ExpInj$) > 1 then
+         StaticText 28,  52, 110, 12, ReadResource$("tunemac",ID_TUNEMAC_NUMBER_OF_FIA_925) + ExpInj$
+      else
+         StaticText 28,  52, 110, 12, ReadResource$("tunemac",ID_TUNEMAC_EXPECTED_NUMBE_926)
+         EditBox   135,  51,  20, 12, ExpInj$
+      endif
+
+      ! Get list of available signals
+      SigList$ = GetSignals$()
+      if SigList$ <> "MSD1" then
+         if InStr(Sig$, SigList$) = 0 then
+            Sig$ = SubString$(SigList$, 1)
+         endif
+         Print SigList$, Sig$
+         ComboBox 80, 35, 40, 65, SigList$, Sig$, 111
+      else
+         StaticText 80, 36, 40, 12, SigList$
+      endif
+      
+      GroupBox   10,  75, 200, 110, "Processing options"
+      OptionGroup UseTest
+!      if UseTest = 1 then
+!         OptionButton 18,  89,  80, 13, "Use predefined test:", UseTest
+!      else
+         OptionButton 18,  89,  80, 13, "Use predefined test:"
+!      endif
+      ComboBox    120,  89,  75, 65, TestList$, Selected_Test$
+
+      OptionButton 18, 106,  60, 12,  "Extract ion(s):"
+      EditBox    90, 108, 30, 12, IonExtract1$
+      EditBox   127, 108, 30, 12, IonExtract2$
+      EditBox   164, 108, 30, 12, IonExtract3$
+
+      CheckBox    18, 127, 115, 12, ReadResource$("tunemac",ID_TUNEMAC_SMOOTH_CHROMAT_927), Smooth
+      CheckBox    18, 142, 115, 12, ReadResource$("tunemac",ID_TUNEMAC_AUTO_INTEGRATE_928), AutoInt
+      StaticText  28, 161, 110, 12, ReadResource$("tunemac",ID_TUNEMAC_INTEGRATION_OF_929)
+      EditBox    135, 161,  20, 12,  Integofftime$
+
+      GroupBox    10, 192, 200, 75, "Signal-to-Noise Parameters"
+      StaticText  28, 208, 110, 12, ReadResource$("tunemac",ID_TUNEMAC_NOISE_METHOD_930)
+      ComboBox   120, 207,  75, 50, NoiseModes$, NoiseMethod$
+
+      StaticText  28, 227,  90, 12, ReadResource$("tunemac",ID_TUNEMAC_NOISE_RANGE__M_931) 
+      EditBox    120, 226,  25, 12, NoiseStart$
+      StaticText 149, 227,  15, 12, ReadResource$("tunemac",ID_TUNEMAC_TO_932)
+      EditBox    160, 226,  25, 12, NoiseEnd$
+      
+      StaticText  28, 246,  90, 12, ReadResource$("tunemac",ID_TUNEMAC_RETENTION_TIME_933)
+      EditBox    120, 245,  25, 12, RetentionTime$
+
+      if _Deconv = 1 then
+         GroupBox    10, 274, 200, 54, "Deconvolution"
+         CheckBox    18, 288,  60, 12, ReadResource$("tunemac",ID_TUNEMAC_DECONVOLUTE_934), doDeconvolute
+         StaticText  90, 290,  50, 12, ReadResource$("tunemac",ID_TUNEMAC_EXPECTED_MW_935)
+         EditBox    150, 288,  50, 12, ExpMW$
+         StaticText  28, 308,  80, 12, ReadResource$("tunemac",ID_TUNEMAC_NUMBER_OF_MASS_936)
+         EditBox    110, 307,  15, 11, IntPeakInSPec$
+      else
+         doDeconvolute = 0
+         ExpMW$ = "0"
+         IntPeakInSpec$ = "0"
+      endif
+      
+      CheckBox        18, 335, 115, 12, "Print Report", ToPrinter
+
+      OkButton        40, 355, 40, 15, "OK"
+      CancelButton    94, 355, 40, 15, "Cancel"
+      ExecPushButton 148, 355, 40, 15, ReadResource$("tunemac",ID_TUNEMAC_HELP_937), CP2, \
+                     "Help HelpSubSystemTopic (""HPMSCORE""," + \
+                     sprintf$(HelpIndex,"%f") + ")"
+
+   EndDialog
+
+   Print ""
+
+   if ShowDialog("AutoSN")=0 then
+      RemoveDialog "AutoSN"
+      Auto_SN_Error "Stopped on user request",5
+   endif
+
+   RemoveDialog "AutoSN"
+   
+   ! Reload signals?
+   LoadSignals = LoadSignals - 1
+   
+   ! Count the number of ions requested
+   for i = 1 to 3
+      evaluate "Test = val(IonExtract" + val$(i) + "$)"
+      if Test > 0 then
+         NumberOfIons = NumberOfIons + 1
+      endif
+   next i
+   
+   if doDeconvolute = 0 then
+      Deconvolute = 0
+   else
+      Deconvolute = val(ExpMW$)
+   endif
+   
+   if UseTest = 2 then
+      Selected_Test$ = ""
+   endif
+
+   ReturnString$=IonExtract1$ + "|" + IonExtract2$ + "|" + IonExtract3$ + \
+      "|" + ExpInj$       + "|" + IntegOffTime$    + "|" + Val$(Smooth) + \
+      "|" + val$(AutoInt) + "|" + NoiseMethod$     + "|" + NoiseStart$  + \
+      "|" + NoiseEnd$     + "|" + val$(ToPrinter) + "|" + val$(NumberOfIons) +\
+      "|" + val$(Deconvolute)+"|" + IntPeakInSPec$ + "|" + Selected_Test$ + \
+      "|" + Sig$ + "|" + val$(LoadSignals) + "|" + RetentionTime$
+   Print ReturnString$
+
+   RETURN ReturnString$
+   
+endmacro  !  end MSAutoSNdlgBox$
+
+!*****************************************************************************
+!*****************************************************************************
+name AutoSNRegManager
+PARAMETER Todo$ default "Initialize"
+PARAMETER Object$ default ""
+! Manage the AutoSNReg register.  This macro includes the definition of all
+! the table structures, except for PeakTable, which is created in MakePeakTable
+!
+! 08/16/2006 CPL Modify Production Specs to give 1.5x margin over Customer Spec.
+! 09/27/2006 CPL Remove 1.5x margin
+! 03/31/2010 CPL Added ModuleInfo query to return MSDModel$ to support Orion.
+! 04/07/2010 CPL Revise specifications for Orion series models.
+! 04/13/2010 CPL Revise specification for G6120B model.
+! 07/19/2010 CPL Add fix for G6120B specification (TT #138558)
+! 09/30/2010 CPL Add fix for Orion MM-APCI (TT #144686
+!*****************************************************************************
+LOCAL Keystring$, TestString$
+LOCAL Row, InstRow, IonMode$, MSDModel$, AcqMode$, ProdEnv, text$, i
+
+! Functionality:
+! Delete/Create new register
+! Initialize new tables
+
+   On error Auto_SN_error "AutoSNRegManager: Register/table access fault", 1
+
+   KeyString$=convertText$(upper,Todo$)
+   TestString$=convertText$(upper,Object$)
+   
+   ! Default parameters
+   if (KeyString$ = "INITIALIZE") then
+      On error Auto_SN_error "AutoSNRegManager: can't initialize test parameters", 1
+      Delreg AutoSNREG
+      NewObj AutoSNREG ,1,1,1
+
+      SetObjHdrText AutoSNReg, "MacroVer", AutoSNVer$
+      SetObjHdrText AutoSNReg, "Test", ""
+      SetObjHdrVal  AutoSNReg, "UseTest", 1
+      SetObjHdrVal  AutoSNReg, "NumInjects", 1
+      SetObjHdrText AutoSNReg, "Signal", "MSD1"
+      SetObjHdrVal  AutoSNReg, "ToPrinter", 1
+      SetObjHdrVal  AutoSNReg, "AutoInt", 1
+      SetObjHdrVal  AutoSNReg, "Smooth", 0
+      SetObjHdrVal  AutoSNReg, "Deconvolute", 0
+      SetObjHdrVal  AutoSNReg, "NoiseStart", -0.6
+      SetObjHdrVal  AutoSNReg, "NoiseEnd",   -0.15
+      SetObjHdrText AutoSNReg, "NoiseMethod", "Individual"
+      SetObjHdrText AutoSNReg, "NoiseModes", "Single|Individual|Averaged"
+      SetObjHdrVal  AutoSNReg, "IntOffTime", 0
+      SetObjHdrVal  AutoSNReg, "MSpeaks", 20
+      ! SetObjHdrVal  AutoSNReg, "RTwindow", 0.1
+      SetObjHdrVal  AutoSNReg, "RTwindow", 0.2   ! PHC 06/00
+      SetObjHdrVal  AutoSNReg, "ReloadEIC", 1
+      SetObjHdrVal  AutoSNReg, "RetentionTime",   -1.0
+      RETURN 1
+   endif
+
+   If (KeyString$ = "KILLTABLE") then
+      DelTab AutoSNReg,Object$
+      RETURN 1
+   Endif
+
+   If (KeyString$ = "NEWTABLE") then
+      DelTab AutoSNReg,Object$
+      NewTab AutoSNReg,Object$
+
+      if TestString$ = "CLUSTERS" then
+         On error Auto_SN_error "AutoSNRegManager: can't create cluster table", 1
+      
+         NumClusters = TabHdrVal(AutoSNReg, "PeakTable", "NumClusters")
+         NewColVal  AutoSNReg, "Clusters", "Cluster"
+         NewColVal  AutoSNReg, "Clusters", "NumInjs"
+         NewColText AutoSNReg, "Clusters", "SampleName"
+         NewColVal  AutoSNReg, "Clusters", "VialNumber" 
+         NewColText AutoSNReg, "Clusters", "Parm1"
+         NewColText AutoSNReg, "Clusters", "Parm2"
+         
+         NewColVal  AutoSNReg, "Clusters", "MeanHeight" 
+         NewColVal  AutoSNReg, "Clusters", "StdDevHeight" 
+         NewColVal  AutoSNReg, "Clusters", "RSDHeight"
+         
+         NewColVal  AutoSNReg, "Clusters", "MeanPpNoise" 
+         NewColVal  AutoSNReg, "Clusters", "StdDevPpNoise" 
+         NewColVal  AutoSNReg, "Clusters", "RSDPpNoise"
+
+         NewColVal  AutoSNReg, "Clusters", "MeanPkPkSNR" 
+         NewColVal  AutoSNReg, "Clusters", "StdDevPkPkSNR" 
+         NewColVal  AutoSNReg, "Clusters", "RSDPkPkSNR"
+
+         NewColVal  AutoSNReg, "Clusters", "MeanRMSSNR" 
+         NewColVal  AutoSNReg, "Clusters", "StdDevRMSSNR" 
+         NewColVal  AutoSNReg, "Clusters", "RSDRMSSNR"
+         
+         InsTabRow  AutoSNReg, "Clusters", 1:NumClusters
+      endif
+         
+      ! Test definitions
+      if TestString$ = "TESTPARMS" then
+         On error Auto_SN_error "AutoSNRegManager: can't initialize test parameters", 1
+
+         ! Manufacturing environment flag
+         prodEnv = 0 
+         if Check(Variable, PRTestVer$) = 1 then
+            prodEnv = 1
+         endif
+                 
+         ! Get instrument model, ionization mode & acquisition mode from 1st loaded signal
+         if RegSize(ChromRes) > 0 then
+            InstRow = RowByText(ChromRes, "ModuleInfo",, "Name", "in", "MSD")
+            MSDModel$ = TabText$(ChromRes, "ModuleInfo", InstRow, "PartNumber")
+            IonMode$ = TabHdrText$(ChromRes, "MSDConditions", "Ionization")
+            if TabHdrType(ChromRes, "MSDConditions", "AcqMode") = 0 then
+               AcqMode$ = TabHdrText$(ChromRes, "MSDConditions", "AcqMode")
+            else
+               for i = 1 to 4
+                  text$ = "AcqMode" + val$(i)
+                  if TabHdrType(ChromRes, "MSDConditions", text$) = 0 then
+                     AcqMode$ = TabHdrText$(ChromRes, "MSDConditions", text$)
+                     i = 5
+                  endif
+               next i
+            endif
+         else
+            IonMode$ = ""; AcqMode$ = ""
+         endif
+
+         NewTabHdrText AutoSnReg, "TestParms", "IonMode", IonMode$
+         NewTabHdrText AutoSnReg, "TestParms", "InstModel", MSDModel$
+         
+         ! Setup the table columns
+         NewColText AutoSnReg, TestParms, "Name"
+         NewColText AutoSnReg, TestParms, "Title"
+         NewColText AutoSnReg, TestParms, "SampleKey"
+         NewColText AutoSnReg, TestParms, "MethodKey1"
+         NewColText AutoSnReg, TestParms, "MethodKey2"
+         NewColText AutoSnReg, TestParms, "MethodKey3"
+         NewColVal  AutoSnReg, TestParms, "NumIons", 1
+         NewColVal  AutoSnReg, TestParms, "Ion1"
+         NewColVal  AutoSnReg, TestParms, "Ion2"
+         NewColVal  AutoSnReg, TestParms, "Ion3"
+         NewColVal  AutoSnReg, TestParms, "IntegOff", -1
+         NewColVal  AutoSnReg, TestParms, "Smooth",   -1
+         NewColText AutoSnReg, TestParms, "NoiseMethod"
+         NewColVal  AutoSnReg, TestParms, "NoiseStart"
+         NewColVal  AutoSnReg, TestParms, "NoiseEnd"
+         NewColVal  AutoSnReg, TestParms, "SampleCluster", -1
+         NewColVal  AutoSnReg, TestParms, "BackCluster",   -1
+         NewColVal  AutoSnReg, TestParms, "Deconvolute",    0
+         NewColVal  AutoSnReg, TestParms, "MassPeaks",     15
+         NewColVal  AutoSnReg, TestParms, "SNSpec",        -1
+         NewColVal  AutoSnReg, TestParms, "MWerrorSpec",   -1
+         NewColVal  AutoSnReg, TestParms, "RetentionTime"
+
+         ! Add the rows to the table
+         InsTabRow  AutoSnReg, TestParms, 1:8
+         Row = 0
+
+         ! Reserpine, positive ion, API-ES, MM-ES, APCI, MM-APCI, APPI, or AJS-ES for 6100 Series
+         Row = Row + 1
+         SetTabText AutoSnReg, TestParms, Row, "Name", "Reserpine-6100"
+         if len(IonMode$) = 0 then
+            text$ = "Positive Ion Sensitivity Test"
+         else
+            text$ =  IonMode$ + " Positive Ion " + AcqMode$ + " Sensitivity Test"
+         endif
+         SetTabText AutoSnReg, TestParms, Row, "Title", text$
+         SetTabText AutoSnReg, TestParms, Row, "SampleKey", ""
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey1", "61"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey2", "SIM"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey3", "SCN"         
+         SetTabVal  AutoSnReg, TestParms, Row, "NumIons", 1
+         SetTabVal  AutoSnReg, TestParms, Row, "Ion1", 609.3
+         SetTabVal  AutoSnReg, TestParms, Row, "IntegOff", 1.0
+         SetTabText AutoSnReg, TestParms, Row, "NoiseMethod", "Individual"
+         SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1         
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseStart", 0.50
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseEnd",   0.90
+         SetTabVal  AutoSnReg, TestParms, Row, "SampleCluster", 2
+         SetTabVal  AutoSnReg, TestParms, Row, "BackCluster", 1
+         SetTabVal  AutoSnReg, TestParms, Row, "RetentionTime", -1.0
+         
+          if (MSDModel$ = "G6120B") OR (MSDModel$ = "G6130B") OR (MSDModel$ = "G6150B") then
+            if (AcqMode$ = "SIM") then
+              SetTabVal  AutoSnReg, TestParms, Row, "NoiseStart", 0.5
+              SetTabVal  AutoSnReg, TestParms, Row, "NoiseEnd",   0.8
+            else
+              SetTabVal  AutoSnReg, TestParms, Row, "NoiseStart", 0.45
+              SetTabVal  AutoSnReg, TestParms, Row, "NoiseEnd",   0.8
+            endif                      
+          endif
+         
+         ! Production Specifications
+          if ProdEnv = 1 then
+            if (MSDModel$ = "G6120B") OR (MSDModel$ = "G6130B") OR (MSDModel$ = "G6150B") then        
+              if IonMode$ = "AJS-ES" then             
+                SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 100
+              else
+                if (MSDModel$ = "G6120B") AND (IonMode$ = "ES-API") then   
+                  SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 50
+                else
+                  if IonMode$ = "MM-APCI" then
+                    SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+                  else   
+                    SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 20
+                  endif ! MM-APCI else all others
+                endif ! G6120B
+              endif ! AJS-ES  
+            else 
+              ! Lassen & Sirius series
+              if IonMode$ = "MM-APCI" then
+                SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10  ! CPL 9/27/2006                
+              else         
+                SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 20  ! CPL 9/27/2006
+              endif ! MM-APCI else all others
+            endif ! Orion series (Production)
+          else
+            ! Customer Specifications
+            if (MSDModel$ = "G6120B") OR (MSDModel$ = "G6130B") OR (MSDModel$ = "G6150B") then     
+              if IonMode$ = "AJS-ES" then             
+                SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 100
+              else
+                if (MSDModel$ = "G6120B") AND (IonMode$ = "ES-API") then 
+                  SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 50
+                else
+                  if IonMode$ = "MM-APCI" then
+                    SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+                  else   
+                    SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 20
+                  endif ! MM-APCI else all others
+                endif ! G6120B
+              endif ! AJS-ES 
+            else
+              ! Lassen & Sirius series                       
+              if IonMode$ = "MM-APCI" then
+                SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10     
+              else
+                SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 20
+              endif ! MM-APCI else all others
+            endif ! Orion series (Customer)
+          endif ! ProdEnv = 1
+
+         ! Reserpine, positive ion, API-ES, MM-ES, APCI, MM-APCI, or APPI for 1956 VL Model
+         Row = Row + 1
+         SetTabText AutoSnReg, TestParms, Row, "Name", "Reserpine-1956VL"
+         if len(IonMode$) = 0 then
+            text$ = "Positive Ion Sensitivity Test"
+         else
+            text$ =  IonMode$ + " Positive Ion " + AcqMode$ + " Sensitivity Test"
+         endif
+         SetTabText AutoSnReg, TestParms, Row, "Title", text$
+         SetTabText AutoSnReg, TestParms, Row, "SampleKey", ""
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey1", "56VL"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey2", ""
+         SetTabVal  AutoSnReg, TestParms, Row, "NumIons", 1
+         SetTabVal  AutoSnReg, TestParms, Row, "Ion1", 609.3
+         SetTabVal  AutoSnReg, TestParms, Row, "IntegOff", 1.0
+         SetTabText AutoSnReg, TestParms, Row, "NoiseMethod", "Individual"
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseStart", 0.45
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseEnd",   0.90
+         SetTabVal  AutoSnReg, TestParms, Row, "SampleCluster", 2
+         SetTabVal  AutoSnReg, TestParms, Row, "BackCluster", 1
+         if ProdEnv = 1 then
+           if IonMode$ = "MM-APCI" then
+            SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 15
+            SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1
+           else
+            SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 30
+            SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1
+           endif
+         else
+           if IonMode$ = "MM-APCI" then
+             SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+             SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0              
+           else
+             SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 20
+             SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0
+           endif
+         endif
+         SetTabVal  AutoSnReg, TestParms, Row, "RetentionTime", -1.0
+
+         ! Reserpine, positive ion, API-ES, MM-ES, APCI, MM-APCI, or APPI for 1956 SL Model
+         Row = Row + 1
+         SetTabText AutoSnReg, TestParms, Row, "Name", "Reserpine-1956SL"
+         if len(IonMode$) = 0 then
+            text$ = "Positive Ion Sensitivity Test"
+         else
+            text$ =  IonMode$ + " Positive Ion " + AcqMode$ + " Sensitivity Test"
+         endif
+         SetTabText AutoSnReg, TestParms, Row, "Title", text$
+         SetTabText AutoSnReg, TestParms, Row, "SampleKey", ""
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey1", "56SL"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey2", ""
+         SetTabVal  AutoSnReg, TestParms, Row, "NumIons", 1
+         SetTabVal  AutoSnReg, TestParms, Row, "Ion1", 609.3
+         SetTabVal  AutoSnReg, TestParms, Row, "IntegOff", 1.0
+         SetTabText AutoSnReg, TestParms, Row, "NoiseMethod", "Individual"
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseStart", 0.45
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseEnd",   0.90
+         SetTabVal  AutoSnReg, TestParms, Row, "SampleCluster", 2
+         SetTabVal  AutoSnReg, TestParms, Row, "BackCluster", 1
+         if ProdEnv = 1 then
+           if IonMode$ = "MM-APCI" then
+            SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 15
+            SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1            
+           else
+            SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 30
+            SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1
+           endif 
+         else
+           if IonMode$ = "MM-APCI" then
+             SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+             SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0            
+           else
+             SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 20
+             SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0
+           endif
+         endif
+         SetTabVal  AutoSnReg, TestParms, Row, "RetentionTime", -1.0
+
+         ! Reserpine, positive ion, API-ES, MM-ES, APCI, MM-APCI or APPI for 1946D Model
+         Row = Row + 1
+         SetTabText AutoSnReg, TestParms, Row, "Name", "Reserpine-1946D"
+         if len(IonMode$) = 0 then
+            text$ = "Positive Ion Sensitivity Test"
+         else
+            text$ =  IonMode$ + " Positive Ion " + AcqMode$ + " Sensitivity Test"
+         endif
+         SetTabText AutoSnReg, TestParms, Row, "Title", text$
+         SetTabText AutoSnReg, TestParms, Row, "SampleKey", "RESERP"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey1", "SLSCN"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey2", "SLSIM"
+         SetTabVal  AutoSnReg, TestParms, Row, "NumIons", 1
+         SetTabVal  AutoSnReg, TestParms, Row, "Ion1", 609.3
+         SetTabVal  AutoSnReg, TestParms, Row, "IntegOff", 1.0
+         SetTabText AutoSnReg, TestParms, Row, "NoiseMethod", "Individual"
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseStart", 0.45
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseEnd",   0.90
+         SetTabVal  AutoSnReg, TestParms, Row, "SampleCluster", 2
+         SetTabVal  AutoSnReg, TestParms, Row, "BackCluster", 1
+         if ProdEnv = 1 then
+           if IonMode$ = "MM-APCI" then
+             SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 15
+             SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1
+           else              
+            SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 15
+            SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1
+           endif  
+         else
+           if IonMode$ = "MM-APCI" then
+             SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+             SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0
+           else  
+             SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+             SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0
+           endif  
+         endif
+         SetTabVal  AutoSnReg, TestParms, Row, "RetentionTime", -1.0
+
+         ! Reserpine, positive ionm, API-ES, MM-ES, APCI, MM-APCI, or APPI for 1946A/B/C Model
+         Row = Row + 1
+         SetTabText AutoSnReg, TestParms, Row, "Name", "Reserpine-1946A-B-C"
+         if len(IonMode$) = 0 then
+            text$ = "Positive Ion Sensitivity Test"
+         else
+            text$ =  IonMode$ + " Positive Ion " + AcqMode$ + " Sensitivity Test"
+         endif
+         SetTabText AutoSnReg, TestParms, Row, "Title", text$
+         SetTabText AutoSnReg, TestParms, Row, "SampleKey", "RESERP"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey1", "RES"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey2", "CI"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey3", "PI"
+         SetTabVal  AutoSnReg, TestParms, Row, "NumIons", 1
+         SetTabVal  AutoSnReg, TestParms, Row, "Ion1", 609.3
+         SetTabVal  AutoSnReg, TestParms, Row, "IntegOff", 0.6
+         SetTabText AutoSnReg, TestParms, Row, "NoiseMethod", "Individual"
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseStart", -0.6
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseEnd",   -0.15
+         SetTabVal  AutoSnReg, TestParms, Row, "SampleCluster", 2
+         SetTabVal  AutoSnReg, TestParms, Row, "BackCluster", 1
+         if ProdEnv = 1 then
+           if IonMode$ = "MM-APCI" then
+             SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 15
+             SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1
+           else              
+            SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 15
+            SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1
+           endif  
+         else
+           if IonMode$ = "MM-APCI" then
+             SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+             SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0
+           else  
+             SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+             SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0
+           endif  
+         endif
+         SetTabVal  AutoSnReg, TestParms, Row, "RetentionTime", -1.0
+
+         ! Acid Red 4, negative ion API-ES
+         Row = Row + 1
+         SetTabText AutoSnReg, TestParms, Row, "Name", "Acid Red 4"
+         text$ = "Negative Ion API-ES Sensitivity Test"
+         SetTabText AutoSnReg, TestParms, Row, "Title", text$
+         SetTabText AutoSnReg, TestParms, Row, "SampleKey", "CID RED"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey1", "SIM_AR4"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey2", "MSSUPAR4"
+         SetTabVal  AutoSnReg, TestParms, Row, "NumIons", 1
+         SetTabVal  AutoSnReg, TestParms, Row, "Ion1", 357.1
+         SetTabVal  AutoSnReg, TestParms, Row, "IntegOff", 0.6
+         SetTabText AutoSnReg, TestParms, Row, "NoiseMethod", "Individual"
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseStart", -0.6
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseEnd",   -0.15
+         SetTabVal  AutoSnReg, TestParms, Row, "SampleCluster", 2
+         SetTabVal  AutoSnReg, TestParms, Row, "BackCluster", 1
+         if ProdEnv = 1 then
+            SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 20
+            SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1
+         else
+            ! No external spec for ESI negative ion
+            ! SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+            SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0
+         endif
+         SetTabVal  AutoSnReg, TestParms, Row, "RetentionTime", -1.0
+         
+         ! 4-nitrophenol, negative ion APCI
+         Row = Row + 1
+         SetTabText AutoSnReg, TestParms, Row, "Name", "4-Nitrophenol"
+         text$ = "Negative Ion APCI Sensitivity Test"
+         SetTabText AutoSnReg, TestParms, Row, "Title", text$
+         SetTabText AutoSnReg, TestParms, Row, "SampleKey", "4-NIT"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey1", "SIM_4NP"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey2", "MSSUP4NP"
+         SetTabVal  AutoSnReg, TestParms, Row, "NumIons", 1
+         SetTabVal  AutoSnReg, TestParms, Row, "Ion1", 138
+         SetTabVal  AutoSnReg, TestParms, Row, "IntegOff", 0.6
+         SetTabText AutoSnReg, TestParms, Row, "NoiseMethod", "Individual"
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseStart", -0.6
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseEnd",   -0.15
+         SetTabVal  AutoSnReg, TestParms, Row, "SampleCluster", 2
+         SetTabVal  AutoSnReg, TestParms, Row, "BackCluster", 1
+         if ProdEnv = 1 then
+            SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 20
+            SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 1
+         else
+            ! No external spec for APCI negative ion
+            ! SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+            SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0
+         endif
+         SetTabVal  AutoSnReg, TestParms, Row, "RetentionTime", -1.0
+
+         ! Myoglobin, positive ion mass deconvolution accuracy
+         Row = Row + 1
+         SetTabText AutoSnReg, TestParms, Row, "Name", "Myoglobin"
+         text$ = "Deconvolution Mass Assignment Test"
+         SetTabText AutoSnReg, TestParms, Row, "Title", text$
+         SetTabText AutoSnReg, TestParms, Row, "SampleKey", "MYO"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey1", "MYO_TEST"
+         SetTabText AutoSnReg, TestParms, Row, "MethodKey2", "MSSUPMYO"
+         SetTabVal  AutoSnReg, TestParms, Row, "NumIons", 3
+         SetTabVal  AutoSnReg, TestParms, Row, "Ion1",  893.3
+         SetTabVal  AutoSnReg, TestParms, Row, "Ion2", 1131.3
+         SetTabVal  AutoSnReg, TestParms, Row, "Ion3", 1413.5
+         SetTabVal  AutoSnReg, TestParms, Row, "IntegOff", 0.6
+         SetTabVal  AutoSnReg, TestParms, Row, "Smooth", 0
+         SetTabText AutoSnReg, TestParms, Row, "NoiseMethod", "Individual"
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseStart", -0.7
+         SetTabVal  AutoSnReg, TestParms, Row, "NoiseEnd",   -0.25
+         SetTabVal  AutoSnReg, TestParms, Row, "SampleCluster", 1
+         SetTabVal  AutoSnReg, TestParms, Row, "Deconvolute", 16951.97
+         SetTabVal  AutoSnReg, TestParms, Row, "MassPeaks", 20
+         if ProdEnv = 1 then
+            SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 20
+         else
+            ! No external spec for APCI negative ion 
+            ! SetTabVal  AutoSnReg, TestParms, Row, "SNSpec", 10
+         endif
+         SetTabVal  AutoSnReg, TestParms, Row, "MWerrorSpec", 0.02
+         SetTabVal  AutoSnReg, TestParms, Row, "RetentionTime", -1.0
+         
+         ! List of all tests
+         text$ = ""
+         for i = 1 to TabHdrVal(AutoSnReg, TestParms, "NumberOfRows")
+            text$ = text$ + TabText$(AutoSnReg, TestParms, i, "Name") + "|"
+         next i
+         text$ = text$[1:len(text$) - 1]
+         SetTabHdrText AutoSnReg, TestParms, "TestList", text$
+
+      endif         ! end if "TESTPARMS" table
+      RETURN 1
+   endif
+
+   RETURN 0
+   
+endmacro    ! end AutoSNregManager
+!*****************************************************************************
+
+!*******************************************************************************
+!*****************************************************************************
+!*******************************************************************************
+name Set_Int_Params
+PARAMETER evtab$
+PARAMETER initwidth
+PARAMETER initheight
+PARAMETER initreject
+PARAMETER shoulderson
+PARAMETER integ_off_time default 0   ! if greater than zero, integration is
+                                     !  off until this time
+!*******************************************************************************
+LOCAL i
+
+   settabhdrval _damethod[1], evtab$, "initwidth", initwidth
+   settabhdrval _damethod[1], evtab$, "initheight", initheight
+   settabhdrval _damethod[1], evtab$, "initreject", initreject
+   settabhdrval _damethod[1], evtab$, "shoulderson", shoulderson
+
+   ! remove any time table events
+   deltabrow _damethod[1], evtab$, -1
+
+   ! add in the appropriate events for the s/n calculation
+   if integ_off_time > 0 then
+      instabrow _damethod[1], evtab$, 1:2
+      settabval _damethod[1], evtab$, 1, "Time", 0
+      settabval _damethod[1], evtab$, 1, "EventCode", 6
+      settabval _damethod[1], evtab$, 1, "Value", 0
+      settabval _damethod[1], evtab$, 2, "Time", integ_off_time
+      settabval _damethod[1], evtab$, 2, "EventCode", -6
+      settabval _damethod[1], evtab$, 2, "Value", 1
+   endif
+
+endmacro
+!*****************************************************************************
+
+!*******************************************************************************
+!*****************************************************************************
+!*******************************************************************************
+name AutoSNReport
+PARAMETER Destination$ default "PRINTER"  ! text file name or printer
+PARAMETER TestNum default 0
+! Format Signal/Noise report for either the printer or a text file
+!*******************************************************************************
+LOCAL savexloc, objnum, i, j, npeaks, FileNum,  CurrentPeak, ion, Test$
+LOCAL x$, x1$, x3$, x5$, x6$, x13$, x14$, x15$, x16$, x17$, x18$, x30$
+LOCAL sub_sn_avg, x_pf$, x_archiveoff, mfgEnv, Err, Text$, VialNum, Sample$
+LOCAL Cluster, PrevCluster, nCluster, PkTable$, ClusterTable$, NoiseMethod$
+LOCAL SampleCluster, BackCluster, SNRspec, BSPPSNR, nLines, SNR
+LOCAL Location$
+
+Local  ID_TUNEMAC_AUTOSNREPORT_938
+Local  ID_TUNEMAC_939
+Local  ID_TUNEMAC___INJ__LOCATIO_940
+Local  ID_TUNEMAC____PASSED_941
+Local  ID_TUNEMAC____FAILED_942
+Local  ID_TUNEMAC_943
+Local  ID_TUNEMAC_NOISE_METHOD_944
+Local  ID_TUNEMAC__MS_AUTO_SN_VE_945
+
+ID_TUNEMAC_AUTOSNREPORT_938                        =  17938  
+ID_TUNEMAC_939                                     =  17939  
+ID_TUNEMAC___INJ__LOCATIO_940                      =  17940  
+ID_TUNEMAC____PASSED_941                           =  17941  
+ID_TUNEMAC____FAILED_942                           =  17942  
+ID_TUNEMAC_943                                     =  17943  
+ID_TUNEMAC_NOISE_METHOD_944                        =  17944  
+ID_TUNEMAC__MS_AUTO_SN_VE_945                      =  17945
+
+   x_archiveoff = 0   ! If no archive.mac found, archive will be turned off
+   if check(variable, PRTestVer$) = 1 then  !check to see if in mfg
+ 
+      mfgEnv = 1
+   endif
+
+   x$   = ""
+   x1$  = "Peak #"
+   x3$  = "Ret. time"
+   x5$  = "Pk-Pk S/N"
+   x6$  = "RMS S/N"
+   x13$ = "Signal Ht"
+   x14$ = "Pk-Pk Noise"
+   x15$ = "Average ="
+   x16$ = "Std Dev ="
+   x17$ = "%RSD ="
+   x18$ = "Mass = "
+   x30$ = "10% 13% 6# 5% 6# 4% 6# 5% 6#/"
+   
+   if TestNum > 0 then
+      Test$ = TabText$(AutoSNReg, "TestParms", TestNum, "Title")
+   endif
+
+   GetCurrentPrinterSetup                  !3-02PR utilize current printer setup
+   if destination$ = "PRINTER" then
+      FileNum = 5
+      if mfgEnv <> 1 then
+         if devNum() <> 5
+            evaluate "close #" + val$(devNum())
+            opendevice "Printer" as # FileNum
+         endif
+         BeginJob "Page ", " of ", xMax() - 13, yMax() - 1 
+         SetMargin 4
+         ReportHeader FileNum, Test$
+      else
+         macro _AutoMSPath$ + "header.mac" 
+         MfgHeaderMain test$, 1, "DA"      
+      endif
+   else
+      FileNum = 4
+      On Error Print
+      Close # FileNum
+      On Error Err = 1
+      Open Destination$ for Output as # FileNum
+      if Err <> 1 then
+         ! Format header
+         ReportHeader FileNum, Test$
+         Print # FileNum, ""
+      else
+         Print ReadResource$("tunemac",ID_TUNEMAC_AUTOSNREPORT_938) + \
+                              Destination$
+         RETURN
+      endif
+   endif
+
+   On Error goto SNreportErr
+
+   FirstObj = 1
+   LastObj  = RegSize(ChromReg)
+
+   ! Plot the chromatograms only for the printer
+   if Destination$ = "PRINTER" then
+      Print # FileNum, ""
+      SaveXLoc = XLoc()
+
+      !*#$-TODO:Vary plot size with number of objects-$#*!
+      ! Use 25% of the vertical space of the paper for the plot
+      PlotChrom "PRINTER", 0.9,0.25, File_Start, File_End,,, \
+                FirstObj, LastObj, 0
+
+      SetPageLoc SaveXLoc
+      ! Print # FileNum, "" ! CPL 02/24/2010 Remove extra space between graphic and test results.
+
+      !*#$-TODO:Add WMF graphic export-$#*!
+   endif
+
+   ! For each EIC
+   for ObjNum = FirstObj to LastObj
+
+      PkTable$ = "PeakTable" + val$(ObjNum)
+      ClusterTable$ = "Clusters" + val$(ObjNum)
+      PrevCluster = 0
+
+      ! Signal descriptor
+      Print # FileNum, ""
+      Print # FileNum, "Signal: " + ObjHdrText$(ChromReg[ObjNum], "SignalDesc") 
+
+      ! Format table column headings
+      Print # FileNum, ReadResource$("tunemac",ID_TUNEMAC_939) + \
+                             "Pk-Pk   RMS    Signal    Pk-Pk"
+      Print # FileNum, ReadResource$("tunemac",ID_TUNEMAC___INJ__LOCATIO_940) + \
+                             "S/N    S/N    Height    Noise"
+      Print # FileNum, "  ___  ________  ________________ _______  ______ " + \
+                             "______ _________  _______"
+
+      ! Determine number of peaks from the size of the table, the last three rows
+      ! of the table are used to save statistical information
+      ! Print each ResultTable
+      On Error nPeaks = 0
+      nLines = TabHdrVal(AutoSnReg, PkTable$ , "NumberOfRows")
+
+      On Error goto SNreportErr
+
+      !-----------------------------------------------------------
+      ! Print each peak in the peak table
+      if nLines > 0
+      
+         ! Format results for each peak in the EIC
+         for i = 1 to nLines + 1
+
+            if i <= nLines then
+               Cluster = TabVal(AutoSNReg, PkTable$, i, "Cluster")
+               ! Print i, Cluster, PrevCluster
+            endif
+
+            !-----------------------------------------------------------
+            ! If this line is the last line, or is a new cluster AND 
+            ! the previous line was not Cluster 0, print stats 
+            if ((Cluster <> PrevCluster) and (PrevCluster <> 0)) or \
+               ((i = nLines + 1) and (Cluster <> 0)) then 
+
+               ! Print PrevCluster, ClusterTable$
+               ! Format average results
+               Print # FileNum, "  ___  ________  ________________ _______  " + \
+                             "______ ______ _________  _______"
+               
+               Print # FileNum, SPrintF$("", "   Average:  %-20s") + \
+                     SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                    "MeanPkPkSNR"), "%15.0f") + \
+                     SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                    "MeanRMSSNR"), "%8.0f") + \
+                     SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                    "MeanHeight"), "%10.0f")+ \
+                     SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                    "MeanPpNoise"), "%9.0f")
+            
+               ! If cluster has more than two peaks, print StdDev & RSD
+               if TabVal(AutoSNReg, ClusterTable$, PrevCluster, "NumInjs") > 2 then
+                  ! Format Std Dev results
+                  Print # FileNum, SPrintF$("", "   StdDev:   %-20s") + \
+                        SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                       "StdDevPkPkSNR"), "%15.0f") + \
+                        SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                       "StdDevRMSSNR"), "%8.0f") + \
+                        SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                       "StdDevHeight"), "%10.0f")+ \
+                        SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                       "StdDevPpNoise"), "%9.0f")
+               
+                  ! Format %RSD results
+                  Print # FileNum, SPrintF$("", "   RSD:      %-20s") + \
+                        SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                       "RSDPkPkSNR"), "%15.0f") + \
+                        SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                       "RSDRMSSNR"), "%8.0f") + \
+                        SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                       "RSDHeight"), "%10.0f")+ \
+                        SPrintF$(TabVal(AutoSNReg, ClusterTable$, PrevCluster, \
+                                       "RSDPpNoise"), "%9.0f")
+               
+               endif
+
+            endif     ! if (PrevCluster <> 0) or (i = nLines + 1)
+
+            if (PrevCluster <> Cluster) then
+               Print # FileNum, ""
+            endif
+            
+            !-----------------------------------------------------------
+            ! If first line of a new cluster or cluster = 0 or the first line 
+            ! of peak table, write sample ID line
+            if ((PrevCluster <> Cluster) or (i = 1) or (Cluster = 0)) and \
+                                                       (i <= nLines) then
+               VialNum = TabVal(AutoSnReg, PkTable$, i, "VialNumber")
+	           ! Convert Vial to Location string.
+	           Location$ = GetPlatePosString$( VialNum )
+               Sample$ = TabText$(AutoSnReg, PkTable$, i, "SampleName")
+               if len(Sample$) > 16 then
+                  Sample$ = Sample$[1:16]
+               endif
+            endif
+
+            PrevCluster = Cluster
+
+            !-----------------------------------------------------------
+            ! Last but not least: write the peak stats
+            if i <= nLines then
+               ! Print injection stat if retention time is not -1
+               if TabVal(AutoSNReg, PkTable$, i, "ActRT") <> -1 then
+                  Print # FileNum, SPrintF$(i, " %3d") + \
+                     SPrintF$(Location$, "%10s") + \
+                     SPrintF$(Sample$, "   %-16s") + \
+                     SPrintF$(TabVal(AutoSnReg,PkTable$, i, "ActRT"),   "%7.2f") + \
+                     SPrintF$(TabVal(AutoSnReg,PkTable$, i, "PkPkSNR"), "%8.0f") + \
+                     SPrintF$(TabVal(AutoSnReg,PkTable$, i, "RMSSNR"),  "%8.0f") + \
+                     SPrintF$(TabVal(AutoSnReg,PkTable$, i, "Height"), "%10.0f") + \
+                     SPrintF$(TabVal(AutoSnReg,PkTable$, i, "ppNoise"), "%9.0f") 
+               else
+                  Print # FileNum, SPrintF$(i, " %3d") + \
+                     SPrintF$(Location$, "%10s") + \
+                     SPrintF$(Sample$, "   %-16s   ----") + \
+                     SPrintF$(TabVal(AutoSnReg,PkTable$, i, "ppNoise"), "%35.0f")
+               endif
+            endif
+            ! Formfeed if printing and less than three lines left
+            if (YLoc() > (YlogMax() -3)) and (FileNum = 5) then
+               FormFeed
+            endif
+
+         next i      ! next injection
+
+         ! Print Spec if a valid test was specified
+         if TestNum > 0 then
+            ! Formfeed if printing and less than five lines left
+            if (YLoc() > (YlogMax() -5)) and (FileNum = 5) then
+               FormFeed
+            endif
+            SpecSNR = TabVal(AutoSNReg, "TestParms", TestNum, "SNSpec")
+            if SpecSNR > 0 then
+               SampleCluster = TabVal(AutoSNReg, "TestParms", TestNum, "SampleCluster")
+               BackCluster   = TabVal(AutoSNReg, "TestParms", TestNum, "BackCluster")
+               nClusters     = TabHdrVal(AutoSNReg, ClusterTable$, "NumberOfRows")
+               
+               ! Background subtracted signal-to-noise ?
+               if (SampleCluster > 0) and (SampleCluster <= nClusters) and \
+                    (BackCluster > 0) and (BackCluster   <= nClusters) then
+                  SNR = TabVal(AutoSNReg, ClusterTable$, SampleCluster, "MeanPkPkSNR") - \
+                        TabVal(AutoSNReg, ClusterTable$, BackCluster,   "MeanPkPkSNR") 
+                  Text$ = "Blank-Subtracted Average Pk-Pk Signal-to-Noise Ratio"
+               else
+                  if (SampleCluster <= nClusters) then
+                     SNR = TabVal(AutoSNReg, ClusterTable$, SampleCluster, "MeanPkPkSNR")
+                     Text$ = "Average Pk-Pk Signal-to-Noise Ratio"
+                  else
+                     ! This should only happen if there's no sample cluster
+                     SNR = 0
+                     Text$ = "Expected sample peaks not found"
+                  endif
+               endif
+               Print # FileNum, ""
+               
+               ! Pass or fail
+               if SNR >=SpecSNR then
+                  x_pf$ = "PASS"
+                  print # FileNum, ReadResource$("tunemac",ID_TUNEMAC____PASSED_941) + Text$
+               else
+                  x_pf$ = "FAIL"
+                  print # FileNum, ReadResource$("tunemac",ID_TUNEMAC____FAILED_942) + Text$
+               endif
+               print using # FileNum, ReadResource$("tunemac",ID_TUNEMAC_943), \
+                                      SNR, SpecSNR
+            endif
+            Print # FileNum, ""
+
+         endif   ! end if TestNum > 0
+
+      endif       ! end if NLines > 0
+   next ObjNum
+
+   NoiseMethod$ = ObjHdrText$(AutoSnReg, "NoiseMethod")
+   Print # FileNum, ""
+   Print # FileNum, ReadResource$("tunemac",ID_TUNEMAC_NOISE_METHOD_944) + NoiseMethod$
+   Text$ = SPrintF$(ObjHdrVal(AutoSNReg, "NoiseStart"), "Noise region: %4.2f") + \
+           SPrintF$(ObjHdrVal(AutoSNReg, "NoiseEnd"), " to %4.2f min. ")
+   if NoiseMethod$ = "Single" then
+      Text$ = Text$ + "(Absolute)"
+   else
+      Text$ = Text$ + "(Relative)"
+   endif
+   Print # FileNum, Text$
+   Print # FileNum, ""
+
+   !*#$-TODO:Add Support for Archiving-$#*!
+   !*! if destination$ = "PRINTER" then
+   !*! EndJob
+   !*! 
+   !*! !** Customized for Manufacturing
+   !*! ! Data Archiving
+   !*! ! Check if archiving is available
+   !*! if (check(macro,archive_header) < 1) then
+   !*!    if (filestat(mode, _autopath$ + "..\ms\archive.mac") < 1) then
+   !*!       x_archiveoff = 1
+   !*!    else
+   !*!       macro _AUTOPATH$ + "..\ms\archive.mac"
+   !*!    endif
+   !*! endif
+
+   !*! if (x_archiveoff <> 1) then
+   !*!    Archive_Header ObjHdrText$(ChromReg[1], "MethodFile"),,1
+   !*!    Archive_Data "ION MASS", val$(TabVal(AutoSnReg,Overview,1,IonMass))
+   !*!    count = 0
+   !*!    for i = 1 to tabHdrval(AutoSnReg,TableName$ , "numberofrows")
+   !*!       if (instr(tabtext$(AutoSnReg,TableName$, i, "Instruction"),"Average") > 0) or \
+   !*!          (instr(tabtext$(AutoSnReg,TableName$, i, "Instruction"),"STD DEV") > 0) or \
+   !*!          (instr(tabtext$(AutoSnReg,TableName$, i, "Instruction"),"%RSD") > 0) then
+   !*!           if (instr(tabtext$(AutoSnReg,TableName$, i, "Instruction"),"%RSD") > 0) and (count < 5) then
+   !*!              for j = 1 to (5 - count)
+   !*!                 Archive_Data "Ret Time", "0"
+   !*!                 Archive_Data "Pk Pk SN", "0"
+   !*!                 Archive_Data "RMS SN", "0"
+   !*!                 Archive_Data "Sig Tot", "0"
+   !*!                 Archive_Data "Noise", "0"
+   !*!              next j
+   !*!           endif
+   !*!       else
+   !*!          Archive_Data "Ret Time", val$(tabval(AutoSnReg,TableName$, i, "ret"))
+   !*!          Archive_Data "Pk Pk SN", val$(tabval(AutoSnReg,TableName$, i, "sn_ratio"))
+   !*!          Archive_Data "RMS SN",   val$(tabval(AutoSnReg,TableName$, i, "rms_sn"))
+   !*!          Archive_Data "Sig Tot",  val$(tabval(AutoSnReg,TableName$, i, "sig_tot"))
+   !*!          Archive_Data "Noise",    val$(tabval(AutoSnReg,TableName$, i, "noise"))
+   !*!          count = count + 1
+   !*!       endif
+   !*!    next i
+   !*! Archive
+   !*! endif  ! if destination$ = "PRINTER"
+
+SNreportEnd:
+   On Error
+   if (ObjHdrVal(AutoSNReg, "Deconvolute") = 0) then
+      Print Using # FileNum, ReadResource$("tunemac",ID_TUNEMAC__MS_AUTO_SN_VE_945), AutoSNVer$
+      close # FileNum
+   else
+      if Destination$ = "PRINTER" then
+         FormFeed
+      endif
+   endif
+   RETURN
+   
+SNreportErr:
+   On Error 
+   AutoSN_PrintError
+   close # fileNum
+   Auto_SN_Error "AutoSNReport: Error sending report to " + Destination$
+   
+endmacro             ! AutoSNReport
+
+!*****************************************************************************
+!*******************************************************************************
+name ReportHeader
+PARAMETER FileNum
+PARAMETER TestTitle$ default ""
+! Format report header which includes file header items.
+!*******************************************************************************
+LOCAL InstRow, InstName$, ProdNum$, SerialNum$, SampleName$, AcqInjTim, AcqInjTim$
+
+Local  ID_TUNEMAC_PRINTED_ON_946
+Local  ID_TUNEMAC_FILE_443
+Local  ID_TUNEMAC_OPERATOR_444
+Local  ID_TUNEMAC_DATE_ACQUIRED_445
+
+Local  ID_TUNEMAC_INSTRUMENT_446
+ID_TUNEMAC_PRINTED_ON_946                          =  17946  
+ID_TUNEMAC_FILE_443                                =  17443  
+ID_TUNEMAC_OPERATOR_444                            =  17444  
+ID_TUNEMAC_DATE_ACQUIRED_445                       =  17445  
+ID_TUNEMAC_DATE_ACQUIRED_445                       =  17445  
+ID_TUNEMAC_INSTRUMENT_446                          =  17446  
+   On Error Auto_SN_Error "ReportHeader: error generating report header"
+   
+   if RegSize(ChromReg) < 1 then
+      RETURN
+   endif
+
+   if RegSize(ChromRes) < 1 then
+      InstName$ = ""
+   else
+      InstRow = RowByText(ChromRes, "ModuleInfo",, "Name", "=", \
+                                    "HP Mass Spec Detector") ! yes, this should still have HP
+                                                             ! in it to handle old data files, RMC 23 Jun 04
+      if (InstRow = -1) then
+         InstRow = RowByText(ChromRes, "ModuleInfo",, "Name", "in", "MSD")
+      endif
+
+      InstName$ = ObjHdrText$(ChromReg[1], "InstModel") 
+      if (InstRow > 0) then
+         InstName$ = InstName$ + "  " + \
+                     TabText$(ChromRes, "ModuleInfo", InstRow, "PartNumber") + \
+              "  " + TabText$(ChromRes, "ModuleInfo", InstRow, "serialNumber")
+      endif
+   endif
+
+   ! If printing, set title as a header
+   if FileNum = 5 then
+      SetMargin , 2, 3
+      SetHeader TestTitle$
+      SetFooter ReadResource$("tunemac",ID_TUNEMAC_PRINTED_ON_946) + Time$(), 4, yMax() - 1
+   else
+      Print Using # FileNum, "%/", TestTitle$
+   endif
+   
+   ! Get information from the object header of the chromatogram object
+   Print Using # FileNum,ReadResource$("tunemac",ID_TUNEMAC_FILE_443), \
+           ObjHdrText$(ChromReg[1], "RawDataFile")
+   Print Using # FileNum,ReadResource$("tunemac",ID_TUNEMAC_OPERATOR_444), \
+           ObjHdrText$(ChromReg[1], "Operator")
+
+!best not to use the following date / time string because it can not be formatted with the desired 'regional format'
+!  Print Using # FileNum,ReadResource$("tunemac",ID_TUNEMAC_DATE_ACQUIRED_445), \
+!          ObjHdrText$(ChromReg[1], DateTime)
+
+   !now print the date / time using the format specified in control panel 'regional settings'
+   AcqInjTim = ObjHdrVal (ChromRes[1], "AcqInjTime")
+   if AcqInjTim > 0 then
+      AcqInjTim$ = Date$(1,AcqInjTim) + " " + Time$(1,AcqInjTim)
+   else
+      AcqInjTim$ = ObjHdrText$ (ChromRes[1], "InjDateTime")
+   endif
+   Print Using # FileNum,ReadResource$("tunemac",ID_TUNEMAC_DATE_ACQUIRED_445), AcqInjTim$
+   Print Using # FileNum,ReadResource$("tunemac",ID_TUNEMAC_INSTRUMENT_446), InstName$
+   Print Using # FileNum,"Method File:         %/", ObjHdrText$(ChromReg[1], "MethodFile")
+   ! The sample name is not being loaded with the LoadEIC command, so use the backup
+   ! Print Using # FileNum,"Sample Name:%/", ObjHdrText$(ASNChromTemp[1], "SampleName")
+   SampleName$ = ConvertText$ (ltrim, ObjHdrText$ (ChromReg[1], "SampleName"))
+   Print Using # FileNum,"Sample Name:         %/", SampleName$
+   ! CPL 02/24/2010 Use ConvertText$ to remove spaces from SampleName field for better report formatting.
+           
+   Print Using # FileNum, ""
+
+endmacro    ! end ReportHeader
+
+!*****************************************************************************
+!*****************************************************************************
+name Check_Deconvolution
+PARAMETER injections default 5  ! Number of flow injections or number of peaks
+PARAMETER expected_mw default 16951.97   ! Expected molecular weight
+PARAMETER report_file$ default "" ! Text file name for report
+PARAMETER ToPrinter default 1     ! To printer on/off
+PARAMETER IntegPeaks default 20   ! Number of peaks for integrated spectra
+PARAMETER TestNum default 0
+PARAMETER Signal$ default "MSD1"
+!
+! Load total ion chromatogram and integrate.
+!
+! For each peak, average the spectra across the middle of the peak, integrate,
+! and deconvolute.
+! Compare deconvolution results with expected molecular weight.
+! Print report which includes file header information, spectral plots, and
+! deconvolution results.
+! Optionally, add the deconvolution results to a text file.
+!*****************************************************************************
+LOCAL TICObj, EvTab$, TryEvTab$, Peak, nPeaks, Threshold, Loopout, MWeight, BestMatch
+LOCAL IdentPeak, MisMatch, mfgEnv, PeakFound, oldSpecNorm
+
+Local  ID_TUNEMAC_LOADING_TOTAL_947
+Local  ID_TUNEMAC_CHECK_DECON_EN_948
+ID_TUNEMAC_LOADING_TOTAL_947                       =  17947  
+ID_TUNEMAC_CHECK_DECON_EN_948                      =  17948  
+   On Error AutoSN_PrintError
+
+   ! Load TIC
+   Print ReadResource$("tunemac",ID_TUNEMAC_LOADING_TOTAL_947)
+   LoadTIC ChromReg,, Signal$
+   TICobj = regsize(ChromReg)
+   
+   ! Work with the most specific integration events table that is available
+!   EvTab$ = "EVENT_MSD1TIC"
+!   if ObjHdrType(_DAMethod[1],EvTab$) <> 4 then
+!      EvTab$ = "EVENT_MSD"
+!      if ObjHdrType(_DAMethod[1],EvTab$) <> 4 then
+!         EvTab$ = "EVENT"
+!      endif
+!   endif
+   EvTab$ = "EVENT"
+   TryEvTab$ = "EVENT_MSD"
+   if (ObjHdrType(_damethod[1],TryEvTab$) = 4) then
+       if (TabHdrVal(_damethod[1],TryEvTab$,"UseForInteg") = 1) then
+         EvTab$ = TryEvTab$
+       endif
+   endif
+   TryEvTab$ = "EVENT_MSD1TIC"
+   if (ObjHdrType(_damethod[1],TryEvTab$) = 4) then
+       if (TabHdrVal(_damethod[1],TryEvTab$,"UseForInteg") = 1) then
+         EvTab$ = TryEvTab$
+       endif
+   endif
+
+   ! Set all parameters except slope sensitivity to the default settings
+   Set_Int_Params EvTab$, 0.04, 1.7, 1, 0
+   
+   ! Make sure spectral normalization is off
+   oldSpecNorm = MSO_Normalize
+   if MSO_Normalize > 0 then
+      MSO_Normalize = MSO_Normalize * (-1)
+   endif
+
+   ! Try slope sensitivity starting at half of maximum signal
+   GetDataMinMax ChromReg[TICObj], 1
+   Threshold = obj_max / 2
+   nPeaks = 0
+   Loopout = 0
+
+   ! If less than expected number of peaks detected then
+   ! slope sensitivity is lowered until minimum set of peaks is detected.
+   while npeaks < injections and loopout = 0
+      SetTabHdrVal _DAMethod[1], EvTab$, InitThresh, Threshold
+      IntegrateObj ChromReg[TICObj], , , _DAMethod[1]
+      On Error nPeaks = 0
+      nPeaks = TabHdrVal(ChromReg[TICObj], IntResults, "NumberOfRows")
+      on error AutoSN_PrintError
+      threshold = threshold / 2
+      if threshold < 1e2
+         loopout = 1
+      endif
+   endwhile
+
+   ! if the number of peaks are two times bigger than the number of injections
+   ! then we need another optimization!
+   nPeaks = TabHdrVal(ChromReg[TICObj], IntResults, "NumberOfRows")
+
+   if npeaks <> injections then
+      ReturnVal=AdjustIntegrationParameter (injections, EvTab$, file_start,\
+                          file_end, TICObj, 2*injections, "INITAREA")
+   endif
+
+   ! try to match peaks from previous results and with the latest int results
+   nPeaks = MakePeakTable()
+
+   ! Assign peaks to each injection
+   SelectPeaks 1
+
+   if (nPeaks > 0)
+
+      ! Destroy MS spectral register to start fresh
+      Delreg MSReg
+
+      SetActualMassSpecRange "MSO_"
+
+      ! Work with the most specific integration events table that is available
+!      EvTab$ = "EVENT_MSD1SPC"
+!      if objhdrtype(_damethod[1],EvTab$) <> 4 then
+!         EvTab$ = "EVENT_SPC"
+!         if objhdrtype(_damethod[1],EvTab$) <> 4 then
+!            EvTab$ = "EVENT"
+!         endif
+!      endif
+      EvTab$ = "EVENT"
+      TryEvTab$ = "EVENT_SPC"
+      if (ObjHdrType(_damethod[1],TryEvTab$) = 4) then
+         if (TabHdrVal(_damethod[1],TryEvTab$,"UseForInteg") = 1) then
+            EvTab$ = TryEvTab$
+         endif
+      endif
+      TryEvTab$ = "EVENT_MSD1SPC"
+      if (ObjHdrType(_damethod[1],TryEvTab$) = 4) then
+         if (TabHdrVal(_damethod[1],TryEvTab$,"UseForInteg") = 1) then
+            EvTab$ = TryEvTab$
+         endif
+      endif
+
+      !!! To be done - need to verify whether these are appropriate parameter
+      !!! values
+      ! Set all parameters except slope sensitivity to the default settings
+
+      Set_Int_Params EvTab$, 1, 0, 0, 0
+
+      ! For each peak load spectrum and deconvolute
+      IdentPeak=0
+
+      for i = 1 to nPeaks
+
+         PeakFound = GetPeakSpecAverage(TICobj, i)
+         
+         if PeakFound > 0 then
+            
+            ! Need to set "WindowTitle" so that DrawMSReg doesn't crash
+            if ObjHdrType(MSReg[1], "WindowTitle") = 99 then
+               if RegSize(MSReg) > 1 then
+                  NewObjHdrText MSReg[1], "WindowTitle", "Current Mass Spectra"
+               else
+                  NewObjHdrText MSReg[1], "WindowTitle", "Current Mass Spectrum"
+               endif
+            endif
+
+            NrOfPeaks=100
+            Divider=10
+            repeat
+
+               ! Set slope sensitivity parameter to 10% of the highest peak
+               GetDataMinMax MSReg[1], 1
+               SetTabHdrVal _DAMethod[1], EvTab$, InitThresh, obj_max / Divider
+               ! Integrate the resulting spectrum
+               LDMS_IntegrateSpectra 1, 0
+            
+               NrOfPeaks=TabHdrVal(MsReg[1],Intresults,"NumberOfRows")
+               Divider=Divider-1
+
+            until NrofPeaks<=IntegPeaks OR Divider=1
+
+            DrawMsReg
+
+            ! on error goto check_decon_end2
+            On Error
+
+            ! Do deconvolution which could only operate on the 1st object in MSReg
+            DEC_Deconvolute
+
+            ! Find the row in the MW table that is the closest match to expected_mw
+            ! Make sure that the "mw" table exists
+            if ObjHdrType(MSReg[1], "mw") = 4 then
+               BestMatch = RowByVal(MSReg[1], "mw", , "mw", "~", expected_mw)
+               if bestmatch > 0 then
+                  MWeight   = TabVal(MSReg[1], "mw", BestMatch, "mw")
+               else
+                  MWeight= 0
+               endif
+            else
+               MWeight= 0
+            endif
+            
+            ! Save MW and %error  for reporting
+            SetTabVal AutoSNReg, "PeakTable", i, MW, MWeight
+            SetTabVal AutoSNReg, "PeakTable", i, MWError, \
+                     ((mweight - expected_mw) / expected_mw) * 100
+
+         endif      ! end if PeakFound
+
+      next i
+
+      DelObj ChromReg[TICObj]
+      
+      ! Rearrange spectra in MSReg for presentation
+      for i = 1 to RegSize(MSReg) - 1
+         MoveObj MSReg[RegSize(MSReg)], MSReg[i]
+      next i
+
+      mfgEnv = check(variable, PRTestVer$)
+      if ToPrinter = 1 then
+         if devNum() = 0 then   ! printer not open
+            if mfgEnv = 1 then
+               MfgHeaderMain "Deconvolution Mass Assignment Test", 1
+            else
+               OpenDevice "Printer" as #5
+               SetMargin 4, 2, 2
+               ReportHeader 5, "Deconvolution Mass Assignment Test"
+            endif
+        else
+            if mfgEnv = 1 then
+               MfgHeaderPrint 1
+            else
+               SetMargin 4
+               ReportHeader 5, "Deconvolution Mass Assignment Test"
+            endif
+         endif
+
+         on error goto check_decon_end1
+
+         ! Format report header and plot average spectra for each peak
+         decon_report_part1 5
+
+         ! Format and print 2nd half of report which includes the MW results
+         decon_report_part2 5, IdentPeak, TestNum
+         EndJob
+
+      endif
+
+      ! If reporting to text file as well
+      if report_file$ <> ""
+         ! If text file does not exist, write header first
+         if FindFile$(report_file$) = ""
+             open report_file$ for output as #4
+             on error goto check_decon_end3
+             ReportHeader 4, Test$
+         ! If text file is present, append to the file
+         else
+            On Error Print   ! file should already be open
+            open report_file$ for append as #4
+            on error goto check_decon_end3
+         endif
+         ! Format MW results for text file
+         decon_report_part1 4
+         decon_report_part2 4, IdentPeak, TestNum
+
+check_decon_end3:
+         on error goto check_decon_end2
+         close #4
+      endif
+
+check_decon_end2:
+   on error goto check_decon_end1
+
+check_decon_end1:
+      on error
+      If ToPrinter= 1 then
+         if devNum() = 5 then
+            close #5
+         else
+            !dummy=alert(_errmsg$,3,ReadResource$("tunemac",ID_TUNEMAC_CHECK_DECON_EN_948))
+         endif
+      endif
+   
+   endif
+   MSO_Normalize = OldSpecNorm
+   
+endmacro    ! end Check_Deconvolution
+
+!*****************************************************************************
+!*******************************************************************************
+name GetPeakSpecAverage
+PARAMETER ObjNum default Regsize(chromreg)
+PARAMETER PeakNr
+! Averages the spectra across the specified peak, returns the number of 
+! spectra loaded (should be one or zero). PeakNr is the peak index i
+!*******************************************************************************
+LOCAL RT, PkWidth, tStart, tEnd, n, ChromStart, ChromEnd, NumSpectra
+LOCAL StartIx, EndIx
+
+Local  ID_TUNEMAC_AVERAGING__1D_949
+Local  ID_TUNEMAC__SPECTRA_FROM_950
+ID_TUNEMAC_AVERAGING__1D_949                       =  17949  
+ID_TUNEMAC__SPECTRA_FROM_950                       =  17950  
+   RT = TabVal(AutoSNReg, "PeakTable", PeakNr, "ActRT")
+   if RT = -1 then
+      RETURN 0
+   endif
+   
+   PkWidth = TabVal(AutoSNReg, "PeakTable", PeakNr, "Width")
+
+   tStart  = RT - (PkWidth / 2)
+   tEnd    = RT + (PkWidth / 2)
+   
+   GetDataMinMax ChromReg[ObjNum], 0
+   ChromStart = Obj_Min
+   ChromEnd   = Obj_Max
+   
+   NumSpectra = RegSize(MSReg)
+   
+   if (tStart >= 0) and (tEnd > 0) and (tEnd > tStart) and \
+      (tStart >= ChromStart) and (tEnd <= ChromEnd) then
+
+      StartIx = DataIndex(ChromReg[ObjNum], tStart)
+      EndIx   = DataIndex(ChromReg[ObjNum], tEnd)
+
+      ! Average spectra between half height start and end times
+      Print SprintF$(EndIx - StartIx + 1, ReadResource$("tunemac",ID_TUNEMAC_AVERAGING__1D_949)) + \
+            SprintF$(tStart, ReadResource$("tunemac",ID_TUNEMAC__SPECTRA_FROM_950))    + \
+            SprintF$(tEnd, "%4.2f")
+      LoadMSSpectrum MSReg, tStart:tEnd
+
+      ! move this object,which is last, into first position
+      n = RegSize(MSReg)
+      if n <> 1 then
+         MoveObj MSReg[n], MSReg[1]
+      endif
+
+   endif
+   
+   RETURN RegSize(MSReg) - NumSpectra
+
+endmacro
+
+!*****************************************************************************
+!*******************************************************************************
+name PlotMSReg
+PARAMETER Destination$ default "PRINTER"
+PARAMETER XPages default 0.95                    ! 0<XPages<=1
+PARAMETER YPages default 1                       ! 0<YPages<=1
+PARAMETER Orientation default TabHdrVal(_DAMethod[1], RptParm, "Orientation")
+!*******************************************************************************
+LOCAL Win     ! window number for plot spectra
+
+Local  ID_TUNEMAC_SCREEN_726
+ID_TUNEMAC_SCREEN_726                              =  17726  
+   Win = MSDA_MSWin
+   ! set general window parameters
+   SetWinPrintParams Win, Destination$, XPages, YPages, Orientation
+   DrawMSReg Win
+   SetWinPrintParams Win, ReadResource$("tunemac",ID_TUNEMAC_SCREEN_726)
+   
+endmacro
+
+!*****************************************************************************
+!*******************************************************************************
+name decon_report_part1
+PARAMETER FileNum default 5
+! Format first part of the deconvolution report: header and spectral plots
+!*******************************************************************************
+LOCAL SaveXLoc, ExpMass
+
+Local  ID_TUNEMAC_DECONVOLUTION_951
+ID_TUNEMAC_DECONVOLUTION_951                       =  17951  
+   Print # FileNum, ""
+   Print # FileNum, ReadResource$("tunemac",ID_TUNEMAC_DECONVOLUTION_951)
+   Print # FileNum, ""
+   SaveXLoc = xloc()
+
+   ! Use 50% of the vertical space of the paper for the spectral plots
+   if FileNum = 5 then 
+      PlotMSReg ,,0.5
+   else
+      ! WMF export
+   endif
+   SetPageLoc SaveXLoc
+  
+endmacro
+
+!*******************************************************************************
+!*******************************************************************************
+name decon_report_part2
+PARAMETER FileNum default 5
+PARAMETER nPeaks
+PARAMETER TestNum default 0
+! Format second part of the deconvolution report: deconvolution results
+!*******************************************************************************
+LOCAL peak ,mw, mwerror, mwspec, ExpMW
+LOCAL x_archiveoff, SampleCluster, n
+
+Local  ID_TUNEMAC____EXPECTED_MO_952
+Local  ID_TUNEMAC____PASSED_DECO_953
+Local  ID_TUNEMAC____FAILED_DECO_954
+Local  ID_TUNEMAC___________MASS_955
+!Local  ID_TUNEMAC_MS_AUTO_SN_VER_956                         CPL 08/2006 Use ReadResource 17945
+
+ID_TUNEMAC____EXPECTED_MO_952                      =  17952  
+ID_TUNEMAC____PASSED_DECO_953                      =  17953  
+ID_TUNEMAC____FAILED_DECO_954                      =  17954  
+ID_TUNEMAC___________MASS_955                      =  17955  
+!ID_TUNEMAC_MS_AUTO_SN_VER_956                      =  17956  CPL 08/2006 Use ReadResource 17945
+
+   On Error AutoSN_PrintError
+   
+   x$ = ""
+   x_archiveoff = 0
+
+   ! Check if archiving is available
+   if (check(macro,archive_header) < 1) then
+      if (filestat(mode, _autopath$ + "..\ms\archive.mac") < 1) then
+         x_archiveoff = 1
+      else
+         macro _AUTOPATH$ + "..\ms\archive.mac"
+      endif
+   endif
+
+   if (x_archiveoff <> 1) then
+      Archive_Header "DECONV"
+   endif
+
+   ! Print deconvolution results heading
+   ExpMW = ObjHdrVal(AutoSNReg, "Deconvolute")
+   Print # FileNum, ""
+   if ExpMW > 1 then
+      Print # FileNum, SPrintF$(ExpMW, ReadResource$("tunemac",ID_TUNEMAC____EXPECTED_MO_952))
+   endif
+   
+   Print using # FileNum, "   9% 4% 8% 4% 8%/", \
+           "Peak #", x$, "Mol. Wt", x$, "% Error"
+   Print # FileNum, "   _________     _________      _________"
+   Print # FileNum, ""
+
+   ! For each peak, print results
+   MW = 0 ; MWerror = 0; n = 0
+
+   nPeaks = TabHdrVal(AutoSNReg, "PeakTable", "NumberOfRows")
+
+   if TestNum > 0 then
+      SampleCluster = TabVal(AutoSNReg, "TestParms", TestNum, "SampleCluster")
+   else
+      SampleCluster = 0
+   endif
+
+   ! Step through table, printing and archiving results and calculating average
+   ! molecular weight and MW error
+   for Peak = 1 to nPeaks
+
+      ! If a defined test, use only SampleCluster peaks for calculations
+      if (TabVal(AutoSNReg, "PeakTable", Peak, "ActRT") >= 0) then
+
+         !*#$-TODO:Exclude MW error if appropriate-$#*!
+         Print using # FileNum,"   6# 7% 5#.2# 4% 3#.3# %/", Peak , x$, \
+               TabVal(AutoSNReg,"PeakTable", Peak, MW), x$, \
+               TabVal(AutoSNReg,"PeakTable", Peak, MWerror),"%"
+
+         if (SampleCluster = 0) or \
+            TabVal(AutoSNReg, "PeakTable", Peak, "Cluster") = SampleCluster then
+            if (x_archiveoff <> 1) then
+               Archive_Data "Peak", val$(Peak)
+               Archive_Data "MW", val$(TabVal(AutoSNReg, "PeakTable", Peak, MW))
+               Archive_Data "MWERROR", val$(TabVal(AutoSNReg, "PeakTable", Peak, MWerror))
+            endif
+            MW      = MW      + TabVal(AutoSNReg, "PeakTable", Peak, MW)
+            MWError = MWError + TabVal(AutoSNReg, "PeakTable", Peak, MWerror)
+            n = n + 1
+         endif
+      endif
+
+      if TabVal(AutoSNReg, "PeakTable", Peak, "MW") = -1 then
+        print using # FileNum,"   6# %/", Peak, "        --------"
+      endif
+
+   next Peak
+
+   ! Print average
+   MW = MW / n
+   MWError = MWError / n
+   Print using # FileNum, "/   9% 4% 5#.2# 4% 3#.3# %/", "Average: ", x$, \
+            MW, x$, MWerror, "%"
+
+   ! if TestNum > 0, then compare to spec and declare pass/fail
+   if TestNum > 0 then
+
+
+      Print # FileNum, " "
+      MWSpec = TabVal(AutoSNReg, "TestParms", TestNum, "MWerrorSpec")
+      
+      if (MWSpec > abs(MWError)) then
+         x_pf$ = "PASS"
+         print # FileNum,    ReadResource$("tunemac",ID_TUNEMAC____PASSED_DECO_953)
+      else
+         x_pf$ = "FAIL"
+         print # FileNum,    ReadResource$("tunemac",ID_TUNEMAC____FAILED_DECO_954)
+      endif
+      Print using # FileNum, ReadResource$("tunemac",ID_TUNEMAC___________MASS_955) +   \
+                             "(Specification: <= +\/- #.###\%)/", MWError, MWSpec
+
+      if (x_archiveoff <> 1) then
+         Archive_Data "Average", val$(MW)
+         Archive_Data "MWERROR", val$(MWError)
+         Archive
+      endif
+   endif
+
+   Print # FileNum, ""
+   !Print # FileNum,      ReadResource$("tunemac",ID_TUNEMAC_MS_AUTO_SN_VER_956), AutoSNVer$
+   Print # FileNum,       ReadResource$("tunemac",ID_TUNEMAC__MS_AUTO_SN_VE_945), AutoSNVer$
+
+   Remove x$
+   
+endmacro
+
+!*****************************************************************************
+!*****************************************************************************
+name Auto_SN
+PARAMETER Dialog Default 1
+   !  1: Dialog box is presented
+   ! anything else: No dialog box, for unattended operation
+PARAMETER Injections default GetFIAInjections(5)
+   ! Number of FIA-injections default 5, take info from FIATable if present
+PARAMETER Test$ default "-1"
+PARAMETER Signal$ default "MSD1"
+PARAMETER ReloadEIC default 1
+PARAMETER AutoIntegrate default 1
+PARAMETER IntegOffTime default 0
+PARAMETER Smooth default 1
+PARAMETER NoiseMethod$ default "Individual"
+   ! Individual: Separate noise region for, and relative to, each peak
+   ! Average:    Use average of noise region relative to each peak
+   ! Single:     Single noise region used for each peak.  Time is absolute.
+!PARAMETER NoiseStart default -0.6 
+PARAMETER NoiseStart default 0.55  ! CPL 02/22/2010 
+!PARAMETER NoiseEnd   default -0.15
+PARAMETER NoiseEnd   default 0.85 ! CPL 02/22/2010 
+PARAMETER ToPrinter  default 1
+PARAMETER Deconvolute default 0
+   ! 0 : Do not deconvolute / > 0: Deconvolute / > 1 : expected MW
+PARAMETER MaxPeaks default 15
+   ! Maximum number of integrated peaks in spectrum for deconvolution
+PARAMETER RetentionTime   default -1.0
+! ==========================================================================
+! Revision History:
+! 09/30/99 YD  Added code to save the original ChromReg first. When the Auto_SN is done, the
+!                     ChromReg will be restored back, and the draw command will be used to redraw the
+!                     original ChromReg on the screen. Hence, the orignal Chromatic diagram will be restored.
+!                     (PVCS #6042: Auto_SN "nukes" chromreg)
+! ===========================================================================
+LOCAL CrabText$, i, ReturnString$, npeaks
+LOCAL Ionextract1, Ionextract2, Ionextract3, Ionextract4, Ionextract5
+LOCAL IonExtract, NumIons, mfgEnv
+LOCAL IonMode$, DataFileName$
+LOCAL TestNum, NewTabName$, ReportFile$, Selected_Test$
+
+Local  ID_TUNEMAC_TEST_957
+Local  ID_TUNEMAC_EXTRACTING_ION_958
+Local  ID_TUNEMAC_REFRESHING_REG_959
+Local  ID_TUNEMAC_PRINTING_REPOR_960
+Local  ID_TUNEMAC_SAVING_REPORT_961
+Local  ID_TUNEMAC_APPENDING_REPO_962
+Local  ID_TUNEMAC_DECONVOLUTION_963
+Local  ID_TUNEMAC_MS_AUTO_SN_DON_964
+ID_TUNEMAC_TEST_957                                =  17957  
+ID_TUNEMAC_EXTRACTING_ION_958                      =  17958  
+ID_TUNEMAC_REFRESHING_REG_959                      =  17959  
+ID_TUNEMAC_PRINTING_REPOR_960                      =  17960  
+ID_TUNEMAC_SAVING_REPORT_961                       =  17961  
+ID_TUNEMAC_APPENDING_REPO_962                      =  17962  
+ID_TUNEMAC_DECONVOLUTION_963                       =  17963  
+ID_TUNEMAC_MS_AUTO_SN_DON_964                      =  17964  
+   
+   mfgEnv = check(variable, PRTestVer$)
+   if RegSize(ChromReg) < 1 then
+      Auto_Sn_Error "Please reload data file", 5
+   else
+      ! 09/30/99 YD
+      if (RegSize(ASNChromTemp) > 0)
+         delreg ASNChromTemp
+      endif
+      copyobj ChromReg, ASNChromTemp
+   endif
+
+   if RegSize(AutoSNReg) < 1 then
+      ReturnVal = AutoSNRegManager("INITIALIZE")
+      ReturnVal = AutoSNRegManager("NewTable", "TestParms")
+   else
+      ! if ObjHdrType(AutoSNReg, "TestParms") <> 4 then
+      ! 04/01/2010 CPL
+      if RegSize(AutoSNReg) >= 1 then
+         ReturnVal = AutoSNRegManager("INITIALIZE")
+         ReturnVal = AutoSNRegManager("NewTable", "TestParms")
+      endif
+   endif
+
+   ! Check if the source has changed
+   !if RegSize(ChromRes) > 0 then   
+   !   if (TabHdrText$(AutoSnReg, "TestParms", "IonMode") <> TabHdrText$(ChromRes, "MSDConditions", "Ionization")) then
+   !       ReturnVal = AutoSNRegManager("NewTable", "TestParms")
+   !   endif
+   !endif
+
+   !if test$ = "-1" then
+   !   Test$ = GuessTest$()
+   !   if (len(Test$) > 0) and (Dialog >= 0) then
+   !      Dialog = 1
+   !   endif
+   !endif
+   
+   TestNum = RowByText(AutoSnReg, TestParms,, "Name", "i=", Test$)
+
+   ! Use dialog box
+   if Dialog >= 0 then
+      ! If running as a post-run macro, suppress dialog box
+      if _MethodOn <> 1 and _SequenceOn <> 1 then
+      
+         ReturnString$ = MSAutoSNdlgBox$()
+
+         !! Extract string into its parameters
+         IonExtract1         = Val(SubString$(ReturnString$, 1))
+         IonExtract2         = Val(SubString$(ReturnString$, 2))
+         IonExtract3         = Val(SubString$(ReturnString$, 3))
+         Injections          = Val(SubString$(ReturnString$, 4))
+         IntegOffTime        = Val(SubString$(ReturnString$, 5))
+         Smooth              = Val(SubString$(ReturnString$, 6))
+         AutoIntegrate       = Val(SubString$(ReturnString$, 7))
+         NoiseMethod$        =     SubString$(ReturnString$, 8)
+         NoiseStart          = Val(SubString$(ReturnString$, 9))
+         NoiseEnd            = Val(SubString$(ReturnString$,10))
+         ToPrinter           = Val(SubString$(ReturnString$,11))
+         NumIons             = Val(SubString$(ReturnString$,12))
+         Deconvolute         = Val(SubString$(ReturnString$,13))
+         MaxPeaks            = Val(SubString$(ReturnString$,14))
+         Selected_Test$      =     SubString$(ReturnString$,15)
+         Signal$             =     SubString$(ReturnString$,16)
+         ReloadEIC           = Val(SubString$(ReturnString$,17))
+         RetentionTime       = Val(SubString$(ReturnString$,18))
+
+         TestNum = RowByText(AutoSnReg, TestParms,, "Name", "i=", Selected_Test$)
+
+         ! If a test is specified, enforce certain masses and deconvolution
+         if TestNum > 0 then
+            if TestNum = 1 then  ! CPL 09/27/2006 For 6100 Series
+              Smooth = TabVal (AutoSNReg, "TestParms", TestNum, \
+                                 "Smooth")
+            endif
+            NumIons = TabVal(AutoSNReg, "TestParms", TestNum, "NumIons")
+            for i = 1 to NumIons
+               evaluate "IonExtract" + val$(i) + " = TabVal(AutoSNReg, " + \
+                        "TestParms, " + val$(TestNum) + ", Ion" + val$(i) + ")"
+            next i
+
+            Deconvolute   = TabVal  (AutoSNReg, "TestParms", TestNum, \
+                                    "Deconvolute")
+            IntPeakInSpec$= SprintF$(TabVal (AutoSNReg, "TestParms", TestNum, \
+                                     "MassPeaks"), "%1.0f")
+
+         endif
+      endif
+
+   else    ! See if there's an ion list or a test definition
+
+      Print ReadResource$("tunemac",ID_TUNEMAC_TEST_957),Test$
+
+      ! If Test$ has a "|" character, it's an ion list
+      if InStr(Test$,"|") > 0 then
+         for i = 1 to 10            ! Maximum Number of Extractions
+            if Len(SubString$(Test$,i)) > 0
+               CrabText$ = "IonExtract" + val$(i) + \
+                           "= Val(SubString$(Test$," +val$(i) + "))"
+               Evaluate CrabText$
+            else
+               NumIons = i - 1
+               i = 10
+            endif
+
+         next i
+      else   ! test definition
+         ! If a test is specified, enforce certain masses and deconvolution
+         TestNum = RowByText(AutoSnReg, TestParms,, "Name", "i=", Test$)
+         if TestNum > 0 then
+            NumIons = TabVal(AutoSNReg, "TestParms", TestNum, "NumIons")
+            Selected_Test$ = Test$
+            for i = 1 to NumIons
+               evaluate "IonExtract" + val$(i) + " = TabVal(AutoSNReg, " + \
+                        "TestParms, " + val$(TestNum) + ", Ion" + val$(i) + ")"
+                            next i
+            NoiseStart    = TabVal(AutoSNReg, "TestParms", TestNum, "NoiseStart")  
+            NoiseEnd      = TabVal(AutoSNReg, "TestParms", TestNum, "NoiseEnd")
+            RetentionTime = TabVal(AutoSNReg, "TestParms", TestNum, "RetentionTime")
+            NoiseMethod$  = TabText$(AutoSNReg, "TestParms", TestNum, "NoiseMethod")
+            IntegOfftime  = TabVal (AutoSNReg, "TestParms", TestNum, "IntegOff")
+            Smooth        = TabVal(AutoSNReg, "TestParms", TestNum, "Smooth")
+            Deconvolute   = TabVal  (AutoSNReg, "TestParms", TestNum, "Deconvolute")
+            IntPeakInSpec$= SprintF$(TabVal (AutoSNReg, "TestParms", TestNum, \
+                                     "MassPeaks"), "%1.0f")
+         endif
+      endif
+   endif
+
+   ! Prevent deconvolution if no license exists
+   if _Deconv = 0 then
+      Deconvolute = 0
+   endif
+   
+   !Check for some important parameters first
+   CheckParams injections, IonExtract1, NoiseMethod$, NoiseStart, NoiseEnd, \
+               ReloadEIC
+
+   if ReloadEIC = 1 then
+      ! Start with a fresh chromreg register
+      DelReg ChromReg
+   else
+      NumIons = 0
+      for i = 1 to RegSize(ChromReg)
+         if InStr(ObjHdrText$(ChromReg[i], "Detector"), "MSD") > 0 then
+            NumIons = NumIons + 1
+         endif
+      next i
+   endif
+   
+   if NumIons = 0 then
+      if ReloadEIC = 1 then
+         Auto_SN_Error "No MSD signals specified."
+      else
+         Auto_SN_Error "No MSD signals are loaded"
+      endif
+   endif
+
+   if len(Selected_Test$) > 0 then
+      UseTest = 1
+   else
+      UseTest = 2
+   endif
+
+   ! Post operating parameters to AutoSNReg
+   On Error Print 
+   SetObjHdrVal  AutoSNReg, "NumInjects",  Injections
+   SetObjHdrVal  AutoSNReg, "IntOffTime",  IntegOffTime
+   SetObjHdrVal  AutoSNReg, "Smooth",      Smooth
+   SetObjHdrVal  AutoSNReg, "AutoInt",     AutoIntegrate
+   SetObjHdrText AutoSNReg, "NoiseMethod", NoiseMethod$
+   SetObjHdrVal  AutoSNReg, "NoiseStart",  NoiseStart
+   SetObjHdrVal  AutoSNReg, "NoiseEnd",    NoiseEnd
+   SetObjHdrVal  AutoSNReg, "ToPrinter",   toPrinter
+   SetObjHdrVal  AutoSNReg, "NumIons",     NumIons
+   SetObjHdrVal  AutoSNReg, "Deconvolute", Deconvolute
+   SetObjHdrVal  AutoSNReg, "MSpeaks",     MaxPeaks 
+   SetObjHdrText AutoSNReg, "Test",        Selected_Test$
+   SetObjHdrVal  AutoSNReg, "ReloadEIC",   ReloadEIC
+   SetObjHdrVal  AutoSNReg, "UseTest",     UseTest
+   SetObjHdrVal  AutoSNReg, "RetentionTime", RetentionTime
+   
+   On Error Auto_SN_Error "Error calculating signal/noise ratio", 5
+   
+   For i = 1 to NumIons
+
+      if ReloadEIC = 1 then
+         crabText$= "IonExtract = IonExtract" + Val$(i)
+         Evaluate crabText$
+         Print ReadResource$("tunemac",ID_TUNEMAC_EXTRACTING_ION_958), IonExtract
+
+         ! Extract ion and optionally integrate
+         !*#$-TODO:Param Check2-$#*!
+         EventTab$ = FirstIntegration$(Injections,IonExtract,Signal$,,, \
+                                       IntegOfftime,Smooth)
+
+      else
+         On Error IonExtract = 0
+         IonExtract = val(ChromReg[i], "SignalID")
+         On Error Auto_SN_Error "Error calculating signal/noise ratio", 5
+      endif
+      
+      NumInjects = MakePeakTable()
+
+      if (TabHdrVal(ChromReg[i], "IntResults", "NumberOfRows") = 0) then
+         Auto_SN_Error "Extracted ion is out of range.", 3
+      endif
+
+      ! Assign peaks to each injection
+      SelectPeaks i
+
+      SetTabHdrVal AutoSNReg, "PeakTable", "Ion", IonExtract
+
+      ! Find noise region and calculate signal-to-noise ratios
+      DoNoiseCalcs i, NoiseMethod$, NoiseStart, NoiseEnd
+
+      ! Draw noise regions on the chromatogramp
+      DrawNoiseGraphics i
+
+      ! Calculate cluster information
+      GenerateClusters
+      
+      NewTabName$ = "PeakTable" + val$(i)
+      ReturnVal = AutoSNRegManager("KILLTABLE", NewTabName$)
+      CopyTab AutoSNReg, "PeakTable", AutoSNReg, NewTabName$
+      NewTabName$ = "Clusters" + val$(i)
+      ReturnVal = AutoSNRegManager("KILLTABLE", NewTabName$)
+      CopyTab AutoSNReg, "Clusters", AutoSNReg, NewTabName$
+
+      if i < NumIons
+          print ReadResource$("tunemac",ID_TUNEMAC_REFRESHING_REG_959)
+          Returnval = AutoSNRegManager("KILLTABLE","PeakTable")
+          Returnval = AutoSNRegManager("KILLTABLE","Clusters")
+      endif
+      
+      Draw ChromWin, ChromReg,,, 1,1
+
+   Next i
+
+   if ToPrinter=1 then
+      Print ReadResource$("tunemac",ID_TUNEMAC_PRINTING_REPOR_960)
+      AutoSNReport , TestNum
+   endif
+   
+   On Error AutoSN_PrintError
+   ReportFile$ = DAdataPath$ + DAdataFile$ + "\Auto_SN.txt"
+   Print ReadResource$("tunemac",ID_TUNEMAC_SAVING_REPORT_961) + ReportFile$
+   AutoSNReport ReportFile$, TestNum
+   On error
+
+   ! Deconvolution mass assignment report
+   if (Deconvolute > 0) then
+
+      Check_Deconvolution Injections, Deconvolute , ReportFile$, \
+                          ToPrinter, MaxPeaks, TestNum, Signal$
+
+      Print ReadResource$("tunemac",ID_TUNEMAC_APPENDING_REPO_962) + ReportFile$
+      Print ReadResource$("tunemac",ID_TUNEMAC_DECONVOLUTION_963)
+
+   endif
+
+   ! Put report in a viewer 
+   if _MethodOn <> 1 and _SequenceOn <> 1 and Dialog >= 0 then
+      if FileStat(Mode, ReportFile$) = 1 then
+      !   execnowait "hpcvwr01.exe " + ReportFile$, 1
+      cmdpath$ = "notepad.exe " +chr$(34) + ReportFile$ + chr$(34) 
+		  execnowait cmdpath$, 1
+
+      endif
+   endif
+
+  ! 09/30/99 YD
+  if (RegSize(ASNChromTemp) > 0)
+    if (RegSize(ChromReg) >= 0)
+      delreg ChromReg
+    endif
+    copyobj ASNChromTemp, ChromReg
+    delreg ASNChromTemp
+    draw 38, ChromReg[1:0], , , 1, 1
+    winupdate
+  endif
+
+  Print ReadResource$("tunemac",ID_TUNEMAC_MS_AUTO_SN_DON_964)
+
+  On Error print
+  ! Remove G_SN_SPEC
+
+endmacro
+
+!*****************************************************************************
+!verIx = instr(AutoSNVer$, ".mac") + 5
+!AutoSNVer$ =  AutoSNVer$[verIx:verIx + instr(AutoSNVer$[verIx:len(AutoSNVer$)]," ") - 1]
+! CPL 08/2006 Change to ChemStation _Version$
+verIx = Instr(_Version$,"Copyright")
+AutoSNVer$ = _Version$[5:verIx-2]
+remove verIx
+
+!Print "MSautoSN version:  " + AutoSNVer$
+Print "ChemStation  " + AutoSNVer$
+!************************* end of file ***************************************
+

@@ -1,0 +1,189 @@
+!******************************************************************************
+!
+!   FILE
+!       FRACTOP.MAC
+!
+!   DESCRIPTION
+!        Fraction Collection 
+!        Toplevel and Init macros
+! 
+!              
+!   RCS
+!       $Header: /cag/DRIVERS/leodef/ce/misc/fractop.mac 1.4 1995-11-10 06:07:41-08 hmgr Exp $
+!
+!******************************************************************************
+
+
+
+!******************************************************************************
+NAME FC_Initialize
+  PARAMETER TestDir$ DEFAULT ""
+!******************************************************************************
+LOCAL Path$
+
+on error print ""
+
+IF _OffLine = 0  ! ===> online
+  !---------------------------------------------------
+  !do not initialize the fraction collection
+  !              if no DAD configured
+  !                 or incompatibel DAD firmware
+  !
+  ! a dummy user interface is defined by the macro
+  ! "FC_EditParameter" later in this file
+  !---------------------------------------------------
+  IF (dev1050DAD = 0) 
+    RETURN
+  ENDIF
+  IF FC_DADcompatible() = 0
+    RETURN
+  ENDIF
+ENDIF
+IF devRCnet > 0
+  RETURN
+ENDIF
+
+!---------------------------------------------------
+IF Len(TestDir$) = 0
+  Path$ = _ProductPath$
+ELSE 
+  Path$ = TestDir$
+ENDIF
+
+Macro Path$+"fracpara.mac"
+Macro Path$+"fractexe.mac"
+Macro Path$+"fracfile.mac"
+
+FC_InitHooks
+
+RETURN
+ENDMACRO
+   
+  
+  
+!******************************************************************************
+NAME FC_InitHooks
+!******************************************************************************
+
+  FC_AddHookMacro "LoadMethod"     ,"FC_LoadMethod"
+  FC_AddHookMacro "SaveMethod"     ,"FC_SaveMethod"
+  FC_AddHookMacro "EditInstMethod" ,"FC_EditParameter"
+  FC_AddHookMacro "PrintInstMethod","FC_PrintInstMethod"
+
+  IF _offline = 0
+    FC_AddHookMacro "PreRun"         ,"FC_PreRun"
+    FC_AddHookMacro "PostAcq"        ,"FC_PostAcq"
+  ELSE
+    FC_RemoveHookMacro "PreRun"         ,"FC_PreRun"
+    FC_RemoveHookMacro "PostAcq"        ,"FC_PostAcq"
+  ENDIF
+
+RETURN
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_AddHookMacro
+  PARAMETER HookTable$,HookMacro$
+!******************************************************************************
+  LOCAL row
+    
+  row = RowByText(HOOK[1], HookTable$ ,, "Command" ,"=", HookMacro$)
+  IF row > 0  
+    RETURN  ! ----- Hook already exists ------
+  ENDIF
+
+  InsTabRow  HOOK[1], HookTable$
+  row = TabHdrVal(HOOK[1], HookTable$, "NumberOfRows")
+  SetTabText HOOK[1], HookTable$, row, "Command", HookMacro$
+  RETURN
+ENDMACRO
+
+
+!******************************************************************************
+NAME FC_RemoveHookMacro
+  PARAMETER HookTable$,HookMacro$
+!******************************************************************************
+  LOCAL row
+    
+  row = RowByText(HOOK[1], HookTable$ ,, "Command" ,"=", HookMacro$)
+  IF row > 0  
+    DelTabRow HOOK[1], HookTable$, row
+  ENDIF
+
+  RETURN
+ENDMACRO
+
+
+
+
+
+
+!******************************************************************************
+NAME FC_DADcompatible
+!
+!  DESCRIPION:
+!    Tests if the DAD firmware is compatible with the
+!    fraction collection macros
+!
+!  RETURN:
+!          0 (FALSE) if DAD revision is 1.0 or 1.1
+!
+!          1 (TRUE)  DAD revision is greater 1.1 (not 1.0 or 1.1)
+!          1 (TRUE)  if DAD is power off.
+!                          Be prepared that DAD is switched on later 
+!
+!******************************************************************************
+LOCAL Response$
+  
+  ON ERROR Print
+  Response$ = ""
+  Response$ = SendModule$("DAD","IDN?")
+  ON ERROR
+
+  IF (Len(Response$) = 0) !---- DAD is switched off ------
+    RETURN 1
+  ENDIF
+
+  IF (Instr(Response$, "1.0") > 0) OR (Instr(Response$, "1.1") > 0)
+    RETURN 0
+  ENDIF
+
+  RETURN 1
+
+ENDMACRO
+
+
+
+!******************************************************************************
+NAME FC_EditParameter
+!
+! This macro will be overloaded during initialization by the real
+! fraction collection parameter dialog if:
+!             a.)  DAD is configured 
+!         and b.)  DAD firmware revision is compatible.
+!
+!******************************************************************************
+LOCAL Ret, Message$
+
+IF dev1050DAD = 0
+  Message$ = "Cannot collect peaks without a DAD configured"
+ELSE
+  Message$ = "DAD firmware revision greater 1.1 required"
+ENDIF
+
+Ret = Alert(Message$, 3, "Fraction Collection")
+
+RETURN
+ENDMACRO
+
+ 
+
+!******************************************************************************
+!                       A U T O E X E C U T E
+!******************************************************************************
+
+FC_Initialize
+
+! **************************< end of file >************************************

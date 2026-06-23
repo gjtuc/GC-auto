@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 sp2 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="TopFrpTB" PosStyle="TOP" Caption="“TopFrpTB”" PanelName="Main">
+		<Static Name="Signals" Visible="1" Enable="1" Text="信号" Border="NoBorder"/>
+		<PushButton Name="LoadSignal" Help="调用数据文件的信号和光谱" Command="LoadFile &quot;&quot;,0,,0" ImageName="Load_signal20" ImageNameDisabled="Load_signal20_d"/>
+		<PushButton Name="OverlaySignal" Help="调用数据文件的信号并与当前信号重叠" Command="LoadFile &quot;&quot;,1,,0" ImageName="Overlay_signal20" ImageNameDisabled="Overlay_signal20_d"/>
+		<NonEditCombobox Name="DataFile" Help="从最近调用的数据文件中选择" Enable="1" Table="_Config,1,DataFile" Selection="-1" Width="200"/>
+		<Static Name="Methods" Visible="1" Text="方法" NewGroup="1" Border="NoBorder"/>
+		<PushButton Name="LoadMethod" Help="调用方法" Command="TLB_LoadMethod" ImageName="Load_method20" ImageNameDisabled="Load_method20_d"/>
+		<PushButton Name="SaveMethod" Help="保存当前方法" Command="TLB_SaveCurrentMethod" ImageName="Save_method20" ImageNameDisabled="Save_method20_d"/>
+		<NonEditCombobox Name="MethodFile" Help="从最近调用的方法文件中选择" NewGroup="1" Enable="1" Width="200" Table="_Config,1,MethodFile" Selection="1"/>
+		<NonEditCombobox Name="SelectCalcType" Help="设置当前方法的计算类型" Enable="1" TextList="百分比|ESTD|归一化|ISTD|ESTD%|ISTD%" Width="70" DefCmdParNumber="0" DefCommand="FRPTMenu_ChangeCalcType"/>
+		<NonEditCombobox Name="SelectCalcBase" Help="设置当前方法的计算基础" Enable="1" TextList="面积|高度" Width="70" DefCmdParNumber="0" DefCommand="FRPTMenu_ChangeCalcBase"/>
+		<NonEditCombobox Name="FRptLayout" Help="从最近使用的报告模板中选择" NewGroup="1" Enable="1" Width="100" Table="_Config,1,FrptFile" Selection="1"/>
+		<PushButton Name="NewReportTemplate" Help="新建报告模板" Command="FRPT_DoNewReportTemplate" ImageName="Report_NewTemplate20" ImageNameDisabled="Report_NewTemplate20_d"/>
+		<PushButton Name="OpenReportTemplate" Help="打开报告模板" Command="FRPT_DoOpenReportTemplate" ImageName="Report_OpenTemplate20" ImageNameDisabled="Report_OpenTemplate20_d"/>
+		<PushButton Name="SaveReportTemplate" Help="保存当前报告模板" Command="value=FRPT_SaveReportTemplate()" ImageName="Report_SaveTemplate20" ImageNameDisabled="Report_SaveTemplate20_d"/>
+		<PushButton Name="ReportPreview" Help="使用当前模板、方法和数据文件显示报告预览" Command="FRPT_Test SCREEN" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="ReportPrint" Help="使用当前模板、方法和数据文件打印报告" Command="FRPT_Test SCREEN" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+	</toolbar>
+</graphical_object>

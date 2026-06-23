@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphical_object>
+	<toolbar Name="TLBSMSDA" PosStyle="Right" DockRow="0" DockCol="0" Caption="数学計算" PanelName="Chem">
+		<StickyButton Name="MultiplySpect" Help="MS スペクトル ウィンドウでイオンのスケールを選択範囲から設定" CmdList="DeactivateMSMultiplySpectraButton | ActivateMSMultiplySpectraButton" ImageName="MathMS_SetScale20" ImageNameDisabled="MathMS_SetScale20_d"/>
+		<StickyButton Name="SumSpect" Help="選択したスペクトルを MS スペクトル ウィンドウに追加" CmdList=" | ActivateMSSumSpectraButton" ImageName="MathMS_AddSpectrum20" ImageNameDisabled="MathMS_AddSpectrum20_d"/>
+		<StickyButton Name="SubtrSpect" Help="選択したスペクトルを MS スペクトル ウィンドウから減算" CmdList=" | ActivateMSSubtractSpectraButton " ImageName="MathMS_SubSpectrum20" ImageNameDisabled="MathMS_SubSpectrum20_d"/>
+		<PushButton Name="ClearSpect" Help="MS スペクトル ウィンドウ リセット" Command="DoMSClearSpectra" ImageName="MathMS_Rest20" ImageNameDisabled="MathMS_Rest20_d"/>
+		<PushButton Name="HelpSpect" Help="計算ツールバーのヘルプ" Command="DoMSSpectraMathHelp" ImageName="Help20" ImageNameDisabled="Help20_d"/>
+		<PushButton Name="ExitSpect" Help="計算ツールバー モード終了" Command="DoMSSpectraMathExit" ImageName="Exit20" ImageNameDisabled="Exit20_d"/>
+	</toolbar>
+</graphical_object>

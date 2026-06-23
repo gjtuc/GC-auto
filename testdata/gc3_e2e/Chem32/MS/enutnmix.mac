@@ -1,0 +1,1179 @@
+!===============================================================================
+! enutnmix.mac  Macros to manage the tune mix configuration register
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY 
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  The Purpose:
+!       Macros to manage the tune mix configuration register
+!===============================================================================
+!
+!===============================================================================
+!* Macros:   msat_InitTuneMix      loads tune mix reg from disk or creates
+!*                                 a new one if necessary
+!*           msat_SelectTuneMix    Dialog box to select tune mix
+!*           msat_ApplyTuneMix     Applies selected parameters to current tune 
+!*                                 file
+!*           msat_SetParm          Sets a parameter according to table def
+!*           msat_SetAllParms      Sets all parameters in the table
+!*           msat_SetPeakWidths    Change peak widths in TuneIons table
+!*           msat_PrintTuneMix     Print tune mix register contents
+!*           msat_GetDefault       Gets default value for a given parameter
+!*
+!* Globals:  TuneMixVer$, TuneMixRegFileName$, defTuneMixRegFileName$
+!*
+!===============================================================================
+!* Contents of the tune mix objects:
+!*    Header items:  "ShortName", "LongName"    descriptive strings
+!*                   "PrepDate", "CDS_Bottle",  A/B/None
+!*                   "IonSource"                0=ES, 1=APCI, 2=APPI, 
+!*                                              3=MM-ES+APCI, 4=NANOESI,
+!*                                              5=CHIPCUBE, 6 = AJS-ES
+!*                   "IonPolarity"              0=Pos, 1=Neg
+!*                   "LowMass"                  low end of scan range
+!*                   "HiMass"                   high end of scan range
+!*                   "Samples", "Averages", "StepSize", "Thresh"
+!*                   "ScanType"                 1 = full
+!*                   "MsFilter", "MSFilterParm" 
+!*                   "NumIons", "LastTuneDate"
+!*
+!===============================================================================
+!*    Tables         TuneIons                           ! Ions to opt/calib
+!*                        m/z, Name, PW, Iso1Ratio, Iso2Ratio
+!*                   BackgroundIons                     ! Expected ions, not
+!*                        m/z, Name                     ! for opt/calib
+!*                   TuneParms                          ! Optimization instruc.
+!*                        Element, Default, Min, Max, Action, ActionParm
+!*                   LastTune   ! parameters of last tune or pointer to them
+!*
+!===============================================================================
+!*    Action keywords: Fixed   : use default value
+!*                     Last    : no change to parameter
+!*                     Zone    : set using Zone command (for temps/gases)
+!*                     SimRamp : Optimize using SimRamp according to
+!*                               ActionParm
+!*                                  Average    : average value of all ramp max
+!*                                  Number     : use ramp max of this ion
+!*                                  NumberList : Ions to average
+!*                                               i.e. 234  (use 2 , 3, & 4)
+!*                                 -NumberList : don't ramp these ions
+!*                                               i.e.  -15 (don't use 1 & 5)
+!*                     Dynamic : Generate a dynamic ramp using all ions
+!*                               ActionParms for Dynamic:
+!*                                  NumberList : ions to use for dynamic ramp
+!*                                 -NumberList : ions to not use
+!*
+!*                     ManRamp : Generate a dynamic ramp based on setting in
+!*                                ManRamp table
+!*
+!===============================================================================
+! Some global definitions
+TuneMixRegFileName$ = _tunePath$ + "tune_mix.reg"
+DefTuneMixRegFileName$ = _tunePath$ + "def_tmix.reg"
+
+TuneMixVer$ = "$Header: /cag/DRIVERS/sprite1b/macros/tune/enutnmix.mac 1.25 2003-02-21 08:15:05-08 pcormia Exp $"
+verIx = instr(TuneMixVer$, ".mac ") + 5
+TuneMixVer$ =  TuneMixVer$[verIx:VerIx + instr(TuneMixVer$[VerIx:len(TuneMixVer$)]," ") - 1] 
+remove verIx
+!
+!===============================================================================
+name msat_SetParm
+PARAMETER RegIndex default 0, Parm$
+PARAMETER Keyword$ default ""
+PARAMETER ActionParm$ default ""
+! Sets the parameter Parm according to the value in the specified tunemix
+! register.  The parameter should be spelled exactly as required by the
+! MSParm or Zone commands.  The register index can be obtained using the
+! macro msat_SelectTuneMix(ShortName$), for example:
+!    result = msat_SetParm(msat_SelectTuneMix("APCI Neg"), "Fragmentor")
+! 
+! return values:  0 = No parameter changed
+!                 1 = No error occurred, assume command successful
+!                -1 = Error occurred
+! Known problem:
+!   The tune mix reg used is hardcoded as TuneMixReg. Fast scan macro 
+!   cannot use this (doesn't currently).  PHC 07/25/2004
+!***************************************************************************!
+Local i, msat_SetParmRet, parm, numIons, RampVal, RampValSum, numRamped, DefVal, MaxVal
+Local msat_SetParmError$, DynList$, ParmList$, temp$, IonSrc$
+Local lParmEnabled           ! see MSParmInfo
+Local lPolarity
+Local lButton
+
+Local lDebug;            lDebug = 1
+
+On Error goto msat_SetParmErr              !* set error trap
+
+
+   !* Parameter checking
+Local  ID_TUNEMAC_AUTOTUNE_COULD_550
+Local  ID_TUNEMAC_MSAT_SETPARM_751
+Local  ID_TUNEMAC_SPECIFIED_TUNE_752
+Local  ID_TUNEMAC_SPECIFIED_PARA_753
+Local  ID_TUNEMAC_SETTING_ZONE_754
+Local  ID_TUNEMAC_MSPARM_664
+Local  ID_TUNEMAC_SIMRAMPING_755
+
+Local  ID_TUNEMAC_MSSIMRAMP_757
+Local  ID_TUNEMAC_RAMPVALSUM_759
+Local  ID_TUNEMAC_MSAT_SETPARM_761
+Local  ID_TUNEMAC___MSAT_SETPARM_763
+Local  ID_TUNEMAC_MSAT_SETPARM_764
+Local  ID_TUNEMAC_NO_CHANGE_TO_765
+Local  ID_TUNEMAC_BUILDING_DYNAM_766
+
+Local  ID_TUNEMAC_BUILDING_MANUA_767
+Local  ID_TUNEMAC_MSAT_SETPARM_768
+Local  ID_TUNEMAC_MANUAL_DYNAMIC_769
+
+ID_TUNEMAC_AUTOTUNE_COULD_550                      =  17550  
+ID_TUNEMAC_MSAT_SETPARM_751                        =  17751  
+ID_TUNEMAC_SPECIFIED_TUNE_752                      =  17752  
+ID_TUNEMAC_SPECIFIED_TUNE_752                      =  17752  
+ID_TUNEMAC_SPECIFIED_PARA_753                      =  17753  
+ID_TUNEMAC_SETTING_ZONE_754                        =  17754  
+ID_TUNEMAC_MSPARM_664                              =  17664  
+ID_TUNEMAC_SIMRAMPING_755                          =  17755  
+ID_TUNEMAC_SIMRAMPING_755                          =  17755  
+ID_TUNEMAC_MSSIMRAMP_757                           =  17757  
+ID_TUNEMAC_RAMPVALSUM_759                          =  17759  
+ID_TUNEMAC_MSAT_SETPARM_761                        =  17761  
+ID_TUNEMAC___MSAT_SETPARM_763                      =  17763  
+ID_TUNEMAC_MSAT_SETPARM_764                        =  17764  
+ID_TUNEMAC_NO_CHANGE_TO_765                        =  17765  
+ID_TUNEMAC_BUILDING_DYNAM_766                      =  17766  
+ID_TUNEMAC_MSSIMRAMP_757                           =  17757  
+ID_TUNEMAC_MSAT_SETPARM_761                        =  17761  
+ID_TUNEMAC_BUILDING_MANUA_767                      =  17767  
+ID_TUNEMAC_MSAT_SETPARM_768                        =  17768  
+ID_TUNEMAC_MANUAL_DYNAMIC_769                      =  17769  
+ID_TUNEMAC_SPECIFIED_PARA_753                      =  17753  
+ID_TUNEMAC_MSAT_SETPARM_761                        =  17761  
+
+    If ( lDebug > 0 ) then
+        Print "MSAT_SetParm: Regindex =", RegIndex,\
+                          "  KeyWord =""" + KeyWord$ + """",\
+                          "  ActionParm =""" + Actionparm$ + """"
+    Endif
+
+    ! This macro uses TuneMixRegister hard coded.
+    ! Therefore it cannot handle fast scan mode
+    ! To make make sure it is not misued: Here is the check:
+    MSParm IonPolarity, lPolarity
+    If ( lPolarity > 1 ) then
+        Print "MSAT_SetParm: Cannot by called in mode other than standard."
+        Stop  ! This is an internal error message. No need to globalize.
+    Endif
+
+   if Parm$ = "" then
+      msat_SetParmError$ = ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETPARM_751)
+      goto msat_SetParmErr
+   endif
+   
+   if RegSize(TuneMixReg) <= 0 then   ! make sure the register's loaded
+      msat_InitTuneMix
+   endif 
+   
+   if RegIndex < 1 then               ! request tune mix if not specified
+      RegIndex = msat_SelectTuneMix()
+      if RegIndex <= 0 then
+         msat_SetParmError$ = ReadResource$("tunemac",ID_TUNEMAC_SPECIFIED_TUNE_752)
+         goto msat_SetParmErr
+      endif
+   else
+      if RegIndex > RegSize(TuneMixReg) then
+         msat_SetParmError$ = ReadResource$("tunemac",ID_TUNEMAC_SPECIFIED_TUNE_752)
+         goto msat_SetParmErr
+     endif
+   endif
+   
+   !* Get some values from the appropriate table
+   parm = RowByText(TuneMixReg[RegIndex], "TuneParms",, "Parm", "i=", Parm$)
+   if parm = -1 then
+      msat_SetParmError$ = ReadResource$("tunemac",ID_TUNEMAC_SPECIFIED_PARA_753)
+      goto msat_SetParmErr
+   endif
+   DefVal = TabVal(TuneMixReg[RegIndex], "TuneParms", parm, "Default")
+   if len(keyword$) = 0 then
+     !* keyword not given, so use action and action parm from tunemix
+     keyWord$ = ConvertText$(upper, TabText$(TuneMixReg[RegIndex], \
+                          "TuneParms", parm, "Action"))
+     ActionParm$ = ConvertText$(upper, TabText$(TuneMixReg[RegIndex], \
+                          "TuneParms", parm, "ActionParm"))
+   else
+     !* keyword given, so use that instead
+     !* It is up to the caller to ensure that the Action given 
+     !* in the keyword specified either doesn't need an ActionParm or
+     !* the matches the ActionParm in the tune mix register
+     keyword$ = ConvertText$(upper, keyword$)
+     if len(ActionParm$) = 0 then
+       !* ActionParm$ not given.
+       ActionParm$ = ConvertText$(upper, TabText$(TuneMixReg[RegIndex], \
+                             "TuneParms", parm, "ActionParm"))
+     else
+       ActionParm$ = ConvertText$(upper, ActionParm$)
+     endif
+   endif
+   NumIons = ObjHdrVal(TuneMixReg[RegIndex], "NumIons")
+   !* temporary limit 
+   if NumIons > 3 then 
+      NumIons = 3
+   endif
+
+   IonSrc$ = msGetIonSrc$()
+
+   !* Keyword LAST
+   if keyWord$ = "LAST" then
+      msat_SetParmRet = 0
+      msat_SetParmError$ = "msat_SetParm(): "+ parm$ + " not changed"
+      goto msat_SetParmEnd
+   endif             !* end if keyword LAST
+
+   !* Keyword ZONE
+   if keyWord$ = "ZONE" then
+      msat_SetParmError$ = "msat_SetParm(): Error setting zone " + parm$
+      Print ReadResource$("tunemac",ID_TUNEMAC_SETTING_ZONE_754), parm$, " to ", val$(DefVal)
+      
+      if ConvertText$(upper, parm$) = "VAPORIZER" then
+         if (IonSrc$ <> "APCI") OR (IonSrc$ <> "APPI") OR (IonSrc$ <> "MM-ES+APCI") then ! Not supported on all sources.  CPL 12/14/2009
+            msat_SetParmError$ = "msat_SetParm(): Can't set Vaporizer because mode is " + IonSrc$
+            goto msat_SetParmErr
+         endif      !* end if IonSrc$...
+      endif         !* end if "VAPORIZER"
+      
+      if ConvertText$(upper, parm$) = "SGAS_TEMP" then
+         if (IonSrc$ <> "AJS-ES") then ! Not supported on all sources.  CPL 12/14/2009
+            msat_SetParmError$ = "msat_SetParm(): Can't set SGas_Temp because mode is " + IonSrc$
+            goto msat_SetParmErr
+         endif      !* end if IonSrc$...
+      endif         !* end if "SGas_Temp"
+      
+      if ConvertText$(upper, parm$) = "SGASFLOW" then
+         if (IonSrc$ <> "AJS-ES") then ! Not supported on all sources.  CPL 12/14/2009
+            msat_SetParmError$ = "msat_SetParm(): Can't set SGasFlow because mode is " + IonSrc$
+            goto msat_SetParmErr
+         endif      !* end if IonSrc$...
+      endif         !* end if "SGasFlow"      
+         
+      MSZone Parm$,,, DefVal
+      msat_SetParmRet = 1
+      msat_SetParmError$ = "msat_SetParm(): Set zone " + parm$ + " to " + val$(DefVal)                      
+      goto msat_SetParmEnd
+   endif             !* end if keyword ZONE
+
+   !* Keyword FIXED
+   if keyWord$ = "FIXED" then
+     ! In case the parameter is dynamically enabled, disable it first
+    If ( isDynamic( Parm$ ) > 0 ) then
+      MSDynamic Parm$, disable
+    Endif
+      
+    If ( lDebug > 0 ) then
+	    Print "MSAT_SetParm: MSParameter", Parm$, "set to", DefVal
+    Endif
+    
+      if _offline <> 1 then
+      ! Check wether that parameter is enabled for given source.
+      ! If it is enabled : set it.
+      ! If it fails the checks: Error message and Stop
+      ! Handle inconsitent use of "Fragment" and "Fragmentor"
+        If instr( ConvertText$( UPPER, Parm$ ), "FRAGMENT" ) > 0 then 
+            Parm$ = "Fragment"; 
+        Endif
+      MSParmInfo Parm$, lParmEnabled
+        If ( lParmEnabled = 1 ) then
+          MSParm parm$,, DefVal 
+        Endif ! Checking and setting parameters
+      Endif ! not offline
+      msat_SetParmRet = 1
+      msat_SetParmError$ = "msat_SetParm(): Set " + parm$ + " to " + val$(DefVal)
+      goto msat_SetParmEnd
+   endif             !* end if keyword FIXED
+
+   !* Keyword SIMRAMP
+   if keyWord$ = "SIMRAMP" then
+
+      Print ReadResource$("tunemac",ID_TUNEMAC_SIMRAMPING_755), parm$, ", ", ActionParm$
+      msat_SetParmError$ = "msat_SetParm(): Error SIMramping " + parm$
+      MSDynamic Parm$, disable
+      
+      !* see if ActionParm has the word average in it; this ramps all masses
+      if Instr(ConvertText$(upper, ActionParm$), "AVERAGE") > 0 then
+         ActionParm$ = ""
+         for i = 1 to NumIons
+            ActionParm$ = ActionParm$ + val$(i)
+         next i
+      else              !* if Action Parm is average
+         !* see if ActionParm has a '-' in it
+         if Instr(TabText$(TuneMixReg[RegIndex], "TuneParms", parm, \
+                           "ActionParm"), "-") > 0 then
+            temp$ = ""
+            for i = 1 to NumIons
+               if InStr(ActionParm$, val$(i)) = 0 then   ! not found
+                  temp$ = temp$ + val$(i)
+               endif
+            next i
+            ActionParm$ = temp$
+         endif          !* if ActionParm$ has a '-'
+      endif             !* if ActionParm$ contains 'average'
+      
+      Print ReadResource$("tunemac",ID_TUNEMAC_SIMRAMPING_755), parm$, ", ", ActionParm$
+      !* Step through the mass list, ramping and storing maxima
+      numRamped  = 0
+      RampValSum = 0
+      for i = 1 to NumIons 
+         !* see if ion is in list
+         if instr(ActionParm$, val$(i)) > 0 then
+            Print ReadResource$("tunemac",ID_TUNEMAC_MSSIMRAMP_757), parm$, ",", i, ", MAX"
+            if _offline <> 1 then
+               MSSIMRamp parm$, i, "MAX"
+               MSParm Parm$, RampVal
+            else 
+               RampVal = DefVal
+            endif
+            numRamped = numRamped + 1
+            RampValSum = RampValSum + RampVal
+            Print ReadResource$("tunemac",ID_TUNEMAC_RAMPVALSUM_759), RampValSum, ";  numRamped= ", numRamped
+         endif       !* end if ion is in list
+      next i
+      
+      !* set parameter to average value of ions that are ramped
+      if numRamped > 0 then
+         RampVal = RampValSum / numRamped
+         if _offline <> 1 then
+            MSParm Parm$,, RampVal
+         endif
+         msat_SetParmError$ = ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETPARM_761) + parm$ + " set to " + val$(RampVal)
+         msat_SetParmRet = 1
+         Print msat_SetParmError$, ReadResource$("tunemac",ID_TUNEMAC___MSAT_SETPARM_763), msat_SetParmRet  
+      else          
+         msat_SetParmError$ = ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETPARM_764) + \
+                         ReadResource$("tunemac",ID_TUNEMAC_NO_CHANGE_TO_765) + parm$
+         msat_SetParmRet = -1
+      endif       !* end if any ramps occurred
+      
+      goto msat_SetParmEnd
+   endif          !* end if keyword SIMRAMP
+
+   !* Keyword DYNAMIC
+   if keyWord$ = "DYNAMIC" then
+      Print ReadResource$("tunemac",ID_TUNEMAC_BUILDING_DYNAM_766), parm$, ", ", ActionParm$
+      msat_SetParmError$ = "msat_SetParm(): Error building dynamic ramp of " + parm$
+      !* temporary limit
+      if NumIons > 3 then 
+         NumIons = 3
+      endif
+      
+      ActionParm$ = TabText$(TuneMixReg[RegIndex], "TuneParms", parm, \
+                            "ActionParm")
+      if ActionParm$ = "" then    !* no ActionParm means use all
+         for i = 1 to NumIons 
+            ActionParm$ = ActionParm$ + val$(i)
+         next i
+      endif
+      
+      !* see if ActionParm has a '-' in it
+      if Instr(TabText$(TuneMixReg[RegIndex], "TuneParms", parm, \
+                        "ActionParm"), "-") > 0 then
+         temp$ = ""
+         for i = 1 to NumIons
+            if InStr(ActionParm$, val$(i)) = 0 then   ! not found
+               temp$ = temp$ + val$(i)
+            endif
+         next i
+         ActionParm$ = temp$
+      endif         
+               
+      MSDynamic Parm$, disable
+      
+      !* Step through the mass list, ramping and storing maxima
+      DynList$ = "MSDynamic " + Parm$ + ", SET,"
+      for i = 1 to NumIons 
+         !* see if ion is in list
+         if instr(ActionParm$, val$(i)) > 0 then
+            Print ReadResource$("tunemac",ID_TUNEMAC_MSSIMRAMP_757), parm$, ",", i, ", MAX"
+            if _offline <> 1 then
+               MSSIMRamp parm$, i, "MAX"
+               MSParm parm$, rampVal
+            else
+               RampVal = DefVal
+            endif
+            DynList$ = DynList$ + \
+                       val$(TabVal(TuneMixReg[RegIndex], "TuneIons", i, "mz")) \
+                       + "," + val$(RampVal) + ","
+            Print DynList$
+         endif       !* end if ion is in list
+      next i
+      
+      DynList$ = DynList$[1:len(DynList$)-1]  ! remove trailing comma            
+      Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETPARM_761) + DynList$
+      if _offline <> 1
+         MSDynamic Parm$, enable
+         evaluate DynList$
+         MSDynamic Parm$, plot
+      endif
+      msat_SetParmError$ = "msat_SetParm(): Built dynamic ramp for " + Parm$
+      
+   endif          !* end if keyword DYNAMIC
+
+   !* Keyword MANRAMP
+   if keyWord$ = "MANRAMP" then
+      Print ReadResource$("tunemac",ID_TUNEMAC_BUILDING_MANUA_767), parm$, ", ", ActionParm$
+      msat_SetParmError$ = ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETPARM_768) + parm$
+
+      if ObjHdrType (TuneMixReg[RegIndex],"ManRamp") <> 4 then
+         msat_SetParmError$ = ReadResource$("tunemac",ID_TUNEMAC_MANUAL_DYNAMIC_769)
+         goto msat_SetParmErr
+      endif   
+      
+      parm = RowByText(TuneMixReg[RegIndex], "ManRamp",, "Parm", "i=", Parm$)
+      if parm = -1 then
+        msat_SetParmError$ = ReadResource$("tunemac",ID_TUNEMAC_SPECIFIED_PARA_753)
+        goto msat_SetParmErr
+      endif
+      
+      MSDynamic Parm$, disable
+      
+      !* Step through the mass list, ramping and storing maxima
+      DynList$ = "MSDynamic " + Parm$ + ", SET,"
+
+      ParmList$ = msat_GetManRampList$(RegIndex,parm$)
+      if ParmList$ <>  "" then
+         DynList$ = DynList$ + ParmList$
+      else   
+         msat_SetParmError$ = "msat_SetParm(): Error building ramp settings " + Parm$
+         goto msat_SetParmErr
+      endif
+      
+      Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETPARM_761) + DynList$
+      if _offline <> 1
+         MSDynamic Parm$, enable
+         evaluate DynList$
+         MSDynamic Parm$, plot
+      endif
+      msat_SetParmError$ = "msat_SetParm(): Built dynamic ramp for " + Parm$
+      
+   endif          !* end if keyword MANRAMP
+   goto msat_SetParmEnd
+   
+   
+   msat_SetParmErr:
+      msat_SetParmRet = -1
+
+   msat_SetParmEnd:
+   if msat_SetParmRet < 0 then
+      Print msat_SetParmError$
+   endif
+   
+   RETURN msat_SetParmRet
+
+endmacro                !* end msat_SetParm
+!***************************************************************************!
+
+!***************************************************************************!
+name msat_GetDefault
+PARAMETER RegIndex
+PARAMETER parm$
+!
+!  This routine gets the current default value for a specified parameter
+!  The parameter name is case-insensitive
+!***************************************************************************!
+LOCAL RowNum, RetVal
+
+   RowNum = RowByText(TuneMixReg[RegIndex], TuneParms,, "Parm", "i=", \
+            parm$)
+   if RowNum > 0 then
+       RetVal = TabVal(TuneMixReg[RegIndex], TuneParms, RowNum, "Default")
+   else
+       RetVal = 0
+   endif 
+   
+   RETURN RetVal
+   
+endmacro                !* end msat_GetDefault
+!***************************************************************************!
+
+!***************************************************************************!
+name msat_GetManRampList$
+PARAMETER RegIndex
+PARAMETER parm$
+!
+!  This routine builds the list of MANRAMP parameters to pass to
+!  MSDynamic for a manual dynamic ramp.  It will check the mass and settings
+!  against known limits and will ensure that the masses are in ascending
+!  order.
+!***************************************************************************!
+local NumIons, low, high, minmass, maxmass, list$, lensrow
+local i, rampVal, mass, j, tmp$, idx, strlen
+
+      NumIons = TabHdrVal(TuneMixReg[RegIndex],"ManRamp","NumPairs")
+      MSParmInfo parm$,,low,high
+      maxmass = MSInstrParm("maxmass")
+      minmass = MSInstrParm("minmass") 
+      list$ = ""
+      
+      lensrow = RowByText(TuneMixReg[RegIndex], "ManRamp",, "Parm", "i=", Parm$)
+      if lensrow = -1 then
+        return list$
+      endif
+      
+      
+      for i = 1 to NumIons
+         rampVal = TabVal (TuneMixReg[RegIndex],"ManRamp",lensrow,"Setting"+val$(i))
+         mass = TabVal(TuneMixReg[RegIndex], "ManRamp", lensrow, "Mass"+val$(i))
+         if mass <= maxmass AND mass >= minmass AND \
+            rampVal >= low AND rampVal <= high
+           !* Add to list in ascending order
+             if i = 1 then
+               list$ = val$(mass) + "," + val$(RampVal)
+             else
+               for j = 1 to i
+                 tmp$ = substring$(list$,(j*2)-1,,",")
+                 if abs(val(tmp$)-mass)<0.1 then
+                   goto next_item
+                 endif
+                 if val(tmp$) > mass then
+                   idx = instr(list$,tmp$)
+                   if idx = 1 then
+                     list$ = val$(mass) + "," + val$(RampVal)+ "," + list$
+                   else
+                     strlen = len(list$)
+                     list$ = list$[1:idx-1] + val$(mass) + "," + val$(RampVal)  +","+ list$[idx:strlen]
+                   endif
+                   print list$
+                   goto next_item
+                 endif
+               next j
+               list$ = list$ + "," + val$(mass) + "," + val$(RampVal)
+             endif
+         endif  
+next_item:         
+      next i
+      
+      return list$
+
+endmacro              !* msat_GetManRampList$
+
+!***************************************************************************!
+name msat_SetAllParms
+PARAMETER RegIndex
+! This macro sets all parameters in the tuneparms table according to their
+! definition.  All ZONES are set first (there is no wait for stability), 
+! then all FIXED values are set, followed by SIMRAMPS and last by DYNAMICS.
+!
+! Returns -1 if any error occurs, and 1 if it completes successfully
+!
+!***************************************************************************!
+  local i
+   if RegSize(TuneMixReg) <= 0 then   !* make sure the register's loaded
+Local  ID_TUNEMAC_MSAT_SETALLPAR_770
+Local  ID_TUNEMAC_MSAT_SETALLPAR_771
+Local  ID_TUNEMAC_MSAT_SETALLPAR_772
+Local  ID_TUNEMAC_MSAT_SETALLPAR_773
+Local  ID_TUNEMAC_MSAT_SETALLPAR_775
+ID_TUNEMAC_MSAT_SETALLPAR_770                      =  17770  
+ID_TUNEMAC_MSAT_SETALLPAR_771                      =  17771  
+ID_TUNEMAC_MSAT_SETALLPAR_772                      =  17772  
+ID_TUNEMAC_MSAT_SETALLPAR_772                      =  17772  
+ID_TUNEMAC_MSAT_SETALLPAR_773                      =  17773  
+ID_TUNEMAC_MSAT_SETALLPAR_772                      =  17772  
+ID_TUNEMAC_MSAT_SETALLPAR_772                      =  17772  
+ID_TUNEMAC_MSAT_SETALLPAR_775                      =  17775  
+      msat_InitTuneMix
+   endif 
+         
+   if RegIndex = 0 then               ! if a register number not passed, ask
+      RegIndex = msat_SelectTuneMix()
+      print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETALLPAR_770), RegIndex
+      if RegIndex <= 1 then
+         Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETALLPAR_771)
+         RETURN -1
+      endif
+   endif
+   
+   !* First set all zones
+   for i = 1 to TabHdrVal(TuneMixReg[RegIndex], "TuneParms", "NumberOfRows")
+      if ConvertText$(upper, TabText$(TuneMixReg[RegIndex], "TuneParms", \
+                        i, "Action")) = "ZONE" then 
+         if msat_SetParm(RegIndex, TabText$(TuneMixReg[RegIndex], "TuneParms", \
+                                       i, "Parm")) <> 1 then
+            Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETALLPAR_772) +  \
+                   TabText$(TuneMixReg[RegIndex], "TuneParms", i, "Parm")
+         endif
+      endif
+   next i
+
+   !* Set all fixed values
+   for i = 1 to TabHdrVal(TuneMixReg[RegIndex], "TuneParms", "NumberOfRows")
+      if ConvertText$(upper, TabText$(TuneMixReg[RegIndex], "TuneParms", \
+                        i, "Action")) = "FIXED" then 
+         if msat_SetParm(RegIndex, TabText$(TuneMixReg[RegIndex], "TuneParms", \
+                                       i, "Parm")) <> 1 then
+            Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETALLPAR_772) +  \
+                   TabText$(TuneMixReg[RegIndex], "TuneParms", i, "Parm")
+         endif
+      endif
+   next i
+
+   !* Set all SIMRamps
+   for i = 1 to TabHdrVal(TuneMixReg[RegIndex], "TuneParms", "NumberOfRows")
+      if ConvertText$(upper, TabText$(TuneMixReg[RegIndex], "TuneParms", \
+                        i, "Action")) = "SIMRAMP" then 
+         msat_SetParmErr =  msat_SetParm(RegIndex, TabText$(TuneMixReg[RegIndex], \
+                              "TuneParms", i, "Parm"))
+         if msat_SetParmErr <> 1 then
+            Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETALLPAR_773), msat_SetParmErr, " setting " +  \
+                   TabText$(TuneMixReg[RegIndex], "TuneParms", i, "Parm")
+            RETURN -1 
+         endif
+      endif                                
+   next i
+ 
+   !* Set all DYNAMICs                  
+   for i = 1 to TabHdrVal(TuneMixReg[RegIndex], "TuneParms", "NumberOfRows")
+      if ConvertText$(upper, TabText$(TuneMixReg[RegIndex], "TuneParms", \
+                        i, "Action")) = "DYNAMIC" then 
+         if msat_SetParm(RegIndex, TabText$(TuneMixReg[RegIndex], "TuneParms", \
+                                       i, "Parm"))  <> 1 then
+            Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETALLPAR_772) +  \
+                   TabText$(TuneMixReg[RegIndex], "TuneParms", i, "Parm")
+            RETURN -1 
+         endif
+      endif                                
+   next i
+
+   !* Set all MANRAMPSs
+   for i = 1 to TabHdrVal(TuneMixReg[RegIndex], "TuneParms", "NumberOfRows")
+      if ConvertText$(upper, TabText$(TuneMixReg[RegIndex], "TuneParms", \
+                        i, "Action")) = "MANRAMP" then 
+         if msat_SetParm(RegIndex, TabText$(TuneMixReg[RegIndex], "TuneParms", \
+                                       i, "Parm"))  <> 1 then
+            Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETALLPAR_772) +  \
+                   TabText$(TuneMixReg[RegIndex], "TuneParms", i, "Parm")
+            RETURN -1 
+         endif
+      endif
+   next i
+   
+  
+   Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SETALLPAR_775)
+   RETURN 1
+ 
+endmacro              !* msat_SetAllParms
+!***************************************************************************!
+
+
+!***************************************************************************!
+name msat_ApplyTuneMix
+PARAMETER RegIndex, ApplyDefaults default -1, ApplyMode default -1
+PARAMETER ApplyIons default -1, ApplyParmLimits default -1
+! Updates the current tune file using data in the specified tune mix object
+! If no RegIndex is specified, then a dialog box is displayed to select the
+! tune mix.  The three 'apply' parameters control which type of parameter
+! is used:
+!     ApplyMode       : Set ionization mode, ion polarity, ?CDS bottle?
+!     ApplyIons       : Set ion mass assignments and scan parameters
+!     ApplyParmLimits : Set min and max values for ramp parameters
+!     ApplyDefaults   : Reset to defaults: all the above plus tune parms
+! If any of the 'apply' (except ApplyDefaults) parameters are not supplied, 
+! a dialog box will request which to use; ApplyDefaults = 1 will apply all
+! without user intervention
+! If ion polarity is changed, the other tunefile polarity is loaded without
+! saving the current tune file.
+!
+!***************************************************************************!
+LOCAL ApplyTM$, ShortName$, msat_ApplyTuneMixDlg
+LOCAL IonPolarity, CurrentIonPolarity, text$, inlet$, IonSource
+LOCAL numberOfMasses, i, ion, j, parm, step, text1$, parm$
+
+Local  ID_TUNEMAC_MSAT_APPLYTUNE_776
+Local  ID_TUNEMAC_MSAT_APPLYTUNE_777
+Local  ID_TUNEMAC_APPLY_IONIZATI_778
+Local  ID_TUNEMAC_APPLY_TUNE_ION_779
+Local  ID_TUNEMAC_APPLY_RAMP_LIM_780
+Local  ID_TUNEMAC_SET_ALL_TUNE_V_781
+Local  ID_TUNEMAC_MSPARM_IONPOLA_782
+Local  ID_TUNEMAC_ION_POLARITY_W_783
+Local  ID_TUNEMAC_ERROR_SETTING_784
+Local  ID_TUNEMAC_ERROR_SETTING_785
+Local  ID_TUNEMAC_PARM_786
+Local  ID_TUNEMAC_SETTING_69
+
+Local  ID_TUNEMAC_SETTING_GAIN_A_788
+Local  ID_TUNEMAC_SETTING_MANUAL_789
+Local  ID_TUNEMAC_APPLYDEFAULTS_790
+ID_TUNEMAC_MSAT_APPLYTUNE_776                      =  17776  
+ID_TUNEMAC_MSAT_APPLYTUNE_777                      =  17777  
+ID_TUNEMAC_APPLY_IONIZATI_778                      =  17778  
+ID_TUNEMAC_APPLY_TUNE_ION_779                      =  17779  
+ID_TUNEMAC_APPLY_RAMP_LIM_780                      =  17780  
+ID_TUNEMAC_SET_ALL_TUNE_V_781                      =  17781  
+ID_TUNEMAC_MSPARM_IONPOLA_782                      =  17782  
+ID_TUNEMAC_ION_POLARITY_W_783                      =  17783  
+ID_TUNEMAC_ERROR_SETTING_784                       =  17784  
+ID_TUNEMAC_ERROR_SETTING_785                       =  17785  
+ID_TUNEMAC_PARM_786                                =  17786  
+ID_TUNEMAC_SETTING_69                              =  17069  
+ID_TUNEMAC_SETTING_69                              =  17069  
+ID_TUNEMAC_SETTING_GAIN_A_788                      =  17788  
+ID_TUNEMAC_SETTING_MANUAL_789                      =  17789  
+ID_TUNEMAC_APPLYDEFAULTS_790                       =  17790  
+   ApplyTM$ = "msat_ApplyTuneMixRegDlg"
+   if RegSize(TuneMixReg) <= 0 then   !* make sure the register's loaded
+      msat_InitTuneMix
+   endif 
+          
+   if RegIndex = 0 then               !* if a register number not passed, ask
+      RegIndex = msat_SelectTuneMix()
+      print ReadResource$("tunemac",ID_TUNEMAC_MSAT_APPLYTUNE_776), RegIndex
+      if RegIndex <= 1 then
+         Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_APPLYTUNE_777)
+         RETURN
+      endif
+   endif
+   ShortName$ = ObjHdrText$(TuneMixReg[RegIndex], "ShortName")
+
+   msat_ApplyTuneMixDlg = DialogExists(ApplyTM$)
+   
+   if (ApplyDefaults = -1) and (ApplyMode = -1) and (ApplyIons = -1) and \
+      (ApplyParmLimits = -1) then
+      if msat_ApplyTuneMixDlg = 0 then         ! create dialog box
+         BeginDialog ApplyTM$, 50, 50, 190, 120, "Apply " + ShortName$ + \
+                                                 " to current tune file?"
+         Groupbox    20,  10, 150,  74
+         CheckBox    30,  20, 120,  10, ReadResource$("tunemac",ID_TUNEMAC_APPLY_IONIZATI_778), ApplyMode
+         CheckBox    30,  36, 130,  10, ReadResource$("tunemac",ID_TUNEMAC_APPLY_TUNE_ION_779),\
+                                         ApplyIons
+         CheckBox    30,  52, 120,  10, ReadResource$("tunemac",ID_TUNEMAC_APPLY_RAMP_LIM_780), \
+                                         ApplyParmLimits
+         CheckBox    30,  68, 120,  10, ReadResource$("tunemac",ID_TUNEMAC_SET_ALL_TUNE_V_781), \
+                                         ApplyDefaults
+         OKButton       53,  95,  32,  16
+         CancelButton   108,  95,  32,  16
+         EndDialog
+      endif                               !* if dialog box was created
+      !* exit if Cancel is pressed
+      if ShowDialog (ApplyTM$) = 0 then
+         RemoveDialog ApplyTM$
+         RETURN
+      endif
+      !* one last chance to abort
+      if alert("Are you sure you want to modify the current tune file?", 4) = 0 then 
+         RemoveDialog ApplyTM$
+         RETURN
+      endif
+   endif
+
+   !* If applydefaults is true, apply all
+   if ApplyDefaults = 1 then
+      ApplyIons = 1
+      ApplyParmLimits = 1
+      ApplyMode = 1
+   endif
+   
+   if ApplyMode = 1 then
+      IonPolarity = ObjHdrVal(TuneMixReg[RegIndex], "IonPolarity")
+      if _offline = 1 then
+         Print ReadResource$("tunemac",ID_TUNEMAC_MSPARM_IONPOLA_782), IonPolarity
+      else   !* online
+         MSParm IonPolarity, CurrentIonPolarity
+         print ReadResource$("tunemac",ID_TUNEMAC_ION_POLARITY_W_783) + val$(CurrentIonPolarity)
+         if CurrentIonPolarity <> IonPolarity then  !* get the other tune file
+            MSGetTuneFile TuneFilePath$ + TuneFileName$, IonPolarity   
+            MSParm IonPolarity, IonPolarity  !* make sure it's right
+         endif 
+      endif
+     ! MSGetMode text$, inlet$
+     ! IonSource = ObjHdrVal(TuneMixReg[RegIndex], "IonSource")
+     ! if IonSource = 0 then
+     !    MSMode "API_ES", inlet$
+     ! else 
+     !    if IonSource = 1 then
+     !       MSMode "APCI", inlet$
+     !    else
+     !      if IonSource = 2 then
+     !        MSMode "APPI", inlet$
+     !      else
+     !        if IonSource = 3 then
+     !          if (instr(text$,"MM")=0) then    ! non-MM mode; Don't want
+     !            MSMode "MM-ES+APCI", inlet$    ! to change it if it is.
+     !          endif
+     !        else
+     !          Print ReadResource$("tunemac",ID_TUNEMAC_ERROR_SETTING_784), IonSource
+     !          RemoveDialog ApplyTM$
+     !          RETURN
+     !        endif
+     !      endif
+     !    endif
+     ! endif
+     msat_SetMode, IonPolarity ! function call to enutnatn.mac
+     RemoveDialog ApplyTM$
+     !* Calibrant selection handled by msat_CalSwitch & TuneMixReg
+   endif            !* end if ApplyMode = 1
+   
+   !* Sets masses and scan parameters
+   if ApplyIons = 1 then
+      numberOfMasses = ObjHdrVal(TuneMixReg[RegIndex], "NumIons")
+      for i = 1 to numberOfMasses
+          ion = TabVal(TuneMixReg[RegIndex], TuneIons, i, "mz")
+          if ion <> 0 then
+             MSMassValue i,,ion,,1
+          endif 
+      next i
+      !* Unselect masses greater than the number of masses  
+      for j = i to 6
+          if j > numberOfMasses then
+             MSMassValue j,,,,0
+          endif
+      next j
+
+      msat_SetAllWidths ,,1            !* apply peak width targets
+
+      MSScanParm LowMass,,  ObjHdrVal(TuneMixReg[RegIndex], "LowMass")
+      MSScanParm HiMass,,   ObjHdrVal(TuneMixReg[RegIndex], "HiMass")
+      MSScanParm Threshold,,ObjHdrVal(TuneMixReg[RegIndex], "Thresh")
+      MSScanParm ScanType,, ObjHdrVal(TuneMixReg[RegIndex], "ScanType")
+      MSPeakParm ,1,,20
+      MSScanParm StepSize,, ObjHdrVal(TuneMixReg[RegIndex], "StepSize")
+      MSAverages ,          ObjHdrVal(TuneMixReg[RegIndex], "Averages")      
+      MSSamples ,           ObjHdrVal(TuneMixReg[RegIndex], "Samples")
+      MSStepSize ,          ObjHdrVal(TuneMixReg[RegIndex], "StepSize")
+      MSFilterMass ,        ObjHdrText$(TuneMixReg[RegIndex], "MSFilter"),, \
+                            ObjHdrVal(TuneMixReg[RegIndex], "MSFilterParm")
+    
+   endif            !* end if ApplyIons = 1
+   
+   if ApplyParmLimits = 1 then
+     for parm = 1 to TabHdrVal(TuneMixReg[RegIndex], TuneParms, "NumberOfRows")
+        !* don't set ramp limits for zones
+        if ConvertText$(upper, TabText$(TuneMixReg[RegIndex], TuneParms, \
+                                        parm, "Action")) <> "ZONE" then
+           !* set ramp limits; make sure there's at least 100 steps
+           step = (TabVal(TuneMixReg[RegIndex], TuneParms, parm, "Max") - \
+                   TabVal(TuneMixReg[RegIndex], TuneParms, parm, "Min")) / 100
+           !* need parameter resolution to properly round the stepsize
+           !* will rely on MSSetRamp command to handle odd values of stepsize
+           On Error print ReadResource$("tunemac",ID_TUNEMAC_ERROR_SETTING_785) + \
+                    TabText$(TuneMixReg[RegIndex], TuneParms, parm, "Parm")
+           !* don't set ramp parameters if the min and max are the same
+           if TabVal(TuneMixReg[RegIndex], TuneParms, parm, "Max") <> \
+              TabVal(TuneMixReg[RegIndex], TuneParms, parm, "Min")
+                 text1$ = "MSSetRamp " +  \
+                           TabText$(TuneMixReg[RegIndex], TuneParms, \
+                           parm, "Parm") + "," + \
+                           val$(TabVal(TuneMixReg[RegIndex], TuneParms, \
+                           parm, "Min")) + "," + \
+                           val$(TabVal(TuneMixReg[RegIndex], TuneParms, \
+                           parm, "Max")) + "," + val$(step)
+                 Print text1$
+                 evaluate text1$
+            endif
+           On Error
+        endif       !* end if not a zone
+     next parm
+   endif            !* end if ApplyParmLimits
+   
+   if ApplyDefaults = 1 then
+     for parm = 1 to TabHdrVal(TuneMixReg[RegIndex], TuneParms, "NumberOfRows")
+         parm$ = TabText$(TuneMixReg[RegIndex], TuneParms, \
+                            parm, "Parm")
+         print ReadResource$("tunemac",ID_TUNEMAC_PARM_786), parm, "  ", parm$
+         !* if ZONE
+         if ConvertText$(upper, TabText$(TuneMixReg[RegIndex], TuneParms, \
+                                        parm, "Action")) = "ZONE" then  
+            if  ConvertText$(upper, parm$) = "VAPORIZER" then
+               if (ObjHdrVal(TuneMixReg[RegIndex], "IonSource") = 1) or \
+                  (ObjHdrVal(TuneMixReg[RegIndex], "IonSource") = 2) or \
+                  (ObjHdrVal(TuneMixReg[RegIndex], "IonSource") = 3) then
+                  DefVal = TabVal(TuneMixReg[RegIndex], TuneParms, parm, "Default") ! Define "DefVal" parameter for Vaporizer zone CPL 02/13/06
+                  MaxVal = TabVal(TuneMixReg[RegIndex], TuneParms, parm, "Max") ! Define "MaxVal" parameter for Vaporizer zone CPL 02/13/06
+                  Print ReadResource$("tunemac",ID_TUNEMAC_SETTING_69) + TabText$(TuneMixReg[RegIndex], TuneParms, \
+                     parm, "Action") + parm$ +" to " + val$( \
+                     TabVal(TuneMixReg[RegIndex], TuneParms, parm, "Default"))
+                  MSZone Parm$,,, DefVal,,MaxVal ! Add MSZone command to apply default setting CPL 02/13/06
+                  Print    
+               endif
+            else             !* if not VAPORIZER
+               !* set zone parameters
+               DefVal = TabVal(TuneMixReg[RegIndex], TuneParms, parm, "Default")
+               Print ReadResource$("tunemac",ID_TUNEMAC_SETTING_69) + TabText$(TuneMixReg[RegIndex], TuneParms, \
+                      parm, "Action") + " " + parm$ +" to " + val$( DefVal )
+               MSZone Parm$,,, DefVal
+                      
+            endif
+            
+         else  !* if not a zone
+            if ConvertText$(upper, parm$) = "GAIN" then
+               !* set the gain
+               print ReadResource$("tunemac",ID_TUNEMAC_SETTING_GAIN_A_788)
+               MSParm Gain,,1
+               MSParm HED,,10000
+            else
+               !* Check for manual dynamic ramp
+               if ConvertText$(upper, TabText$(TuneMixReg[RegIndex], TuneParms, \
+                                           parm, "Action")) = "MANRAMP" then  
+                  if msat_SetParm(RegIndex, parm$, "MANRAMP") = 1 then
+                    print ReadResource$("tunemac",ID_TUNEMAC_SETTING_MANUAL_789) + parm$                         
+                  endif
+               else
+               !* check for APCI or MM-ES+APCI only parameters
+                 if ConvertText$(upper, parm$) = "CORONA" then
+                     if (ObjHdrVal(TuneMixReg[RegIndex], "IonSource") = 1) or \
+                        (ObjHdrVal(TuneMixReg[RegIndex], "IonSource") = 3) then
+                           MSParm parm$ , , TabVal(TuneMixReg[RegIndex], \
+                             TuneParms, parm, "Default")
+                     endif
+                 else      !* set the parameter
+                    On Error print
+                    MSDynamic parm$, disable
+                    !* Don't set parameters which are supposed to use last values
+                    if ConvertText$(upper, TabText$(TuneMixReg[RegIndex], TuneParms, \
+                                          parm, "Action")) <> "LAST" then  
+                        MSParm parm$ , , \
+                              TabVal(TuneMixReg[RegIndex], TuneParms, parm, \
+                              "Default")
+                    endif          
+                    On Error
+                 endif
+               endif 
+            endif
+         endif   
+      next parm
+   endif            !* end if ApplyDefaults
+   
+   RemoveDialog ApplyTM$
+   Print ReadResource$("tunemac",ID_TUNEMAC_APPLYDEFAULTS_790)
+
+endmacro   !* msat_ApplyTuneMix
+!***************************************************************************!
+
+!***************************************************************************!
+name msat_InitTuneMix
+PARAMETER NewMix default 0, TuneMixFile$ default ""
+!
+! Loads the tune mix register from disk if it's not in memory.  
+! If a tunemix file is specified, a full path name should be used.  
+! 
+! if NewMix = 1, make a new object and initiate the modify routine
+! if NewMix = 0, then load from disk if not found in memory  
+!
+!***************************************************************************!
+local _button, line1$
+
+
+Local  ID_TUNEMAC_LOADED_TUNE_MI_791
+Local  ID_TUNEMAC_MSAT_INITTUNEM_792
+ID_TUNEMAC_LOADED_TUNE_MI_791                      =  17791  
+ID_TUNEMAC_LOADED_TUNE_MI_791                      =  17791  
+ID_TUNEMAC_MSAT_INITTUNEM_792                      =  17792  
+   if TuneMixFile$ <> "" then 
+   !* Use file name specified
+      if FileStat(MODE, TuneMixFile$) = 1 then 
+         TuneMixRegFileName$ =  TuneMixFile$
+      else
+         ! try to load the default tune mix register
+         if FileStat(MODE, defTuneMixRegFileName$) = 1 then 
+            TuneMixFile$ = defTuneMixRegFileName$
+         else
+           line1$ = "The system was unable to load the tune " \
+           + "mix register from "+TuneMixFile$ + ".  The system " \
+           + "will try to load the register from: " + chr$(13) + TuneMixRegFileName$
+           _button = Alert(line1$,3)
+         endif
+     endif
+   endif
+   
+   !* if there's no tune mix register in memory
+   if RegSize(TuneMixReg) <= 0 then 
+      !* see if file exists
+      if FileStat(MODE, TuneMixRegFileName$) = 1 then 
+         LoadObj TuneMixRegFileName$,, TuneMixReg
+         Print ReadResource$("tunemac",ID_TUNEMAC_LOADED_TUNE_MI_791) + TuneMixRegFileName$
+      else
+         ! try to load the default tune mix register
+         if FileStat(MODE, defTuneMixRegFileName$) = 1 then 
+            LoadObj defTuneMixRegFileName$,, TuneMixReg
+            Print ReadResource$("tunemac",ID_TUNEMAC_LOADED_TUNE_MI_791) + defTuneMixRegFileName$
+         else
+            Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_INITTUNEM_792)
+         endif
+      endif
+   endif
+
+   if NewMix = 1 then
+      CopyObj TuneMixReg[1], TuneMixReg
+      !* Call the msat_EditTuneMix routine so that the user can enter
+      msEditTuneMix RegSize(TuneMixReg)
+   endif           !* end if creating a new mix
+
+endmacro           !* msat_InitTuneMix
+!******************************************************************************!
+!******************************************************************************!
+name msat_SelectTuneMix
+PARAMETER pMixName$      Default ""
+! This macro returns the index number of the register.  If passed a short
+! name, it will return the index number.  If no name is passed "", then
+! a dialog box comes up to let the user select the mix.  If "Auto" is passed,
+! then the first tunemix register with the correct ionization mode and ion
+! polarity is chosen.  If an error is encountered, -1 is returned.
+!
+!******************************************************************************!
+Local lDebug;	lDebug = 1
+LOCAL TMSelect$, IonPolarity, TuneRegName$, TuneIndex, TuneRegSize, i
+LOCAL RegPol, RegSrc, ShortName$, ThisPol$, ThisScan$, TabShortName$
+LOCAL TabLongName$, NameList$, LongName$, TuneMixSelectDlg, _button
+
+Local  ID_TUNEMAC_MSAT_SELECTTUN_793
+Local  ID_TUNEMAC_TUNE_MIX_794
+Local  ID_TUNEMAC_LONG_NAME_796
+ID_TUNEMAC_MSAT_SELECTTUN_793                      =  17793  
+ID_TUNEMAC_TUNE_MIX_794                            =  17794  
+ID_TUNEMAC_LONG_NAME_796                           =  17796  
+
+    TMSelect$ = "TuneMixSelectDlg"
+    ! Load tune mix reg & set variable based on polarity:
+    ! Polarity 0 = positive 
+    ! Polarity 1 = negative
+    ! Polarity 2 = fast or ultra fast scanning positive
+    ! Polarity 3 = fast or ultra fast scanning negative
+    MSParm ionPolarity, IonPolarity
+    if IonPolarity < 2 then
+        TuneRegName$ = "TuneMixReg"           ! Standard scan
+        if RegSize(TuneMixReg) <= 0 then      ! if the register is not found
+            loadobj _tunepath$ + "def_tmix.reg",,TuneMixReg
+        endif
+    else
+        TuneRegName$ = "FSTuneMixReg"         ! Fast scan or ultra fast scan
+        if RegSize(FSTuneMixReg) <= 0 then    ! if the register is not found
+            loadobj _tunepath$ + "defmixFS.reg",,FSTuneMixReg
+        endif
+    endif
+    If ( lDebug > 0 ) then
+	Print "MSat_SelectTuneMix: IonPolarity =", IonPolarity
+	Print "MSat_SelectTuneMix: TuneRegName =", TuneRegName$
+    Endif ! Debug block
+
+    if pMixName$ <> "" then              ! check parameter passed
+	if ConvertText$(upper,pMixName$) = "AUTO" then
+            !* select first register with correct source type
+            msat_SetMode IonPolarity     ! Set msat_mode & msat_srctype globals
+            ! Code branch for instruments not prior to G6100 models
+            If ( pre6100() = 0 ) then
+                MSAT_SrcType = GetIonSource()
+            Endif
+	    TuneIndex = 0
+            evaluate "TuneRegSize = RegSize("+TuneRegName$+")"
+            i = 2
+            while ( i <= TuneRegSize ) and TuneIndex = 0
+		evaluate "RegPol = ObjHdrVal("+TuneRegName$+"[i], IonPolarity)"
+		evaluate "RegSrc = ObjHdrVal("+TuneRegName$+"[i], IonSource)"
+		if (RegPol = IonPolarity)  AND (RegSrc = msat_srctype) then
+		    TuneIndex = i
+		endif
+		i = i + 1
+	     endwhile       ! end of stepping through tunemix register
+         if TuneIndex = 0 then
+            Print ReadResource$("tunemac",ID_TUNEMAC_MSAT_SELECTTUN_793) + \
+                  "register matches current parameters" 
+            RETURN -1
+         else
+            RETURN TuneIndex
+         endif
+      else              ! make sure that the specified mix exists
+         ShortName$ = ConvertText$(upper,pMixName$)
+         if (instr(ShortName$,"MM")>0) then
+           if (instr(ShortName$,"POS")>0) then
+             ThisPol$ = "POS"
+           else
+             ThisPol$ = "NEG"
+           endif
+           if (instr(ShortName$,"Fast")>0) then
+             ThisScan$ = " - FAST"
+           else
+             ThisScan$ = ""
+           endif
+           ShortName$ = "MM-ES+APCI "+ThisPol$+ThisScan$
+         endif
+         evaluate "TuneRegSize = RegSize("+TuneRegName$+")"
+         for i = 2 to TuneRegSize
+           evaluate "TabShortName$ = ObjHdrText$("+TuneRegName$+"[i], ""ShortName"")"
+           if ConvertText$(upper, TabShortName$) = ShortName$ 
+              RETURN i
+           endif
+         next i
+         Print ReadResource$("tunemac",ID_TUNEMAC_TUNE_MIX_794), MixName$, " not found"
+         RETURN -1
+      endif
+   else                               ! no parameter passed; make dialog box
+   
+      !* Get the list of tune mixes
+      evaluate "TuneRegSize = RegSize("+TuneRegName$+")"
+      for i = 2 to TuneRegSize
+        evaluate "TabLongName$ = ObjHdrText$("+TuneRegName$+"[i], ""LongName"")"
+         NameList$ = NameList$ + TabLongName$ + "|"
+      next i
+      if len(NameList$) > 1 then
+         NameList$ = NameList$[1:len(NameList$)-1]
+         LongName$ = SubString$(NameList$,1,,"|")
+      endif
+
+      TuneMixSelectDlg = DialogExists(TMSelect$)
+       
+      if TuneMixSelectDlg = 0 then
+         BeginDialog TMSelect$, 50, 50, 190, 100, "Select Tune Mix"
+         
+         OKButton      24, 70, 32, 16
+         CancelButton  88, 70, 32, 16 
+
+         ListBox       20, 10, 150, 38, NameList$, LongName$
+       
+         EndDialog
+      endif   ! end build dialog box
+      ! print ReadResource$("tunemac",ID_TUNEMAC_LONG_NAME_796) + LongName$
+       
+      _button = showDialog(TMSelect$)
+      
+      !* find the register number that the long name corresponds to   
+      for i = 2 to TuneRegSize
+        ! Print "msat_SelectTuneMix(): LongName= ", ObjHdrText$(TuneRegName[i], \
+        !      "LongName"), "; Register index= ", i
+        evaluate "TabLongName$ = ObjHdrText$("+TuneRegName$+"[i], ""LongName"")"
+        if TabLongName$ = LongName$ then
+           RemoveDialog TMSelect$
+           RETURN i
+        endif
+      next i
+   endif         !* end if no parameter passed
+
+   RemoveDialog TMSelect$
+   RETURN -1     !* if we got this far,something's wrong
+   
+endmacro           !* msat_SelectTuneMix
+
+!***************************************************************************!
+
+if Check(variable, PRTestVer$) = 1 then
+   print "enutnmix.mac ver. " + TuneMixVer$ + " loaded."
+endif
+
+!*********************** End of File ***************************************!

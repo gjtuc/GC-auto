@@ -1,0 +1,2660 @@
+
+!******************************************************************************
+!*
+!* FILE:  top.mac
+!*
+!* DESCRIPTION:  Toplevel Macros, Autostart Macro
+!*
+!* $Header: /cag/PHX3D/parts/macros/top.mac 4.91 2002-09-04 01:49:54-07 fkremser Exp $
+!******************************************************************************
+!*
+!* MACROS :                     GotoStandby
+!*                                                  ClosePhx
+!*           Top                SetMethodChanged    MethodWait
+
+
+!############################################################################
+name CmdChangeAccessLevel
+
+! called from the menu item to change the access level.
+! The macro's only reason for existence is to avoid creating a global
+! variable to hold the return value of ChangeAccessLevel.
+!############################################################################
+
+local r_val
+
+  r_val = ChangeAccessLevel(1)
+
+  ! See if to change the toolbar buttons
+  TLB_SetANN_GraphTaskAccess
+
+endmacro
+
+!############################################################################
+name GotoStandBy
+
+! Called in the Instrument|System Off menu item
+!############################################################################
+ 
+local reply$, base$, lastitem$, Type$
+ 
+local NLSFileName_top$
+local ID_TOP_SWITCH_OFF_LC_1
+local ID_TOP_SWITCH_OFF_CE_2
+local ID_TOP__AND_3
+local ID_TOP_LAMP_S_4
+local ID_TOP___THERMOSTAT_5
+local ID_TOP_SWITCH_OFF_6
+local ID_TOP_MSD__STANDBY_M_7
+
+  NLSFileName_top$				              =  "top"
+  ID_TOP_SWITCH_OFF_LC_1            =  17001  
+  ID_TOP_SWITCH_OFF_CE_2            =  17002  
+  ID_TOP__AND_3                     =  17003
+  ID_TOP_LAMP_S_4                   =  17004  
+  ID_TOP___THERMOSTAT_5             =  17005  
+  ID_TOP_SWITCH_OFF_6               =  17006  
+  ID_TOP_MSD__STANDBY_M_7           =  17007
+
+  if _ProductType$ = "GC" then
+    return
+  endif
+
+  if _offline<>0 then
+    return
+  endif
+
+  ! initialize reply$ string parts
+  if _HPCE=0 then
+    base$ = ReadResource$(NLSFileName_top$,ID_TOP_SWITCH_OFF_LC_1)
+  else
+    base$ = ReadResource$(NLSFileName_top$,ID_TOP_SWITCH_OFF_CE_2)
+  endif
+  and$  = ReadResource$(NLSFileName_top$,ID_TOP__AND_3)
+  lastitem$ = ReadResource$(NLSFileName_top$,ID_TOP_LAMP_S_4)
+  
+  ! add thermostat
+  if (devleothm > 0) or (devRCnet > 0) then
+    base$ = base$ + ReadResource$(NLSFileName_top$,ID_TOP___THERMOSTAT_5)
+  endif
+
+  ! add MSD
+  if dev1946msd > 0  then
+	if MSOnlyConfigCheck() = 1 then
+	  base$ = ReadResource$(NLSFileName_top$,ID_TOP_SWITCH_OFF_6)
+	  and$ = " "
+	else
+      base$ = base$ + ", " + lastitem$
+	endif
+    lastitem$ = ReadResource$(NLSFileName_top$,ID_TOP_MSD__STANDBY_M_7) 
+  endif
+
+  ! build final string
+  reply$ = base$ + and$ + lastitem$ + "?"
+
+  ON ERROR _ASK4APPILAMP = 0
+  if alert (reply$, 4, Alert4Title$) = 1 then
+    ! This _ASK4APPILAMP flag is needed to set to 1. C code will check the value
+    ! if set to 1, will pop up a dialog box ask for shut down APPI Lamp or not
+    ! if set to 0, no farther action
+    _ASK4APPILAMP = 1
+    StandBy
+    ! switch off FLD lamp
+    if dev1046FLD = 1
+      if _offline = 0
+        reply$ = SendModule$ ("FLD", "LAMP=0")
+      endif
+    endif
+  endif
+  ON ERROR
+
+endmacro
+
+!############################################################################
+name SetUALValues
+!############################################################################
+
+local menutype$
+
+  if bManagerLevelAccess = 1 then
+    menutype$ = TabHdrText$(_config[1],"MenusForViews","MenuCol")
+    if menutype$ = "FullMenuFile" then
+      SetTabHdrVal _Config[1], "UAL", "SetFullMenu", 1
+    else
+      SetTabHdrVal _Config[1], "UAL", "SetFullMenu", 0
+    endif
+  EndIf
+  
+endmacro
+
+!############################################################################
+name ClosePhx
+
+Parameter no_prompt default 0
+Parameter start_LabDev default 0
+
+! Called from the Exit menu item
+!############################################################################
+
+local ok, mode$, ok1
+local dummy
+
+local NLSFileName_top$
+local ID_TOP__OFFLINE_8
+local ID_TOP__ONLINE_9
+Local ID_TOP_CLOSE_10
+Local ID_TOP_STARTLABDEV_46
+
+  NLSFileName_top$                  =  "top"
+  ID_TOP__OFFLINE_8                 =  17008
+  ID_TOP__ONLINE_9                  =  17009
+  ID_TOP_CLOSE_10                   =  17010
+  ID_TOP_STARTLABDEV_46             =  17046
+
+  if _offline = 1
+    Mode$ = ReadResource$(NLSFileName_top$,ID_TOP__OFFLINE_8)
+  else
+    Mode$ = ReadResource$(NLSFileName_top$,ID_TOP__ONLINE_9)
+  endif
+    
+  if start_LabDev=0
+  
+    !!!
+    !!! ClosePhx is called (via CpRequest) from the UAL code.
+    !!! We don't want a prompt if the user tries to Cancel out
+    !!! without supplying a login id.
+    !!!
+    if no_prompt <> 1 then
+      ok = alert(ReadResource$(NLSFileName_top$,ID_TOP_CLOSE_10) + _instname$ + mode$ + "?", 4, Alert4Title$)
+      if ok = 1 AND _offline = 0
+        if  DevRCNet+DevLeoAfc+DevLeoPump+DevLeoAls+DevLeoThm+DevLeoDad+DevLeoMwd+DevNucDad+DevNucMwd+DevNucVwd+DevLeoFld+DevLeoVwd+DevLeoRid+Dev1946Msd > 0
+          GotoStandBy
+        endif
+      endif
+    else
+      ok = 1
+    endif
+  Else
+    if no_prompt <> 1 then
+      ok=Alert(sPrintf$(_instname$+mode$,ReadResource$(NLSFileName_top$,ID_TOP_STARTLABDEV_46)),4,Alert4Title$)
+    Else
+      ok=1
+    endif
+  endif
+  
+  if ok = 1     ! ok - close application
+  
+    SwitchViewCloseAllWindows 1 !non view manager windows
+  
+    ! Check if current view was "Diagnose". If so, save the diagnosis register and
+    ! clear the method changed and sequence changed flag.
+    if TabHdrType(_CONFIG[1], WINDOW, CurrentView) <> 99 then
+      if ConvertText$(upper,TabHdrText$(_CONFIG[1], WINDOW, CurrentView)) = "DIAGNOSE" then
+        ! Also check whether DiagGUIReg exits because in the case of exiting the ChemStore
+        ! logon dialog the ChemStation is closed before DiagGUIReg is loaded.
+        if RegSize(DiagGUIReg) > 0 then
+          SaveObj DiagGUIReg, _INSTPATH$ + "dgguireg.reg", NEW
+        endif
+        _MethodChanged = 0
+        _SequenceChanged = 0
+      endif
+    endif
+
+
+    ! Check if current view was "Verify". If so, close the verification file.
+    ! clear the method changed and sequence changed flag.
+    if TabHdrText$(_Config[1], "Window", "CurrentView") = "Verify" then
+      If IVResClose() = 0
+        return
+      endif
+      _MethodChanged = 0
+      _SequenceChanged = 0
+    endif
+
+    ! Check if current view was "RPTLAYOUT". If so, check for changed template
+    if TabHdrText$(_Config[1], "Window", "CurrentView") = "RPTLAYOUT" then
+      CloseRptLayoutView 1
+    endif
+
+    If ClearUpDirtyMethod() = 0
+      return
+    EndIf
+    
+    If ClearUpDirtySequence() = 0
+      return
+    EndIf
+
+    ! Check for Dirty HyperSequence if exists
+    If Check(VARIABLE,STK_EXISTS)=1 Then
+      If (STK_EXISTS=1 or HypSeq_Always=1)
+        If ClearUpDirtyHyperSequence() = 0
+          Return
+        endif
+      endif
+    EndIf
+
+    !Man Int Events in data file
+    If DFEvents_CheckDirty() = 0 Then
+      Return
+    EndIf
+
+    If VC_ClearUpDirtyData() = 0
+      return
+    EndIf
+
+    VC_Shutdown
+
+
+    !Check if GC product is running
+    If Check(Variable, ShowGCGUI$) <> 0 Then
+      ! GC application is running
+      ! Close all GC windows
+      ShowGCGUI$ = "0000"
+    EndIf
+
+
+    ! Clear the _DDE variables in WIN.INI
+    if _offline = 1
+      SetPrivateProfileString "PCS,"+Val$(_Instrument), "_DDEOffLine", "", "chemstation.ini"
+    else
+      SetPrivateProfileString "PCS,"+Val$(_Instrument), "_DDEOnLine", "", "chemstation.ini"
+    endif
+
+    ! Delete rawdata file if marked for delete.
+    if CheckSecPack() > 0  ! Operator and manger in security mode
+    Sec_DeleteRawdataFiles 0
+    endif
+
+    ! Close addon products
+    ExecHook "CloseApp"
+
+    _LoadServiceNotify_ShutdownEvent
+
+    ! Save Insert Vial Range Box state in object header
+    if ObjHdrType(_Config[1], "InsVialRngBox") <> 99 AND \
+      Check(Variable, SEQTAB_InsVialRngBox) = 1 then
+      SetObjHdrVal _Config[1], "InsVialRngBox", SEQTAB_InsVialRngBox
+    endif
+
+    ! Save Load Signal Box state in object header
+    if ObjHdrType(_Config[1], "LoadSigBox") <> 99 AND \
+      Check(Variable, ChroLoadSigBox) = 1 then
+      SetObjHdrVal _Config[1], "LoadSigBox", ChroLoadSigBox
+    endif
+
+    SetUALValues
+
+    if TabHdrText$(_Config[1],"window","CurrentView") = "TOP"
+       ACQSetTheNewDisplayTab  TabHdrText$(_Config[1],"View_TOP",\
+                               "CurrentDisplay"),  1 , 0
+    endif
+
+    ! switch yielding back to normal mode (refer to top) to avoid
+    ! server access during shut down
+    _LoadService_ToggleYield
+    
+    
+    ! start Lc diagnositcs
+    If start_LabDev=1
+      StartUpLabDev
+    EndIf
+    
+    !to be clean at next startup of CS : 
+    !clear if _DATASUBDIR$ does not exist, assuming it was then created on scondary datapath only
+    !this is important for single samples info
+    if _DATASUBDIR$ <> ""  and  FileStat (Mode, _DATAPath$ + _DATASUBDIR$) <> 2 then
+       _DATASUBDIR$ = "" 
+    endif
+    
+    
+    BYE
+  endif
+  
+endmacro
+
+!############################################################################
+name SetMethodChanged
+
+parameter EventCause$
+parameter EventLevel$
+parameter EventReg$
+parameter EventObj
+parameter EventPartName$
+parameter EventIndex
+
+! Called when anything in the _DAMethod register is changed
+!############################################################################
+
+  _MethodChanged = 1
+  GUICondenseDAMethodParameters
+
+  On Error Print
+  ExecHook "DAMethodChanged"
+  On Error
+
+endmacro
+
+!############################################################################
+name MethodWait
+
+parameter waittime default 5
+
+! Called by sequence after a new method is loaded
+!############################################################################
+
+local l1
+
+local NLSFileName_top$
+local ID_TOP_METHOD_WAIT_11
+  
+NLSFileName_top$                  =  "top"
+ID_TOP_METHOD_WAIT_11             =  17011
+
+  
+  if Check (Variable, NewSeqMethod) = 0
+    return
+  endif
+
+  if NewSeqMethod = 1
+    ! new method loaded in sequence
+    l1 = waittime * 60
+
+    while l1 > 0
+      print using "% #.## % /", ReadResource$(NLSFileName_top$,ID_TOP_METHOD_WAIT_11), l1/60, " min"
+      sleep 1
+      l1 = l1 - 1
+    endwhile
+    print ""
+  endif
+  
+endmacro
+
+!############################################################################
+name CheckDisk
+
+parameter MinSize Default 1000000    ! 1MB
+
+! Checks for free disk space and prints warning if below MinSize
+!############################################################################
+ 
+local DiskSpace
+
+local NLSFileName_top$
+local ID_TOP_NOT_ENOUGH_DIS_13
+local ID_TOP_DISK_SPACE_IS_14
+local ID_TOP_NOT_ENOUGH_DIS_15
+local ID_TOP_DISK_SPACE_16
+
+  NLSFileName_top$                  =  "top"
+  ID_TOP_NOT_ENOUGH_DIS_13          =  17013
+  ID_TOP_DISK_SPACE_IS_14           =  17014
+  ID_TOP_NOT_ENOUGH_DIS_15          =  17015
+  ID_TOP_DISK_SPACE_16              =  17016
+
+
+  DiskSpace=FreeDiskSpace(_DataPath$[1])
+  if  DiskSpace <= MinSize
+    if _sequenceon = 1
+      WriteToLogbook ReadResource$(NLSFileName_top$,ID_TOP_NOT_ENOUGH_DIS_13)
+      _abort = 1
+    else
+      if _MethodOn = 1
+        if Alert (ReadResource$(NLSFileName_top$,ID_TOP_DISK_SPACE_IS_14),4) = 0
+          WriteToLogbook ReadResource$(NLSFileName_top$,ID_TOP_NOT_ENOUGH_DIS_15)
+          _abort = 1
+        endif
+      else
+        Message (ReadResource$(NLSFileName_top$,ID_TOP_DISK_SPACE_16)+Val$(DiskSpace/1000000)+" MB")
+      endif
+    endif
+  else
+    if _sequenceon = 1
+      WriteToLogbook ReadResource$(NLSFileName_top$,ID_TOP_DISK_SPACE_16)+Val$(Ceil(DiskSpace/1000)/1000)+" MB"
+    else
+      Message (ReadResource$(NLSFileName_top$,ID_TOP_DISK_SPACE_16)+Val$(Ceil(DiskSpace/1000)/1000)+" MB")
+    endif
+  endif
+  
+endmacro
+
+!############################################################################
+name InitializeUAL
+
+! Initialize user access levels.  The user will be prompted to select
+! an access level if the "PromptAtStartup" flag is set.
+! Called at end of autostart macro.
+!############################################################################
+
+! ############## Attention !!! ######################################
+! This macro is overloaded by HP ChemStore CS !
+! In case of any changes please inform ChemStore people in Waldbronn.
+! (Hartmut Doenges or Gerd Heinje)
+! Thanks.
+! ###################################################################
+
+local bPromptAtStartup, r_val, szPassword$
+
+local NLSFileName_top$
+local ID_TOP_INITIALIZING_U_17
+
+  NLSFileName_top$                  =  "top"
+  ID_TOP_INITIALIZING_U_17          =  17017  
+
+  If AUTHORIZATIONSERVICE_ISPERMITTED(AS_Privilege_CommandLineRun)=0 Then
+    CmdLine off  
+    bManagerLevelAccess = 1
+    Return
+  EndIf
+
+
+  ! If the UAL DLC does not exist, default to "Manager" level.
+  if FileStat(MODE, _EXEPATH$ + "HPUAL_01.DLC") <> 1 Then
+    bManagerLevelAccess = 1
+    CmdLine on
+    Return
+  endif
+
+  ! Initialize user access levels.
+  print ReadResource$(NLSFileName_top$,ID_TOP_INITIALIZING_U_17)
+
+  ! Create the UAL table if it does not exist.
+  if ObjHdrType (_config[1], "UAL") = 99 then
+    NewTab _config[1], "UAL"
+    NewTabHdrVal _config[1], "UAL", "PromptAtStartup", 0, 1, 3, 0, 1
+    NewTabHdrVal _config[1], "UAL", "SetFullMenu", 0, 1, 3, 0, 1
+    NewTabHdrVal _config[1], "UAL", "UserLevel", 0, 1, 3, 0, 1
+  endif
+
+  if idUAL_DLC = 0 THEN
+    bManagerLevelAccess = 1
+    CmdLine on
+  endif
+
+  ! If "PromptAtStartup" is set, then prompt for access level.
+  bPromptAtStartup = TabHdrVal(_config[1], "UAL", "PromptAtStartup")
+  if bPromptAtStartup = 1 Then
+    ! Pass a "1" as the first parameter to "ChangeAccessLevel" to enable
+    ! the dialog's "Cancel" button.
+
+    ! r_val < 0 error
+    ! r_val = 0 Ok Button
+    ! r_val = 1 Cancel Button
+    ! r_val = 2 Help Button
+
+    ! If the User cancels out of UAL during initialization
+    ! take it as a signal to shut down Step 1B.
+
+    r_val = ChangeAccessLevel( 1 )
+    if r_val = 1 then
+      ClosePhx 1
+    endif
+  else
+    ! If the level is operator, but there is no manager password,
+    ! start up as manager
+    if bManagerLevelAccess = 0 then
+
+	      szPassword$ = PrivateProfileString$("PCS", "level", "chemstation.ini")
+       if szPassword$ = "" then
+          bManagerLevelAccess = 1
+       endif
+    endif
+
+    ! Default to last set level if a prompt is not given.
+    if bManagerLevelAccess = 1 then
+       bSetFullMenu = TabHdrVal(_config[1], "UAL", "SetFullMenu")
+       if bSetFullMenu = 1 Then
+         SwitchMenuInView ,"FULL"
+       else
+         SwitchMenuInView ,"SHORT"
+       endif       
+    endif
+  endif
+
+  if bManagerLevelAccess = 1 Then
+    CmdLine on
+  EndIf
+  
+endmacro
+
+!############################################################################
+Name CheckSecPack
+! 
+!     The macro CheckSecPac has to be installed in all ChemStations
+!     to control the cases where #ModBySecPac#  Statements controlling
+!     the standard behaviour.
+!   
+!     Check, wether the security Pack is installed and which security mode we are in
+!     Return Codes are: 
+!     2 if Security Pack active and manager logged on
+!     1 if Security Pack active and operator logged on
+!		  0 if no Security pack (but ChemStore installed)
+! 		-1 if no Chemstore installed
+!
+!############################################################################
+ 
+  If _IsChemStore = 0 Then
+    ! ChemStore not installed
+    Return -1
+  EndIf
+  
+  If _IsRegulated = 1 and bManagerLevelAccess = 0 Then
+    ! ChemStore installed and security pack is in operator mode
+    Return 1
+  EndIf
+
+  If _IsRegulated = 1 and bManagerLevelAccess = 1 Then
+    ! ChemStore installed and security pack is in manager  mode
+    Return 2
+  EndIf
+  
+  If _IsRegulated = 0  Then
+    ! ChemStore installed and security pack not installed
+    Return 0
+  EndIf
+   
+EndMacro
+  
+  
+
+!############################################################################
+NAME UpdateMaintenanceCDIniFile
+
+! Update hppcssvc.ini according the actual instrument configuration to be
+! used with the MMV maintenance CD ROM title.
+!############################################################################
+
+LOCAL NoOfRows, Row, ModuleRef, IniFileRef$, Section$
+LOCAL System$, Pump$, Degasser$, Oven$, Sampler$, Detector1$, Detector2$
+LOCAL HP1090Found, HP1050Found, HP1100Found
+
+  HP1090Found = 0; HP1050Found = 0; HP1100Found = 0
+  IniFileRef$ = "hppcssvc.ini"
+  Section$ = "PCS" + val$(_INSTRUMENT)
+  SetPrivateProfileString Section$, TOC, "HP1100_" + val$(_INSTRUMENT) +".MVB", IniFileRef$
+
+  System$    = ""
+  Pump$      = "HPNONE.MVB"
+  Degasser$  = "HPNONE.MVB"
+  Oven$      = "HPNONE.MVB"
+  Sampler$   = "HPNONE.MVB"
+  Detector1$ = "HPNONE.MVB"
+  Detector2$ = "HPNONE.MVB"
+  
+  NoOfRows = TabHdrVal(_CONFIG, ModuleINFO, NumberOfRows)
+  FOR Row = 1 TO NoOfRows
+    ModuleRef = TabVal(_CONFIG, ModuleINFO, Row, "nameRef")
+    ModuleID$ = "_" ! to prevent problems with ModuleID$ consisting entirely of digits
+    ModuleID$ = ModuleID$ + TabText$(_CONFIG, Modules, ModuleRef, "Var")
+    ModuleID$ = ModuleID$ + TabText$(_CONFIG, Modules, ModuleRef, "PartNumber")
+    ModuleID$ = ModuleID$ + TabText$(_CONFIG, Modules, ModuleRef, "BasePartNumber")
+
+    ON ERROR GOTO UnknownModule
+     EVALUATE "GOTO " + ModuleID$
+
+     ! 1090 Modules
+
+     _SDS1090:  ;ON ERROR; Pump$ = "HP1090.MVB"
+                HP1090Found = 1
+                GOTO Continue
+
+     _AS1090:   ;ON ERROR; Sampler$ = "HP1090.MVB"
+                HP1090Found = 1
+                GOTO Continue
+
+     _AI1090:   ;ON ERROR; Sampler$ = "HP1090.MVB"
+                HP1090Found = 1
+                GOTO Continue
+
+     _OV1090:   ;ON ERROR; Oven$ = "HP1090.MVB"
+                HP1090Found = 1
+                GOTO Continue
+     _FPD1090:
+     _DAD79880: ;ON ERROR
+                IF Detector1$ = "HPNONE.MVB" THEN
+                  Detector1$ = "HP1090.MVB"
+                ELSE
+                  Detector2$ = "HP1090.MVB"
+                ENDIF
+                HP1090Found = 1
+                GOTO Continue
+
+     ! 1050 Modules
+
+     _MWD79854:
+     _VWD79853:
+     _DAD79854C: ;ON ERROR
+                IF Detector1$ = "HPNONE.MVB" THEN
+                  Detector1$ = "HP1050.MVB"
+                ELSE
+                  Detector2$ = "HP1050.MVB"
+                ENDIF
+                HP1050Found = 1
+                GOTO Continue
+     _SDS79851:
+     _SDS79852:  ;ON ERROR; Pump$ = "HP1050.MVB"
+                HP1050Found = 1
+                GOTO Continue
+
+     _AS79855:   ;ON ERROR; Sampler$ = "HP1050.MVB"
+                HP1050Found = 1
+                GOTO Continue
+
+     ! Leonardo Modules
+
+     _LPMPG1310A:;ON ERROR; Pump$ = "HP11_ISO.MVB"
+                HP1100Found = 1
+                GOTO Continue
+
+     _LPMPG1311A:;ON ERROR; Pump$ = "HP11_QUA.MVB"
+                HP1100Found = 1
+                GOTO Continue
+
+     _LPMPG1312A:;ON ERROR; Pump$ = "HP11_BIN.MVB"
+                HP1100Found = 1
+                GOTO Continue
+
+     _LALSG1313A:;ON ERROR; Sampler$ = "HP11_ALS.MVB"
+                HP1100Found = 1
+                GOTO Continue
+
+     _LVWDG1314A:;ON ERROR
+                IF Detector1$ = "HPNONE.MVB" THEN
+                  Detector1$ = "HP11_VWD.MVB"
+                ELSE
+                  Detector2$ = "HP11_VWD.MVB"
+                ENDIF
+                HP1100Found = 1
+                GOTO Continue
+
+     _LDADG1315A:;ON ERROR
+                IF Detector1$ = "HPNONE.MVB" THEN
+                  Detector1$ = "HP11_DAD.MVB"
+                ELSE
+                  Detector2$ = "HP11_DAD.MVB"
+                ENDIF
+                HP1100Found = 1
+                GOTO Continue
+
+     _LDADG1315B:;ON ERROR
+                IF Detector1$ = "HPNONE.MVB" THEN
+                  Detector1$ = "HP11_DAD.MVB"
+                ELSE
+                  Detector2$ = "HP11_DAD.MVB"
+                ENDIF
+                HP1100Found = 1
+                GOTO Continue
+
+     _LMWDG1365A:;ON ERROR
+                IF Detector1$ = "HPNONE.MVB" THEN
+                  Detector1$ = "HP11_MWD.MVB"
+                ELSE
+                  Detector2$ = "HP11_MWD.MVB"
+                ENDIF
+                HP1100Found = 1
+                GOTO Continue
+
+     _LMWDG1365B:;ON ERROR
+                IF Detector1$ = "HPNONE.MVB" THEN
+                  Detector1$ = "HP11_MWD.MVB"
+                ELSE
+                  Detector2$ = "HP11_MWD.MVB"
+                ENDIF
+                HP1100Found = 1
+                GOTO Continue
+
+     _LRIDG1362A:;ON ERROR
+                IF Detector1$ = "HPNONE.MVB" THEN
+                  Detector1$ = "HP11_RID.MVB"
+                ELSE
+                  Detector2$ = "HP11_RID.MVB"
+                ENDIF
+                HP1100Found = 1
+                GOTO Continue
+
+     _LTHMG1316A:;ON ERROR; Oven$ = "HP11_TCC.MVB"
+                HP1100Found = 1
+                GOTO Continue
+
+     _ADC35900:
+     _ECD1049:
+     _FLD1046:   ;ON ERROR ! Remains on HPNONE.MVB
+                GOTO Continue
+
+     UnknownModule: ;ON ERROR
+
+     Continue:
+
+  NEXT Row
+
+  ! Process rules to determine system title.
+  Sys = HP1100Found * 4 + HP1050Found * 2 + HP1090Found
+  IF Sys >= 4 THEN  ! At least one Leonardo module in the system
+    System$ = "HP11_SYS.MVB"
+  ENDIF
+  IF Sys = 3 THEN  ! A mixed system of 1090 and 1050
+    System$ = "HP1090.MVB"
+  ENDIF
+  IF Sys = 2 THEN  ! A pure 1050 system
+    System$ = "HP1050.MVB"
+  ENDIF
+  IF Sys = 1 THEN  ! A pure 1090 system
+    System$ = "HP1090.MVB"
+  ENDIF
+
+  ! Process rules to determine degassing method
+  IF INSTR(Pump$,"HP11_") > 0 THEN
+    IF INSTR(Pump$,"ISO") = 0 THEN
+      Degasser$ = "HP11_DEG.MVB"
+    ENDIF
+  ELSE
+    Degasser$ = Pump$
+  ENDIF
+
+  ! Process rules to determine injector
+  IF Sampler$ = "HPNONE.MVB" THEN  ! no als found
+    IF INSTR(Pump$,"HP11_") > 0 THEN  ! if it's a leo pump
+      Sampler$ = "HP11_MAN.MVB"   ! then it's a leo Manual Valve
+    ELSE     ! otherwise,
+      Sampler$ = Pump$    ! manual valve type is pump type
+    ENDIF
+  ENDIF
+
+  ! Process rules to determine oven
+  IF Oven$ = "HPNONE.MVB" THEN   ! no oven found
+    IF INSTR(Pump$,"HP11_") > 0 THEN  ! if it's a leo pump
+      Oven$ = "HP11_NOO.MVB"   ! then use leo "no oven" option
+    ELSE     ! otherwise,
+      Oven$ = Pump$    ! oven type is pump type
+    ENDIF
+  ENDIF
+
+  SetPrivateProfileString Section$, System,    System$,    IniFileRef$
+  SetPrivateProfileString Section$, Pump,      Pump$,      IniFileRef$
+  SetPrivateProfileString Section$, Degasser,  Degasser$,  IniFileRef$
+  SetPrivateProfileString Section$, Oven,      Oven$,      IniFileRef$
+  SetPrivateProfileString Section$, Sampler,   Sampler$,   IniFileRef$
+  SetPrivateProfileString Section$, Detector1, Detector1$, IniFileRef$
+  SetPrivateProfileString Section$, Detector2, Detector2$, IniFileRef$
+
+ENDMACRO
+
+
+!############################################################################
+name LoadNLSRegister
+
+parameter ProductArea$               ! for meaning see nlsmake.mac
+parameter Path$ default _AutoPath$   ! path for the code macro files
+parameter bNew default 1             ! if 1 register is loaded regardless
+                                     ! else only if it doesn't exist
+
+! loads the NLS register for the specified ProductArea$.
+!############################################################################
+
+local File$, Reg$, rs
+
+  Reg$ = "NLS" + ProductArea$
+
+  if bNew = 0 then
+    evaluate "rs = RegSize(" + Reg$ + ")"
+    if rs >= 0 then                      ! register already exists
+      return
+    endif
+  endif
+
+  Path$ = Path$ + "language\"
+  File$ = _Lang$ + ProductArea$ + ".reg"
+
+  if FileStat (Mode, Path$ + File$) <> 1 then
+    ! file not found
+    File$ = "enu" + ProductArea$ + ".reg"
+  endif
+
+  evaluate "DelReg " + Reg$
+  evaluate "LoadObj Path$ + File$,," + Reg$
+
+  return
+endmacro
+
+!############################################################################
+name LoadMacro
+
+parameter FileName$                  ! macro file to be loaded
+
+! loads a macro while a message is displayed on the msg line.
+!############################################################################
+
+  print using TabHdrText$ (NLSCore[1], "Util", "Loading"), FileName$
+  macro FileName$
+  print                                ! to clear the msg line
+  return
+endmacro
+
+!############################################################################
+name LoadMcxOrMac
+
+parameter File$                    ! file to be loaded without extension
+parameter StartMacro$ default ""   ! Macro to be executed after loading
+
+! loads a mcx or mac-file while a message is displayed on the msg line.
+!############################################################################
+
+  if filestat(MODE, File$ + ".mcx") = 1   ! exists - is a file
+    print using TabHdrText$ (NLSCore[1], "Util", "Loading"), File$+".mcx"
+    evaluate "macro " + """" + File$ + ".mcx" + """" 
+  else  ! mcx file does not exist try mac file (without test)
+    print using TabHdrText$ (NLSCore[1], "Util", "Loading"), File$+".mac"
+    evaluate "macro " + """" + File$ + ".mac" + """" 
+  endif
+  print                                ! to clear the msg line
+  Evaluate StartMacro$
+
+  return
+endmacro
+
+
+!############################################################################
+Name EndJobBeforeBeginJob               !3-02PR recover from previous BeginJob without an EndJob
+!global print report 'On Error' macros
+!############################################################################
+
+local NLSFileName_top$
+local ID_TOP_ABOVE__BEGINJO_18
+
+NLSFileName_top$                  =  "top"
+ID_TOP_ABOVE__BEGINJO_18          =  17018
+
+  On Error 
+  print _ErrMsg$
+  Print ReadResource$(NLSFileName_top$,ID_TOP_ABOVE__BEGINJO_18)
+  EndJob;
+  BeginJob      !and try again
+EndMacro
+
+
+!############################################################################
+Name CloseDeviceBeforeOpenDevice		!3-02PR recover from previously unclosed OpenDevice...
+!############################################################################
+
+local NLSFileName_top$
+local ID_TOP_ABOVE__OPENDEV_19
+
+  NLSFileName_top$                  =  "top"
+  ID_TOP_ABOVE__OPENDEV_19          =  17019
+
+
+  On Error      !do normal error handling here
+  print _ErrMsg$
+  Print ReadResource$(NLSFileName_top$,ID_TOP_ABOVE__OPENDEV_19)
+  Close #5
+  BeginJob      !get latest printer 'setup' parameters
+  EndJob        !end this pseudo job so any new printer setup is used
+  OpenDevice "Printer" as #5	        !and try again
+EndMacro
+
+
+!############################################################################
+Name GetCurrentPrinterSetup
+!print report utility macro to utilize current printer setup(portrait vs landscape, letter vs A4....)
+!############################################################################
+
+  On Error EndJobBeforeBeginJob           !3-02PR recover and continue
+  !3-02PR - do this BeginJob/EndJob to get latest printer parameters (done during BeginJob)
+  BeginJob       !get latest printer parameters
+  On Error print _ErrMsg$
+  EndJob         !end this pseudo job so the BeginJob below is all set to work
+  On Error       !do normal error handling here
+  
+EndMacro
+
+
+!############################################################################
+Name UseXternalInj
+!############################################################################
+
+    if UseExternalInjector = 0 then
+        UseExternalInjector = 1
+    else
+        UseExternalInjector = 0
+    endif
+
+EndMacro
+
+
+!############################################################################
+Name UseXternalInjMenu
+
+parameter a1$,a2$,a3$,a4$
+!############################################################################
+
+    if UseExternalInjector = 0 then
+        UseExternalInjectorMenu = 1
+    else
+        UseExternalInjectorMenu = 3
+    endif
+
+EndMacro
+
+!############################################################################
+Name OnEvPrefsUpdate_HookWOParams
+
+parameter Action$,Topic$,TopicName$,object,Item$
+!############################################################################
+
+  ExecHook_OnEvPrefsUpdate
+  
+endmacro
+  
+
+!############################################################################
+Name DIR_Create
+!
+!############################################################################
+
+    If ObjHdrType(_Config[1], "Directories") = 99 Then
+        NewTab _Config[1], "Directories"
+
+        NewColText _Config[1],"Directories", "Path"
+        NewColVal _Config[1], "Directories", "Data"
+        NewColVal _Config[1], "Directories", "Method"
+        NewColVal _Config[1], "Directories", "Sequence"
+        NewColVal _Config[1], "Directories", "Report"
+        NewColVal _Config[1], "Directories", "UVLib"
+        NewColVal _Config[1], "Directories", "MSTune"
+    EndIf
+    If TabColType(_Config[1], "Directories", "RecentSingleSample") = 99 Then
+        NewColVal _Config[1], "Directories", "RecentSingleSample"
+    EndIf
+
+    If TabHdrType(_Config[1], "LoadFileOpts", "LoadMeth_Seq") = 99 Then
+        If _ProductType$ = "GC" Then
+            NewTabHdrVal _Config[1], "LoadFileOpts", "LoadMeth_Seq", 0,, 3
+        Else
+            NewTabHdrVal _Config[1], "LoadFileOpts", "LoadMeth_Seq", 1,, 3
+        EndIf
+    Else
+        If TabHdrVal(_Config[1], "LoadFileOpts", "LoadMeth_Seq") = -1 Then
+            If _ProductType$ = "GC" Then
+                SetTabHdrVal _Config[1], "LoadFileOpts", "LoadMeth_Seq", 0
+            Else
+                SetTabHdrVal _Config[1], "LoadFileOpts", "LoadMeth_Seq", 1
+            EndIf
+        EndIf
+    EndIf
+      
+    If TabHdrType(_Config[1], "LoadFileOpts", "LoadMeth_SFs") = 99 Then
+        If _ProductType$ = "GC" Then
+            NewTabHdrVal _Config[1], "LoadFileOpts", "LoadMeth_SFs", 0,, 3
+        Else
+            NewTabHdrVal _Config[1], "LoadFileOpts", "LoadMeth_SFs", 1,, 3
+        EndIf
+    Else
+        If TabHdrVal(_Config[1], "LoadFileOpts", "LoadMeth_SFs") = -1 Then
+            If _ProductType$ = "GC" Then
+                SetTabHdrVal _Config[1], "LoadFileOpts", "LoadMeth_SFs", 0
+            Else
+                SetTabHdrVal _Config[1], "LoadFileOpts", "LoadMeth_SFs", 1
+            EndIf
+        EndIf
+    EndIf 
+
+    If ObjHdrType(_Config[1], Preferences) = 99 Then
+       ! the creation of this table is now done in hpcoreApi
+        NewTab _Config[1], "Preferences"
+
+        !NewTabHdrText _Config[1], Preferences, "SeqNameTemplate", "|Se| |Da| |Ti|"
+        NewTabHdrText _Config[1],"Preferences", "SeqNameTemplate", "<SeqN><Date><Time>"
+        NewTabHdrText _Config[1],"Preferences", "PCName", ""
+        NewTabHdrVal _Config[1], "Preferences", "Counter", 1,, 3
+        NewTabHdrVal _Config[1], "Preferences", "SeqPackage", 1
+    Else
+        If TabHdrType(_Config[1], "Preferences", "PCName") = 99 Then
+            NewTabHdrText _Config[1],"Preferences", "PCName", ""
+            NewTabHdrVal _Config[1], "Preferences", "Counter", 1,, 3
+        EndIf
+        If TabHdrType(_Config[1], "Preferences", "SeqPackage") = 99 Then
+            NewTabHdrVal _Config[1], "Preferences", "SeqPackage", 1
+        EndIf
+    EndIf
+    
+EndMacro 
+
+!############################################################################
+Name DIR_UseSingleSampleDataDir
+!
+Parameter Directory$ default _DATAPATH$
+!############################################################################
+local Row, Loop, NumRows
+
+    If ObjHdrType(_Config[1], "Directories") = 4 Then
+        Directory$ = ConvertText$("trim", Directory$)
+        If Directory$ = "" Then
+            Return
+        EndIf
+
+        !add trailing backslash
+        If Directory$[Len(Directory$)] <> "\" Then
+            Directory$ = Directory$ + "\"
+        EndIf
+
+        Row = RowByText(_Config[1], "Directories",, "Path", "i=", Directory$) 
+        NumRows = TabHdrVal(_Config[1], "Directories", "NumberOfRows")
+        Loop = 1
+        while (Loop > 0)
+            if ((Loop > 0) and (Loop <> Row))
+                SetTabVal  _Config[1], "Directories", Loop, "RecentSingleSample", 0
+            EndIf
+            if (Loop < NumRows)
+                Loop = RowByVal(_Config[1], "Directories", Loop+1:-1, "RecentSingleSample", "<>", 0)
+            else
+                Loop = -1
+            EndIf
+        endwhile
+            
+        If Row > 0 Then
+            SetTabVal  _Config[1], "Directories", Row, "RecentSingleSample", 1
+        EndIf
+
+    EndIf
+EndMacro 
+
+!############################################################################
+Name DIR_AddDirectory
+!
+Parameter Directory$
+Parameter Data      Default 0
+Parameter Method    Default 0
+Parameter Sequence  Default 0
+Parameter Report    Default 0
+Parameter UVLib     Default 0
+Parameter MSTune    Default 0
+!
+!############################################################################
+
+Local Row
+
+    If ObjHdrType(_Config[1], "Directories") = 4 Then
+        
+        Directory$ = ConvertText$("trim", Directory$)
+        If Directory$ = "" Then
+            Return
+        EndIf
+
+        !add trailing backslash
+        If Directory$[Len(Directory$)] <> "\" Then
+            Directory$ = Directory$ + "\"
+        EndIf
+
+        Row = RowByText(_Config[1], "Directories",, "Path", "i=", Directory$)
+        If Row < 0 Then
+            InsTabRow _Config[1], "Directories", 1
+            Row = 1
+            SetTabText _Config[1], "Directories", Row, "Path", Directory$
+        EndIf
+
+        If Data <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "Data", 1
+        EndIf
+        If Method <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "Method", 1
+        EndIf
+        If Sequence <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "Sequence", 1
+        EndIf
+        If Report <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "Report", 1
+        EndIf
+        If UVLib <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "UVLib", 1
+        EndIf
+        If MSTune <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "MSTune", 1
+        EndIf
+
+    EndIf
+
+EndMacro 
+
+
+
+!############################################################################
+Name DIR_RemoveDirectory
+!
+Parameter Directory$
+Parameter Data          Default 0
+Parameter Method        Default 0
+Parameter Sequence      Default 0
+Parameter Report        Default 0
+Parameter UVLib         Default 0
+Parameter MSTune        Default 0
+Parameter FinallyRemove Default 0
+!
+!############################################################################
+
+Local Row
+
+    If ObjHdrType(_Config[1], "Directories") = 4 Then
+        
+        Directory$ = ConvertText$("trim", Directory$)
+        If Directory$ = "" Then
+            Return
+        EndIf
+
+        !add trailing backslash
+        If Directory$[Len(Directory$)] <> "\" Then
+            Directory$ = Directory$ + "\"
+        EndIf
+
+        Row = RowByText(_Config[1], "Directories",, "Path", "i=", Directory$)
+        If Row < 0 Then
+            Return
+        EndIf
+
+        If Data <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "Data", 0
+        EndIf
+        If Method <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "Method", 0
+        EndIf
+        If Sequence <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "Sequence", 0
+        EndIf
+        If Report <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "Report", 0
+        EndIf
+        If UVLib <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "UVLib", 0
+        EndIf
+        If MSTune <> 0 Then
+            SetTabVal _Config[1], "Directories", Row, "MSTune", 0
+        EndIf
+
+        If (FinallyRemove = 1) And \
+            (TabVal(_Config[1], "Directories", Loop, "Data") = 0) And \
+            (TabVal(_Config[1], "Directories", Loop, "Method") = 0) And \
+            (TabVal(_Config[1], "Directories", Loop, "Sequence") = 0) And \
+            (TabVal(_Config[1], "Directories", Loop, "Report") = 0) And \
+            (TabVal(_Config[1], "Directories", Loop, "UVLib") = 0) And \
+            (TabVal(_Config[1], "Directories", Loop, "MSTune") = 0) Then
+            DelTabRow _Config[1], "Directories", Row
+        EndIf
+    EndIf
+
+EndMacro 
+
+
+
+!############################################################################
+Name DIR_InitDirectories
+!
+!############################################################################
+
+    DIR_Create
+    DIR_AddDirectory _DataPath$ , 1
+    DIR_AddDirectory _ConfigMetPath$ ,, 1 
+    DIR_AddDirectory _ConfigSeqPath$  ,,, 1 
+    DIR_UpdateDirectories
+    CpRequest "CP2", "OnEvent ""_Config[1]._Tab.Directories"", ""DIR_UpdateDirectories"",, ""ROD"""
+
+EndMacro 
+
+
+
+!############################################################################
+Name DIR_UpdateDirectories
+!
+Parameter EventCause$			Default ""
+Parameter EventLevel$			Default ""
+Parameter EventSubjName$  Default ""
+Parameter EventObj				Default 0
+Parameter EventObj2 			Default 0
+Parameter EventPartName$  Default ""
+Parameter EventIndex			Default 0
+Parameter EventIndex2     Default 0
+Parameter EventNVName$    Default ""
+!
+!############################################################################
+
+
+Local NumRows
+Local Loop
+Local Path$
+
+    if (EventLevel$ = "Tab_Cell") ! don't care about recent single sample data directory
+        if (EventNVName$ = "RECENTSINGLESAMPLE")
+            return
+        EndIf
+    EndIf
+
+    _DATAPATHS$ = ""
+    _METHODPATHS$ = ""
+    _SEQUENCEPATHS$ = ""
+    _REPORTPATHS$ = ""
+    _UVLIBPATHS$ = ""
+    _MSTUNEPATHS$ = ""
+
+    If ObjHdrType(_Config[1], "Directories") = 4 Then
+        
+        NumRows = TabHdrVal(_Config[1], "Directories", "NumberOfRows")
+        For Loop = 1 To NumRows
+
+            Path$ = TabText$(_Config[1], "Directories", Loop, "Path")
+            if (len(Path$)>0) Then
+                If TabVal(_Config[1], "Directories", Loop, "Data") > 0 Then
+                    if _DATAPATHS$ <> ""
+                       Path$ = "|" + Path$
+                    endif   
+                    _DATAPATHS$ = _DATAPATHS$ + Path$
+                EndIf
+
+                If TabVal(_Config[1], "Directories", Loop, "Method") > 0 Then
+                    if _METHODPATHS$ <> ""
+                       Path$ = "|" + Path$
+                    endif   
+                    _METHODPATHS$ = _METHODPATHS$ + Path$
+                EndIf
+
+                If TabVal(_Config[1], "Directories", Loop, "Sequence") > 0 Then
+                    if _SEQUENCEPATHS$ <> ""
+                       Path$ = "|" + Path$
+                    endif   
+                    _SEQUENCEPATHS$ = _SEQUENCEPATHS$ + Path$
+                EndIf
+
+                If TabVal(_Config[1], "Directories", Loop, "Report") > 0 Then
+                    if _REPORTPATHS$ <> ""
+                       Path$ = "|" + Path$
+                    endif   
+                    _REPORTPATHS$ = _REPORTPATHS$ + Path$
+                EndIf
+
+                If TabVal(_Config[1], "Directories", Loop, "UVLib") > 0 Then
+                    if _UVLIBPATHS$ <> ""
+                       Path$ = "|" + Path$
+                    endif   
+                    _UVLIBPATHS$ = _UVLIBPATHS$ + Path$
+                EndIf
+
+                If TabVal(_Config[1], "Directories", Loop, "MSTune") > 0 Then
+                    if _MSTUNEPATHS$ <> ""
+                       Path$ = "|" + Path$
+                    endif   
+                    _MSTUNEPATHS$ = _MSTUNEPATHS$ + Path$
+                EndIf
+            EndIf
+
+        Next Loop
+
+    EndIf
+
+EndMacro 
+
+
+!############################################################################
+Name SetFKey_VIEW
+
+Parameter view$
+!############################################################################
+  
+local NLSFileName_top$
+local ID_TOP__F1_HELP_21
+local ID_TOP__F5_STARTRUN_23
+local ID_TOP__F6_STARTSEQRU_25
+local ID_TOP__F8_STOP_27
+local ID_TOP__F9_START_HYPE_29
+local ID_TOP__F10_STOP_HYPE_31
+local ID_TOP__F11_NEXTWINDO_33
+
+  NLSFileName_top$         = "top"
+  ID_TOP__F1_HELP_21       =  17021
+  ID_TOP__F5_STARTRUN_23   =  17023
+  ID_TOP__F6_STARTSEQRU_25 =  17025
+  ID_TOP__F8_STOP_27       =  17027
+  ID_TOP__F9_START_HYPE_29 =  17029
+  ID_TOP__F10_STOP_HYPE_31 =  17031
+  ID_TOP__F11_NEXTWINDO_33 =  17033
+ 
+  view$=UPPERCASE$(view$)
+
+  SetFKey "F1","!",ReadResource$(NLSFileName_top$,ID_TOP__F1_HELP_21)
+
+  if view$="TOP" then
+    !set shortcut Function keys (must be same in all menus shown as \tF5 etc)
+    If AUTHORIZATIONSERVICE_ISPERMITTED(AS_Privilege_RunRun)=0 Then
+      SetFkey "F5",""
+      SetFkey "F6",""
+      SetFKey "F8",""
+      SetFKey "F9",""
+      SetFKey "F10",""
+    else
+      SetFkey "F5","RunMethod",ReadResource$(NLSFileName_top$,ID_TOP__F5_STARTRUN_23)
+      SetFkey "F6","RunSequence",ReadResource$(NLSFileName_top$,ID_TOP__F6_STARTSEQRU_25)
+      SetFKey "F8","HPLC.STOPMETHOD",ReadResource$(NLSFileName_top$,ID_TOP__F8_STOP_27)
+      ! add shortcut functions for Hyperseq only in online mode when AutoInterface installed
+      if (_wellplatesampler<>0 and (STK_EXISTS=1 and _offline=0)) or HypSeq_Always=1
+        SetFKey "F9","Hyper_Run",ReadResource$(NLSFileName_top$,ID_TOP__F9_START_HYPE_29)
+        SetFKey "F10","Hyper_Stop",ReadResource$(NLSFileName_top$,ID_TOP__F10_STOP_HYPE_31)
+      EndIf
+    endif
+    SetFKey "F11","view.win ,""next""",ReadResource$(NLSFileName_top$,ID_TOP__F11_NEXTWINDO_33)
+  Else
+    SetFkey "F5",""
+    SetFkey "F6",""
+    SetFKey "F8",""
+    SetFKey "F9",""
+    SetFKey "F10",""
+    SetFkey "F11",""
+  EndIf
+  
+EndMacro
+
+
+!############################################################################
+name SetDeviceVars_Modular1050_1090_CE
+!############################################################################
+
+
+  if Check (Variable, _WellplateSampler) = 0 then
+    _WellplateSampler = 0
+  endif
+  if Check (Variable, DevHPCE) = 0 then
+    DevHPCE = 0
+  endif
+  if Check (Variable, DevHPCS) = 0 then
+    DevHPCS = 0
+  endif
+  if Check (Variable, Dev1090pump) = 0 then
+    Dev1090pump = 0
+  endif
+  if Check (Variable, Dev1050pump) = 0 then
+    Dev1050pump = 0
+  endif
+  if Check (Variable, Dev1050heater) = 0 then
+    Dev1050heater = 0
+  endif
+  if Check (Variable, Dev1090inject) = 0 then
+    Dev1090inject = 0
+  endif
+  if Check (Variable, Dev1050sampler) = 0 then
+    Dev1050sampler = 0
+  endif
+  if Check (Variable, Dev1090DAD) = 0 then
+    Dev1090DAD = 0
+  endif
+  if Check (Variable, Dev1050DAD) = 0 then
+    Dev1050DAD = 0
+  endif
+  if Check (Variable, Dev1050MWD) = 0 then
+    Dev1050MWD = 0
+  endif
+  if Check (Variable, Dev1050VWD) = 0 then
+    Dev1050VWD = 0
+  endif
+  if Check (Variable, Dev1046FLD) = 0 then
+    Dev1046FLD = 0
+  endif
+  if Check (Variable, Dev1049ECD) = 0 then
+    Dev1049ECD = 0
+  endif
+  if Check (Variable, Dev1090FPD) = 0 then
+    Dev1090FPD = 0
+  endif
+  if Check (Variable, DevADC) = 0 then
+    DevADC = 0
+  endif
+  if Check (Variable, adcdevice) = 0 then
+    adcdevice = 0
+  endif
+  if Check (Variable, adctimetab) = 0 then
+    adctimetab = 0
+  endif
+
+endmacro
+
+!############################################################################
+name  SetDeviceVars_RCNET
+!############################################################################
+
+  local Modules$
+  local Module$
+  local Module
+  local GCIInstance
+  local ModuleInstance
+  local ModuleID$
+
+  !new for GCI
+
+  on error print ""
+
+  if Check (Variable, RapidControlEnabled) = 0 then
+    RapidControlEnabled=0
+  endif
+  _GCISignalDesc$ = ""
+  devRCnet = 0
+  devRCnetFirst = 0
+  if Check (Variable, devGCI) = 0 then
+    devGCI = 0
+  else
+    if (devGCI > 0)
+      if Check(Function, GCIGetBaseType$) = 1 then
+         for l = 1 to devGCI
+           if InStr(GCIGetBaseType$(l), "RAPIDCONTROL") > 0 then
+              devRCnet = devRCnet + 1
+              if devRCnetFirst = 0 then
+                 devRCnetFirst = l
+              endif
+           endif
+        next l        
+      endif
+    endif
+  endif
+
+
+
+  if Check(Function, RCListDevices$) > 0 then
+    Modules$ = RCListDevices$()
+    Module = 1
+    repeat
+      Module$ = SubString$(Modules$, Module)
+      if Module$ <> "" then
+        GCIInstance = 0
+        ModuleID$ = ""
+        ModuleInstance = 0
+        GCIInstance = RCGetGCIInstanceNumber(Module$)
+        ModuleID$ = RCGetDeviceModuleID$(Module$)
+        ModuleInstance = RCGetDeviceModuleInstanceNumber(Module$)
+
+        if (GCIInstance > 0) and (ModuleID$ <> "") and (ModuleInstance > 0) then
+          evaluate "_GCI"+Val$(GCIInstance)+"ALIAS$=ModuleID$"
+          evaluate "_GCI"+Val$(GCIInstance)+"ALIAS=ModuleInstance"
+        endif
+
+      endif
+      Module = Module + 1
+    until Module$ = ""
+  endif
+
+
+  if Check(Variable, RCSingleStatusRequired) = 0 then
+    RCSingleStatusRequired=0
+  endif
+
+endmacro
+
+
+!############################################################################
+name SetDeviceVars_LEOModules
+!############################################################################
+
+  !new for LEO MODULES
+  if Check (Variable, DevLeoAccess) = 0 then
+    DevLeoAccess = 0
+  endif
+  if Check (Variable, DevPumpType) = 0 then
+    DevPumpType = 1
+  endif
+  if Check (Variable, DevLeoPump) = 0 then
+    DevLeoPump = 0
+  endif
+  if Check (Variable, DevLeoAls) = 0 then
+    DevLeoAls = 0
+  endif
+  if Check (Variable, DevLeoDad) = 0 then
+    DevLeoDad = 0
+  endif
+  if Check (Variable, DevNucDad) = 0 then
+    DevNucDad = 0
+  EndIf
+  if Check (Variable, DevNucMwd) = 0 then
+    DevNucMwd = 0
+  EndIf
+  if Check (Variable, DevNucVwd) = 0 then
+    DevNucVwd = 0
+  EndIf
+  if Check (Variable, DevLeoMwd) = 0 then
+    DevLeoMwd = 0
+  endif
+  if Check (Variable, DevLeoFld) = 0 then
+    DevLeoFld = 0
+  endif
+  if Check (Variable, DevLeoVwd) = 0 then
+    DevLeoVwd = 0
+  endif
+  if Check (Variable, DevLeoRid) = 0 then
+    DevLeoRid = 0
+  endif
+  if Check (Variable, DevLeoThm) = 0 then
+    DevLeoThm = 0
+  endif
+  if Check (Variable, DevLeoClc) = 0 then
+    DevLeoClc = 0
+  endif
+  if Check (Variable, DevLeoAfc) = 0 then
+    DevLeoAfc = 0
+  endif
+  if Check (Variable, DevLeoVlv) = 0 then
+    DevLeoVlv = 0
+  endif
+  if Check (Variable, stk_exists) = 0 then
+    stk_exists = 0
+  endif
+  if Check (Variable, stk_error) = 0 then
+    stk_error = 0
+  endif
+
+  ! There is no DevNucVwd because the Dolphin do not provides diagnosis
+  _DiagnosisEnabled = DevLeoPump+DevLeoAls+DevLeoDad+DevLeoMwd+DevLeoFld+DevLeoVwd+DevLeoRid+DevLeoThm+DevLeoClc+DevLeoAfc+DevNucDad+DevNucMwd
+  !end for LEO
+
+endmacro
+
+
+!############################################################################
+name  InitDevices_LEOModules_DebugSettings
+!############################################################################
+
+  ! Initialize DEBUG settings for 1100 modules
+  if (DevLeoPump > 0)
+    _LoadServiceLPmp "DEBUG", 0x2003
+  endif
+  if (DevLeoAls > 0)
+    _LoadServiceLAls "DEBUG", 0x2003
+  endif
+  if (DevLeoThm > 0)
+    _LoadServiceLThm "DEBUG", 0x2003
+  endif
+  if (DevLeoClc > 0)
+    _LoadServiceLClc "DEBUG", 0x2003
+  endif
+  if (DevLeoVwd > 0)
+    _LoadServiceLVwd "DEBUG", 0x2003
+  endif
+  if (DevLeoRid > 0)
+    _LoadServiceLRid "DEBUG", 0x2003
+  endif
+  if (DevLeoDad > 0)
+    _LoadServiceLDad "DEBUG", 0x2003
+  endif    
+  if (DevNucDad > 0)
+    _LoadServiceNDad "DEBUG", 0x2007
+  EndIf
+  if (DevNucMwd > 0)
+    _LoadServiceNMwd "DEBUG", 0x2007
+  endif
+  if (DevNucVwd > 0)
+    _LoadServiceNVwd "DEBUG", 0x2007
+  EndIf
+  if (DevLeoMwd > 0)
+    _LoadServiceLMwd "DEBUG", 0x2003
+  endif
+  if (DevLeoFld > 0)
+    _LoadServiceLFld "DEBUG", 0x2003
+  endif
+  if (DevLeoAfc > 0)
+    _LoadServiceLAfc "DEBUG", 0x2003
+  endif
+
+endmacro
+
+
+
+
+!############################################################################
+name  DeleteUnneededDeviceNLSRegisters
+!############################################################################
+!this should lighten CS process memory by 130 MB
+local  index
+
+  if _ProductType$ <> "GC" then
+     DelReg NLS6850
+     DelReg NLSgc0a
+     DelReg NLSgc6a
+     DelReg NLSin0a
+  endif
+
+  ! check which modules are present at all
+  if (DevLeoPump = 0)
+     DelReg NLSlpmp
+  endif
+  if (DevLeoAls = 0)
+     DelReg NLSlals
+     !both go via same var
+     DelReg NLSlwls
+  endif
+  if (DevLeoThm = 0)
+     DelReg NLSlthm
+  endif
+  if (DevLeoClc = 0)
+     DelReg NLSlclc
+  endif
+  if (DevLeoVwd = 0)
+     DelReg NLSlvwd
+  endif
+  if (DevLeoRid = 0)
+     DelReg NLSlrid
+  endif
+  if (DevLeoDad = 0)
+     DelReg NLSldad
+  endif    
+  if (DevNucDad = 0)
+     DelReg NLSndad
+  EndIf
+  if (DevNucMwd = 0)
+     DelReg NLSnmwd
+  endif
+  if (DevNucVwd = 0)
+     DelReg NLSnvwd
+  EndIf
+  if (DevLeoMwd = 0)
+     DelReg NLSlmwd
+  endif
+  if (DevLeoFld = 0)
+     DelReg NLSlfld
+  endif
+  if (DevLeoAfc = 0)
+     DelReg NLSlafc
+  endif
+  if (DevLeoVlv = 0)
+     DelReg NLSlvlv
+  endif
+  
+  !containing quite a lot of string infos  
+  for index = 1 to 3
+      if ObjHdrType (NLSCore[1], "Columns"+val$(index)) = 4 then
+         DelTab NLSCore[1], "Columns"+val$(index)
+      endif
+  next index
+
+
+endmacro
+
+
+!############################################################################
+name  SetXMLImportExport_Variables
+!############################################################################
+
+  If Check(VARIABLE, XMLEnableImport) = 0 Then
+    	XMLEnableImport = PrivateProfileInt("PCS","XMLEnableImport","chemstation.ini",0)
+  EndIf
+  
+  If Check(VARIABLE, XMLEnableExport) = 0 Then
+    	XMLEnableExport = PrivateProfileInt("PCS","XMLEnableExport","chemstation.ini",0)
+  EndIf
+  
+  If Check(VARIABLE, XMLAutomation) = 0 Then
+    	XMLAutomation = PrivateProfileInt("PCS","XMLAutomation","chemstation.ini",0)
+  EndIf
+  
+  If Check(VARIABLE,XMLExportDestUNC$) = 0 Then
+    	XMLExportDestUNC$ = PrivateProfileString$("PCS,"+Val$(_Instrument),"XMLExportDestUNC$","chemstation.ini","")
+  EndIf
+  
+  If Check(VARIABLE,XMLExportLocalRecovPath$) = 0 Then
+     XMLExportLocalRecovPath$ = PrivateProfileString$("PCS","XMLExportLocalRecovPath$","chemstation.ini","")
+  EndIf
+ 
+  If Check(VARIABLE,XMLImportPath$) = 0 Then
+    	XMLImportPath$ = PrivateProfileString$("PCS,"+Val$(_Instrument),"XMLImportPath$","chemstation.ini",_EXEPATH$)
+  EndIf
+
+  If Check(VARIABLE,XML_ExportAlwaysExtPerf) = 0 Then
+    XML_ExportAlwaysExtPerf = PrivateProfileInt("PCS","XML_ExportAlwaysExtPerf","chemstation.ini",0)
+  EndIf
+
+  If Check(VARIABLE,XML_ExportOnPrint) = 0 Then
+    XML_ExportOnPrint = PrivateProfileInt("PCS","XML_ExportOnPrint","chemstation.ini",0)
+  EndIf
+
+endmacro
+
+
+
+!############################################################################
+name  Setup_CoreExtension_Hooks
+!############################################################################
+
+  ! setup all hook entry points that the core product provides
+  !PreViewMenu and MenuLoadComplete hooks triggered first time each menu is displayed.
+  ! 1)"Base menu" is build (items BEFORE View Menu Item)
+  ! 2)PreViewMenu hook triggered
+  ! 3)View, Abort, and Help menus are added
+  ! 4)MenuLoadComplete hook triggered
+  NewHook "DAMethodChanged"
+  NewHook "PreViewMenu"           ! can be used to add a new menu before the View menu
+  NewHook "PostMenuLoad"   
+  NewHook "LoadMethod"            ! can be used to load additional files
+  NewHook "SaveMethod"            ! can be used to save additional files
+  NewHook "EditMethod"            ! can be used to edit additional parameters
+  NewHook "EditInstMethod"        ! can be used to edit additional
+  NewHook "PrintMethod"           ! can be used to print additional parameters
+  NewHook "PrintInstMethod"       ! can be used to print additional
+  NewHook "PreRun"                ! can be used to modify Runtime checklist
+  NewHook "AcqRes"                ! can be used to add info to the AcqRes register
+  NewHook "PostAcq"               ! can be used to do instrument-specific control
+  NewHook "PreLoadFile"           ! can be used to change file name and other vars
+  NewHook "PreInteg"              ! can be used to modify the loaded signals, e.g.
+                                  ! by scaling or shifting, subtract blank run, etc.
+  NewHook "PostInteg"             ! can be used to do manual integ, or
+                                  ! re-integrate with optimized parameters.
+  NewHook "PreQuant"              ! can be used to modify the ident results in ChromRes
+  NewHook "PostQuant"             ! transfer info about used DA method to ChromRes
+  NewHook "RepPostBegin"
+  NewHook "RepPreChrom"           ! can be used to print/plot additional info
+  NewHook "RepPostChrom"          ! can be used to print/plot additional info
+  NewHook "RepPreEnd"
+  NewHook "PostDA"                ! can be used to transfer result files
+  NewHook "PostRun"               ! can be used to wrap up the instrument run
+  NewHook "PostMethodDone"        ! executed after run has finished even on abort
+
+  NewHook "PreSeq"
+  NewHook "PauseSeq"
+  NewHook "ResumeSeq"
+  NewHook "PrePostSeq"
+  NewHook "PostSeq"
+  NewHook "OnSeqStop"
+  NewHook "SeqStartErr"
+  
+  SetHook "PreRun",  "CapturePreRunColumnsTable", 80
+  SetHook "PostAcq", "SeqX_PostAcq", 80
+  SetHook "PostRun", "SeqX_PostRun", 80
+  SetHook "SeqStartErr","SeqX_PostSequence", 80
+
+  NewHook "AllowCloseApp"
+  NewHook "CloseApp"
+  NewHook "SeqLbkClosed"
+  NewHook "SeqFinalize"
+  NewHook "DASignalsLoaded"
+  NewHook "LoadTopTaskBar",       "", "Task$"
+  NewHook "TopSwitchTask",  "String", "ButtonName$"
+  NewHook "DaSwitchTask",   "String", "ButtonName$"
+  NewHook "TopStatusTB"
+  NewHook "PreViewSwitch", "Scalar", "NextViewName$"
+  NewHook "PreCopyClip"
+  NewHook "PostCopyClip"
+  NewHook "PreWindowOpt"
+  NewHook "PostWindowOpt"
+  NewHook "OnEventChromReg",  , "Action$, Topic$, TopicName$, " + \
+  	                             "Object1,Object2, Item$, IndexX,IndexX2," + \
+		                       		     "ItemPart$, IndexY, IndexY2"
+
+  NewHook "LoadMethodCheck", Scalar, "methpath$"
+  NewHook "DiagAddModule"      ! hook to plug in new modules
+  NewHook "OQPVAddTests"
+  NewHook "PInstrCondition",,"Destination$"
+
+  NewHook "PostSeqImport", "", "FileName$"
+  NewHook "PreSeqImport",  "", "FileName$"
+  
+  !new hook executed when _config[1].preferences table changed
+  NewHook "OnEvPrefsUpdate"
+  OnEvent "_Config[1]._Tab.Preferences", "OnEvPrefsUpdate_HookWOParams",, ROB
+  !OnEvPrefsUpdate_HookWOParams calls ExecHook_OnEvPrefsUpdate without parameters to simplify
+  
+  NewHook "SettingsChanged"
+  NewHook "AuthentChanged"
+
+  ! new hooks for XML Export
+  if Check(VARIABLE,XMLEnableExport) = 1
+  	  if 1 = XMLEnableExport 
+  		    NewHook "XML_PreExport"
+        NewHook "XML_PostExport"
+        NewHook "XML_PostUpload"
+   		   SetHook "PostAcq","XML_GenerateLimsFile",200
+		      SetHook "PostDA","XML_PostDAExport",200
+	    endif
+  endif
+
+  SetHook "OnEventChromReg", "CalculateAreaPerc"
+  ! Init_Filldown removed rl 06/18/02
+  
+  !manual integration event
+  !B.04.01 MT
+  Init_DFManIntHooks
+
+endmacro
+
+
+!############################################################################
+name  LoadCore_CmdExtentions
+!############################################################################
+
+  ! preload all resource dlls 
+  dummy = InstallCmds(_ExePath$ + "hplock00.dlc")
+  _LoadServiceLockDLL
+  
+  if Check(Command, CpStart) = 0 then
+    ! load the dll for multiple CPs
+    idBGCP_DLL = InstallCmds(_ExePath$ + "hpbgcp00.dll")
+  endif
+  CpStart "CP2"        ! start the 2nd CP
+  CpStart "CP3"        ! start the 3rd CP
+  _LoadServiceNotify_CpFullReadyEvent ! event handler for hpcorApi
+
+  !Execwait _ExePath$ + "win2kchk.exe"
+  progcmd$ = chr$(34) + _ExePath$ + "win2kchk.exe" + chr$(34)
+  SetCWD  _ExePath$
+  Execwait progcmd$
+
+  ! Load the hpgtw_01.dlc if it is not loaded.
+  If Check(Command, EdTab) = 0 Then
+    ! load the DLC which holds the missing command
+    idGTW_DLC = InstallCmds(_EXEPATH$ + "hpgtw_01.dlc")
+  endif
+
+  if Check(Command, CalibratePeaks) = 0 then
+    ! load the Abacus dll
+    idQANT_DLL = InstallCmds(_ExePath$ + "hpqant00.dll")
+  endif
+
+  if Check(Command, ShowReport) = 0 then
+    ! load the dll for Report Viewer Window
+    idRPTV_DLL = InstallCmds(_ExePath$ + "hprptv00.dll")
+  endif
+
+  if Check(Command, Beep) = 0 then
+    ! load the dll for Beep, SendString, SysInfo$(), printf$(), ConvertText$()
+    ! and TopWndSize() 
+    idBEEP_DLL = InstallCmds(_ExePath$ + "hpbeep00.dll")
+  endif
+
+  if Check(Command, CopyObjTabRow) = 0 then
+    ! load the dlc for some table utility commands like CopyObjTabRow
+    idTUTI_DLC = installcmds(_EXEPATH$ + "hptuti00.dlc" )
+  endif
+
+  if Check(Command, MenuRead) = 0 then
+    ! load the macro and dlc to install the new menu commands
+    macro _ExePath$ + "menucmds.mac"
+    SeeIfMenuCmdsLoaded
+  endif
+
+  if Check(Command, DoHTMLReport) = 0 then
+    ! load the dll for HTML-reports
+    idHTML_DLL = InstallCmds(_ExePath$ + "hphtml00.dlc")
+  endif
+
+  if Check(Command, Publish) = 0 then
+    l = PrivateProfileInt( "PCS","OLEAutomation","chemstation.ini", 42)
+    if (l = 42) then
+      l = PrivateProfileInt( "PCS,"+val$(_Instrument),"OLEAutomation","chemstation.ini", 42)
+    endif
+    if (l=1)or (l=2) then
+      idEXTIFC=installcmds("agtextifc00.dll")              ! load the OLE automation framework
+      publish _Instrument,"Instrument"+val$(_Instrument),_Offline,2-l,l-1 
+    endif
+  endif
+
+endmacro
+
+!############################################################################
+name SetBetterPdfReportFont
+     !for better pdf report appearence under Win7 ( XP does not have consolas font family )
+     !this gives much better ledigbe fonts under Vista and Win7 in the classic pdf reports
+!############################################################################
+
+  local  DosVerNumber 
+  DosVerNumber = Val(SysInfo$("dos version"))
+  
+  !Win7 has DosVerNumber=6.1  XP has DosVerNumber=5.1
+  !and also make sure it is only on non JPN CHN system so that they have their way from installation for all OS
+
+  if DosVerNumber >= 6
+     !then it is Win7 and not XP
+     if (_Lang$ <> "CHS") AND (_Lang$ <> "CHN") AND (_Lang$ <> "JPN") Then
+        SetPrivateProfileString "PCS", "pdf_ReportFontName"  , "Consolas", "chemstation.ini"
+        SetPrivateProfileString "PCS", "pdf_ReportFontSize"  , "10"      , "chemstation.ini"
+        SetPrivateProfileString "PCS", "pdf_ReportFontWeight", "700"     , "chemstation.ini"
+     endif   
+  else
+     !then it is XP
+     if (_Lang$ <> "CHS") AND (_Lang$ <> "CHN") AND (_Lang$ <> "JPN") Then
+        SetPrivateProfileString "PCS", "pdf_ReportFontName"  , "Courier New", "chemstation.ini"
+        SetPrivateProfileString "PCS", "pdf_ReportFontSize"  , "10"      , "chemstation.ini"
+        SetPrivateProfileString "PCS", "pdf_ReportFontWeight", "700"     , "chemstation.ini"
+     endif   
+     
+     !also shut off usage of report viewer in TO Screen ONLY in sequence reprocessing , 
+     !since user object leak in i-explorer control kills usage of all apps under OS XP-SP3
+     !     (no menus dialog etc come up anymore)
+     ! this is to create, higher reliability but less features for XP users
+     SetPrivateProfileString    "PCS", "Pdf_viewer_DAReprocess", "0"     , "chemstation.ini"
+  endif
+endmacro
+
+
+!############################################################################
+
+name Top
+
+! The autostart macro which is called from C-code at startup
+!############################################################################
+
+
+local dummy,StartUpView$,ProductMacFile$, l
+
+local NLSFileName_top$
+local ID_TOP__ONLINE_9
+local ID_TOP__F1_HELP_21
+local ID_TOP__F5_STARTRUN_23
+local ID_TOP__F6_STARTSEQRU_25
+local ID_TOP__F8_STOP_27
+local ID_TOP__F9_START_HYPE_29
+local ID_TOP__F10_STOP_HYPE_31
+local ID_TOP__F11_NEXTWINDO_33
+local ID_TOP_LOADING_HPSPC1_34
+local ID_TOP_LOADING_35
+local ID_TOP_36
+local ID_TOP_WELCOME_TO_37
+local ID_TOP_LOADING_USER_M_38
+local ID_TOP_LOADING_MOST_R_39
+local ID_TOP_LOADING_TOPLEV_40
+local ID_TOP_FREE_DISK_SPAC_41
+local ID_TOP_CURRENT_FREE_S_42
+local ID_TOP__HELP_43
+local ID_TOP_ABOUT_YOUR__GC_44
+local ID_TOP_SHOW_SETUP_OF_45
+
+local szMthLoadDelay$
+
+  NLSFileName_top$                  =  "top"
+  ID_TOP__ONLINE_9                  =  17009
+  ID_TOP__F1_HELP_21                =  17021
+  ID_TOP__F5_STARTRUN_23            =  17023
+  ID_TOP__F6_STARTSEQRU_25          =  17025
+  ID_TOP__F8_STOP_27                =  17027
+  ID_TOP__F9_START_HYPE_29          =  17029
+  ID_TOP__F10_STOP_HYPE_31          =  17031
+  ID_TOP__F11_NEXTWINDO_33          =  17033
+  ID_TOP_LOADING_HPSPC1_34          =  17034
+  ID_TOP_LOADING_35                 =  17035
+  ID_TOP_36                         =  17036
+  ID_TOP_WELCOME_TO_37              =  17037
+  ID_TOP_LOADING_USER_M_38          =  17038
+  ID_TOP_LOADING_MOST_R_39          =  17039
+  ID_TOP_LOADING_TOPLEV_40          =  17040
+  ID_TOP_FREE_DISK_SPAC_41          =  17041
+  ID_TOP_CURRENT_FREE_S_42          =  17042
+  ID_TOP__HELP_43                   =  17043
+  ID_TOP_ABOUT_YOUR__GC_44          =  17044
+  ID_TOP_SHOW_SETUP_OF_45           =  17045
+  
+  !setverbose 3
+  !logging 7,"c:\log.txt"
+  LinesPerGraph = 8     ! global variable used by print report macs as minimum graph size
+
+  szMthLoadDelay$ = PrivateProfileString$("PCS", "methodLoadDelay", "chemstation.ini", "")
+  If szMthLoadDelay$ <> "" Then
+    methodLoadDelay = Val(szMthLoadDelay$)
+  EndIf
+
+  !Custom Fields - moved to PrintSeq.mac
+  !If Check(Variable, SEQ_PrintSeqTblCFSamp) = 0 Then
+  !  SEQ_PrintSeqTblCFSamp = 0  !gloabl variable used in print sequence for sample custom fields 
+  !EndIf
+
+  !If Check(Variable, SEQ_PrintSeqTblCFCmpd) = 0 Then
+  !  SEQ_PrintSeqTblCFCmpd = 0 !gloabl variable used in print sequence for coumpound custom fields 
+  !endif
+
+  Sec_DisableCalibPatch = 1 !disable security pack interims patch for calibration task buttons
+  CS_Disable4699Patch = 1   !disable ChemStore patch
+
+  ! Variable initialization for 16 Bit checks
+  _Mth16Bit = 0
+  _Seq16Bit = 0
+  _Batch16Bit = 0
+  _FRPT16Bit = 0
+  _Hyper16Bit = 0
+  _SPC16Bit = 0
+
+  UseExternalInjector = 0
+  UseExternalInjectorMenu = 1
+  OnEvent "UseExternalInjector", "UseXternalInjMenu",, CP
+
+  PrepPumps = 0
+
+  If Check(Variable, _PumpUseBar) = 0 Then
+    _PumpUseBar = 1
+  endif
+
+  If Check(Variable, _GuiPump) = 0 Then
+    _GuiPump = 1
+  endif
+
+  If Check(Variable, _MainPump) = 0 Then
+    _MainPump = 1
+  endif
+
+  If Check(Variable, _PrepA) = 0 Then
+    _PrepA = 1
+  endif
+
+  If Check(Variable, _PrepB) = 0 Then
+    _PrepB = 1
+  endif
+
+  if Check(Variable,VCS_INTEGRATION)=0
+    VCS_INTEGRATION = 0
+    VCS_NOTINTEGRATED = 1
+  EndIf
+    
+  !--------------------------------------------------------
+  ! Batch environment
+  If Check(Variable, _BatchVisible) = 0 Then
+    _BatchVisible = 0
+  EndIf
+
+  If Check(Variable, _BatchNotVisible) = 0 Then
+    _BatchNotVisible = 1
+  EndIf
+  
+  !pvcs 15942 - BatchReview enabled by default, ECM suppresses the BatchReview functionality 
+  !             chemstation.ini entry overrides the behaviour 
+  If Check(VARIABLE,_BatchReview) = 0 Then
+    _BatchReview = PrivateProfileInt("PCS","_BatchReview","chemstation.ini",10) !-1 doesn't work as default
+    !if entry found it has always priority
+    !if entry not found in chemstation.ini, enable review, disable only with ECM
+    If _BatchReview = 10 Then
+      If VCS_INTEGRATION = 1 Then
+        _BatchReview = 0
+      Else
+        _BatchReview = 1 
+      EndIf
+    EndIf
+    
+  EndIf
+
+  If Check(VARIABLE,_DataAuditTrailDisabled) = 0 Then
+    _DataAuditTrailDisabled = 1
+  EndIf
+  
+
+  
+  !--------------------------------------------------------
+
+  LoadCore_CmdExtentions
+  !remove one time macro again
+  remove  LoadCore_CmdExtentions
+
+  !listmessages on,on,8000
+
+
+  ! set the path of the cursor dll for the Draw cmd
+  ! Note: This must adapted if more than just the 800 resolution exists.
+  SetTabHdrText _Config[1], "Window", "DrawCursorDLL", \
+                _ExePath$ + "800\hpcur008.dll"
+
+  ! This MethodChangedOK flag is needed to get through initialization with 
+  ! out getting an error for undefined macros.  Apparently, so C code      
+  ! during initialization is setting MethodCHanged, which causes    
+  ! SetMethModTime to get called before any macros are even loaded.  
+  ! This flag prevents any calls from being scheduled until the macro
+  ! subsystem is up and running.   (See part\top\top.c for more info) 
+  ! ---------------------------------------------------------------------- 
+  _MethodChangedOK = 1
+  OnEvent _DAMethod, "SetMethodChanged"
+  dummy = Event (_DAMethod, ON)
+
+  Alert1Title$ = _InstName$
+  Alert2Title$ = _InstName$
+  Alert3Title$ = _InstName$
+  Alert4Title$ = _InstName$
+  Alert5Title$ = _InstName$
+
+  ! minimal free diskspace to check for is set to 200 MB
+  FreeDiskLimit = 200000000
+  if _Instance > 1
+    _menu_memory = 2    ! default is 4 menus - held in memory
+  endif
+
+  SetDeviceVars_Modular1050_1090_CE
+  !remove ontime macro again
+  remove  SetDeviceVars_Modular1050_1090_CE
+  
+  if Check (Variable, EDEVENTS_DialogOff) = 0 then
+    EDEVENTS_DialogOff = 1
+  EndIf
+  
+  if Check (Variable, bAllowMethodEvents) = 0 then
+    bAllowMethodEvents = 1
+  EndIf
+  
+  if Check (Variable, RunDisableExt) = 0 then
+    RunDisableExt = 0
+  endif
+
+  SetDeviceVars_RCNET
+  !remove ontime macro again
+  remove  SetDeviceVars_RCNET
+
+
+  ! _MassSpec is converted into a system variable by the add-on
+  ! product.  Set it here based on the feature table for anything
+  ! that requires the variable before the add-on starts
+  if Check (Variable, _MassSpec) = 0 then
+    _MassSpec = TabHdrVal(_Config[1], "Features", "MSAllowed")
+  endif
+
+  if ObjHdrType(_Config[1], "LoadSigBox") = 99 then
+    NewObjHdrVal _Config[1], "LoadSigBox", 1, 1, 1
+  endif
+
+  if ObjHdrType(_Config[1], "RTPMethodSet") = 99 then
+    NewObjHdrVal _Config[1], "RTPMethodSet", 0, 1, 1
+  endif
+
+
+  !AFC Ticks Add-On
+  if ObjHdrType(_Config[1], "AFCTicksVisible") = 99 then
+    NewObjHdrVal _Config[1], "AFCTicksVisible", 0, 1, 1
+  endif
+
+  ! This variable (along with the object header
+  ! keeps track of the mode of the Load Signal dialog box.  
+  ! 0 = Full
+  ! 1 = Short
+  ChroLoadSigBox = ObjHdrVal(_Config[1], "LoadSigBox")
+
+  SetDeviceVars_LEOModules
+  !remove ontime macro again
+  remove  SetDeviceVars_LEOModules
+
+
+  HypSeq_Always = 0 
+  _HyperIdleLn = 1
+
+  !!! new for 1946 MSD; 
+  !!! variable must exist even for LC-only and MS add-on does not get installed
+  if Check (Variable, Dev1946Msd) = 0 then
+    Dev1946Msd = 0
+  endif
+
+  if Check (Variable, _APPILAMPON) = 0 then
+    _APPILAMPON = 0
+  endif
+
+  if Check (Variable, _APPILAMPOFF) = 0 then
+    _APPILAMPOFF = 0
+  endif
+  
+  Macro "A_EPC.MCX"
+
+
+  InitDevices_LEOModules_DebugSettings
+  !remove ontime macro again
+  remove  InitDevices_LEOModules_DebugSettings
+
+
+  ! Initialize method load/save state
+  MethLoadSaveIdle = 1
+
+
+
+  ! Load the DLC if it is not loaded.
+  If Check(Function, PrivateProfileInt) = 0 Then
+    ! load the DLC which holds the missing command
+    idPROF_DLC = InstallCmds(_EXEPATH$ + "HPPROF01.DLC")
+  endif
+
+  ! Load the HPUAL_01.DLC if it is not loaded.
+  If Check(FUNCTION, ChangeAccessLevel) = 0 Then
+    ! load the DLC which holds the missing command
+    idUAL_DLC = InstallCmds(_EXEPATH$ + "HPUAL_01.DLC")
+  endif
+
+  if idUAL_DLC = 0 then
+     If Check(VARIABLE, bManagerLevelAccess) = 0 Then
+        bManagerLevelAccess = 0    ! global variable used for menu item links
+     endif    
+  endif
+
+
+
+  SetXMLImportExport_Variables
+  !remove ontime macro again
+  remove  SetXMLImportExport_Variables
+
+  
+  If Check(VARIABLE,UpdateDAMethodOnReport) = 0 Then
+    UpdateDAMethodOnReport =  PrivateProfileInt("PCS","UpdateDAMethodOnReport","chemstation.ini",0)
+  EndIf
+  
+  !!! CustomFields MT 4.01
+  If Check(VARIABLE,CustomFieldsAllowed) = 0 Then
+    CustomFieldsAllowed = PrivateProfileInt("PCS","CustomFieldsAllowed","chemstation.ini",1)
+  EndIf
+  !!! CustomFields MT 4.01 END
+  
+  If Check(VARIABLE, PrintSeqOldLayout) = 0 Then
+    PrintSeqOldLayout = PrivateProfileInt("PCS", "PrintSeqOldLayout", "chemstation.ini", 0)
+  EndIf
+
+  !pvcs 14293 - multiplier and dilution shouldn't be used in percent reports
+  !customers who rely on this bug though can disable the fix
+  If Check(VARIABLE,FactorsInPercReports) = 0 Then
+    FactorsInPercReports = PrivateProfileInt("PCS","FactorsInPercReports","chemstation.ini",0)
+  EndIf
+
+
+
+  ! Write our DDE Name to WIN.INI
+  if _offline = 1
+     SetPrivateProfileString "PCS,"+Val$(_Instrument), "_DDEOffLine", _DDEName$, "chemstation.ini"
+  else
+     SetPrivateProfileString "PCS,"+Val$(_Instrument), "_DDEOnLine", _DDEName$, "chemstation.ini"
+  endif
+
+  if Check (Variable, _SequenceOn) = 0 then
+    _SequenceOn = 0
+  endif
+ 
+  if Check (Variable, _PartialSequenceOn) = 0 then
+    _PartialSequenceOn = 0
+  endif
+ 
+  if Check (Variable, _SLAVEIDLE) = 0 then
+    _SLAVEIDLE = 1
+  endif
+
+  if Check (Variable, _Lang$) = 0 then
+    _Lang$ = ProfileString$ ("intl", "sLanguage", "enu")
+  EndIf
+  
+  if Check (Variable, _NotOldSequenceData) = 0 then
+    _NotOldSequenceData = 1
+  EndIf
+  
+  _PDFPrinterInstalled = IsPDFPrinterInstalled()
+
+  ! Initialize file name of the core macro dialog dll  
+  !NLSCoreMacDLL$ = _ExePath$ + "language\hbmacr00." + _Lang$
+  !G11n, modified on 30-09-04
+  !Select hl or hb according to the system locale.
+  If (_Lang$ = "enu" or _Lang$ = "ENU")    
+    G11nVar$ = "b"    
+  Else
+    G11nVar$ = "l"    
+  EndIf  
+  NLSCoreMacDLL$ = _ExePath$ + "language\h" + G11nVar$ + "macr00." + _Lang$
+  
+  if FileStat (Mode, NLSCoreMacDLL$) = -1 then
+    NLSCoreMacDLL$ = _ExePath$ + "language\hbmacr00.enu"
+  endif
+
+  ! Initialize variable for default method integrator setting and set a menu item link
+  ! for the update opportunity to the enhanced integrator
+  if Check (Variable, _GENIEMETHOD) = 0 then
+    _GENIEMETHOD = 1      ! The default method is always a GENIE method
+  endif 
+
+  if filestat(MODE, _autopath$ + "applics.mac") = 1   ! exists - is a file
+    macro "applics.mac"   ! activate ChemStations applications
+  endif
+
+  !_DA_PartReprocess = 0 will switch off the "Partial Sequence" menu item of DA view
+  !_DA_PartReprocess = 1 make it work according to other variables
+  If Check(Variable,_DA_PartReprocess) = 0
+    _DA_PartReprocess = 1
+  endif
+  
+  If _ProductType$ = "GC" Then
+    LoadMacro "Emethods.mac"
+    ACQNOTREADYWAIT = 30  ! default for GC
+  EndIf
+  
+  LoadMacro "signal.mcx"
+  LoadMacro "report.mcx"
+  LoadMacro "ecmmcx.mcx"
+  Init_Signal
+  LoadMacro "ssp.mcx"
+  Init_SeqSum
+
+  IREnabled = PrivateProfileInt("PCS,"+Val$(_Instrument),"IREnabled","chemstation.ini",0)
+  ! Initialization of Review Part I
+  if FileStat(Mode,_EXEPATH$ + "ireport.mcx") = 1
+    LoadMacro "ireport.mcx"
+    IR_InitReportingView  
+  endif
+
+  ! initialization of the HyperSequence 
+  If _wellplatesampler<>0 Or HypSeq_Always=1
+    If STK_EXISTS=0 and HypSeq_Always=0
+      Hyper_HideActuals
+    EndIf
+    Hyper_Init
+  Else
+    Hyper_HideActuals
+  EndIf
+  
+  ! restoring the old DataPath after Chemstation crash 
+  ! If PrivateProfileString$("PCS,"+Val$(_Instrument),"_OLDDATAPATH$","chemstation.ini")<>""
+	 !   _DATAPATH$=PrivateProfileString$("PCS,"+Val$(_Instrument),"_OLDDATAPATH$", "chemstation.ini")
+  !	  SetPrivateProfileString "PCS,"+val$(_Instrument),"_OLDDATAPATH$","","chemstation.ini"
+  ! EndIf
+
+  If Check(Variable,_OLDDATAPATH$) = 0
+    _OLDDATAPATH$ = _DATAPATH$
+  endif
+
+  !Initialize directory variables and table
+  DIR_InitDirectories
+
+  ! initializing CP Variable for showing if Sequence Edit Table is openend
+  SeqTabEdOpen=0
+  
+  LoadMacro "txt_imp.mcx" !load the text import macro - since 05 Feb 03 contains also xml import/export macros
+  
+  !CustomFields 4.01 MT
+  isGCFlag = 0
+  If _ProductType$ = "GC" Then
+    isGCFlag = 1 
+  EndIf
+  !CustomFields 4.01. MT END
+  
+  SetFKey_VIEW "TOP"
+
+  print "Loading postacq.mac..."
+  macro "postacq.mac"
+
+
+  Setup_CoreExtension_Hooks
+  !remove ontime macro again
+  remove  Setup_CoreExtension_Hooks
+
+
+  !moved Init_NavTab and Init_CustomFields after all hooks are set
+  Init_NavTab
+  
+  !CustomFields 4.01 MT
+  Init_CustomFields
+
+
+  !update of sample.mac/batch file on reporting
+  !B.04.01 MT
+  Init_Quant
+  
+  ! load and initialize batch review
+  LoadMcxOrMac _AutoPath$ + "batch", "BatchInit"
+
+  if TabHdrVal (_Config[1], "Features", "SpectraAllowed") = 1 then
+    ! Load spectral macros
+    print ReadResource$(NLSFileName_top$,ID_TOP_LOADING_HPSPC1_34)
+    macro "hpspc1.mcx",go
+  endif
+
+  ! For offline da/reporting to improve cycle time
+  if filestat(MODE, _autopath$ + "OffLnDA.mac") = 1   ! exists - is a file
+    LoadMacro "OffLnDA.mac"
+    OfflineDA_Init
+  endif
+  
+  if (VCS_INTEGRATION = 1) then
+    VCS_NOTINTEGRATED = 0
+    InitAcaml
+  endif
+
+  if (VCS_INTEGRATION = 1) then
+     !_datasubdir$ not allowed even when CS is migrated to ECM usage on TT #21191
+     _DATASUBDIR$ = "" 
+  endif
+
+
+  ! call the start macro of each configured add-on that wants to
+  ! use the above defined hooks
+  
+  _InstType$ = PrivateProfileString$("PCS,"+Val$(_Instrument),"InstType","chemstation.ini","")
+  If (_InstType$ = "68GC" Or _InstType$ = "5890" Or _InstType$ = "6850GC" or _InstType$ = "78GC" or _InstType$ = "7820GC")
+     l = Instr(_AUTOPATH$, "\CORE")
+     If l = 0
+        l = Instr(_AUTOPATH$, "\core")
+     EndIf
+     
+     _AutoPUIPath$ = _AUTOPATH$[1:l]+"GC\"
+     PUITopMac$ = _AutoPUIPath$ + "PUITOP.MAC"
+     If FileStat(MODE, PUITopMac$) = 1
+        Macro PUITopMac$, Go
+     EndIf
+           
+     _AutoRTLPath$ = _AUTOPATH$[1:l]+"GC\"
+     RTLTopMac$ = _AutoRTLPath$ + "RTLTOP.mac"
+     If fileStat (Mode, RTLTopMac$) = 1
+        Macro RTLTopmac$, Go
+     endif
+
+  EndIf
+  
+  StartAddons
+  
+  If Check(System_Variable, _IsRegulated) = 1 Then
+    If _IsRegulated = 1 Then
+      If Check(Macro, ChemStoreSelectDB) = 0 Then
+        AddOnPath$ = PrivateProfileString$("PCS", "Path", "chemstation.ini", "c:\hpchem") + "\chemstor\"
+        Macro AddOnPath$+"hpdbif00.mcx", go
+        remove AddOnPath$
+      EndIf
+      LoadMacro "security.mcx"
+    EndIf
+  EndIf
+
+  PostAddOnAdjustMenusForViewsTab
+
+  ! initialize the GUI with all that the Addons might have brought in
+  GUICoreInitialize
+  
+  ! call the hp<_ProductType$>.mac, if it exists
+  ProductMacFile$ = _ProductPath$ + "hp" + _ProductType$ + ".mac"
+  if FileStat(MODE, ProductMacFile$) = 1 then       ! is a regular file
+    print ReadResource$(NLSFileName_top$,ID_TOP_LOADING_35) + ProductMacFile$ + ReadResource$(NLSFileName_top$,ID_TOP_36)
+    macro ProductMacFile$, go
+  endif
+
+! Only until leonardo instrument control does it
+  if DevLeoAccess > 0 or devGCI > 0 then
+    macro _driverpath$+"hpclst00.mcx",go
+  EndIf
+
+
+  ! Load method and sequence
+  ! Set method changed to zero since this is the
+  ! first time we are loading a method and the method should
+  ! not be dirty.  This is an attempt to fix the defect where
+  ! an 6890 is making the method dirty before the first method is
+  ! loaded.  -JTG  950131
+  _MethodChanged = 0
+
+  ! do we start after a broken purify study run? Then restore some important values  
+  If (PrivateProfileString$ ("PURIFY", "StudySequence", "chemstation.ini", "") <> "")
+    On error print
+    Delete _seqpath$ + PrivateProfileString$ ("PURIFY", "StudySequence", "chemstation.ini",""), DONTASK
+    _seqfile$ = PrivateProfileString$ ("PURIFY", "OldSequence", "chemstation.ini", _seqfile$)
+    _MethPath$ = PrivateProfileString$ ("PURIFY", "MethPath", "chemstation.ini", _MethPath$)
+    _DataPath$ = PrivateProfileString$ ("PURIFY", "DataPath", "chemstation.ini", _DataPath$)
+
+    
+    ! clear entries now
+    SetPrivateProfileString "PURIFY", "StudySequence", "", "chemstation.ini"
+    SetPrivateProfileString "PURIFY", "OldSequence", "", "chemstation.ini"
+    SetPrivateProfileString "PURIFY", "MethPath", "", "chemstation.ini"
+    SetPrivateProfileString "PURIFY", "DataPath", "", "chemstation.ini"
+    On error
+  EndIf
+  ! reset paths in case of a crash
+  If (PrivateProfileString$("PCS," + Val$(_Instrument),"ACQSEQPATH","chemstation.ini","")<>"") and \
+     ( (IsOnlineRunning()=0) or (_offline=0))
+      on error print
+      Delete PrivateProfileString$("PCS," + Val$(_Instrument),"ACQSEQPATH","chemstation.ini","") + "ACQUIRING.TXT", DONTASK
+      SetPrivateProfileString "PCS," + Val$(_Instrument),"ACQSEQPATH","","chemstation.ini"
+      On Error
+  endif
+  ! loading method if fails then load def_xx.m
+  On error MethodNew
+  
+  !14792 - START - reprocessing copy should take over the method from the online
+  Local tmp_methpath$
+  Local tmp_methfile$
+  
+  If _offline = 1 and IsOnlineRunning()=1 Then
+    If FileStat(MODE,_TempPath$+"currmeth.txt") <> -1 Then
+      Open _tempPath$+"currmeth.txt" For Input as #42
+      Input #42, tmp_methpath$
+      Input #42, tmp_methfile$
+      Close #42
+      delete _TempPath$+"currmeth.txt", DONTASK
+    EndIf
+  EndIf
+
+  If Check(Command, ClusterTccStartup) = 1 Then
+    ClusterTccStartup
+  EndIf
+  If Check(Command, ClusterPmpStartup) = 1 Then
+    ClusterPmpStartup
+  EndIf
+  
+  If (_ProductType$ = "CE") And (CheckChangedCEMode() = 1) Then
+    MethodNew
+  Else
+    If tmp_methpath$ <> "" And tmp_methfile$ <> "" And FileStat(MODE,tmp_methpath$+tmp_methfile$) <> -1 Then
+      LoadMethod tmp_methpath$,tmp_methfile$
+    Else
+      LoadMethod _methpath$,_methfile$
+    EndIf
+  EndIf
+  !14792 - END
+
+  
+  On Error SequenceNew
+  LoadSequence _seqpath$,_seqfile$, , 0
+  On Error
+
+  If Check(command,_LoadServiceNotify_AddNewViewEvent)>0 then
+    _LoadServiceNotify_AddNewViewEvent
+  Endif
+  RunStartupViewMacros    ! load everything that views need
+
+  ! Initialization of Intelligent Reporting 
+  if FileStat(Mode,_EXEPATH$ + "ireport.mcx") = 1
+    IR_Init
+  endif
+
+  !now initialize the Security Pack
+  if CheckSecPack() > 0 then
+    InitializeSecurityPack
+  EndIf
+  
+  !now call all that personalizes this chemstation in the user.mac
+  !for instance with user contributed libraries
+  TopWelcomeMsg$ = ReadResource$(NLSFileName_top$,ID_TOP_WELCOME_TO_37) + \
+                   TabHdrText$ (_Config[1], "Features", "AppTitleText") +\
+                   ". "
+                   !will be printed when all startup has been completed
+                   !Set here so can be altered in user.mac
+
+  if filestat(MODE, _autopath$ + "user.mac") = 1   ! exists - is a file
+    print ReadResource$(NLSFileName_top$,ID_TOP_LOADING_USER_M_38)
+    macro "user.mac"
+  EndIf
+  
+
+
+  !now do no more loading of functionality. (after user.mac)
+  !just prepear the display and menu,
+  !and put up diskspace warning and user levels at
+  !the very end of initialization
+  !after quitting those the chemstation is ready for use
+
+  if TabHdrVal (_Config[1], "Features", "Background") = 0 then
+    Background
+  endif
+
+  !ChemStore version supporting B.03.01+ will set those variables according to their needs. 
+  If Check(variable,_NavTab_LoadFirstFileWithDataSet) = 0 Then
+    _NavTab_LoadFirstFileWithDataSet = 1 
+  EndIf
+
+  If Check(variable,_NavTab_AlwaysHide) = 0 Then
+    _NavTab_AlwaysHide = 0
+  EndIf
+
+
+  StartUpView$=TabHdrText$(_config[1],"window","CurrentView")
+  if StartUpView$ <> ""
+    print ReadResource$(NLSFileName_top$,ID_TOP_LOADING_MOST_R_39)
+    ! have the menu show before the chemstation says welcome
+    SwitchMenuInView   StartUpView$
+    SwitchView TabHdrText$(_config[1],"window","CurrentView")
+  else
+    print ReadResource$(NLSFileName_top$,ID_TOP_LOADING_TOPLEV_40)
+    LoadMenu 1             ! load the menu from the various files
+    SwitchView "TOP"
+    StartUpView$="TOP"
+  endif
+  if (VCS_INTEGRATION = 1)
+    if StartUpView$ = "TOP"
+      _ECM_AUTOUPLOAD_ACQ_ENABLED = 1
+    else
+      _ECM_AUTOUPLOAD_ACQ_ENABLED = 0
+    endif
+  endif
+  
+  ! if the edit columns screen was left on, need the processing macros
+  if tabtext$(_config[1],"window",68,"command") <> "" then
+    macro "editcolp.mac"
+  endif
+
+  ! Now update hppcssvc.ini for the MMV maintenance CD ROM title.
+  UpdateMaintenanceCDIniFile
+
+  dummy=FreeDiskSpace(_DataPath$[1])
+  if  dummy < FreeDiskLimit
+    dummy= Alert(ReadResource$(NLSFileName_top$,ID_TOP_FREE_DISK_SPAC_41)\
+                 +Val$(FreeDiskLimit/1000000)+ " MB."\
+                 +CHR$(13)+CHR$(10)\
+                 +ReadResource$(NLSFileName_top$,ID_TOP_CURRENT_FREE_S_42)\
+                 +Val$(ceil(FreeDiskSpace(_DataPath$[1])/1000)/1000)\
+                 +" MB.",3)
+  endif
+
+  ! Initialize user access levels.  The user will be prompted to select
+  ! an access level if the "PromptAtStartup" flag is set.
+  InitializeUAL  
+
+  ! switch yielding to server yield
+  _LoadService_ToggleYield
+  ! Fraction Collector intialization routine
+  LoadMacro "fraccoll.mcx"
+  FracColl_Init
+  if _HPCE<>0 then
+      MSTimeout = 3600
+  endif
+
+
+
+  ! run gcinfo.mac - available only for GC ChemStation
+  !Defect fix: PVCS#7025 
+  local menufile$
+  menufile$ = TabHdrText$(_config[1],"MenusForViews","MenuCol")
+   
+  fullmenu = TabHdrVal(_config[1], "UAL", "SetFullMenu")
+  
+  !If ((_ProductType$ = "GC") And (_OFFLINE = 0) And (adcdevice = 0)) Then
+  !If (((_ProductType$ = "GC") And (adcdevice = 0)) or (((_ProductType$ = "GC") And (_OFFLINE = 0)) And (adcdevice = 0)) ) Then
+
+  ! TT #917 This menu item should only appear for a 5890.  EMP Aug 25 2009
+  If ((_ProductType$ = "GC") And (TestForDevice("GC", 0, "") <> 0)) Then
+    If ((menufile$ = "FullMenuFile") Or (fullmenu = 1 ))Then
+      MenuAdd ReadResource$(NLSFileName_top$,ID_TOP__HELP_43),ReadResource$(NLSFileName_top$,ID_TOP_ABOUT_YOUR__GC_44),"macro ""gcinfo.mac"" ,GO",,\
+      ReadResource$(NLSFileName_top$,ID_TOP_SHOW_SETUP_OF_45)
+    EndIf
+  EndIf
+  
+  !initialize automation engine
+  macro "ae.mac"
+  
+  DeleteUnneededDeviceNLSRegisters
+  remove  DeleteUnneededDeviceNLSRegisters
+
+  !for better pdf report appearence under Win7 ( XP does not have consolas font family )
+  !also shut off usage of report viewer in TO Screen only in sequence reprocessing , since user object leak kills usage of all apps under OS XP-SP3
+  SetBetterPdfReportFont
+  remove  SetBetterPdfReportFont
+
+endmacro

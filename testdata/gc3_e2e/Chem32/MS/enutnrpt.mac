@@ -1,0 +1,1289 @@
+! EnuTnRpt.MAC   Tune report in tune.                           **-Oct-09
+!
+! COPYRIGHT (C) AGILENT TECHNOLOGIES, 1999-2005.  ALL RIGHTS ARE RESERVED   
+! COPYING OR OTHER REPRODUCTION OF THIS PROGRAM EXCEPT FOR ARCHIVAL  
+! PURPOSES IS PROHIBITED WITHOUT THE PRIOR WRITTEN CONSENT OF  
+! AGILENT TECHNOLOGIES.
+!
+!                     RESTRICTED RIGHTS LEGEND                          
+!                                                                       
+! Use, duplication, or disclosure by the Government is subject to       
+! restrictions as set forth in subdivision (b) (3) (ii) of the Rights in  
+! Technical Data and Computer Software clause at 52.227-7013.           
+!                                                                       
+! AGILENT TECHNOLOGIES                                               
+! Life Sciences and Chemical Analysis Solutions           
+! 5301 Stevens Creek Blvd
+! Santa Clara, CA 95051-7201
+! United States
+!
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!  These MACROs are the common macros that are called when tune is invoked.
+!  They take care of testing for the current instrument configuration and
+!  call the proper set of macros for tuning or diagnostics. IT IS STRONGLY
+!  RECOMMENDED THAT NO MODIFICATIONS BE MADE TO THESE MACROS.
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!
+! FILE:    EnuTnRpt.mac
+!
+! MACROS:  MSTN_DoGenReport         MSTN_ReportError
+!          MSTN_PrintRep            MSTN_ErrPrintRep
+!          MSTN_PrintRepHeader      MSTN_ErrPrintRep2
+!          MSTN_PrintChkTnRpt       MSTN_PrintRep_ToFile
+!	   MSTN_DoGenReport_ToFile
+!
+! GLOBAL VARIABLES:
+!
+!          _ErrMsg$                 TUNEFILENAME$
+!          _TUNEPATH$               TUNEFILEPATH
+!          MSFILEINSTRNUM           TUNETYPE$
+!          MSTN_DoPrint
+!          SCAN_NO_PEAKS
+!          SOURCE_MAX
+!
+!==============================================================================
+NAME MSTN_DoGenReport
+parameter DoPreview default 0
+parameter ProfAvg default 0
+! Sets the TUNETYPE$ global variable and calls
+! the macro that prints the tune report
+! Global variables: TUNETYPE$
+! called from fmmcmenu.mac
+! if ProfAvg is >0, these are used for profile.
+!
+! 10/19/09 CPL Modified tune report header to use MSD model number
+!==============================================================================
+local polarity, IonMode$, msdSeries$
+
+on error TUNETYPE$ = "G1946"
+    
+msparm polarity, polarity
+msGetMode IonMode$
+MSSCQuery "*idn?", msdSeries$
+msdSeries$ = SubString$(msdSeries$,2,,",")
+
+if polarity = 0 then
+  TUNETYPE$= "MSD Tune Report, " + msdSeries$ + ": " + IonMode$ + " Positive Mode - Standard Scan"  !* Set Report title global variable
+endif
+
+if polarity = 1 then
+  TUNETYPE$= "MSD Tune Report, " + msdSeries$ + ": " + IonMode$ + " Negative mode - Standard Scan"  !* Set Report title global variable
+endif
+
+if polarity = 2 then
+  TUNETYPE$= "MSD Tune Report, " + msdSeries$ + ": " + IonMode$ + " Positive mode - Fast Scan"  !* Set Report title global variable
+endif
+
+if polarity = 3 then
+  TUNETYPE$= "MSD Tune Report, " + msdSeries$ + ": " + IonMode$ + " Negative mode - Fast Scan"  !* Set Report title global variable
+endif
+    
+if Check(Variable, PRTestVer$) = 1 then
+  TUNETYPE$ = TUNETYPE$ +  "      " + M_MSID$
+endif
+    
+on error
+    
+!* Print profile, scan, parms, dynamic ramp, average for profile
+  MSTN_PrintRep DoPreview,1,1,0,1,1,ProfAvg
+  TUNETYPE$ = ""
+
+endmacro    !MSTN_DoGenReport
+!==============================================================================
+
+
+!==============================================================================
+name  MSTN_PrintChkTnRpt
+parameter DoPreview default 0
+parameter ProfAvg default 0
+!
+! 10/19/09 CPL Modified tune report header to use MSD model number
+!==============================================================================
+local polarity, IonMode$
+on error print
+    
+TuneType$ = "MSD Check Tune  " !* Set Report title global variable
+
+msparm polarity, polarity
+msGetMode IonMode$
+MSSCQuery "*idn?", msdSeries$
+msdSeries$ = SubString$(msdSeries$,2,,",")
+
+if polarity = 0 then
+  TUNETYPE$= TuneType$ + msdSeries$ + ": " + IonMode$ + " Positive mode - Standard Scan"   !* Set Report title global variable
+endif
+
+if polarity = 1 then
+  TUNETYPE$= TuneType$ + msdSeries$ + ": " + IonMode$ + " Negative mode - Standard Scan"   !* Set Report title global variable
+endif
+
+if polarity = 2 then
+  TUNETYPE$= TuneType$ + msdSeries$ + ": " + IonMode$ + " Positive mode - Fast Scan"       !* Set Report title global variable
+endif
+
+if polarity = 3 then
+  TUNETYPE$= TuneType$ + msdSeries$ + ": " + IonMode$ + " Negative mode - Fast Scan"       !* Set Report title global variable
+ endif
+
+if Check(Variable, PRTestVer$) = 1 then
+  TUNETYPE$ = TUNETYPE$ +  "      " + M_MSID$
+endif
+
+!* Print profile and checktune part
+  MSTN_PrintRep DoPreview,1,0,1,0,0,ProfAvg
+  TuneType$ = ""
+
+endmacro  !MSTN_PrintChkTnRpt
+
+!==============================================================================
+
+!==============================================================================
+name mstn_Sprintf$
+parameter value
+parameter format1$
+parameter format2$
+parameter width
+!* Calls sprintf$ in such as way as to format value according to
+!* format1$ and to place that formatted string in string
+!* formatted according to format2$ and padding the result
+!* to at least width characters.  This makes spacing
+!* somewhat independent of significant digits to allow better
+!* alignment of number within columns of numbers
+!==============================================================================
+local spaces$, str$, padlen
+
+  spaces$ = "                         "     !*buffer of spaces
+  if width > len(spaces$) then
+    spaces$ = spaces$ + "   "          !* Added more spaces if needed
+  endif
+
+  !* Format the number string by significant digits, width, and justification
+  !* and surrounding text and total string width
+  str$ = sprintf$(sprintf$(value, format1$),format2$)
+
+  !* Pad the string with spaces to reach the column width
+  padlen = width - len(str$)
+  if padlen > 0 then
+    str$ = str$ + spaces$[1:padlen]
+  endif
+  return str$
+endmacro           !*mstn_sprintf$
+
+!==============================================================================
+
+!==============================================================================
+! Function Name:  vPrintResultSummaryHdr
+! Function Description:
+!       This function prints the Chek Tune Result Summary header directly to the printer.
+!       Assuming, like all the other routines in this file, the printer device has ready been
+!       opened, and the pass-in string might contain the "|" line separator which we don't want
+!       to print it out.
+!
+! Parameter Passed-In:
+!       sSummary$ - The Result Summary header string to print.
+!       MSFILEINSTRNUM - the printer device number
+!
+! Function Return: None.
+!       
+! Revision History:
+!       04/27/00 YD   First created.
+!==============================================================================
+
+!==============================================================================
+name vPrintResultSummaryHdr 
+  parameter sSummary$
+  parameter MSFILEINSTRNUM  default -1
+!==============================================================================
+
+  local iLen, iIndex, sStr$, bCont, iStrLen
+
+   on error print
+   ! Error checking
+   if MSFILEINSTRNUM < 0
+      return
+   endif
+
+   iLen = Len(sSummary$)
+   if iLen < 1
+      return
+   endif
+  
+  print # MSFILEINSTRNUM, " "
+  iIndex = 0
+  sStr$ = sSummary$
+  bCont = 1
+  while (bCont <> 0) do
+     ! Search the sub string
+     iIndex = InStr(sStr$, "|")
+     if iIndex > 0
+           ! Print out a sub string.
+           print # MSFILEINSTRNUM, sStr$[1:iIndex-1]
+           iStrLen = Len(sStr$)
+           if iStrLen >= (iIndex+1)
+                sStr$ = sStr$[iIndex+1:iStrLen]
+           else
+                ! Nothing to be printed out
+                bCont = 0
+           endif
+     else
+         if Len(sStr$) > 0
+            ! The last sub string might not contain "|"
+             print # MSFILEINSTRNUM, sStr$
+         endif
+         bCont = 0
+     endif
+  endwhile
+
+endmacro
+
+!==============================================================================
+
+!==============================================================================
+! Function Name:  vPrintFailMsg
+! Function Description:
+!       This function prints the Failing message directly to the printer for the Check Tune.
+!       Assuming, like all the other routines in this file, the printer device has ready been
+!       opened, and the pass-in string might contain the "|" as the first char. which we don't want
+!       to print it out.
+! 
+! Parameter Passed-In:
+!       sMsg$ - The message string to print.
+!       MSFILEINSTRNUM - the printer device number
+! 
+! Function Return:  None.
+! 
+! Revision History:
+!       04/27/00 YD  First created.
+!==============================================================================
+
+!==============================================================================
+name vPrintFailMsg
+  parameter sMsg$
+  parameter MSFILEINSTRNUM  default -1
+!==============================================================================
+  on error print  
+  ! Error checking
+  if MSFILEINSTRNUM < 0
+     return
+  endif
+  if Len(sMsg$) > 0
+     ! The 1st char might contain "|" which we don't want to print it out
+     if sMsg$[1:1] = "|"
+        print #MSFILEINSTRNUM, sMsg$[2:Len(sMsg$)]
+     else
+        print #MSFILEINSTRNUM, sMsg$              
+     endif
+  else
+       print #MSFILEINSTRNUM, sMsg$
+  endif
+
+endmacro
+
+!==============================================================================
+
+!==============================================================================
+name mstn_PrintCheckTune
+parameter DeviceNum default MSFILEINSTRNUM
+parameter startx, starty
+! Assumes that profile has already been done
+! and that deviceNum is open as a printer
+!
+! potentially sets global variables:
+! msat_ABFail, msat_PWFail, msat_MAFail, msat_MassErrLim, msat_AbundErrLim
+! msat_MassWindow
+! Revision History:
+! 04/27/00 YD   The new printer driver for A.08.01 does not work with the MSDispPrint anymore
+!                       (when trying to print a pure text meta file). To provide a temp. workaround,
+!                       I wrote some routines to print the Check Tune Report (pure text portion)
+!                       directly to the printer, instead of using the MSDispPrint command. The final
+!                       fix should be done at the printer driver site.
+!==============================================================================
+local targchange, passfail$, ProdEnv, ScanTabName$, ProfTabName$, NumTunes
+local _button, delim$, sBar$, y, i, i$, mass, selected
+local fail1$, fail2$, fail3$, fail4$, fail5$, fail6$
+local mass$, massAxis, massAxis$, target, tolerance, maintarg, bigtarg, target$
+local peakwidth, peakwidth$, pwdiff, abundance, abundance$
+local pfMass$, pftarget$, failSummary$
+! local prevabund,abunddiff, abunddiff$, pfabund$
+
+  targchange = 0                    ! Initialize the flag
+
+Local  ID_TUNEMAC_VALUES_FROM_A_884
+Local  ID_TUNEMAC_STRING1_885
+Local  ID_TUNEMAC__MASS_AXIS_CAL_887
+Local  ID_TUNEMAC_TARGET____TUNE_888
+Local  ID_TUNEMAC_TARGET____TUNE_889
+Local  ID_TUNEMAC__MASS_____MASS_890
+Local  ID_TUNEMAC__MASS_____MASS_891
+
+ID_TUNEMAC_VALUES_FROM_A_884                       =  17884  
+ID_TUNEMAC_STRING1_885                             =  17885  
+ID_TUNEMAC__MASS_AXIS_CAL_887                      =  17887  
+ID_TUNEMAC__MASS_AXIS_CAL_887                      =  17887  
+ID_TUNEMAC_TARGET____TUNE_888                      =  17888  
+ID_TUNEMAC_TARGET____TUNE_889                      =  17889  
+ID_TUNEMAC_TARGET____TUNE_889                      =  17889  
+ID_TUNEMAC__MASS_____MASS_890                      =  17890  
+ID_TUNEMAC__MASS_____MASS_891                      =  17891  
+ID_TUNEMAC__MASS_____MASS_891                      =  17891  
+   if Check(Macro, Archive_Header) = 1 then
+      Archive_Header "CHCKTUNE"
+      passfail$ = "PASS"
+      ProdEnv = 1
+   endif
+
+!* Construct the autotune results table names (based on installed source and polarity)
+   ScanTabName$ = msat_GetScanTabName$()
+   ProfTabName$ = msat_GetProfTabName$()
+
+!* Check to see if the save scan register exists in memory
+  NumTunes =  RegSize(AtuneReg)
+
+  if NumTunes = -1 then
+  !* If the save scan register is not in memory, try to load from file
+    if filestat(mode,_tunepath$ + "atune.reg") = 1 then
+      Loadobj _tunepath$ + "atune.reg",, AtuneReg
+      NumTunes =  RegSize(AtuneReg)
+    endif
+    if NumTunes = -1 then
+      _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_VALUES_FROM_A_884),3)
+    endif
+  endif
+
+!* Check if limits have been specified (global variables)
+  if check(variable,msat_MassErrLim) = 0 OR check(variable,msat_AbundErrLim) = 0 then
+    msat_InitTuneTargets
+  endif
+
+  delim$  = " | "
+
+  ! 04/27/00 YD  Added the following section of code
+  sBar$ = "------------------------------------------------------------------"
+  SetPageLoc (XMax() - Len(sBar$))/2, YLoc()+5
+
+  y = 0      !* Start at top of display window
+!* Print check tune report headings
+!*  MSWindDisp  ReadResource$("tunemac",ID_TUNEMAC_STRING1_885) [,value] [,"string2"] [,x] [,y]
+  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC__MASS_AXIS_CAL_887),,,,y
+  ! 04/27/00 YD   Added the following code to print the results directly to the printer
+  print #MSFILEINSTRNUM, ReadResource$("tunemac",ID_TUNEMAC__MASS_AXIS_CAL_887)
+  y = y+1
+  MSWindDisp sBar$,,,,y
+  ! 04/27/00 YD   Added the following code to print the results directly to the printer
+  print #MSFILEINSTRNUM, sBar$
+
+  y = y+1
+!!  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_TARGET____TUNE_888),,,,y
+  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC_TARGET____TUNE_889),,,,y
+  ! 04/27/00 YD   Added the following code to print the results directly to the printer
+  print #MSFILEINSTRNUM, ReadResource$("tunemac",ID_TUNEMAC_TARGET____TUNE_889)
+
+  y = y+1
+!!  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC__MASS_____MASS_890),,,,y
+  MSWindDisp ReadResource$("tunemac",ID_TUNEMAC__MASS_____MASS_891),,,,y
+  ! 04/27/00 YD   Added the following code to print the results directly to the printer
+  print #MSFILEINSTRNUM, ReadResource$("tunemac",ID_TUNEMAC__MASS_____MASS_891)
+
+  for i = 1 to 6
+     i$ = val$(i)
+
+     !* See if mass is selected
+     MSMassValue i,mass,,selected
+
+     if selected = 0 then
+       evaluate "fail"+ i$ +"$ = """" "
+       if ProdEnv = 1 then
+         Archive_Data " "," "
+         Archive_Data " "," "
+         Archive_Data " "," "
+       endif
+
+     else
+     !* Target mass
+       mass$ = mstn_sprintf$(mass,"%.2f","%7s",9)
+
+     !* calculated tune mass
+       evaluate "massAxis=Peakm_z" + i$
+       if massAxis = -1 then
+         evaluate "MassAxis=basepeak" + i$
+       endif
+
+       if ProdEnv = 1 then
+          Archive_Data "MassAxis", val$(massAxis)
+       endif
+
+       massAxis = (round(MassAxis * 100))/100
+       massaxis$ = mstn_sprintf$(massAxis,"%.2f","%7s",9)
+
+     !* target peakwidth
+       MSPWidths  i,target,,tolerance
+       if i=1 then
+         maintarg = target
+       endif
+       if target > maintarg then   ! masses 5 & 6 have bigger default targets
+         bigtarg = target
+         target = maintarg           ! try the narrower target first
+         targchange = 1
+       endif
+       target$ = mstn_sprintf$(target,"%.2f","%4s",7)
+
+     !* actual peakwidth
+       evaluate "peakwidth=PeakWidth"+ i$
+       if ProdEnv = 1 then
+          Archive_Data "PeakWidth", val$(PeakWidth)
+       endif
+
+       peakwidth$ = mstn_sprintf$(peakwidth,"%.2f","%4s",7)
+
+
+       pwdiff = ABS((round(peakwidth * 100))/100 - target)
+
+     !* Actual abundance
+       evaluate "abundance=PeakMax"+ i$
+       if ProdEnv = 1 then
+          Archive_Data "Abundance", val$(Abundance)
+       endif
+       abundance$ = mstn_sprintf$(abundance,"%.0f","%7s",9)
+
+       !* Mass i              <---- error table row labels
+       evaluate "fail"+ i$ +"$ = mstn_sprintf$(" + i$ + ",""|Mass %d"",""%s"",18)"
+
+       !* Mass axis pass fail
+       !massAxis = (round(MassAxis * 100))/100
+       if abs(mass-massaxis) > msat_MassErrLim then
+         !* Mass Axis error
+         pfmass$ = "fail" + delim$
+         evaluate "fail" + val$(i) + "$ = fail" + i$ + "$ + mstn_sprintf$(abs(mass-massaxis),""abs(%.2f)"",""%s"",16)"
+         msat_MAFail = 1
+         passfail$ = "FAIL"
+       else
+         pfmass$ = "pass" + delim$
+         evaluate "fail" + val$(i) + "$ = fail" + i$ + "$ + sprintf$(""pass"",""%-16s"")"
+         !msat_MAFail = 0
+       endif
+
+       !* Peak Width pass fail
+       if (abs(pwdiff)>abs(tolerance)) then
+         if targchange = 0 then
+           pftarget$ = "fail" + delim$
+           evaluate "fail"+val$(i)+"$ = fail" + val$(i) + "$ + mstn_sprintf$(abs(pwdiff),""abs(%.2f)"",""%s"",18)"
+           msat_PWFail = 1
+           passfail$ = "FAIL"
+         else
+           target$ = mstn_sprintf$(bigtarg,"%.2f","%4s",7)
+           pwdiff = ABS((round(peakwidth * 100))/100 - bigtarg)
+           if ABS(pwdiff) > ABS(tolerance) then
+             pftarget$ = "fail" + delim$
+             evaluate "fail"+val$(i)+"$ = fail" + val$(i) + "$ + mstn_sprintf$(abs(pwdiff),""abs(%.2f)"",""%s"",18)"
+             msat_PWFail = 1
+             passfail$ = "FAIL"
+           else
+             pftarget$ = "pass" + delim$
+             evaluate "fail" + val$(i) + "$ = fail" + i$ + "$ + sprintf$(""pass"",""%-18s"")"
+             !msat_PWFail = 0
+           endif
+         endif
+       else
+         pftarget$ = "pass" + delim$
+         evaluate "fail" + val$(i) + "$ = fail" + i$ + "$ + sprintf$(""pass"",""%-18s"")"
+         !msat_PWFail = 0
+       endif
+
+       !* Abundance pass fail
+!!       if (abs(abunddiff) > abs(msat_AbundErrLim)) then
+!!         pfabund$ = "fail"            !* Set abundance failure flag
+!!         evaluate "fail"+val$(i)+"$ = fail" + val$(i) + "$ + mstn_sprintf$(abs(abunddiff*100),""abs(%.0f)%%"",""%s"",14)"
+!!         msat_ABFail = 1
+!!       else
+!!         if instr(abunddiff$,"NA") > 0 then
+!!           pfabund$ = " NA "
+!!           evaluate "fail" + val$(i) + "$ = fail" + i$ + "$ + sprintf$("" NA "",""%-14s"")"
+!!           !msat_ABFail = 0
+!!           !passfail$ = "FAIL"
+!!         else
+!!           pfabund$ = "pass"
+!!           evaluate "fail" + val$(i) + "$ = fail" + i$ + "$ + sprintf$(""pass"",""%-14s"")"
+!!           !msat_ABFail = 0
+!!         endif
+!!       endif
+
+       y= y+1              !* Increment to next line
+
+       !* Print Row of results
+!!       MSWindDisp mass$ + massaxis$ + pfmass$ + target$ + peakwidth$ + pftarget$ + abundance$ + abunddiff$ + pfabund$,,,,y
+       MSWindDisp mass$ + massaxis$ + pfmass$ + target$ + peakwidth$ + pftarget$ + abundance$,,,,y
+       ! 04/27/00 YD   Added the following code to print the results directly to the printer
+       print #MSFILEINSTRNUM, mass$ + massaxis$ + pfmass$ + target$ + peakwidth$ + pftarget$ + abundance$
+
+     endif       !* Only do something if mass is selected
+     targchange = 0                  ! Reset the flag
+  next i         !* Next mass
+  y = y + 2
+
+  !* Print results summary section
+  failSummary$ = mstn_ResultSummary$(msat_MassErrLim,tolerance,msat_AbundErrLim*100)
+  ! 04/27/00 YD
+  vPrintResultSummaryHdr failSummary$, MSFILEINSTRNUM
+  failSummary$ = failSummary$ + fail1$ + fail2$ + fail3$ + fail4$ +fail5$ + fail6$
+
+  ! 04/27/00 YD   Added the following section of code to print the results directly to the printer
+  vPrintFailMsg fail1$, MSFILEINSTRNUM
+  vPrintFailMsg fail2$, MSFILEINSTRNUM
+  vPrintFailMsg fail3$, MSFILEINSTRNUM
+  vPrintFailMsg fail4$, MSFILEINSTRNUM
+  vPrintFailMsg fail5$, MSFILEINSTRNUM
+  vPrintFailMsg fail6$, MSFILEINSTRNUM
+
+  mstn_PrintMultiLineStr failSummary$,y
+
+  !* Send Check Tune Display to printer
+  !* Assume printer job already open
+
+  ! 04/27/00 YD   The MSDispPrint does not work any more with the A.08.01 Printer driver
+  !  MSDispPrint startx, starty
+
+  if ProdEnv = 1 then
+     Archive ,passfail$
+  endif
+
+endmacro  !* mstn_PrintCheckTune
+!==============================================================================
+
+!==============================================================================
+name mstn_ResultSummary$
+parameter MALim, PWLim, SigLim
+Local ID_TUNEMAC_983
+Local ID_TUNEMAC_984
+Local ID_TUNEMAC_985
+Local ID_TUNEMAC_986
+Local ID_TUNEMAC_987
+Local ID_TUNEMAC_988
+ID_TUNEMAC_983 = 17983
+ID_TUNEMAC_984 = 17984
+ID_TUNEMAC_985 = 17985
+ID_TUNEMAC_986 = 17986
+ID_TUNEMAC_987 = 17987
+ID_TUNEMAC_988 = 17988
+!*
+!* Build Check tune report results summary header string
+!*
+!==============================================================================
+local str$
+local str1$
+! str$ = "Results Summary"
+  str$ = ReadResource$("tunemac",ID_TUNEMAC_983)
+!! str$ = str$ + "|                 Mass Axis      Peak Width      Signal Intensity"
+ !str$ = str$ + "|                 Mass Axis      Peak Width "
+ str1$ = ReadResource$("tunemac",ID_TUNEMAC_984)
+ str$ = str$ + str1$
+!! str$ = str$ + "|Allowed Diff.    <"+val$(MALim)+" amu      <"+val$(PWLim)+" amu          <"+val$(SigLim)+"% diff."
+ !str$ = str$ + "|Allowed Diff.    <="+val$(MALim)+" amu      <="+val$(PWLim) + "  amu"
+ str$ = str$ + ReadResource$("tunemac",ID_TUNEMAC_985)+val$(MALim)+ReadResource$("tunemac",ID_TUNEMAC_986)+val$(PWLim) + ReadResource$("tunemac",ID_TUNEMAC_987)
+ !str$ = str$ + "|Actual Diff. "
+ str$ = str$ + ReadResource$("tunemac",ID_TUNEMAC_988)
+ return str$
+endmacro      !* mstn_ResultsSummary$
+
+!==============================================================================
+
+!==============================================================================
+name mstn_PrintMultiLineStr
+parameter string$
+parameter Starty
+!* Routine to print a Multi-line string to the tune display window
+!==============================================================================
+local str$,i,y
+Local  ID_TUNEMAC_GENERATING_REP_892
+Local  ID_TUNEMAC_PRINTJOB_893
+ID_TUNEMAC_GENERATING_REP_892                      =  17892  
+ID_TUNEMAC_PRINTJOB_893                            =  17893  
+  i = 1
+  y = StartY
+
+  str$= substring$(string$,i)
+  while len(str$) > 0
+      MSWindDisp str$,,,,y
+      y = y + 1
+      i = i + 1
+      str$= substring$(string$,i)
+  endwhile
+endmacro         !* mstn_PrintMultiLineStr
+
+!==============================================================================
+
+!==============================================================================
+ NAME MSTN_PrintRep
+ parameter DoPreview default 0
+ parameter DoProfile default 1
+ parameter DoScan default 1
+ parameter DoCheckTune default 0
+ parameter DoPrintParms default 1
+ parameter DoDynamic default 1
+ parameter ProfAvg default 0  !if >0, used for profile average
+
+! Macro that prints the tune report.  Meant to be
+! called from the menu item in Manual MS calibrate.
+! Global variables: MSTN_DoPrint, TUNEFILEPATH$, TUNEFILENAME$
+! SOURCE_MAX, TUNETYPE$, MSFILEINSTRNUM
+! SCAN_NO_PEAKS : set by MSScan
+!
+! Pre-conditions:
+!   TUNETYPE$ is defined.  TuneType$ must have the
+!      substring Check in it to print a check tune report
+!   SOURCE_MAX is defined.
+!   Printer and file #MSFILEINSTRNUM are not open.
+!   Assumes MSTN_ChkIonAP() returns either 0 or 1
+!
+! Post-conditions:
+!   if MSTN_DoPrint is undefined, it is defined and set to 1
+!
+! Known problems:
+!   User interface strings are hard-coded.
+!   Unlike the Mustang version, this version cannot force the printer
+!   into portrait mode.  It will print in whatever mode the user picked.
+!   Code contains references to source files.
+!   Hard codes the m/z value to 3 amu for the profile display.
+! Uses global mstn_rptSavedAvg temporarily.
+!!==============================================================================
+  local PgWidth, PgHeight, MidWidth, LeftX, PlotWidthPercent, PlotHeightPercent
+  local TopY, IonMode$, t$, Top, i, selected, Defined, saveStepsize, MidPgOffset
+  local lens_1$, lens_2$, lens_3$, lens_4$, mstn_report$
+  local ID_TUNEMAC_GENERATING_REP_892  
+  ID_TUNEMAC_GENERATING_REP_892                      =  17892  
+    if check (VARIABLE, MSTN_DoPrint) = 0 then
+        MSTN_DoPrint = 1                   !* Initialize missing global.
+    else
+        if MSTN_DoPrint = 0
+          return                        !* No report is desired
+        endif
+    endif
+
+
+    print ReadResource$("tunemac",ID_TUNEMAC_GENERATING_REP_892)
+    GetCurrentPrinterSetup                 !3-02PR utilize current printer setup
+
+    SetMargin 2, 2, 2                      !* Set the margin
+
+    on error MSTN_ErrorStopReport          !* print error message and stop on error
+
+    PgWidth  = XMax()                      !* Get size of page
+    PgHeight = YMax()
+
+    on error MSTN_ErrPrintRep              !* tune_ErrPrintRep
+                                           !* Basically, ignore the error
+
+    MidWidth = (PgWidth-len(TUNETYPE$))/2  !*Center of the page
+
+    if MidWidth < 0 then
+        MidWidth = 2
+    endif
+
+    !* Set default plotting coordinates
+    LeftX =  0.05                          !* Set the left x at 5% of pg width
+    PlotWidthPercent = 0.9                 !* Set the plot width at 90% of pg width
+    if (PgWidth * PlotWidthPercent) < 69 then
+         PlotWidthPercent = 0.93
+    endif
+
+    TopY = 4/PgHeight                      !* top y is % that 4 lines is of a page
+    !* calculate bottom y point in % of page height for each plot
+    !* Basically, default height of plot is half a page minus 4 lines
+    PlotHeightPercent = ((PgHeight/2)-4)/PgHeight
+
+    MSGetMode IonMode$
+
+    OpenDevice "Printer" As #MSFILEINSTRNUM
+    BeginJob ,,PgWidth-20, (PgHeight-2) ! moving to bottom of page
+    msAverages mstn_rptSavedAvg
+    on error MSTN_ErrPrintRep2
+    MSTN_AddAbortHandler "MSTN_ErrPrintRep2"
+    SetHeader TUNETYPE$, MidWidth, 0
+
+    t$ = time$()                           !* Get system time for reports
+
+    !*
+    !* Do Electrospray plots
+    !*
+
+    Top = 1
+    MSGDisplay on                          !* Show graphics on the scan
+
+    if profAvg>0 then                      !* Use different average
+        msAverages ,profAvg
+    endif
+
+    if DoProfile = 1  then
+    !* Assert: Profile always prints in top section
+      !* Print header
+      MSTN_PrintRepHeader MidWidth,PgWidth,PgHeight,t$,"",0
+
+      ! MSProfile                            !* Do single profile, no report
+      print MSProfileAvg(3,1,1)              ! Using average of 3 profiles for report
+      !* Top half - print the profile
+      MSDispPrint LeftX, TopY, PlotWidthPercent, PlotHeightPercent
+      Top = 0
+    endif
+
+    if DoCheckTune = 1 then
+
+      !* Check if profile needs to be done
+      if DoProfile = 0 then
+        i = 1
+        repeat
+          MSMassValue i,,,selected
+          evaluate "Defined =  check(variable,Peakm_z" + val$(i)+")"
+          if selected = 1 AND Defined = 0 then
+             !change stepsize to 0.05
+             MSStepsize saveStepsize,0.05
+             MSProfile
+             !change stepsize to 0.05
+             MSStepsize ,saveStepsize
+             i = 7       !*break out of loop
+          endif
+          i = i + 1
+        until i > 6
+      endif
+
+    !* Print the Check Tune section
+    !* Assert that profile has already been called
+      on error _abort=1
+      if Top = 1 then
+      !* Print the header
+         MSTN_PrintRepHeader MidWidth,PgWidth,PgHeight,t$,"",0
+         MSTN_PrintCheckTune MSFILEINSTRNUM, LeftX, TopY
+         Top = 0                           !* set next section to bottom
+      else
+         MidPgOffset = YLoc()/PgHeight
+         MSTN_PrintCheckTune MSFILEINSTRNUM, LeftX, TopY + MidPgOffset
+         FormFeed                          !* Second page
+         Top = 1                           !* Toggle the top
+      endif
+      on error MSTN_ErrPrintRep2
+    endif  ! if DoCheckTune = 1
+
+    msAverages ,mstn_rptSavedAvg
+    if DoScan = 1  then
+      MSScan,,,,0                            !* Do scan
+      if Top = 1 then
+      !* Print the header
+        MSTN_PrintRepHeader MidWidth,PgWidth,PgHeight,t$,"",0
+        MSDispPrint LeftX, TopY, PlotWidthPercent, PlotHeightPercent
+        Top = 0
+      else
+        MidPgOffset = YLoc()/PgHeight
+        MSDispPrint LeftX, TopY + MidPgOffset, PlotWidthPercent, PlotHeightPercent
+        FormFeed                             !* Second page
+        Top = 1
+      endif
+    endif  !* if DoScan = 1
+    if DoPrintParms = 1 then
+      if Top = 1 then
+      !* Print Top half
+        MSTN_PrintRepHeader MidWidth,PgWidth,PgHeight,t$,"",0
+        MSPrint                                !* print instrument parameters
+        Top = 0
+      else
+        MidPgOffset = YLoc()/PgHeight
+        MSPrint  YLoc() + 2              !* print instrument parameters
+        FormFeed
+        Top = 1
+      endif
+    endif
+
+    if Check(Variable, PRTest$) = 1 then
+       Archive_Tune
+    endif
+
+    if DoDynamic = 1 then
+      !* Look for dynamic plots
+      lens_1$ = ""                           !* Initialize to empty string
+      lens_2$ = ""                           !* because MSDynamic won't reset
+      lens_3$ = ""                           !* lens strings that are not active
+      lens_4$ = ""
+      MSDynamic list,lens_1$,lens_2$,lens_3$,lens_4$      !* Find out which lens are active
+
+      if (len(lens_1$) > 0) then                          !* do the dynamic plots
+        evaluate ("MSDynamic "+lens_1$+",plot")
+        if Top = 1
+          MSTN_PrintRepHeader MidWidth,PgWidth,PgHeight,t$,"",0
+          MSDispPrint LeftX ,TopY, PlotWidthPercent, PlotHeightPercent
+          Top = 0
+        else
+          MidPgOffset = YLoc()/PgHeight
+          MSDispPrint LeftX ,TopY+MidPgOffset, PlotWidthPercent, 1-TopY-MidPgOffset
+          FormFeed                             !* Second page
+          Top = 1
+        endif
+      endif            !* first lens
+      if (len(lens_2$) <> 0)then
+      !* do the dynamic plots for second lens
+        evaluate ("MSDynamic "+lens_2$+",plot")
+        if Top = 1
+          MSTN_PrintRepHeader MidWidth,PgWidth,PgHeight,t$,"",0
+          MSDispPrint LeftX ,TopY, PlotWidthPercent, PlotHeightPercent
+          Top = 0
+        else
+          MidPgOffset = YLoc()/PgHeight
+          MSDispPrint LeftX ,TopY+MidPgOffset, PlotWidthPercent, 1-TopY-MidPgOffset
+          FormFeed                             !* Second page
+          Top = 1
+        endif
+      endif          !* second lens
+      if (len(lens_3$) > 0)  then                      !* do the dynamic plots
+      !* do the dynamic plots for third lens
+         evaluate ("MSDynamic "+lens_3$+",plot")
+         if Top = 1
+           MSTN_PrintRepHeader MidWidth,PgWidth,PgHeight,t$,"",0
+           MSDispPrint LeftX ,TopY, PlotWidthPercent, PlotHeightPercent
+           Top = 0
+         else
+           MidPgOffset = YLoc()/PgHeight
+           MSDispPrint LeftX ,TopY+MidPgOffset, PlotWidthPercent, 1-TopY-MidPgOffset
+           FormFeed                             !* Second page
+           Top = 1
+         endif
+      endif        !* third lens
+      if (LEN(lens_4$) <> 0)then                  !* do the dynamic plots
+      !* do the dynamic plots for fourth lens
+         evaluate ("MSDynamic "+lens_4$+",plot")
+         if Top = 1
+           MSTN_PrintRepHeader MidWidth,PgWidth,PgHeight,t$,"",0
+           MSDispPrint LeftX ,TopY, PlotWidthPercent, PlotHeightPercent
+           Top = 0
+         else
+           MidPgOffset = YLoc()/PgHeight
+           MSDispPrint LeftX ,TopY+MidPgOffset, PlotWidthPercent, 1-TopY-MidPgOffset
+           FormFeed                             !* Second page
+           Top = 1
+         endif
+      endif     !* fourth lens
+    endif              !* DoDynamic
+  if DoPreview = 1 then
+    EndJob  mstn_Report$
+    !showreport 69,MSTN_Report$,ReadResource$("tunemac",ID_TUNEMAC_PRINTJOB_893),"deljob"
+    showreport 69,MSTN_Report$,"printjob","deljob"
+  else
+    EndJob
+  endif
+  setheader                                     !* Reset header
+  close #MSFILEINSTRNUM
+  MSTN_RemoveAbortHandler "MSTN_ErrPrintRep2"
+  return
+
+endmacro    !MSTN_PrintRep
+!==============================================================================
+
+!==============================================================================
+NAME MSTN_PrintRepHeader
+parameter m, dx, dy, t$ default time$(), title$ default "AUTOTUNE", page default 0
+!
+! global variables: _TUNEPATH$, TUNEFILENAME$
+!
+!Pre-conditions:
+! Assumes that a device is opened as a printer
+! and that this macro is called between BeginJob,EndJob
+! If title$ = "", then assume that the caller has used
+! the set header command
+! If page = 0, then assume the caller doesn't want page #s
+! or has set the print job to use page numbers automatically
+!
+!Post-conditions:
+! The current page location is set to (0.95*dx-len(tfile$)),2
+!==============================================================================
+    local vpos, v$, p$, tfile$
+Local  ID_TUNEMAC_INSTRUMENT_895
+ID_TUNEMAC_INSTRUMENT_895                          =  17895  
+    print
+
+    if len(title$) > 0 then
+       setpageloc m,0
+       sprint title$                        !* Print page title
+    endif
+
+    setpageloc (dx*0.05),1
+    sprint ReadResource$("tunemac",ID_TUNEMAC_INSTRUMENT_895)+ ": "+ _InstName$  !* Print name of instrument
+    
+    vpos=Instr(_Version$,"Copyright")
+    v$ = _Version$[1:vpos-2]
+    SetPageLoc (0.95*dx-(1.2*len(v$))),1
+    sprint v$
+
+  !  if (page > 0) then                             <-- This section doesn't seem to ever be getting used.
+  !      p$ = "Page " +val$(page)                       Maybe the BeginJob statement does it???
+  !      setpageloc ((dx*0.90)-len(p$)),1
+  !      sprint p$                           !* Right justify page number
+  !  endif
+
+
+    SetPageLoc (dx*0.05),2
+    sprint t$
+
+    tfile$=_TUNEPATH$ + TUNEFILENAME$      !* Print name of tune file next to the time
+    ! SetPageLoc (0.95*dx-(1.2*len(tfile$))),2
+    SetPageLoc (0.95*dx-(1.1*len(tfile$))),2
+    sprint tfile$
+
+    return
+
+endmacro    !MSTN_PrintRepHeader
+
+!==============================================================================
+
+!==============================================================================
+NAME MSTN_ReportError
+!
+!  This macro reports the error message stored in _ErrMsg$.
+!  It is meant to be an error handling routine
+!
+!  Global variables:
+!   _ErrMsg$
+!
+! Pre-conditions:
+!
+! Post-conditions:
+!   Displays an error message for user and turns
+!   control to calling routine to keep going.
+!==============================================================================
+local _button
+    on error print
+    _button = alert (_ErrMsg$,3)
+    return      !will keep going
+
+endmacro        !MSTN_ReportError
+!==============================================================================
+
+!==============================================================================
+NAME MSTN_ErrorStopReport
+!
+!  This macro reports the error message stored in _ErrMsg$.
+!  It is meant to be an error handling routine
+!
+!  Global variables:
+!   _ErrMsg$
+!
+! Pre-conditions:
+!
+! Post-conditions:
+!   Displays an error message for user and turns
+!   control to calling routine to keep going.
+!==============================================================================
+local _button
+Local  ID_TUNEMAC_PRINT_MSD_TUNE_896
+Local  ID_TUNEMAC_ABORTED_BY_OPE_897
+ID_TUNEMAC_PRINT_MSD_TUNE_896                      =  17896  
+ID_TUNEMAC_ABORTED_BY_OPE_897                      =  17897  
+    on error print
+    TUNETYPE$ = ""
+    SetHeader                  !* Reset the header
+    _button = alert (_ErrMsg$,3,ReadResource$("tunemac",ID_TUNEMAC_PRINT_MSD_TUNE_896))
+    stop
+
+endmacro        !MSTN_ReportError
+
+!==============================================================================
+
+!==============================================================================
+ NAME MSTN_ErrPrintRep
+! On error in MSTN_PrintRep.
+!==============================================================================
+  return        !* ignore the error
+
+endmacro    !MSTN_ErrPrintRep
+
+!==============================================================================
+
+!==============================================================================
+ NAME MSTN_ErrPrintRep2
+! On error in MSTN_PrintRep.
+! Uses global mstn_rptSavedAvg
+!==============================================================================
+ local _button
+  on error print
+
+   MSTN_RemoveAbortHandler "MSTN_ErrPrintRep2"
+
+   if check(variable,mstn_rptSavedAvg) = 1 then
+     print mstn_rptSavedAvg
+     if mstn_rptSavedAvg > 0 then
+       msAverages ,mstn_rptSavedAvg
+     endif
+     remove mstn_rptSavedAvg
+   endif
+!* print the error msg
+   if instr(_errmsg$,"Abort") = 0 then
+     _button = alert(_errmsg$,3)
+   else
+     print
+     _button = Alert(ReadResource$("tunemac",ID_TUNEMAC_ABORTED_BY_OPE_897),3,"Error")
+   endif
+
+!* end print job
+   endjob
+
+!* close the file/printer if open
+   close #MSFileInstrNum
+   TuneType$ = ""
+   SetHeader                 !* Reset the header
+
+   stop
+
+endmacro    !MSTN_ErrPrintRep2
+
+!==============================================================================
+
+!==============================================================================
+! Added for doing the Saved Meta file Tune Reports
+NAME MSTN_DoGenReport_ToFile
+parameter DoPreview default 0
+parameter ProfAvg default 0
+! Sets the TUNETYPE$ global variable and calls
+! the macro that prints the tune report
+! Global variables: TUNETYPE$
+! called from fmmcmenu.mac
+! if ProfAvg is >0, these are used for profile.
+! Note: The Header information is now written internally from Graphics
+!==============================================================================
+    !* Print profile, scan, parms, dynamic ramp, average for profile
+    MSTN_PrintRep_ToFile DoPreview,1,1,0,1,1,ProfAvg
+endmacro    !MSTN_DoGenReport_ToFile
+
+!==============================================================================
+
+! Added for Meta File Printing
+!==============================================================================
+ NAME MSTN_PrintRep_ToFile
+ parameter DoPreview default 0
+ parameter DoProfile default 1
+ parameter DoScan default 1
+ parameter DoCheckTune default 0
+ parameter DoPrintParms default 1
+ parameter DoDynamic default 1
+ parameter ProfAvg default 0  !if >0, used for profile average
+Local  ID_TUNEMAC_GENERATING_REP_892
+ID_TUNEMAC_GENERATING_REP_892                      =  17892  
+
+! Macro that prints the tune report.  Meant to be
+! called from the menu item in Manual MS calibrate.
+! Global variables: MSTN_DoPrint, TUNEFILEPATH$, TUNEFILENAME$
+! SOURCE_MAX, TUNETYPE$, MSFILEINSTRNUM
+! SCAN_NO_PEAKS : set by MSScan
+!
+! Pre-conditions:
+!   TUNETYPE$ is defined.  TuneType$ must have the
+!      substring Check in it to print a check tune report
+!   SOURCE_MAX is defined.
+!   Printer and file #MSFILEINSTRNUM are not open.
+!   Assumes MSTN_ChkIonAP() returns either 0 or 1
+!
+! Post-conditions:
+!   if MSTN_DoPrint is undefined, it is defined and set to 1
+!
+! Known problems:
+!   User interface strings are hard-coded.
+!   Unlike the Mustang version, this version cannot force the printer
+!   into portrait mode.  It will print in whatever mode the user picked.
+!   Code contains references to source files.
+!   Hard codes the m/z value to 3 amu for the profile display.
+! Uses global mstn_rptSavedAvg temporarily.
+!
+!==============================================================================
+  local PgWidth, PgHeight, MidWidth, LeftX, PlotWidthPercent, PlotHeightPercent
+  local TopY, IonMode$, t$, Top, i, selected, Defined, saveStepsize, MidPgOffset
+  local lens_1$, lens_2$, lens_3$, lens_4$, mstn_report$
+
+    if check (VARIABLE, MSTN_DoPrint) = 0 then
+        MSTN_DoPrint = 1                   !* Initialize missing global.
+    else
+        if MSTN_DoPrint = 0
+          return                        !* No report is desired
+        endif
+    endif
+
+!! MSDispPrintFile -> PrintScreenToFile (cmd2.cpp) and MSPrintFile -> PrintMSParmToFile (cmd2.cpp)
+!! Replace MSTN_PrintRep (print) -> MSTN_PrintRep_ToFile (File save Version)
+!! Replace MSTN_DoGenReport (printer version) -> MSTN_DoGenReport_ToFile (File save version)
+    print ReadResource$("tunemac",ID_TUNEMAC_GENERATING_REP_892)
+    GetCurrentPrinterSetup                 !3-02PR utilize current printer setup
+
+    SetMargin 2, 2, 2                      !* Set the margin
+
+    on error MSTN_ErrorStopReport          !* print error message and stop on error
+
+    PgWidth  = XMax()                      !* Get size of page
+    PgHeight = YMax()
+
+    on error MSTN_ErrPrintRep              !* tune_ErrPrintRep, Ignores the error
+                                           !* Basically, ignore the error
+
+    MidWidth = (PgWidth-len(TUNETYPE$))/2  !*Center of the page
+
+    if MidWidth < 0 then
+        MidWidth = 2
+    endif
+
+    !* Set default plotting coordinates
+    LeftX =  0.05                          !* Set the left x at 5% of pg width
+    PlotWidthPercent = 0.9                 !* Set the plot width at 90% of pg width
+    if (PgWidth * PlotWidthPercent) < 69 then
+         PlotWidthPercent = 0.93
+    endif
+
+    TopY = 4/PgHeight                      !* top y is % that 4 lines is of a page
+    !* calculate bottom y point in % of page height for each plot
+    !* Basically, default height of plot is half a page minus 4 lines
+    PlotHeightPercent = ((PgHeight/2)-4)/PgHeight
+
+    MSGetMode IonMode$
+
+    msAverages mstn_rptSavedAvg
+    on error MSTN_ErrPrintRep2
+
+    !*
+    !* Do Electrospray plots
+    !*
+
+    Top = 1
+    MSGDisplay on                          !* Show graphics on the scan
+
+    if profAvg>0 then                      !* Use different average
+        msAverages ,profAvg
+    endif
+
+    if DoProfile = 1  then
+    !* Assert: Profile always prints in top section
+      !* Print header
+
+      ! MSProfile                            !* Do single profile, no report
+      print MSProfileAvg(3,1,1)              ! Using average of 3 profiles for report
+      !* Top half - print the profile
+      MSDispPrintToFile LeftX, TopY, PlotWidthPercent, PlotHeightPercent, _TEMPPATH$ + "msProfile.emf"
+      Top = 0
+    endif
+
+    if DoCheckTune = 1 then
+
+      !* Check if profile needs to be done
+      if DoProfile = 0 then
+        i = 1
+        repeat
+          MSMassValue i,,,selected
+          evaluate "Defined =  check(variable,Peakm_z" + val$(i)+")"
+          if selected = 1 AND Defined = 0 then
+             !change stepsize to 0.05
+             MSStepsize saveStepsize,0.05
+             MSProfile
+             !change stepsize to 0.05
+             MSStepsize ,saveStepsize
+             i = 7       !*break out of loop
+          endif
+          i = i + 1
+        until i > 6
+      endif
+
+    !* Print the Check Tune section
+    !* Assert that profile has already been called
+      on error _abort=1
+      if Top = 1 then
+      !* Print the header
+         MSTN_PrintCheckTune MSFILEINSTRNUM, LeftX, TopY
+         Top = 0                           !* set next section to bottom
+      else
+         MidPgOffset = YLoc()/PgHeight
+         MSTN_PrintCheckTune MSFILEINSTRNUM, LeftX, TopY + MidPgOffset
+         Top = 1                           !* Toggle the top
+      endif
+      on error MSTN_ErrPrintRep2
+    endif  ! if DoCheckTune = 1
+
+    msAverages ,mstn_rptSavedAvg
+    if DoScan = 1  then
+      MSScan,,,,0                            !* Do scan
+      if Top = 1 then
+      !* Print the header
+        MSDispPrintToFile LeftX, TopY, PlotWidthPercent, PlotHeightPercent, _TEMPPATH$ + "MSScan1.emf"
+        Top = 0
+      else
+        MidPgOffset = YLoc()/PgHeight
+        MSDispPrintToFile LeftX, TopY + MidPgOffset, PlotWidthPercent, PlotHeightPercent, _TEMPPATH$ + "MSScan1.emf"
+        Top = 1
+      endif
+    endif  !* if DoScan = 1
+    if DoPrintParms = 1 then
+      if Top = 1 then
+      !* Print Top half
+        MSPrintToFile , _TEMPPATH$ + "MSParms.emf"                                !* print instrument parameters
+        Top = 0
+      else
+        MidPgOffset = YLoc()/PgHeight
+        MSPrintToFile  YLoc() + 2, "c:\MSParms.emf"              !* print instrument parameters
+        Top = 1
+      endif
+    endif
+
+    if Check(Variable, PRTest$) = 1 then
+       Archive_Tune
+    endif
+
+    if DoDynamic = 1 then
+      !* Look for dynamic plots
+      lens_1$ = ""                           !* Initialize to empty string
+      lens_2$ = ""                           !* because MSDynamic won't reset
+      lens_3$ = ""                           !* lens strings that are not active
+      lens_4$ = ""
+      MSDynamic list,lens_1$,lens_2$,lens_3$,lens_4$      !* Find out which lens are active
+
+      if (len(lens_1$) > 0) then                          !* do the dynamic plots
+        evaluate ("MSDynamic "+lens_1$+",plot")
+        if Top = 1
+          MSDispPrintToFile LeftX ,TopY, PlotWidthPercent, PlotHeightPercent, _TEMPPATH$ + "MSFrag.emf"
+          Top = 0
+        else
+          MidPgOffset = YLoc()/PgHeight
+          MSDispPrintToFile LeftX ,TopY+MidPgOffset, PlotWidthPercent, 1-TopY-MidPgOffset, _TEMPPATH$ + "MSFrag.emf"
+          Top = 1
+        endif
+      endif            !* first lens
+      if (len(lens_2$) <> 0)then
+      !* do the dynamic plots for second lens
+        evaluate ("MSDynamic "+lens_2$+",plot")
+        if Top = 1
+          MSDispPrintToFile LeftX ,TopY, PlotWidthPercent, PlotHeightPercent, _TEMPPATH$ + "MSLens2RF.emf"
+          Top = 0
+        else
+          MidPgOffset = YLoc()/PgHeight
+          MSDispPrintToFile LeftX ,TopY+MidPgOffset, PlotWidthPercent, 1-TopY-MidPgOffset, _TEMPPATH$ + "MSLens2RF.emf"
+          Top = 1
+        endif
+      endif          !* second lens
+      if (len(lens_3$) > 0)  then                      !* do the dynamic plots
+      !* do the dynamic plots for third lens
+         evaluate ("MSDynamic "+lens_3$+",plot")
+         if Top = 1
+           MSDispPrintToFile LeftX ,TopY, PlotWidthPercent, PlotHeightPercent, _TEMPPATH$ + "MSWidthOffset.emf"
+           Top = 0
+         else
+           MidPgOffset = YLoc()/PgHeight
+           MSDispPrintToFile LeftX ,TopY+MidPgOffset, PlotWidthPercent, 1-TopY-MidPgOffset, _TEMPPATH$ + "MSWidthOffset.emf"
+           Top = 1
+         endif
+      endif        !* third lens
+      if (LEN(lens_4$) <> 0)then                  !* do the dynamic plots
+      !* do the dynamic plots for fourth lens
+         evaluate ("MSDynamic "+lens_4$+",plot")
+         if Top = 1
+           MSDispPrintToFile LeftX ,TopY, PlotWidthPercent, PlotHeightPercent, _TEMPPATH$ + "MSL2RFAmp.emf"
+           Top = 0
+         else
+           MidPgOffset = YLoc()/PgHeight
+           MSDispPrintToFile LeftX ,TopY+MidPgOffset, PlotWidthPercent, 1-TopY-MidPgOffset, _TEMPPATH$ + "MSL2RFAmp.emf"
+           Top = 1
+         endif
+      endif     !* fourth lens
+    endif              !* DoDynamic
+    print "Done saving Tune to File"
+  return
+
+endmacro    !MSTN_PrintRep_ToFile
+
+!==============================================================================
+

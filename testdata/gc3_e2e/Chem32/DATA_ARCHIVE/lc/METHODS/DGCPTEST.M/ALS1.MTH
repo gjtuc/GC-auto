@@ -1,0 +1,9 @@
+STPT system
+POST 0.00;
+DSPD 200;
+ESPD 200;
+IVOL 5.0;
+IPOS 0.0;
+RMIX 0;
+EC1 0;
+EC2 0;

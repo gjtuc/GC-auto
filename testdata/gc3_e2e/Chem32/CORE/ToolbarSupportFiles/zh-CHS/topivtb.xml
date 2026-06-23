@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2006 sp2 U (http://www.altova.com) by Ellen Pfeifer (AGILENT TECHNOLOGIES) -->
+<graphical_object>
+	<toolbar Name="TopIVTB" PosStyle="TOP" Caption="“TopIVTB”" PanelName="Main">
+		<NonEditCombobox Name="IVFile" Help="从最近使用的仪器认证文件中选择" NewGroup="1" Enable="1" Table="_Config,1,IVFile" Selection="1" Width="150"/>
+		<PushButton Name="IVResNew" Help="创建新仪器认证" Command="IVResNew" ImageName="OQPV_NewVerification20" ImageNameDisabled="OQPV_NewVerification20_d"/>
+		<PushButton Name="IVResOpen" Help="打开现有仪器认证" Command="IVResOpen" ImageName="OQPV_OpenVerification20" ImageNameDisabled="OQPV_OpenVerification20_d"/>
+		<PushButton Name="IVResSave" Help="保存当前仪器认证" Command="IVResSave" ImageName="OQPV_SaveVerification20" ImageNameDisabled="OQPV_SaveVerification20_d"/>
+		<PushButton Name="IVEdit" Help="编辑仪器认证" Command="CpRequest &quot;CPIV&quot;,&quot;IVEdit&quot;" ImageName="OQPV_EditVerification20" ImageNameDisabled="OQPV_EditVerification20_d"/>
+		<PushButton Name="IVRun" Help="开始执行仪器认证" Command="CpRequest &quot;CPIV&quot;,&quot;IVRun&quot;" ImageName="OQPV_StartVerification20" ImageNameDisabled="OQPV_StartVerification20_d"/>
+		<PushButton Name="IVLogbook" Help="显示/隐藏认证日志" NewGroup="1" Command="IVShowLogbook 1" ImageName="OQPV_ToggleLogbook20" ImageNameDisabled="OQPV_ToggleLogbook20_d"/>
+		<PushButton Name="IVCurLogbook" Help="显示/隐藏当前在线日志" Command="LBK.LOGBOOK" ImageName="Logbook20" ImageNameDisabled="Logbook20_d"/>
+		<PushButton Name="IVSeqLogbook" Help="显示/隐藏序列日志" Command="LBK.OPENSEQLOGBOOK" ImageName="Sequence_logbook20" ImageNameDisabled="Sequence_logbook20_d"/>
+		<PushButton Name="IVPreview" Help="显示仪器认证测试参数和/或测试报告" NewGroup="1" Command="IVPrint &quot;SCREEN&quot;" ImageName="print_preview20" ImageNameDisabled="print_preview20_d"/>
+		<PushButton Name="IVPrint" Help="打印仪器认证测试参数和/或测试报告" Command="IVPrint &quot;PRINTER&quot;" ImageName="Print20" ImageNameDisabled="Print20_d"/>
+	</toolbar>
+</graphical_object>

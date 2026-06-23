@@ -1,0 +1,53 @@
+!******************************************************************************
+!*
+!* FILE:  IQFTOP.MAC
+!*
+!* DESCRIPTION:  6890GC User Interface menu items (full menu)
+!*
+!*  RCS:  $Header: /cag/DRIVERS/iq/release/iqftop.mac 2.5 1995-11-22 05:06:44-08 hmgr Exp $
+!*        $Locker:  $
+!*        $Source: /cag/DRIVERS/iq/release/iqftop.mac $
+!*
+!******************************************************************************
+
+local GC68Help1
+
+
+NLSFileName_astxmac$ = "astxmac"
+ID_ASTXDRIVERSMACFILES__INSTRUMENT_253               =17253
+ID_ASTXDRIVERSMACFILES_QUICK_SETUP_295               =17295  
+ID_ASTXDRIVERSMACFILES_SIMPLIFIED_SET_296            =17296
+ID_ASTXDRIVERSMACFILES_EDIT_PARAMETER_297            =17297
+ID_ASTXDRIVERSMACFILES_EDIT_INSTRUMENT_298           =17298 
+ID_ASTXDRIVERSMACFILES_SETUP_ACTUALS_299             =17299 
+ID_ASTXDRIVERSMACFILES_SELECT_IQ_ACT_300             =17300
+ID_ASTXDRIVERSMACFILES_START_COLUMN_301              =17301 
+ID_ASTXDRIVERSMACFILES_START_COLUMN_CO_302           =17302
+GC68Help1=HelpSubSystemTopic("68GC")
+
+MenuAdd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),,,,,,GC68Help1+10200
+
+MenuAdd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),, "SEPARATOR"
+
+if AS_IsPermitted_InstrumentSetupEdit=0
+MenuAdd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_QUICK_SETUP_295), "IQUI.Q", Insensitive,\
+        ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SIMPLIFIED_SET_296),\
+        "METHLOADSAVEIDLE/_SEQUENCEIDLE/_METHODIDLE/_SLAVEIDLE",GC68Help1+10210
+Else
+MenuAdd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_QUICK_SETUP_295), "IQUI.Q",,\
+        ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SIMPLIFIED_SET_296),\
+        "METHLOADSAVEIDLE/_SEQUENCEIDLE/_METHODIDLE/_SLAVEIDLE",GC68Help1+10210
+EndIf
+      
+        
+MenuAdd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253), ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_EDIT_PARAMETER_297), "IQUI.M",,\
+        ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_EDIT_INSTRUMENT_298),\
+        "METHLOADSAVEIDLE/_SLAVEIDLE",GC68Help1+10215
+
+MenuAdd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),, "SEPARATOR" 
+
+MenuAdd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SETUP_ACTUALS_299),"SETUPACTUALS",,\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_SELECT_IQ_ACT_300),,GC68Help1+10290
+MenuAdd ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES__INSTRUMENT_253),ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_START_COLUMN_301),"COLCOMP6890",,\
+          ReadResource$(NLSFileName_astxmac$,ID_ASTXDRIVERSMACFILES_START_COLUMN_CO_302),"_SEQUENCEIDLE/_METHODIDLE/_SLAVEIDLE",GC68Help1+10295
+

@@ -1,0 +1,817 @@
+
+
+
+!--------------------------------------------------
+! DADTest review macros
+!------------------------------------------------------------------------
+!--------------------------------------------------
+! Menu macro for DADTest review
+!------------------------------------------------------------------------
+Name MenuDADTestReview
+
+Local i,SearchDone,ObjCount
+  
+Local  ID_PHX3DSUPPORTFILES_DAD_TEST_REVIE_316
+Local  ID_PHX3DSUPPORTFILES_NO_DAD_TEST_DA_317
+  
+  ID_PHX3DSUPPORTFILES_DAD_TEST_REVIE_316            =  17316  
+  ID_PHX3DSUPPORTFILES_NO_DAD_TEST_DA_317            =  17317  
+
+  ! get free table window
+  if check(variable,hjbdebug) = 1; print "MenuDADTestReview called"; endif
+
+  if check(variable,DADTWindow) = 1
+    if  DADTWindow <> freewin(DADTWindow)
+      ! the window does exist, check if register exists
+      if RegSize(DADTestReview) > 0
+        ! Window & Register exists
+        Return
+      else
+        Clearwin DADTWindow
+      endif
+    ! else window does not exist
+    endif
+  endif
+
+  DADTWindow  = freewin(REG_ObjListStart)
+  if DADTWindow > REG_ObjListEnd
+    value = alert (ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_WINDOW_FREE_314)+chr$(13)+ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_CLEAR_A_LIST_W_315),3,Alert3Title$)
+    RETURN
+  endif
+
+  CopyWindowRowAndSet 10,DADTWindow,0.5,1.0,0.05,1.0,-1
+  DelReg DADTestReview
+  if FileStat (MODE,DADTest_Path$+DADTest_File$) = 1
+      Loadobj DADTest_Path$+DADTest_File$,,DADTestReview
+      if regsize(DADTestReview) > 0
+
+        ! the following code was introduced to make DADTEST registers acquired
+        ! with A.01.00 readable
+        if len(objhdrtext$(DADTestReview[1],Title)) = 0
+          for i=1 to regsize(DADTestReview)
+            if len(objhdrtext$(DADTestReview[i],Title)) = 0
+              setobjhdrtext DADTestReview[i],Title,\
+                            AnnText$(DADTestReview[i],1,Text)
+            endif
+          next i
+        endif
+        ! end of A.01.00 adaption code
+
+        ! the following code was introduced to display DADTEST registers
+        ! differently when CE header items "capDiameter" and "Bubble"
+        ! are available
+
+        ObjCount = regsize(DADTestReview)
+        SearchDone = 0
+        i = 1
+        while (SearchDone = 0) and (i <=  ObjCount)
+          if (objhdrtype(DADTestReview[i],"Bubble")) <> 99
+            ! it is a register with CE type spectra records
+            ! change DDT to display CE info
+            SearchDone = 1
+            if RowByText(_config[3],"dadtreviewdesc",,Source,"i=","capDiameter") < 0
+               AddDescRow "dadtreviewdesc","Cap. Diameter",,1,15,"%6.0f",1,"capDiameter"
+            endif
+            if RowByText(_config[3],"dadtreviewdesc",,Source,"i=","Bubble") < 0
+               AddDescRow "dadtreviewdesc","Bubble","Capillary|Bubble|High Sens.",3,20,"%s",1,"Bubble"
+            endif
+          endif
+        i = i + 1
+        EndWhile
+
+        if SearchDone = 0
+          ! No CE specific headeritems, remove from DDT
+          i = RowByText(_config[3],"dadtreviewdesc",,Source,"i=","Bubble")
+          if i > 0
+            DelTabRow _config[3],"dadtreviewdesc",i
+          endif
+          i = RowByText(_config[3],"dadtreviewdesc",,Source,"i=","capDiameter")
+          if i > 0
+            DelTabRow _config[3],"dadtreviewdesc",i
+          endif
+        EndIf
+
+        ! end of CE header items adaption code
+
+        SetWinTitle DADTWindow,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_DAD_TEST_REVIE_316)+_InstName$
+        SetTabVal _config[1],window,DADTWindow,DefWinStyle,0x0007
+        SetTabVal _config[1],window,DADTWindow,HelpContext,118
+        EdObjTab DADTWindow,DADTestReview,dadtreviewdesc
+        AppendSelect DADTWindow,DADTestReview[1]
+      else
+        i=Alert (ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_DAD_TEST_DA_317),3,Alert3Title$);
+      endif
+  else
+      i=Alert (ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_DAD_TEST_DA_317),3,Alert3Title$);
+  endif
+endmacro
+!-----------------------------------------------------------------------
+! Table button macros for the DADTest review
+!------------------------------------------------------------------------
+!-----------------------------------------------------------------------
+! macro to be called before a object is deleted
+!------------------------------------------------------------------------
+Name DADT_ListObjPreDelRow
+    parameter regname$
+    parameter row
+    parameter col
+    parameter colname$
+Local ActWin
+  
+Local  ID_PHX3DSUPPORTFILES_DO_YOU_REALLY_318
+Local ID_PHX3DSUPPORTFILES_THE_SELECTED_D_319
+  
+  
+  ID_PHX3DSUPPORTFILES_DO_YOU_REALLY_318             =  17318  
+  ID_PHX3DSUPPORTFILES_THE_SELECTED_D_319            =  17319  
+
+    if check(variable,hjbdebug) = 1; print "DADT_ListObjPreDelRow called";endif
+    !  print regname$,",row=",row,",col=",col,",colname=",colname$
+    ActWin = ActiveWindow()
+
+    if DADTestDelete = 0
+      if alert (ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_DO_YOU_REALLY_318)+chr$(13)+ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_THE_SELECTED_D_319),4,Alert4Title$) = 1
+        !delete allowed
+        DADT_ListObjPreDelRowRetVal=1
+        DADTestDelete=SelectSize(DADTWindow)-1
+      else
+        DADT_ListObjPreDelRowRetVal=0
+        DADTestDelete=-SelectSize(DADTWindow)+1
+      endif
+    else
+      if DADTestDelete < 0
+        DADTestDelete=DADTestDelete+1
+        DADT_ListObjPreDelRowRetVal=0
+      else
+        DADTestDelete=DADTestDelete-1
+        DADT_ListObjPreDelRowRetVal=1
+      endif
+    endif
+
+    SetActiveWindow ActWin
+
+endmacro
+!-----------------------------------------------------------------------
+! macro to be called when a cell is selected
+!------------------------------------------------------------------------
+Name Btn_DADTReviewSelCell
+    parameter regname$
+    parameter row
+    parameter col
+    parameter colname$
+
+    Local i,Time$,Title$
+    if check(variable,hjbdebug) = 1; print "Btn_DADTReviewSelCell called"; endif
+    !print "Select   ",regname$,",row=",row,",col=",col,",colname=",colname$
+    AppendSelect DADTWindow,DADTestReview[row]
+    Btn_DADTReviewSelRow regname$,row,col,colname$
+    return
+endmacro
+
+!-----------------------------------------------------------------------
+! macro to be called when lines are selected
+!------------------------------------------------------------------------
+Name Btn_DADTReviewSelRow
+    parameter regname$
+    parameter row
+    parameter col
+    parameter colname$
+
+    Local i,Time$,Title$
+    if check(variable,hjbdebug) = 1; print "Btn_DADTReviewSelRow called"; endif
+    !print "Select   ",regname$,",row=",row,",col=",col,",colname=",colname$
+    DADTestDelete=0
+    Time$=ObjHdrText$(DADTestReview[row],DateTime)
+    Title$=ObjHdrText$(DADTestReview[row],Title)
+    if (check(Variable,DADTSpecWindow) = 1) and (RegSize (DADTSpecReg) > 0)
+      if (FreeWin(DADTSpecWindow) <> DADTSpecWindow) and \
+         (ObjHdrType(DADTSpecReg[1],DateTime) = 0)
+        for i= 1 to RegSize (DADTSpecReg)
+          if (Time$ = ObjHdrText$(DADTSpecReg[i],DateTime))  and \
+             (Title$ = ObjHdrText$(DADTSpecReg[i],Title))
+            AppendSelect DADTSpecWindow,DADTSpecReg[i]
+            return
+          endif
+        next i
+      endif
+    endif
+    if (check(Variable,DADTSpecWindow2) = 1) and (RegSize (DADTSpecReg2) > 0)
+      if (FreeWin(DADTSpecWindow2) <> DADTSpecWindow2) and \
+         (ObjHdrType(DADTSpecReg2[1],DateTime) = 0)
+        for i= 1 to RegSize (DADTSpecReg2)
+          if (Time$ = ObjHdrText$(DADTSpecReg2[i],DateTime)) and \
+             (Title$ = ObjHdrText$(DADTSpecReg2[i],Title))
+            AppendSelect DADTSpecWindow2,DADTSpecReg2[i]
+            return
+          endif
+        next i
+      endif
+    endif
+
+endmacro
+
+!-----------------------------------------------------------------------
+! macro to be called when lines are unselected
+!------------------------------------------------------------------------
+Name Btn_DADTReviewUnSelRow
+    parameter regname$
+    parameter row
+    parameter col
+    parameter colname$
+    Local i,Time$,Title$
+    if check(variable,hjbdebug) = 1; print "Btn_DADTReviewUnSelRow called"; endif
+    !print "unselect ",regname$,",row=",row,",col=",col,",colname=",colname$
+    DADTestDelete=0
+    Time$=ObjHdrText$(DADTestReview[row],DateTime)
+    Title$=ObjHdrText$(DADTestReview[row],Title)
+    if (check(Variable,DADTSpecWindow) = 1)  and \
+       (RegSize (DADTSpecReg) > 0)
+      if (ObjHdrType(DADTSpecReg[1],DateTime) <> 0); return; endif
+      For i= 1 to SelectSize(DADTSpecWindow)
+        GetSelect DADTSpecWindow,i
+        if (Time$  = ObjHdrText$(DADTSpecReg[sel_obj],DateTime)) and \
+           (Title$ = ObjHdrText$(DADTSpecReg[sel_obj],Title))
+          ClearSelect DADTSpecWindow,i
+          return
+        endif
+      next i
+    endif
+    if (check(Variable,DADTSpecWindow2) = 1)  and \
+       (RegSize (DADTSpecReg2) > 0)
+      if (ObjHdrType(DADTSpecReg2[1],DateTime) <> 0); return; endif
+      For i= 1 to SelectSize(DADTSpecWindow2)
+        GetSelect DADTSpecWindow2,i
+        if (Time$  = ObjHdrText$(DADTSpecReg2[sel_obj],DateTime)) and \
+           (Title$ = ObjHdrText$(DADTSpecReg2[sel_obj],Title))
+          ClearSelect DADTSpecWindow2,i
+          return
+        endif
+      next i
+    endif
+endmacro
+
+!-----------------------------------------------------------------------
+! macro to be called when Intensity spectra should be displayed
+!------------------------------------------------------------------------
+Name DoBtn_DADTMergeDisplay
+
+    Parameter SearchStr$,AxisTitle$
+Local i,ScanNums
+  
+Local  ID_PHX3DSUPPORTFILES_DAD_TEST_REVIE_316
+Local  ID_PHX3DSUPPORTFILES_NO_320
+Local ID_PHX3DSUPPORTFILES__SPECTRA_FOUND_321
+Local ID_PHX3DSUPPORTFILES_NO_FREE_WINDOW_329
+  
+  
+  
+  ID_PHX3DSUPPORTFILES_DAD_TEST_REVIE_316            =  17316  
+  ID_PHX3DSUPPORTFILES_NO_320                        =  17320  
+  ID_PHX3DSUPPORTFILES__SPECTRA_FOUND_321            =  17321  
+  ID_PHX3DSUPPORTFILES_NO_FREE_WINDOW_329            =  17329  
+
+    ! get free table window
+
+    print ""
+    if RegSize (DADTSpecReg) > 0
+      DelObj DADTSpecReg[1:0]
+    endif
+    if check (Variable,DADTSpecWindow) = 0
+        DADTSpecWindow  = freewin(REG_ObjListStart)
+        if DADTSpecWindow > REG_ObjListEnd
+          value = alert (ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_FREE_WINDOW_329),3,Alert3Title$)
+          RETURN
+        endif
+    endif
+    WinUpdate off
+    CopyWindowRowAndSet 39,DADTSpecWindow,0.0,0.5,0.05,1.0,-1
+    SetWinTitle DADTSpecWindow,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_DAD_TEST_REVIE_316)+_InstName$
+    ScanNums=0
+    for i=1 to RegSize(DADTestReview)
+      if InStr(ObjHdrText$(DADTestReview[i],Title),SearchStr$) > 0
+          CopyObj DADTestReview[i],DADTSpecReg
+      SetDataVal DADTSpecReg[RegSize(DADTSpecReg)],1,Color,0xFF000000
+      SetDataVal DADTSpecReg[RegSize(DADTSpecReg)],1,FieldWidth,10
+      SetDataText DADTSpecReg[RegSize(DADTSpecReg)],1,AxisTitle,AxisTitle$
+      ScanNums=ScanNums+1
+      endif
+    next i
+    if ScanNums > 8
+      SetTabVal _config[1],window,DADTSpecWindow,Topic,0xFFFFFFF0
+    else
+      SetTabVal _config[1],window,DADTSpecWindow,Topic,0xFFFFFFFF
+    endif
+
+    if RegSize (DADTSpecReg) > 0
+      if check(Variable,DADTSpecWindow2) = 1
+        Clearwin DADTSpecWindow2
+        Remove DADTSpecWindow2
+      endif
+      Draw DADTSpecWindow,DADTSpecReg
+      Winupdate on
+      ClearSelect DADTSpecWindow
+      for i=1 to SelectSize(DADTWindow)
+        GetSelect DADTWindow,i
+        Btn_DADTReviewSelRow "DADTestReview",sel_obj, -1, ""
+      next i
+      return
+    else
+      print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_320)+ SearchStr$ +ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES__SPECTRA_FOUND_321)
+    endif
+    WinUpdate on
+
+endmacro
+
+
+
+!-----------------------------------------------------------------------
+! macro to be called when Holmium spectra should be displayed
+!------------------------------------------------------------------------
+Name Btn_DADTMergeHolmium
+    parameter regname$
+    parameter row
+    parameter col
+    parameter colname$
+Local i
+  
+Local  ID_PHX3DSUPPORTFILES_BTN_DADTMERGEH_322
+  
+  ID_PHX3DSUPPORTFILES_BTN_DADTMERGEH_322            =  17322  
+    !print regname$,",row=",row,",col=",col,",colname=",colname$
+
+    if check(variable,hjbdebug) = 1; print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_BTN_DADTMERGEH_322); endif
+    DoBtn_DADTMergeDisplay  "Holmium","mAU"
+
+
+endmacro
+
+!-----------------------------------------------------------------------
+! macro to be called when Intensity spectra should be displayed
+!------------------------------------------------------------------------
+Name Btn_DADTMergeIntensity
+    parameter regname$
+    parameter row
+    parameter col
+    parameter colname$
+    !print regname$,",row=",row,",col=",col,",colname=",colname$
+
+    if check(variable,hjbdebug) = 1; print "Btn_DADTMergeIntensity called"; endif
+    DoBtn_DADTMergeDisplay  "Intensit","Counts"
+
+endmacro
+
+!-----------------------------------------------------------------------
+! macro to be called when all selected spectra should be displayed
+!------------------------------------------------------------------------
+Name Btn_DADTMergeSelected
+    parameter regname$
+    parameter row
+    parameter col
+    parameter colname$
+    !print regname$,",row=",row,",col=",col,",colname=",colname$
+
+Local i,IntWin,HolmWin,HolmNums,IntNums
+  
+  Local  ID_PHX3DSUPPORTFILES_BTN_DADTMERGES_323
+Local  ID_PHX3DSUPPORTFILES_NO_WINDOW_FREE_324
+Local  ID_PHX3DSUPPORTFILES_LAMP_INTENSITY_325
+Local  ID_PHX3DSUPPORTFILES_HOLMIUM_SPECTR_326
+Local  ID_PHX3DSUPPORTFILES_DAD_TEST_REVIE_316
+Local  ID_PHX3DSUPPORTFILES_NO_SPECTRA_SEL_327
+
+ID_PHX3DSUPPORTFILES_DAD_TEST_REVIE_316            =  17316  
+ID_PHX3DSUPPORTFILES_BTN_DADTMERGES_323            =  17323  
+ID_PHX3DSUPPORTFILES_NO_WINDOW_FREE_324            =  17324  
+ID_PHX3DSUPPORTFILES_LAMP_INTENSITY_325            =  17325  
+ID_PHX3DSUPPORTFILES_HOLMIUM_SPECTR_326            =  17326  
+ID_PHX3DSUPPORTFILES_NO_SPECTRA_SEL_327            =  17327  
+
+
+    if check(variable,hjbdebug) = 1; print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_BTN_DADTMERGES_323); endif
+    WinUpdate off
+    HolmNums=0
+    IntNums=0
+    DADTestDelete=0
+    if RegSize (DADTSpecReg) > 0
+      DelObj DADTSpecReg[1:0]
+    endif
+    if RegSize (DADTSpecReg2) > 0
+      DelObj DADTSpecReg2[1:0]
+    endif
+    IntWin=0
+    HolmWIn=0
+
+    for i=1 to SelectSize(DADTWindow)
+      GetSelect DADTWindow,i
+      !print "Object=",i,"  ,Sel_obj=",Sel_obj
+      if InStr(ObjHdrText$(DADTestReview[sel_obj],Title),"Intensit") > 0
+        IntWin=1
+        IntNums=IntNums+1
+        CopyObj DADTestReview[sel_obj],DADTSpecReg
+        SetDataVal DADTSpecReg[RegSize(DADTSpecReg)],1,Color,0xFF000000
+        SetDataVal DADTSpecReg[RegSize(DADTSpecReg)],1,FieldWidth,10
+        SetDataText DADTSpecReg[RegSize(DADTSpecReg)],1,AxisTitle,"Counts"
+      else
+        HolmWin=1
+        HolmNums=HolmNums+1
+        CopyObj DADTestReview[sel_obj],DADTSpecReg2
+        SetDataVal DADTSpecReg2[RegSize(DADTSpecReg2)],1,Color,0xFF000000
+        SetDataVal DADTSpecReg2[RegSize(DADTSpecReg2)],1,FieldWidth,10
+        SetDataText DADTSpecReg2[RegSize(DADTSpecReg2)],1,AxisTitle,"mAU"
+      endif
+    next i
+
+    ! get free table window
+    if check (Variable,DADTSpecWindow) = 0
+      DADTSpecWindow  = freewin(REG_ObjListStart)
+      if DADTSpecWindow > REG_ObjListEnd
+        value = alert (ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_WINDOW_FREE_324),3,Alert3Title$)
+        WinUpdate On
+        RETURN
+      endif
+    endif
+
+    if (HolmWin+IntWin) = 2
+      CopyWindowRowAndSet 39,DADTSpecWindow,0.0,0.5,0.05,0.5,-1
+      SetWinTitle DADTSpecWindow,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_LAMP_INTENSITY_325)+_InstName$
+      if IntNums > 8
+        SetTabVal _config[1],window,DADTSpecWindow,Topic,0xFFFFFFF0
+      else
+        SetTabVal _config[1],window,DADTSpecWindow,Topic,0xFFFFFFFF
+      endif
+      Draw DADTSpecWindow,DADTSpecReg
+
+      if check (Variable,DADTSpecWindow2) = 0
+          DADTSpecWindow2  = freewin(1)
+          if DADTSpecWindow2 > REG_ObjListEnd
+            value = alert (ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_WINDOW_FREE_324),3,Alert3Title$)
+            WinUpdate On
+            RETURN
+          endif
+      endif
+      CopyWindowRowAndSet 39,DADTSpecWindow2,0.0,0.5,0.5,1.0,-1
+      SetWinTitle DADTSpecWindow2,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_HOLMIUM_SPECTR_326)+_InstName$
+      if HolmNums > 8
+        SetTabVal _config[1],window,DADTSpecWindow2,Topic,0xFFFFFFF0
+      else
+        SetTabVal _config[1],window,DADTSpecWindow2,Topic,0xFFFFFFFF
+      endif
+      Draw DADTSpecWindow2,DADTSpecReg2
+      WinUpdate on
+
+      return
+    endif
+
+    CopyWindowRowAndSet 39,DADTSpecWindow,0.0,0.5,0.05,1.0,-1
+    SetWinTitle DADTSpecWindow,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_DAD_TEST_REVIE_316)+_InstName$
+    if check(Variable,DADTSpecWindow2) = 1
+      Clearwin DADTSpecWindow2
+      Remove DADTSpecWindow2
+    endif
+    if (HolmNums+IntNums) > 8
+      SetTabVal _config[1],window,DADTSpecWindow,Topic,0xFFFFFFF0
+    else
+      SetTabVal _config[1],window,DADTSpecWindow,Topic,0xFFFFFFFF
+    endif
+
+    if RegSize (DADTSpecReg) > 0
+        Draw DADTSpecWindow,DADTSpecReg
+    else
+      if RegSize (DADTSpecReg2) > 0
+        MoveObj DADTSpecReg2,DADTSpecReg
+        Draw DADTSpecWindow,DADTSpecReg
+      else
+        print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_SPECTRA_SEL_327)
+      endif
+    endif
+    WinUpdate on
+
+endmacro
+
+!-----------------------------------------------------------------------
+! macro to be called to produce an intensity graph in the selected range
+!------------------------------------------------------------------------
+Name Btn_DADTIntensityGraph
+    parameter regname$
+    parameter row
+    parameter col
+    parameter colname$
+
+Local i,NumInts,ScanNum,UseScanNumber,AxisTitle$,MinTime,MaxTime,CurrTime
+Local FirstDate$,LastDate$,LastIndex
+Local UseLampOnTime,LampOnTime,MaxLampeOn,MinLampOn,LastLampOnTime
+  
+  
+  
+Local  ID_PHX3DSUPPORTFILES_BTN_DADTINTENS_328
+Local  ID_PHX3DSUPPORTFILES_NO_FREE_WINDOW_329
+Local  ID_PHX3DSUPPORTFILES_DAD_TEST_INTEN_330
+Local  ID_PHX3DSUPPORTFILES_CHECKING_TIME_331
+Local  ID_PHX3DSUPPORTFILES_NUMBER_OF_INTE_332
+Local  ID_PHX3DSUPPORTFILES_LAMP_ON_HOURS_333
+Local  ID_PHX3DSUPPORTFILES_MIN_334
+Local  ID_PHX3DSUPPORTFILES_HOURS_335
+Local  ID_PHX3DSUPPORTFILES_DAYS_336
+Local  ID_PHX3DSUPPORTFILES_MONTHS_337
+Local  ID_PHX3DSUPPORTFILES_SEARCHING_FOR_338
+  
+  ID_PHX3DSUPPORTFILES_BTN_DADTINTENS_328            =  17328  
+  ID_PHX3DSUPPORTFILES_NO_FREE_WINDOW_329            =  17329  
+  ID_PHX3DSUPPORTFILES_DAD_TEST_INTEN_330            =  17330  
+  ID_PHX3DSUPPORTFILES_CHECKING_TIME_331             =  17331  
+  ID_PHX3DSUPPORTFILES_NUMBER_OF_INTE_332            =  17332  
+  ID_PHX3DSUPPORTFILES_LAMP_ON_HOURS_333             =  17333  
+  ID_PHX3DSUPPORTFILES_MIN_334                       =  17334  
+  ID_PHX3DSUPPORTFILES_HOURS_335                     =  17335  
+  ID_PHX3DSUPPORTFILES_DAYS_336                      =  17336  
+  ID_PHX3DSUPPORTFILES_MONTHS_337                    =  17337  
+  ID_PHX3DSUPPORTFILES_SEARCHING_FOR_338             =  17338  
+  
+    !print regname$,",row=",row,",col=",col,",colname=",colname$
+    print ""
+
+    if check(variable,hjbdebug) = 1; print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_BTN_DADTINTENS_328); endif
+    WinUpdate off
+    UseScanNumber = 0
+    DADTestDelete = 0
+    MinTime=0x7FFFFFFF        ! time measured in sec
+    MaxTime=0
+    MinLampOn=0x7FFFFFFF        ! time measured in hours
+    MaxLampOn=0
+    FirstDate$=""
+    LastDate$=""
+    if RegSize (DADTSpecReg) > 0
+      DelObj DADTSpecReg[1:0]
+    endif
+    if check(Variable,DADTSpecWindow2) = 1
+      Clearwin DADTSpecWindow2
+      Remove DADTSpecWindow2
+    endif
+
+    ! get free table window
+    if check (Variable,DADTSpecWindow) = 0
+        DADTSpecWindow  = freewin(REG_ObjListStart)
+        if DADTSpecWindow > REG_ObjListEnd
+          value = alert (ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NO_FREE_WINDOW_329),3,Alert3Title$)
+          WinUpdate On
+          RETURN
+        endif
+    endif
+    CopyWindowRowAndSet 39,DADTSpecWindow,0.0,0.5,0.05,1.0,-1
+    SetTabVal _config[1],window,DADTSpecWindow,Topic,0xFFFFFFFF
+    SetWinTitle DADTSpecWindow,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_DAD_TEST_INTEN_330)+_InstName$
+
+    NumInts=0
+    LampOnTime=0
+    LastLampOnTime=0
+    print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_CHECKING_TIME_331)
+    for i=1 to RegSize(DADTestReview)
+      if (InStr(ObjHdrText$(DADTestReview[i],Title),"Intensit") > 0)
+          NumInts=NumInts+1
+          CurrTime=ObjHdrVal(DADTestReview[i],Time)
+          if CurrTime = 0
+            UseLampOnTime=-1
+            UseScanNumber = 1
+          else
+            if CurrTime < MinTime
+              MinTime = CurrTime
+            endif
+            if CurrTime > MaxTime
+              MaxTime = CurrTime
+            endif
+          endif
+          if ObjHdrType(DADTestReview[i],LampOnTime) = 1
+            if UseLampOnTime = 0;
+              UseLampOnTime=1;
+            endif
+            if UseLampOnTime = 1
+              LampOnTime =ObjHdrVal(DADTestReview[i],LampOnTime)*3600 !sec
+              if LastLampOnTime > LampOnTime
+                UseLampOnTime=-1
+              else
+                LastLampOnTime = LampOnTime
+                if LampOnTime > MaxLampOn
+                  MaxLampOn = LampOnTime
+                endif
+                if LampOnTime < MinLampOn
+                  MinLampOn = LampOnTime
+                endif
+              endif
+            endif
+          else
+            UseLampOnTime=-1
+          endif
+      endif
+    next i
+
+    if NumInts >= 2
+      NewObj DADTSpecReg,1,1,NumInts
+    else
+      print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_NUMBER_OF_INTE_332)
+      WinUpdate On
+      return
+    endif
+    if UseLampOnTime = 1
+      ! All intensity spectra have a LampOnTime
+      ! Check minimum timespan
+      if ((MaxLampOn-MinLampOn) < (3600*6))
+        !less than 6 hours use absolut scale from "time" NDR
+        UseLampOnTime = -1
+      else
+        MaxTime=MaxLampOn
+        AxisTitle$=ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_LAMP_ON_HOURS_333)
+      endif
+    endif
+    if UseLampOnTime <> 1
+      if (MaxTime-MinTime) <= 7200
+        ! scale is minutes
+        Divisor=60
+        AxisTitle$=ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_MIN_334)
+      else
+        if (MaxTime-MinTime) <= 3600*24*4
+          ! less than 4 days, scale is hours
+          Divisor=3600
+          AxisTitle$=ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_HOURS_335)
+        else
+          if (MaxTime-MinTime) <= 3600*24*100
+            ! less than 100 days, scale is days
+            Divisor=3600*24
+            AxisTitle$=ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_DAYS_336)
+          else
+            ! its enough for months
+            Divisor=3600*24*(365/12)
+            AxisTitle$=ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_MONTHS_337)
+          endif
+        endif
+      endif
+    endif
+    print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_SEARCHING_FOR_338)
+    ScanNum = 1
+    for i=1 to RegSize(DADTestReview)
+      if InStr(ObjHdrText$(DADTestReview[i],Title),"Intensit") > 0
+        if UseScanNumber = 0
+          If UseLampOnTime = 1
+            SetData DADTSpecReg[1],0,ScanNum,ObjHdrVal(DADTestReview[i],LampOnTime)
+          else
+            SetData DADTSpecReg[1],0,ScanNum,(ObjHdrVal(DADTestReview[i],Time)-MinTime)/Divisor
+          endif
+        else
+          SetData DADTSpecReg[1],0,ScanNum,ScanNum
+        endif
+        SetData DADTSpecReg[1],1,ScanNum,ObjHdrVal(DADTestReview[i],Max)
+        ScanNum=ScanNum+1
+        LastIndex=i
+        if len(FirstDate$) = 0
+          FirstDate$=objhdrtext$(DADTestReview[i],DateTime)
+        endif
+      endif
+    next i
+    LastDate$=objhdrtext$(DADTestReview[LastIndex],DateTime)
+    if UseScanNumber = 0
+      SetDataText DADTSpecReg[1],0,AxisTitle,AxisTitle$
+    else
+      SetDataText DADTSpecReg[1],0,AxisTitle,"Scan#"
+    endif
+    SetDataText DADTSpecReg[1],1,AxisTitle,"Counts"
+    SetDataVal DADTSpecReg[1],1,FieldWidth,10
+    SetDataVal DADTSpecReg[1],1,Precision,8
+    SetDataVal DADTSpecReg[1],0,FieldWidth,6
+    SetDataVal DADTSpecReg[1],0,Precision,4
+    SetDataVal DADTSpecReg[1],1,Marker,5
+    i=NewTextAnn(DADTSpecReg[1],"acquired from: "+FirstDate$+"  to: "+LastDate$,,,,1)
+    WinUpdate on
+    print ""
+
+    Draw DADTSpecWindow,DADTSpecReg
+
+endmacro
+
+!-----------------------------------------------------------------------
+! macro to be called to save a modified DAD test database
+!------------------------------------------------------------------------
+Name Btn_DADTSaveAsNew
+    parameter regname$
+    parameter row
+    parameter col
+    parameter colname$
+    Local ActWin
+  
+Local  ID_PHX3DSUPPORTFILES_BTN_DADTSAVEAS_339
+Local  ID_PHX3DSUPPORTFILES_DO_YOU_REALLY_340
+Local ID_PHX3DSUPPORTFILES_CURRENT_DAD_TE_341
+  
+  
+  ID_PHX3DSUPPORTFILES_BTN_DADTSAVEAS_339            =  17339  
+  ID_PHX3DSUPPORTFILES_DO_YOU_REALLY_340             =  17340  
+  ID_PHX3DSUPPORTFILES_CURRENT_DAD_TE_341            =  17341  
+
+    ActWin = ActiveWindow ()
+
+    if check(variable,hjbdebug) = 1; print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_BTN_DADTSAVEAS_339); endif
+    !print regname$,",row=",row,",col=",col,",colname=",colname$
+    DADTestDelete=0
+    if alert (ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_DO_YOU_REALLY_340)+chr$(13)+ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_CURRENT_DAD_TE_341),4,Alert4Title$) = 1
+      SaveObj DADTestReview,DADTest_Path$+DADTest_File$,New
+    endif
+
+    SetActiveWindow ActWin
+
+endmacro
+
+!-----------------------------------------------------------------------
+! macro to be called to close the windows
+!------------------------------------------------------------------------
+Name Btn_DADTCloseTheShow
+    parameter regname$ default ""
+    parameter row  default 1
+    parameter col  default 1
+Parameter colname$ Default ""
+  
+Local  ID_PHX3DSUPPORTFILES_BTN_DADTCLOSET_342
+  
+  ID_PHX3DSUPPORTFILES_BTN_DADTCLOSET_342            =  17342  
+  
+    !print regname$,",row=",row,",col=",col,",colname=",colname$
+   
+    if check(variable,hjbdebug) = 1; print ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_BTN_DADTCLOSET_342); endif
+    DADTestDelete=0
+    if check(Variable,DADTWindow) = 1
+      Clearwin DADTWindow
+      Remove DADTWindow
+    endif
+    if check(Variable,DADTSpecWindow) = 1
+      Clearwin DADTSpecWindow
+      Remove DADTSpecWindow
+    endif
+    if check(Variable,DADTSpecWindow2) = 1
+      Clearwin DADTSpecWindow2
+      Remove DADTSpecWindow2
+    endif
+    DelReg DADTestReview
+    DelReg DADTSpecReg
+    DelReg DADTSpecReg2
+
+endmacro
+
+!--------------------------------------------------
+! Initializes the DADTest review macros
+!------------------------------------------------------------------------
+Name Init_DADTestReview
+  
+Local ID_PHX3DSUPPORTFILES_SHOW_HOLMIUM_S_343
+Local ID_PHX3DSUPPORTFILES_SHOW_INTENSITY_344
+Local ID_PHX3DSUPPORTFILES_SHOW_SELECTED_345
+Local ID_PHX3DSUPPORTFILES_SHOW_INTENSITY_346
+Local ID_PHX3DSUPPORTFILES_CLOSE___85_31_347
+Local ID_PHX3DSUPPORTFILES_SAVE_AS_NEW_DA_348
+Local ID_PHX3DSUPPORTFILES_TITLE_349
+Local ID_PHX3DSUPPORTFILES_DATETIME_350
+Local ID_PHX3DSUPPORTFILES_MAX_351
+Local ID_PHX3DSUPPORTFILES_OPERATOR_352
+        
+  ID_PHX3DSUPPORTFILES_SHOW_HOLMIUM_S_343            =  17343  
+  ID_PHX3DSUPPORTFILES_SHOW_INTENSITY_344            =  17344  
+  ID_PHX3DSUPPORTFILES_SHOW_SELECTED_345             =  17345  
+  ID_PHX3DSUPPORTFILES_SHOW_INTENSITY_346            =  17346  
+  ID_PHX3DSUPPORTFILES_CLOSE___85_31_347             =  17347  
+  ID_PHX3DSUPPORTFILES_SAVE_AS_NEW_DA_348            =  17348  
+  ID_PHX3DSUPPORTFILES_TITLE_349                     =  17349  
+  ID_PHX3DSUPPORTFILES_DATETIME_350                  =  17350
+  ID_PHX3DSUPPORTFILES_MAX_351                       =  17351  
+  ID_PHX3DSUPPORTFILES_OPERATOR_352                  =  17352
+
+ DADTest_Path$=_InstPath$
+ DADTest_File$="DADTEST.REG"
+ DADTestDelete=0
+
+ if objhdrtype(_config[3],DADTReviewDesc) <> 4
+  NewDescTable "dadtreviewdesc"
+  ! set some headers
+  SetTabHdrVal  _Config[3],dadtreviewdesc,"FixedCols",1
+  SetTabHdrVal  _Config[3],dadtreviewdesc,"DispRowNum",1
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,EvPreDelRow,  DADT_ListObjPreDelRow
+
+  ! set events
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,EvSelRow,     Btn_DADTReviewSelRow
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,EvSelCell,    Btn_DADTReviewSelCell
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,EvUnSelRow,   Btn_DADTReviewUnSelRow
+
+
+! set the buttons
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,Btn1,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_SHOW_HOLMIUM_S_343)
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,Btn2,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_SHOW_INTENSITY_344)
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,Btn3,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_SHOW_SELECTED_345)
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,Btn4,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_SHOW_INTENSITY_346)
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,Btn5,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_CLOSE___85_31_347)
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,Btn6,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_SAVE_AS_NEW_DA_348)
+  SetTabHdrText _CONFIG[3],dadtreviewdesc,TableRect, "0,45,0,0"
+
+  ! set the description fields
+  AddDescRow "dadtreviewdesc","Type",,1,16,"%s",0,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_TITLE_349)
+  AddDescRow "dadtreviewdesc","Time",,1,20,"%s",0,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_DATETIME_350)
+  AddDescRow "dadtreviewdesc","Maximum",,1,10,"%6.0f",0,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_MAX_351)
+  AddDescRow "dadtreviewdesc",ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_OPERATOR_352),,1,32,"%s",0,ReadResource$("Phx3dSupport",ID_PHX3DSUPPORTFILES_OPERATOR_352)
+ endif
+
+Endmacro
+
