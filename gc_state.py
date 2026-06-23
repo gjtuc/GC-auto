@@ -30,7 +30,7 @@ gc_state.py — 발송·처리 기록 JSON (.gc_send_state.json)
     session_based — 쿨다운·슬롯 없음. force 도 한도 없음.
 
   GC2/GC3 (8860, chem32):
-    자동 메일 슬롯 1/1 — 성공 발송+SMTP 검증 후 AUTO_MAIL_COOLDOWN_HOURS(기본 3시간) 동안 0/1.
+    자동 메일 슬롯 1/1 — 성공 발송+SMTP 검증 후 AUTO_MAIL_COOLDOWN_HOURS(기본 1시간) 동안 0/1.
     실패 시 pending_email_retry 로 재시도. force 는 슬롯 무시.
 
   daily_send_count / am·pm — 레거시 호환만 (신규 한도에 미사용)
@@ -149,7 +149,7 @@ def session_based_auto_send(mode: str) -> bool:
 
 
 def uses_mail_cooldown(mode: str) -> bool:
-    """GC2/GC3 자동 메일 — 3시간(기본) 쿨다운 슬롯."""
+    """GC2/GC3 자동 메일 — 쿨다운 슬롯(기본 1시간). 핫스pot 세션과 무관."""
     if mode == "gc1":
         return False
     return mode in ("8860", "chem32", "auto")

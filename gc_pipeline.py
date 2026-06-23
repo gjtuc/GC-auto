@@ -38,7 +38,7 @@ gc_pipeline.py — 시퀀스 1건 처리 파이프라인 (엑셀 + 메일)
   3) write_gc1_excel() — FID/TCD 2시트
   4) send_email_via_smtp() — _try_auto_email()
      · force / GC1 → 쿨다운·슬롯 검사 생략
-     · watch 자동 GC2/GC3 → 3시간 쿨다운 슬롯 + SMTP 발송 후 검증
+     · watch 자동 GC2/GC3 → 1시간 쿨다운 슬롯 + SMTP 발송 후 검증
   5) cleanup_superseded_gc1_files() — 잘못된/중복 PDF·xlsx 정리
 
   GC1_SKIP_AUTOCHRO_EXPORT=1 이면 watch 가 이미 export 한 경우 pipeline 중복 방지.
@@ -116,7 +116,7 @@ def _try_auto_email(
     email_body: str,
     script_dir: str,
 ) -> bool:
-    """자동 실행 시 메일 쿨다운 슬롯 확인 후 메일 발송 (GC2/GC3: 3시간 기본)."""
+    """자동 실행 시 메일 쿨다운 슬롯 확인 후 메일 발송 (GC2/GC3: 1시간 기본)."""
     if config.force or gc1_unlimited_auto_send(config.chemstation_mode):
         return send_email_via_smtp(
             output_path,

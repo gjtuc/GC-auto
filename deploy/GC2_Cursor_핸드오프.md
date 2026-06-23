@@ -148,9 +148,9 @@ gc_automation.py     ← CLI 진입, watch/force/user-message 분기
 | 데이터 소스 | Autochro PDF | ChemStation `.D` / acam / Report |
 | 핫스팟 | `iPhone` | `AndroidHotspot5841` |
 | env 위치 | `Desktop\박은규\gc_automation.env` | `Desktop\KCH\gc_automation.env` |
-| watch 트리거 | 핫스팟 **세션당 1회** | 새 acam/Report mtime + **메일 3시간 쿨다운 슬롯** |
-| reconnect debounce | 90초 | 45초 |
-| 메일 한도 | 쿨다운 없음 (세션 1회) | **3시간 쿨다운 슬롯 1/1** (`AUTO_MAIL_COOLDOWN_HOURS`, SMTP 검증 후) |
+| watch 트리거 | 핫스팟 **세션당 1회** | Wi-Fi 유지 중 poll — 새 acam/Report + **메일 1시간 쿨다운** |
+| reconnect debounce | 90초 | 45초 (순간 끊김만; 처리 트리거는 쿨다운·새 데이터) |
+| 메일 한도 | 쿨다운 없음 (세션 1회) | **1시간 쿨다운 슬롯 1/1** (`AUTO_MAIL_COOLDOWN_HOURS`, SMTP 검증 후) |
 | 파이프라인 | `run_processing_gc1()` | `run_processing()` → 8860/chem32 |
 | 엑셀 열 | 「분석된 원소」 | Width 등 GC2 형식 |
 | Autochro 모듈 | **GC1 전용** — GC2에서 호출 금지 | 해당 없음 |
@@ -345,7 +345,7 @@ REQUIRED_HOTSPOT=AndroidHotspot5841
 
 ### GC2/GC3 (iptime 3종)
 1. 새 `acam`/`Report` mtime 감지
-2. **3시간 쿨다운 슬롯 1/1** — SMTP 발송+검증 성공 후 0/1 (`AUTO_MAIL_COOLDOWN_HOURS`, 기본 3)
+2. **1시간 쿨다운 슬롯 1/1** — SMTP 발송+검증 성공 후 0/1 (`AUTO_MAIL_COOLDOWN_HOURS`, 기본 1)
 3. reconnect debounce: 45초
 4. 새 날짜 시퀀스에 시료명 없으면 watch skip (force 시 `--sample-name` 지정)
 

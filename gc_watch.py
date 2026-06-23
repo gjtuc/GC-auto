@@ -35,8 +35,8 @@ gc_watch.py — --watch 핫스팟 감시 루프
     · 새로 연결(just_connected)일 때만 _on_hotspot_connected()
     · 순간 끊김: 끊긴 시간 < HOTSPOT_RECONNECT_MIN_SEC → 동일 세션 (GC1 90s, GC2 45s)
 
-  GC2/GC3: 새 acam/Report + 자동 메일 3시간 쿨다운 슬롯(1/1, 발송·검증 후 0/1)
-  GC1: 핫스pot 세션당 PDF·엑셀·메일 1회 (쿨다운 없음, 켜진 채 반복 없음)
+  GC2/GC3: Wi-Fi 연결 유지 중에도 새 acam/Report 감지 + 메일 1시간 쿨다운(발송·검증 후 0/1)
+  GC1: 핫스pot 세션당 PDF·엑셀·메일 1회 (쿨다운 없음)
        충분히 껐다 켠 재연결 → 세션 1회 더 (Autochro force export)
 
 [새 날짜 시퀀스 — GC2/GC3]
@@ -58,6 +58,7 @@ from gc_kch import check_sample_name_before_processing
 from gc_pipeline import run_processing
 from gc_state import (
     gc1_unlimited_auto_send,
+    get_pending_email_retry,
     has_new_data_since_last_run,
     load_send_state,
     mark_gc1_pdf_attempt_failed,
@@ -127,8 +128,8 @@ class WatchRunner:
             from gc_config import AUTO_MAIL_COOLDOWN_HOURS
 
             mail_rule = (
-                f"엑셀·메일 (자동 메일 {AUTO_MAIL_COOLDOWN_HOURS}시간 쿨다운 슬롯 1/1, "
-                "발송 검증 후 재충전, 새 데이터 있을 때)"
+                f"엑셀·메일 (자동 메일 {AUTO_MAIL_COOLDOWN_HOURS}시간 쿨다운, "
+                "핫스pot 재연결 불필요 — 새 데이터·쿨다운 충족 시 발송)"
             )
         print(f"[안내] 핫스팟 감시 시작 — {interval}초 간격, SSID: {self.config.required_ssid}")
         print(f"       {mail_rule}")
@@ -230,11 +231,16 @@ class WatchRunner:
             if self._pipeline_running:
                 self._publish("processing", "GC1 처리 진행 중 — 완료까지 대기")
                 return
-            if gc1_unlimited_auto_send(self.config.chemstation_mode) and self._gc1_has_pending_work():
-                print("\n[감지] GC1 새 CRM/PDF — 핫스팟 연결 유지 중 처리")
+            if gc1_unlimited_auto_send(self.config.chemstation_mode):
+                if self._gc1_has_pending_work():
+                    print("\n[감지] GC1 새 CRM/PDF — 핫스팟 연결 유지 중 처리")
+                    self._on_hotspot_connected(just_connected=False)
+                    return
+            elif self._gc23_has_pending_work():
+                print("\n[감지] GC2/GC3 새 데이터 — 핫스팟 연결 유지 중 처리")
                 self._on_hotspot_connected(just_connected=False)
                 return
-            self._publish("wifi_ok", "핫스팟 연결 유지 중 — 새 CRM/PDF 있으면 자동 처리")
+            self._publish("wifi_ok", "핫스팟 연결 유지 중 — 새 데이터 있으면 자동 처리")
             return
 
         print("\n[감지] 핫스팟 연결됨 — 새 데이터 확인")
@@ -260,6 +266,43 @@ class WatchRunner:
         if pdf_path and should_retry_gc1_pdf(self.watch_opts.send_state_file, pdf_path):
             return True
         return False
+
+    def _gc23_has_pending_work(self) -> bool:
+        """GC2/GC3: 핫스pot 유지 중 — 미발송 메일 또는 새 acam/Report."""
+        if gc1_unlimited_auto_send(self.config.chemstation_mode):
+            return False
+        state = load_send_state(self.watch_opts.send_state_file)
+        if get_pending_email_retry(state):
+            return True
+        if not os.path.isdir(self.config.data_path):
+            return False
+        mode = resolve_chemstation_mode(self.config.data_path, self.config.chemstation_mode)
+        if mode == "chem32":
+            sample_folder = find_active_sample_folder(
+                self.config.data_path,
+                self.config.sequence_folder,
+            )
+            if not sample_folder:
+                return False
+            return has_new_data_since_last_run(
+                self.watch_opts.send_state_file,
+                sample_folder,
+                self.config.data_path,
+                self.config.chemstation_mode,
+            )
+        sequence_folder = find_sequence_folder(
+            self.config.data_path,
+            self.config.sequence_date,
+            self.config.sequence_folder,
+        )
+        if not sequence_folder:
+            return False
+        return has_new_data_since_last_run(
+            self.watch_opts.send_state_file,
+            sequence_folder,
+            self.config.data_path,
+            self.config.chemstation_mode,
+        )
 
     def _record_result(self, result) -> None:
         if not result.ok or not result.sequence_folder or result.latest_acam_mtime is None:
@@ -311,7 +354,7 @@ class WatchRunner:
             chemstation_mode=self.config.chemstation_mode,
         )
         if not allowed:
-            code = "waiting_quota" if "메일" in reason else "waiting_wifi"
+            code = "waiting_wifi"
             self._publish(code, reason)
             print(f"[대기] {reason}")
             return
@@ -446,7 +489,7 @@ class WatchRunner:
                 self._record_result(result)
                 self._publish(
                     "done",
-                    "Chem32 처리 완료 — 핫스팟 재연결 시 다시 확인",
+                    "Chem32 처리 완료 — 새 Report 있으면 자동 재처리",
                     last_action=result.action_summary,
                     sequence_folder=result.sequence_folder,
                 )
@@ -509,7 +552,7 @@ class WatchRunner:
             self._record_result(result)
             self._publish(
                 "done",
-                "처리 완료 — 핫스팟 해제 후 재연결 시 다시 확인",
+                "처리 완료 — 새 데이터 있으면 자동 재처리",
                 last_action=result.action_summary,
                 sequence_folder=result.sequence_folder,
             )

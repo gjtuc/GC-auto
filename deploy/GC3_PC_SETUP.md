@@ -114,7 +114,7 @@ gc_install_autostart.bat
 
 1. 15초마다 핫스팟 연결·heartbeat txt 갱신  
 2. 핫스팟 연결 + Chem32 새 Report → 엑셀 생성 + 메일  
-3. 자동 메일은 **3시간 쿨다운 슬롯** (기본 `AUTO_MAIL_COOLDOWN_HOURS=3`) — SMTP 발송·검증 성공 후 0/1, `force`는 무시  
+3. 자동 메일 **1시간 쿨다운** (기본 `AUTO_MAIL_COOLDOWN_HOURS=1`) — 핫스pot 재연결 불필요, SMTP 검증 성공 후 0/1  
 4. 메일 실패 시 인터넷 복구 후 재시도  
 
 ---

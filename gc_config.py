@@ -129,7 +129,7 @@ def _env_int(name: str, default: int, minimum: int = 0) -> int:
 
 
 # GC2/GC3 — 자동 메일 쿨다운(시간). 성공 발송·SMTP 검증 후 N시간 동안 슬롯 0/1.
-AUTO_MAIL_COOLDOWN_HOURS = _env_int("AUTO_MAIL_COOLDOWN_HOURS", 3, minimum=1)
+AUTO_MAIL_COOLDOWN_HOURS = _env_int("AUTO_MAIL_COOLDOWN_HOURS", 1, minimum=1)
 
 # 핫스팟 직후 DNS·SMTP 준비 대기 (getaddrinfo failed 방지)
 SMTP_INTERNET_WAIT_MAX_SEC = _env_int("SMTP_INTERNET_WAIT_MAX_SEC", 120)

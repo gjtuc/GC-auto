@@ -27,7 +27,7 @@ class TestGcMailCooldown(unittest.TestCase):
             allowed, _ = can_auto_send_for_mode(path, "chem32")
             self.assertTrue(allowed)
 
-            sent_at = datetime.now() - timedelta(hours=4)
+            sent_at = datetime.now() - timedelta(hours=2)
             record_auto_mail_sent(path, sent_at)
             allowed, _ = can_auto_send_for_mode(path, "chem32")
             self.assertTrue(allowed)

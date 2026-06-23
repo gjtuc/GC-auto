@@ -3,8 +3,8 @@
 gc_wifi.py — Windows Wi-Fi SSID, SMTP 준비, 실행 허용 게이트
 
 check_runtime_gate():
-  · watch/일반 실행 전 — SSID 일치 + GC2/GC3 메일 쿨다운 슬롯
-  · force=True — SSID·쿨다운 모두 생략 (개시 요청·--force)
+  · watch/일반 실행 전 — SSID 일치 (메일 쿨다운은 pipeline 발송 단계)
+  · force=True — SSID 생략 (개시 요청·--force)
 
 wait_for_smtp_internet(): Android/iPhone 핫스pot 직후 DNS 지연 대비
 """
@@ -24,9 +24,6 @@ from gc_config import (
     SMTP_INTERNET_WAIT_MAX_SEC,
     SMTP_SOCKET_TIMEOUT_SEC,
 )
-from gc_state import can_auto_send_for_mode
-
-_SUBPROCESS_FLAGS = 0
 if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW"):
     _SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW
 
@@ -175,9 +172,8 @@ def check_runtime_gate(
     """
     수동 실행 전 허용 여부.
 
-    force=True: 핫스팟·메일 쿨다운 모두 무시 (사용자 수동 요청).
-    watch 자동 GC2/GC3: last_auto_mail_sent_at 기준 3시간(기본) 쿨다운 슬롯.
-    watch 자동 GC1: 쿨다운 없음 — 핫스pot 세션당 1회는 gc_watch 가 담당.
+    force=True: 핫스팟 무시 (사용자 수동 --force).
+    watch 자동: Wi-Fi 연결만 확인. 메일 쿨다운은 pipeline 발송 단계에서만 적용.
     """
     if not skip_wifi_check and not force:
         connected = get_connected_wifi_ssid()
@@ -187,10 +183,5 @@ def check_runtime_gate(
             if connected:
                 return False, f"필수 Wi-Fi({label}) 미연결 — 현재: {connected}"
             return False, f"필수 Wi-Fi({label}) 미연결 — Wi-Fi 없음"
-
-    if send_email and not force:
-        allowed, reason = can_auto_send_for_mode(state_path, chemstation_mode)
-        if not allowed:
-            return False, f"{reason} — 추가 작업은 --force 로 실행"
 
     return True, ""
