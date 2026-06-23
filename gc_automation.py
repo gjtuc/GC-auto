@@ -365,7 +365,11 @@ def main() -> None:
         print_profile_summary(resolve_profile(SCRIPT_DIR))
         return
 
-    config = apply_env_overrides(config_from_args(args, SCRIPT_DIR), SCRIPT_DIR)
+    config = apply_env_overrides(
+        config_from_args(args, SCRIPT_DIR),
+        SCRIPT_DIR,
+        chemstation_mode_cli=args.chemstation_mode,
+    )
     runtime_paths = paths_for_output_dir(config.excel_output_dir)
     status_json = args.watch_status_json or runtime_paths["watch_status_json"]
     status_txt = args.watch_status_txt or runtime_paths["watch_status_txt"]
