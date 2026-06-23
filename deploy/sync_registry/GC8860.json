@@ -10,8 +10,8 @@
                         "windows_user":  "User"
                     },
     "sync":  {
-                 "last_push_at":  "2026-06-23T22:42:26+09:00",
-                 "last_push_commit":  "5ecdee4",
+                 "last_push_at":  "2026-06-23T23:29:05+09:00",
+                 "last_push_commit":  "eddcdb8",
                  "last_push_by":  "GC8860\\차헌",
                  "last_pull_at":  "2026-06-23T19:12:05+09:00",
                  "last_pull_commit":  "a469b55",
@@ -19,6 +19,14 @@
                  "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
              },
     "history":  [
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-23T23:29:05+09:00",
+                        "commit":  "eddcdb8",
+                        "subject":  "auto: sync GC8860 @ 2026-06-23 23:26:31",
+                        "by":  "GC8860\\차헌",
+                        "triggered_by":  "auto_git_sync"
+                    },
                     {
                         "event":  "push",
                         "at":  "2026-06-23T22:42:26+09:00",
