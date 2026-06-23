@@ -7,7 +7,7 @@ gc_watch.py — --watch 핫스팟 감시 루프
 =============================================================================
 
   GC1 **장비** PC: iPhone 핫스팟 세션당 PDF·엑셀·메일 1회 (Desktop\\박은규)
-  GC2/GC3 **장비** PC: AndroidHotspot5841, acam mtime, gc_work_job 단계 재개 (Desktop\\KCH)
+  GC2/GC3 **장비** PC: iptime 3종 Wi-Fi, acam mtime, gc_work_job 단계 재개 (Desktop\\KCH)
 
   은규 PC / 차헌 PC 에서는 --watch 를 돌리지 않음.
 

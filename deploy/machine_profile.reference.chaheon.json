@@ -2,7 +2,7 @@
   "role": "data_pc",
   "label": "차헌 PC (참고)",
   "description": "촉매 반응 계산.py 실행 PC (메일 → 계산 → G: → Origin). GC2/GC3 장비 PC 아님.",
-  "recorded_at": "2026-06-15",
+  "recorded_at": "2026-06-23",
   "identifiers": {
     "computer_name": "DESKTOP-BFMLJ9J",
     "windows_user": "user",
@@ -10,10 +10,20 @@
     "machine_guid": "b4b91217-866e-454c-b791-65791162dffe",
     "cpu": "Intel(R) Core(TM) i5-6500 CPU @ 3.20GHz"
   },
+  "network": {
+    "wifi_gate_ssids": ["iptime", "iptime 2", "iptime_5G"],
+    "wifi_gate_previous": "AndroidHotspot5841",
+    "note": "GC2/GC3 장비 PC와 동일 연구실 Wi-Fi. env REQUIRED_HOTSPOT=iptime,iptime 2,iptime_5G"
+  },
+  "paths": {
+    "env_file": "C:\\Users\\User\\Desktop\\.cursor\\gc_automation.env",
+    "env_template": "deploy/gc_automation.env.chaheon.example"
+  },
   "notes": {
     "pc_naming": "차헌 PC (role=data_pc). GC2/GC3 **장비** PC(GC8860 등)와 별개 물리 PC.",
     "gc2_equipment_pc": "GC2/GC3 장비 PC — ChemStation + gc_automation.py (별도 PC, 예: GC8860)",
     "env_location": "본 PC: Desktop\\.cursor\\gc_automation.env (IMAP). 장비: Desktop\\KCH\\",
+    "eungyu_pc": "은규 PC Wi-Fi·env는 별도 — data_pc/gc_automation.env.example (iPhone). 본인이 직접 관리.",
     "best_id": "smbios_uuid 또는 machine_guid",
     "doc": "docs/PC_NAMING.md"
   }

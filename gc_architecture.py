@@ -20,8 +20,8 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
 =============================================================================
 
   GC1  박은규  Desktop\\박은규   REQUIRED_HOTSPOT=iPhone    CHEMSTATION_MODE=gc1
-  GC2  kimcha  Desktop\\KCH      AndroidHotspot5841         8860 (acam)
-  GC3  kimcha  Desktop\\KCH      AndroidHotspot5841         chem32 (Report)
+  GC2  kimcha  Desktop\\KCH      iptime / iptime 2 / iptime_5G  8860 (acam)
+  GC3  kimcha  Desktop\\KCH      iptime / iptime 2 / iptime_5G  chem32 (Report)
 
 =============================================================================
 [실행 모드 3가지]

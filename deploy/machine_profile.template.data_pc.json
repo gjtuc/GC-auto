@@ -30,7 +30,7 @@
     "pc_naming": "이 파일은 **은규 PC**용. GC1 **장비** PC(DESKTOP-MBGSSME 등) machine_profile 과 별개.",
     "path_customization": "차헌 PC와 G: 실험 폴더 위치·이름이 다를 수 있음. repo 기본 REACTION_ROOTS 를 무조건 따르지 말 것 — docs/DATA_PC_PATHS.md",
     "do_not_run": "본 PC에서 gc_automation.py 실행 금지 (장비 PC 전용)",
-    "reference_chaheon": "차헌 PC 참고: deploy/machine_profile.reference.chaheon.json",
+    "reference_chaheon": "차헌 PC env: deploy/gc_automation.env.chaheon.example (iptime 3종 Wi-Fi)",
     "setup": "은규 PC: %USERPROFILE%\\gc-data-pc\\PEG\\machine_profile.json | 차헌 PC: Desktop\\.cursor\\KCH\\machine_profile.json",
     "storage_folder": "은규 PC=PEG (gc-data-pc), 차헌 PC=KCH (Desktop\\.cursor). 장비 PC Desktop\\KCH 와 별개.",
     "layout_doc": "deploy/DATA_PC_HOME_LAYOUT.md",

@@ -247,5 +247,6 @@ PASS 후 차헌에게 전달:
 
 ## 다음
 
-- **차헌 PC** `BFMLJ9J`: Step 6 + Step 8 (별도)
-- GC1: Step 7 CALIB + Step 8 E2E
+- **차헌 PC** `BFMLJ9J`: Step 6 + Step 8 (별도) — Wi-Fi·env: `deploy/gc_automation.env.chaheon.example` (`iptime,iptime 2,iptime_5G`)
+- **GC3 장비 PC**: `deploy/GC3_PC_SETUP.md` — `REQUIRED_HOTSPOT` GC2와 동일 3종
+- GC1: Step 7 CALIB + Step 8 E2E (은규 PC Wi-Fi는 은규 사용자 관리)
