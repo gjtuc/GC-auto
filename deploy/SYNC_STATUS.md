@@ -1,6 +1,6 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-06-23 19:26:26 | HEAD: `c6df201` | auto: sync GC8860 @ 2026-06-23 19:26:20
+> Updated: 2026-06-23 19:31:11 | HEAD: `47b8b9f` | auto: sync GC8860 @ 2026-06-23 19:31:08
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
@@ -9,7 +9,7 @@
 | `DESKTOP-BFMLJ9J` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
 | `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\은규 @ 2026-06-22T20:58:16+09:00 | `587b96f` | DESKTOP-MBGSSME\은규 @ 2026-06-22T20:40:27+09:00 | `564d5b3` | [WARN] need pull |
 | `DESKTOP-XXXXXXX` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
-| `GC8860` | gc2_pc | GC8860\차헌 @ 2026-06-23T19:26:25+09:00 | `c6df201` | GC8860\차헌 @ 2026-06-23T19:12:05+09:00 | `a469b55` | [WARN] need pull |
+| `GC8860` | gc2_pc | GC8860\차헌 @ 2026-06-23T19:31:11+09:00 | `47b8b9f` | GC8860\차헌 @ 2026-06-23T19:12:05+09:00 | `a469b55` | [WARN] need pull |
 
 ## Commands
 - Start work: `gc_git_pull.bat`
