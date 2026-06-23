@@ -73,12 +73,17 @@ notepad deploy\gc_automation.env.gc2
 
 ### 9.2a — 사무실 Wi-Fi vs 핫스팟 (혼동 금지)
 
-| 구분 | SSID (GC8860, 2026-06~) | 용도 |
-|------|-------------------------|------|
-| **사무실 Wi-Fi** | `iptime_5G` (이전 `iptime`) | git, Cursor, 일반 인터넷 |
-| **핫스팟** (`REQUIRED_HOTSPOT`) | `AndroidHotspot5841` | watch·SMTP 메일 발송 |
+2026-06 TP-Link 증폭기 설치 후 연구실 Wi-Fi 구성 (GC8860):
 
-증폭기·공유기 SSID가 바뀌어도 **`REQUIRED_HOTSPOT` 은 휴대폰 핫스팟 이름 그대로** 둡니다.  
+| 구분 | SSID | 용도 |
+|------|------|------|
+| **증폭기** | `iptime 2`, `iptime_5G` | PC가 둘 중 하나에 자동 연결될 수 있음 |
+| **본 공유기** | `iptime` | 휴대폰 Wi-Fi 연결 대상 |
+| **PC 사무실** | `iptime_5G` / `iptime 2` / `iptime` | git, Cursor — **어느 쪽이든 OK** |
+| **핫스팟** (`REQUIRED_HOTSPOT`) | `AndroidHotspot5841` | watch·SMTP 메일 — **PC가 휴대폰 핫스팟에 연결될 때만** |
+
+- 휴대폰은 `iptime`에 붙어 있어도 됨. GC 자동 메일 시 **휴대폰 핫스팟 ON** → PC Wi-Fi를 `AndroidHotspot5841`로 전환.
+- 증폭기·공유기 SSID가 바뀌어도 **`REQUIRED_HOTSPOT` 은 휴대폰 핫스팟 이름 그대로** 둡니다.  
 참고: `deploy/machine_profile.reference.gc8860.json`
 
 ---

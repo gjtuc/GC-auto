@@ -20,11 +20,14 @@
     "cpu": "Intel(R) Core(TM) i5-10210U CPU @ 1.60GHz"
   },
   "network": {
-    "office_wifi_ssid": "iptime_5G",
-    "office_wifi_previous": "iptime",
-    "office_wifi_note": "2026-06 TP-Link 무선 증폭기 설치 후 5GHz SSID(iptime_5G) 사용. git pull/push·Cursor 일반 인터넷용.",
+    "amplifier_ssids": ["iptime 2", "iptime_5G"],
+    "phone_wifi_ssid": "iptime",
+    "pc_office_ssids": ["iptime_5G", "iptime 2", "iptime"],
+    "pc_typical_ssid": "iptime_5G",
     "required_hotspot": "AndroidHotspot5841",
-    "hotspot_note": "env REQUIRED_HOTSPOT — watch·SMTP 메일 발송 시 휴대폰 핫스팟. 사무실 Wi-Fi SSID로 바꾸지 말 것."
+    "office_wifi_note": "2026-06 TP-Link 증폭기 설치. PC는 iptime_5G·iptime 2·iptime 중 자동 연결 가능 — git/Cursor 모두 OK.",
+    "phone_wifi_note": "휴대폰은 iptime(본 공유기)에 연결. GC 메일 시 휴대폰 핫스팟 켜고 PC를 AndroidHotspot5841에 연결.",
+    "hotspot_note": "env REQUIRED_HOTSPOT — 사무실·증폭기 SSID로 바꾸지 말 것."
   },
   "paths": {
     "repo": "C:\\Users\\User\\chemstation-gc-automation",
