@@ -35,6 +35,7 @@
 | GC1 장비 PC | `gc1_pc` | `deploy/machine_profile.template.gc1.json` |
 | 은규 PC | `data_pc` | `deploy/machine_profile.template.data_pc.json` |
 | GC2/GC3 장비 PC | `gc2_pc` / `gc3_pc` | `deploy/machine_profile.template.gc2.json` |
+| GC8860 (GC2 장비) | `gc2_pc` | `deploy/machine_profile.reference.gc8860.json` |
 | 차헌 PC | `data_pc` | `deploy/machine_profile.reference.chaheon.json` |
 
 ## EXPECTED_PCS (GitHub sync)

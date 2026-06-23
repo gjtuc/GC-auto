@@ -71,6 +71,16 @@ notepad deploy\gc_automation.env.gc2
 
 **repo의 `deploy/gc_automation.env.gc2` 를 그대로 덮어쓰지 말 것** — 기존 앱비밀번호 유지.
 
+### 9.2a — 사무실 Wi-Fi vs 핫스팟 (혼동 금지)
+
+| 구분 | SSID (GC8860, 2026-06~) | 용도 |
+|------|-------------------------|------|
+| **사무실 Wi-Fi** | `iptime_5G` (이전 `iptime`) | git, Cursor, 일반 인터넷 |
+| **핫스팟** (`REQUIRED_HOTSPOT`) | `AndroidHotspot5841` | watch·SMTP 메일 발송 |
+
+증폭기·공유기 SSID가 바뀌어도 **`REQUIRED_HOTSPOT` 은 휴대폰 핫스팟 이름 그대로** 둡니다.  
+참고: `deploy/machine_profile.reference.gc8860.json`
+
 ---
 
 ## 9.3 — `machine_profile.json` (로컬, Git 제외)

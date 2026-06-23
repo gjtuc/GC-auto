@@ -1,0 +1,40 @@
+{
+  "_comment_for_llm": "GC8860(GC2 장비 PC) 참고용. Desktop\\KCH\\machine_profile.json 은 로컬만 — Git commit 금지.",
+  "role": "gc2_pc",
+  "label": "차헌 — GC2/GC3 장비 PC",
+  "description": "ChemStation 8860 (GC2). gc_automation.py --watch. 차헌 PC(데이터) 아님.",
+  "gc_assignment": {
+    "equipment": "GC2",
+    "operator": "차헌",
+    "chemstation_mode": "8860",
+    "output_dir": "Desktop\\KCH",
+    "required_hotspot": "AndroidHotspot5841",
+    "note": "GC3 이면 GC_INSTANCE=gc3, CHEMSTATION_MODE=chem32"
+  },
+  "recorded_at": "2026-06-23",
+  "identifiers": {
+    "computer_name": "GC8860",
+    "windows_user": "User",
+    "smbios_uuid": "ECF325B5-7661-4452-9CAE-EDEF864D833A",
+    "machine_guid": "e015c21c-c5c1-4e75-bb08-9ca3cd4be017",
+    "cpu": "Intel(R) Core(TM) i5-10210U CPU @ 1.60GHz"
+  },
+  "network": {
+    "office_wifi_ssid": "iptime_5G",
+    "office_wifi_previous": "iptime",
+    "office_wifi_note": "2026-06 TP-Link 무선 증폭기 설치 후 5GHz SSID(iptime_5G) 사용. git pull/push·Cursor 일반 인터넷용.",
+    "required_hotspot": "AndroidHotspot5841",
+    "hotspot_note": "env REQUIRED_HOTSPOT — watch·SMTP 메일 발송 시 휴대폰 핫스팟. 사무실 Wi-Fi SSID로 바꾸지 말 것."
+  },
+  "paths": {
+    "repo": "C:\\Users\\User\\chemstation-gc-automation",
+    "github": "https://github.com/gjtuc/GC-auto",
+    "env_file": "C:\\Users\\User\\Desktop\\KCH\\gc_automation.env"
+  },
+  "notes": {
+    "pc_naming": "GC2/GC3 장비 PC. 차헌 PC=Desktop\\.cursor (BFMLJ9J) 와 별개.",
+    "wifi_profiles_windows": "AndroidHotspot5841 2 는 Windows 중복 프로필 이름일 뿐 SSID는 AndroidHotspot5841.",
+    "do_not_commit": "로컬 machine_profile.json·gc_automation.env — Git 제외",
+    "guide": "deploy/STEP9_gc2_pc.md"
+  }
+}
