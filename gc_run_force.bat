@@ -18,4 +18,11 @@ echo        python gc_automation.py --sequence-date 20260613 --sample-name "시�
 echo.
 
 python "%~dp0gc_automation.py" --force %*
-if errorlevel 1 pause
+set EXITCODE=%errorlevel%
+if %EXITCODE% neq 0 (
+    pause
+    exit /b %EXITCODE%
+)
+echo.
+echo [완료] force 실행 종료 — Desktop\KCH 엑셀·메일 결과 확인
+pause
