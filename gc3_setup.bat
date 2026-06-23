@@ -62,7 +62,7 @@ if not exist "C:\Chem32\1\Data" (
 
 echo.
 echo [5/6] 바탕화면 바로가기...
-call "%GC_ROOT%gc3_바탕화면_바로가기.bat"
+call "%GC_ROOT%gc3_desktop_shortcuts.bat"
 
 echo.
 echo [6/6] 설정 확인...
