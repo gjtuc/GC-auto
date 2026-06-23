@@ -12,7 +12,8 @@ gc_mailer.py — 네이버 SMTP 메일 발송 (장비 PC → 데이터 PC)
   MAIL_TO — 수신 = 상대방 **데이터 PC** 주소
 
 [호출 경로]
-  gc_pipeline._try_auto_email() — force 또는 GC1 은 슬롯 검사 생략
+  gc_pipeline._try_auto_email() — force / GC1 은 쿨다운·슬롯 검사 생략
+  발송 후 SMTP NOOP 검증 — 실패 시 슬롯 미사용, watch 재시도
   gc_state.try_pending_email_retry() — 엑셀만 성공·메일 실패 후 재시도
 
 [네트워크]  gc_wifi.wait_for_smtp_internet() — 핫스pot 직후 DNS 지연 대비
@@ -152,7 +153,24 @@ def _smtp_send_once(
         server.starttls()
         server.ehlo()
         server.login(sender, app_password)
-        server.sendmail(sender, [recipient], msg.as_string())
+        refused = server.sendmail(sender, [recipient], msg.as_string())
+        if refused:
+            raise smtplib.SMTPRecipientsRefused(refused)
+
+
+def _verify_smtp_after_send(sender: str, app_password: str) -> bool:
+    """발송 직후 별도 연결로 로그인·NOOP — 전송 경로 재확인."""
+    try:
+        with smtplib.SMTP(NAVER_SMTP_HOST, NAVER_SMTP_PORT, timeout=SMTP_SOCKET_TIMEOUT_SEC) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(sender, app_password)
+            code, _reply = server.noop()
+            return 200 <= int(code) < 400
+    except Exception as exc:
+        print(f"[경고] SMTP 발송 후 검증 실패: {exc}")
+        return False
 
 
 def send_email_via_smtp(
@@ -202,7 +220,14 @@ def send_email_via_smtp(
     for attempt in range(1, retries + 1):
         try:
             _smtp_send_once(sender, app_password, recipient, msg)
-            print(f"[성공] 이메일 발송 완료 → {recipient}")
+            if not _verify_smtp_after_send(sender, app_password):
+                if attempt < retries:
+                    print(f"[경고] SMTP 검증 실패 — 재시도 ({attempt}/{retries})")
+                    time.sleep(SMTP_SEND_RETRY_DELAY_SEC)
+                    continue
+                print("[오류] SMTP 발송 후 검증 실패 — 슬롯 미사용, watch 재시도")
+                return False
+            print(f"[성공] 이메일 발송 완료 (SMTP 검증 OK) → {recipient}")
             return True
         except smtplib.SMTPAuthenticationError:
             print("[오류] SMTP 인증 실패 — 앱 비밀번호·IMAP/SMTP 사용 여부 확인")

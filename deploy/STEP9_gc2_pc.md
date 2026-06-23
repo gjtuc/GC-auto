@@ -186,7 +186,8 @@ gc_start_watch.bat
 python gc_automation.py --watch
 ```
 
-- 핫스팟 **연결 edge** 에서만 1회 처리 (GC2: am/pm 슬롯 규칙은 통합 repo에서 session 기반으로 변경됐을 수 있음 — `gc_watch.py` 주석 확인)
+- 핫스팟 **연결 edge** 에서만 1회 처리 (GC1)
+- GC2/GC3: 새 acam/Report mtime + **메일 3시간 쿨다운 슬롯** (`AUTO_MAIL_COOLDOWN_HOURS`, `gc_state.py`)
 - `gc_watch_status.bat` 로 상태 확인
 - 종료: `gc_stop_watch.bat`
 

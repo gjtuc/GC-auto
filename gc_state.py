@@ -13,7 +13,8 @@ gc_state.py — 발송·처리 기록 JSON (.gc_send_state.json)
 [주요 키]
 =============================================================================
 
-  daily_send_count          GC2/GC3 watch 자동 메일 — 날짜별 {am:0|1, pm:0|1}
+  daily_send_count          레거시 am/pm 기록 (구형 호환)
+  last_auto_mail_sent_at    GC2/GC3 — 검증된 자동 메일 시각 (ISO). 이후 쿨다운
   last_processed_acam_mtime GC2 acam / GC1 PDF mtime — has_new_data_since_last_run
   last_processed_crm_mtime  GC1 처리 완료 시 CRM mtime (기록용)
   last_autochro_crm_mtime   Autochro export 가 마지막으로 본 CRM mtime
@@ -25,12 +26,14 @@ gc_state.py — 발송·처리 기록 JSON (.gc_send_state.json)
 [GC1·GC2·GC3 메일 한도]
 =============================================================================
 
-  session_based_auto_send() == True (전 인스턴스)
-    → 오전/오후 슬롯 검사 생략 (can_auto_send_for_mode)
-    → watch 는 **핫스pot 세션당 1회** pipeline (gc_watch._tick)
-    → force(config.force) 는 한도·핫스pot 모두 우회
+  GC1 (gc1):
+    session_based — 쿨다운·슬롯 없음. force 도 한도 없음.
 
-  daily_send_count / am/pm 슬롯 — 레거시 기록용 (현재 자동 발송 한도에 사용 안 함)
+  GC2/GC3 (8860, chem32):
+    자동 메일 슬롯 1/1 — 성공 발송+SMTP 검증 후 AUTO_MAIL_COOLDOWN_HOURS(기본 3시간) 동안 0/1.
+    실패 시 pending_email_retry 로 재시도. force 는 슬롯 무시.
+
+  daily_send_count / am·pm — 레거시 호환만 (신규 한도에 미사용)
 
 =============================================================================
 [has_new_data_since_last_run]
@@ -50,6 +53,7 @@ from typing import Optional, Tuple
 
 from gc_config import (
     AFTERNOON_START_HOUR,
+    AUTO_MAIL_COOLDOWN_HOURS,
     DAILY_SEND_LIMIT,
     PENDING_EMAIL_SEND_RETRIES,
     PENDING_EMAIL_SMTP_WAIT_MAX_SEC,
@@ -99,7 +103,7 @@ def log_gc_event(excel_output_dir: str, event_type: str, message: str, **extra) 
 
 
 def current_send_slot(dt: Optional[datetime] = None) -> str:
-    """현재 시각 기준 자동 메일 슬롯 — am(00:00~11:59) / pm(12:00~)."""
+    """[레거시] 구형 daily_send_count am/pm 기록용 — 신규 한도는 3시간 쿨다운."""
     hour = (dt or datetime.now()).hour
     return "pm" if hour >= AFTERNOON_START_HOUR else "am"
 
@@ -140,13 +144,83 @@ def is_slot_available(state: dict, today_str: str, slot: str) -> bool:
 
 
 def session_based_auto_send(mode: str) -> bool:
-    """GC1·GC2·GC3 — 오전/오후 슬롯 없이 핫스pot 세션당 자동 처리·메일."""
-    return True
+    """GC1 만 슬롯·쿨다운 없음."""
+    return mode == "gc1"
+
+
+def uses_mail_cooldown(mode: str) -> bool:
+    """GC2/GC3 자동 메일 — 3시간(기본) 쿨다운 슬롯."""
+    if mode == "gc1":
+        return False
+    return mode in ("8860", "chem32", "auto")
 
 
 def gc1_unlimited_auto_send(mode: str) -> bool:
     """session_based_auto_send 와 동일 (GC1 호환 별칭)."""
     return session_based_auto_send(mode)
+
+
+def _parse_mail_timestamp(raw: str) -> Optional[datetime]:
+    if not raw:
+        return None
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def mail_cooldown_seconds() -> int:
+    return AUTO_MAIL_COOLDOWN_HOURS * 3600
+
+
+def get_last_auto_mail_sent_at(state: dict) -> Optional[datetime]:
+    return _parse_mail_timestamp(str(state.get("last_auto_mail_sent_at", "")).strip())
+
+
+def seconds_until_mail_slot_available(
+    state: dict,
+    now: Optional[datetime] = None,
+) -> int:
+    """0 이면 슬롯 1/1 (발송 가능)."""
+    sent_at = get_last_auto_mail_sent_at(state)
+    if sent_at is None:
+        return 0
+    now = now or datetime.now()
+    elapsed = (now - sent_at).total_seconds()
+    remaining = mail_cooldown_seconds() - elapsed
+    return max(0, int(remaining))
+
+
+def is_mail_slot_available(state: dict, now: Optional[datetime] = None) -> bool:
+    return seconds_until_mail_slot_available(state, now) == 0
+
+
+def format_auto_mail_slot_status(state: dict, now: Optional[datetime] = None) -> str:
+    """GC2/GC3 watch 상태용 — 슬롯 1/1 또는 0/1 (남은 시간)."""
+    remaining = seconds_until_mail_slot_available(state, now)
+    if remaining <= 0:
+        return f"슬롯 1/1 ({AUTO_MAIL_COOLDOWN_HOURS}시간 쿨다운)"
+    hours, rem = divmod(remaining, 3600)
+    minutes = rem // 60
+    if hours:
+        eta = f"약 {hours}시간 {minutes}분"
+    else:
+        eta = f"약 {minutes}분"
+    return f"슬롯 0/1 ({eta} 후 1/1)"
+
+
+def record_auto_mail_sent(state_path: str, dt: Optional[datetime] = None) -> None:
+    """검증된 자동 메일 성공 시 쿨다운 시작."""
+    now = dt or datetime.now()
+    state = load_send_state(state_path)
+    state["last_auto_mail_sent_at"] = now.strftime("%Y-%m-%dT%H:%M:%S")
+    save_send_state(state_path, state)
+    print(
+        f"[안내] 자동 메일 슬롯 사용 — {format_auto_mail_slot_status(state, now)} "
+        f"({AUTO_MAIL_COOLDOWN_HOURS}시간 후 재충전)"
+    )
 
 
 def get_today_session_send_count(state: dict, today_str: str) -> int:
@@ -180,17 +254,22 @@ def can_auto_send_for_mode(
     mode: str = "auto",
     dt: Optional[datetime] = None,
 ) -> Tuple[bool, str]:
-    """전 인스턴스 session_based — 오전/오후 슬롯 한도 없음."""
-    if session_based_auto_send(mode):
+    """GC1: 무제한. GC2/GC3: 마지막 검증 발송 후 쿨다운."""
+    if not uses_mail_cooldown(mode):
         return True, ""
-    return can_auto_send_in_current_slot(state_path, dt)
+    now = dt or datetime.now()
+    state = load_send_state(state_path)
+    if is_mail_slot_available(state, now):
+        return True, ""
+    status = format_auto_mail_slot_status(state, now)
+    return False, f"자동 메일 {status}"
 
 
 def can_auto_send_in_current_slot(
     state_path: str,
     dt: Optional[datetime] = None,
 ) -> Tuple[bool, str]:
-    """현재 시각 슬롯(오전/오후)에 자동 메일을 보낼 수 있는지 (GC2/GC3)."""
+    """[레거시] 구형 오전/오후 슬롯 — 신규 코드는 can_auto_send_for_mode(쿨다운) 사용."""
     now = dt or datetime.now()
     today_str = now.strftime("%Y%m%d")
     slot = current_send_slot(now)
@@ -429,7 +508,7 @@ def try_pending_email_retry(
         from gc_work_job import record_session_mail_complete
 
         summary = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} — 메일 재발송"
-        record_session_mail_complete(state_path, excel_output_dir, summary)
+        record_session_mail_complete(state_path, excel_output_dir, summary, chemstation_mode=chemstation_mode)
         log_gc_event(
             excel_output_dir,
             "mail_retry_ok",

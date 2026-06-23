@@ -210,7 +210,7 @@ def parse_message_as_request(text: str) -> Optional[UserForceRequest]:
 
 
 def config_for_user_request(base: AppConfig, request: UserForceRequest) -> AppConfig:
-    """force=True — 핫스팟·일일한도·input() 우회."""
+    """force=True — 핫스팟·메일 쿨다운·input() 우회."""
     return replace(
         base,
         force=True,

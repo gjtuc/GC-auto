@@ -12,7 +12,7 @@ if not exist "%~dp0gc_automation.py" (
     exit /b 1
 )
 
-echo [안내] 수동 실행 — 핫스팟·일일 한도 규칙 없이 엑셀·메일 시도
+echo [안내] 수동 실행 — 핫스팟·메일 쿨다운 규칙 없이 엑셀·메일 시도
 echo        시료/날짜 지정 예:
 echo        python gc_automation.py --sequence-date 20260613 --sample-name "시료이름" --force
 echo.

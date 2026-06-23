@@ -6,7 +6,7 @@ gc_work_job.py — 핫스pot 작업 세션 (미완료 감지·단계별 재개)
 [어느 PC — GC2/GC3 장비 PC (차헌)]
 =============================================================================
 
-  GC2/GC3 **장비** PC merge 시 추가. GC1 **장비**도 import 되지만 GC1은 session_based 1회 처리 위주.
+  GC2/GC3 **장비** PC merge 시 추가. GC1은 세션당 1회, GC2/GC3는 메일 3시간 쿨다운 슬롯.
   은규 PC / 차헌 PC 에서는 미사용 (gc_automation.py 미실행).
 
   GitHub: gjtuc/GC-auto — 다른 PC는 git pull 로 받음.
@@ -270,8 +270,12 @@ def record_session_mail_complete(
     state_path: str,
     excel_output_dir: str,
     action_summary: Optional[str] = None,
+    *,
+    chemstation_mode: str = "auto",
 ) -> None:
-    """메일 발송 성공 = 작업 세션 1회 완료."""
+    """메일 발송·검증 성공 = 작업 세션 1회 완료."""
+    from gc_state import format_auto_mail_slot_status, uses_mail_cooldown
+
     now = datetime.now()
     today_str = now.strftime("%Y%m%d")
     state = load_send_state(state_path)
@@ -285,13 +289,24 @@ def record_session_mail_complete(
     )
     if action_summary:
         state["last_action_summary"] = action_summary
-    clear_active_job(state_path)
-    clear_pending_email_retry(state_path)
+    if uses_mail_cooldown(chemstation_mode):
+        state["last_auto_mail_sent_at"] = now.strftime("%Y-%m-%dT%H:%M:%S")
+    state.pop(ACTIVE_JOB_KEY, None)
+    state.pop("pending_email_retry", None)
     save_send_state(state_path, state)
-    print(
-        f"[안내] 작업 세션 완료 — 메일 발송 1회 기록 "
-        f"({format_today_session_send_status(state, today_str)})"
-    )
+    if uses_mail_cooldown(chemstation_mode):
+        slot_msg = format_auto_mail_slot_status(state, now)
+        from gc_config import AUTO_MAIL_COOLDOWN_HOURS
+
+        print(
+            f"[안내] 작업 세션 완료 — 자동 메일 {slot_msg} "
+            f"({AUTO_MAIL_COOLDOWN_HOURS}시간 후 재충전)"
+        )
+    else:
+        print(
+            f"[안내] 작업 세션 완료 — 메일 발송 1회 기록 "
+            f"({format_today_session_send_status(state, today_str)})"
+        )
     log_gc_event(excel_output_dir, "session_mail_complete", action_summary or "메일 발송 완료")
 
 
@@ -368,7 +383,12 @@ def apply_processing_result_to_job(
     update_active_job(state_path, **job_updates)
 
     if email_sent:
-        record_session_mail_complete(state_path, excel_dir, action_summary)
+        record_session_mail_complete(
+            state_path,
+            excel_dir,
+            action_summary,
+            chemstation_mode=chemstation_mode,
+        )
         return
 
     if not send_email and excel_ok:

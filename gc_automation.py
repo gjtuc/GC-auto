@@ -36,8 +36,8 @@ gc_automation.py — ChemStation / GC1 자동 정리 (CLI 진입점)
 [GC1 vs GC2 watch 차이 — 요약]
 =============================================================================
 
-  GC2: iptime 3종 Wi-Fi, acam mtime, 오전+오후 메일 각 1회
-  GC1: iPhone, 핫스pot **세션당** PDF·엑셀·메일 1회, 슬롯 한도 없음
+  GC2/GC3: iptime 3종 Wi-Fi, acam/Report mtime, 자동 메일 3시간 쿨다운 슬롯 1/1
+  GC1: iPhone, 핫스pot **세션당** PDF·엑셀·메일 1회, 쿨다운·슬롯 없음
 
 =============================================================================
 [사용자/Cursor 개시 → force]
@@ -178,7 +178,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--watch", action="store_true", help="핫스팟 감시 (연결 시 새 데이터 처리)")
     parser.add_argument("--watch-interval", type=int, default=15, help="watch 폴링 간격(초, 기본 15)")
     parser.add_argument("--required-ssid", default=None, help="필수 핫스팟 SSID (기본: env/프로필)")
-    parser.add_argument("--force", action="store_true", help="수동 — 핫스팟·일일한도 무시")
+    parser.add_argument("--force", action="store_true", help="수동 — 핫스팟·메일 쿨다운 무시")
     parser.add_argument("--no-wifi-check", action="store_true", help="핫스팟 검사 생략 (테스트)")
     parser.add_argument("--send-state-file", default=None, help="발송 기록 JSON 경로")
     parser.add_argument("--watch-status-json", default=None)
@@ -255,7 +255,7 @@ def config_from_args(args: argparse.Namespace, script_dir: str) -> AppConfig:
 
 
 def force_config_from(base: AppConfig) -> AppConfig:
-    """사용자 force 전용 설정 — 핫스팟·일일한도·input() 모두 우회."""
+    """사용자 force 전용 설정 — 핫스팟·메일 쿨다운·input() 모두 우회."""
     return AppConfig(
         data_path=base.data_path,
         chemstation_mode=base.chemstation_mode,
@@ -294,14 +294,14 @@ def after_successful_run(config: AppConfig, result, count_email_toward_limit: bo
 
 def run_force_once(config: AppConfig, script_dir: str) -> None:
     """pipeline 1회 — force 규칙(핫스팟·한도 무시). 메일은 daily_send_count에 안 넣음."""
-    print("[안내] force 우선 실행 — 핫스팟·일일 한도 규칙 적용 안 함")
+    print("[안내] force 우선 실행 — 핫스팟·메일 쿨다운 규칙 적용 안 함")
     result = run_processing(config, script_dir)
     after_successful_run(config, result, count_email_toward_limit=False)
 
 
 def submit_force_request(config: AppConfig, script_dir: str, trigger_text: str) -> None:
     """[1단계] force — watch 와 무관하게 이 프로세스에서 즉시 pipeline 실행."""
-    print(f"[1/2] force 실행 — '{trigger_text}' (watch 독립, 핫스팟·일일한도 무시)")
+    print(f"[1/2] force 실행 — '{trigger_text}' (watch 독립, 핫스팟·메일 쿨다운 무시)")
     if not os.path.isdir(config.data_path) and config.chemstation_mode != "gc1":
         print(f"[오류] Data 경로 없음: {config.data_path}")
         return
@@ -438,7 +438,7 @@ def main() -> None:
 
     if config.force:
         require_force_auth(args.force_token)
-        print("[안내] 수동(--force) — 핫스팟·일일 한도 규칙 적용 안 함")
+        print("[안내] 수동(--force) — 핫스팟·메일 쿨다운 규칙 적용 안 함")
 
     result = run_processing(config, SCRIPT_DIR)
     after_successful_run(config, result, count_email_toward_limit=not config.force)

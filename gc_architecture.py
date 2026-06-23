@@ -30,12 +30,12 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
   1) watch (--watch, GC1_감시시작.bat)
      · 핫스pot **연결 edge** 에서만 자동 처리
      · 연결 유지 중에는 반복 실행 없음
-     · GC2: 새 acam + 오전/오후 메일 각 1회
-     · GC1: **세션당 1회** PDF·엑셀·메일 (슬롯 한도 없음)
+     · GC2: 새 acam + 자동 메일 3시간 쿨다운 슬롯(발송·SMTP 검증 후)
+     · GC1: **세션당 1회** PDF·엑셀·메일 (쿨다운 없음)
      · 순간 끊김(< GC1_HOTSPOT_RECONNECT_MIN_SEC) → 동일 세션, skip
 
   2) force (--force, gc_동작해줘.bat, --request)
-     · 핫스pot·일일한도 무시
+     · 핫스pot·메일 쿨다운 무시
      · GC1: Autochro PDF 재내보내기 + 전체 pipeline
 
   3) Cursor 개시 (--user-message "진행" 등)  gc_request.py

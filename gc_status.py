@@ -39,8 +39,10 @@ from typing import Optional
 from gc_config import DESKTOP_STOPPED_PREFIX, HEARTBEAT_TOLERANCE_MINUTES
 from gc_state import (
     format_today_session_send_status,
+    format_auto_mail_slot_status,
     get_today_session_send_count,
     load_send_state,
+    uses_mail_cooldown,
 )
 from gc_wifi import format_required_ssids_label, parse_required_ssids
 
@@ -112,6 +114,7 @@ class StatusReporter:
         watch_interval: int,
         send_state_path: str,
         started_at: str,
+        chemstation_mode: str = "auto",
     ):
         self.status_json_path = status_json_path
         self.status_txt_path = status_txt_path
@@ -119,10 +122,14 @@ class StatusReporter:
         self.watch_interval = watch_interval
         self.send_state_path = send_state_path
         self.started_at = started_at
+        self.chemstation_mode = chemstation_mode
 
     def _today_send_summary(self) -> str:
+        state = load_send_state(self.send_state_path)
+        if uses_mail_cooldown(self.chemstation_mode):
+            return format_auto_mail_slot_status(state)
         today_str = datetime.now().strftime("%Y%m%d")
-        return format_today_session_send_status(load_send_state(self.send_state_path), today_str)
+        return format_today_session_send_status(state, today_str)
 
     def _today_send_count(self) -> int:
         today_str = datetime.now().strftime("%Y%m%d")

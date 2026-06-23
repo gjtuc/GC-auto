@@ -17,7 +17,7 @@ gc_watch.py — --watch 핫스팟 감시 루프
 
   (A) --watch  … 핫스pot 연결 edge 에서 자동 처리 (본 파일)
   (B) force    … 「시작」「go」「진행」 등 개시 요청 (gc_request → pipeline)
-                 watch·핫스pot·일일한도와 무관
+                 watch·핫스pot·메일 쿨다운과 무관
 
 =============================================================================
 [매 tick(기본 15초)]
@@ -35,8 +35,8 @@ gc_watch.py — --watch 핫스팟 감시 루프
     · 새로 연결(just_connected)일 때만 _on_hotspot_connected()
     · 순간 끊김: 끊긴 시간 < HOTSPOT_RECONNECT_MIN_SEC → 동일 세션 (GC1 90s, GC2 45s)
 
-  GC2/GC3: 새 acam/Report + 오전/오후 메일 각 1회
-  GC1: 핫스pot 세션당 PDF·엑셀·메일 1회 (슬롯 한도 없음, 켜진 채 반복 없음)
+  GC2/GC3: 새 acam/Report + 자동 메일 3시간 쿨다운 슬롯(1/1, 발송·검증 후 0/1)
+  GC1: 핫스pot 세션당 PDF·엑셀·메일 1회 (쿨다운 없음, 켜진 채 반복 없음)
        충분히 껐다 켠 재연결 → 세션 1회 더 (Autochro force export)
 
 [새 날짜 시퀀스 — GC2/GC3]
@@ -110,6 +110,7 @@ class WatchRunner:
             watch_opts.watch_interval,
             watch_opts.send_state_file,
             self._started_at,
+            chemstation_mode=config.chemstation_mode,
         )
 
     def run_forever(self) -> None:
@@ -123,7 +124,12 @@ class WatchRunner:
                 f"(끊었다가 {reconnect_sec}초+ 후 재연결 시 1회 더)"
             )
         else:
-            mail_rule = "엑셀·메일 (오전 1회 + 오후 1회, 새 데이터 있을 때)"
+            from gc_config import AUTO_MAIL_COOLDOWN_HOURS
+
+            mail_rule = (
+                f"엑셀·메일 (자동 메일 {AUTO_MAIL_COOLDOWN_HOURS}시간 쿨다운 슬롯 1/1, "
+                "발송 검증 후 재충전, 새 데이터 있을 때)"
+            )
         print(f"[안내] 핫스팟 감시 시작 — {interval}초 간격, SSID: {self.config.required_ssid}")
         print(f"       {mail_rule}")
         print(f"       순간 끊김({reconnect_sec}초 미만 재연결) — 동일 세션, 중복 없음")
@@ -291,7 +297,7 @@ class WatchRunner:
         return None
 
     def _on_hotspot_connected(self, *, just_connected: bool = True) -> None:
-        """핫스팟 edge: 일일 한도 → 미발송 메일 재시도 → 새 데이터 → pipeline."""
+        """핫스팟 edge: 메일 쿨다운 → 미발송 메일 재시도 → 새 데이터 → pipeline."""
         if self._pipeline_running:
             return
         self._publish("wifi_connected", "핫스팟 연결됨 — 새 데이터 확인 중")

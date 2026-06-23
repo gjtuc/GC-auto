@@ -48,7 +48,7 @@ GC1 장비 PC에서 아래 기능이 **운영 검증 완료** 상태입니다.
 
 ### Watch 세션 규칙 (GC1)
 - 핫스팟 **연결 edge**에서만 pipeline 실행 (연결 유지 중 반복 없음)
-- **세션당 1회** PDF·엑셀·메일 (GC2의 오전/오후 슬롯 한도 없음)
+- **세션당 1회** PDF·엑셀·메일 (GC2/GC3의 3시간 메일 쿨다운 슬롯과 별개)
 - **90초 reconnect debounce** (`GC1_HOTSPOT_RECONNECT_MIN_SEC=90`): 짧은 끊김=동일 세션, 길게 껐다 켜면 1회 더
 - 순간 flicker(약한 신호) 무시
 
@@ -71,7 +71,7 @@ GC1 장비 PC에서 아래 기능이 **운영 검증 완료** 상태입니다.
 | 모드 | 진입 | 동작 |
 |------|------|------|
 | **watch** | `--watch`, `GC1_감시시작.bat` | 핫스팟 edge에서 자동 처리 |
-| **force** | `--force`, `--request`, `GC1_동작해줘.bat` | 핫스팟·일일한도 무시, 전체 pipeline |
+| **force** | `--force`, `--request`, `GC1_동작해줘.bat` | 핫스팟·메일 쿨다운 무시, 전체 pipeline |
 | **Cursor 개시** | `--user-message "진행"` | force와 동일 + heartbeat 검증 |
 
 ### 모듈 맵
@@ -116,18 +116,18 @@ gc_automation.py     ← CLI 진입, watch/force/user-message 분기
 |------|------|
 | `gc_architecture.py` | **문서 전용** — 구조·흐름·함정 정리 (실행 코드 없음) |
 | `gc_automation.py` | CLI 진입점 |
-| `gc_watch.py` | 핫스팟 edge 감시, GC1 세션 vs GC2 am/pm 슬롯 |
+| `gc_watch.py` | 핫스팟 edge 감시, GC1 세션 vs GC2/GC3 메일 쿨다운 슬롯 |
 | `gc_pipeline.py` | 모드별 처리 오케스트레이션 |
 | `gc_autochro.py` | GC1 Autochro-3000 UI 5단계 PDF보내기 |
 | `gc_gc1.py` | GC1 PDF 파싱, overflow 병합, trim, 엑셀, cleanup |
 | `gc_chemstation.py` | GC2 `sequence.acam_` XML 파싱 |
 | `gc_chem32.py` | GC3 Report.txt 파싱 |
-| `gc_state.py` | `.gc_send_state.json` — 일일한도, mtime, pending 메일 |
+| `gc_state.py` | `.gc_send_state.json` — 메일 쿨다운, mtime, pending 메일 |
 | `gc_request.py` | 개시 문구 판별 → force |
 | `gc_profiles.py` | PC별 env·핫스팟·모드 해석 |
 | `gc_wifi.py` | REQUIRED_HOTSPOT SSID 확인, SMTP 인터넷 게이트 |
 | `gc_mailer.py` | 네이버 SMTP 발송 |
-| `gc_config.py` | AppConfig, reconnect 시간, 슬롯 상수 |
+| `gc_config.py` | AppConfig, reconnect 시간, `AUTO_MAIL_COOLDOWN_HOURS` |
 | `gc_status.py` | `MMDDHHmm.txt` heartbeat, verify |
 | `gc_force_auth.py` | 선택적 `GC_FORCE_TOKEN` 보호 |
 | `gc_sanitize.py` | 시료명·시퀀스 폴더 검증 |
@@ -148,16 +148,16 @@ gc_automation.py     ← CLI 진입, watch/force/user-message 분기
 | 데이터 소스 | Autochro PDF | ChemStation `.D` / acam / Report |
 | 핫스팟 | `iPhone` | `AndroidHotspot5841` |
 | env 위치 | `Desktop\박은규\gc_automation.env` | `Desktop\KCH\gc_automation.env` |
-| watch 트리거 | 핫스팟 **세션당 1회** | 새 acam mtime + **오전/오후 각 1회** |
+| watch 트리거 | 핫스팟 **세션당 1회** | 새 acam/Report mtime + **메일 3시간 쿨다운 슬롯** |
 | reconnect debounce | 90초 | 45초 |
-| 메일 한도 | 슬롯 없음 (세션 1회) | `DAILY_SEND_LIMIT=2` (am/pm) |
+| 메일 한도 | 쿨다운 없음 (세션 1회) | **3시간 쿨다운 슬롯 1/1** (`AUTO_MAIL_COOLDOWN_HOURS`, SMTP 검증 후) |
 | 파이프라인 | `run_processing_gc1()` | `run_processing()` → 8860/chem32 |
 | 엑셀 열 | 「분석된 원소」 | Width 등 GC2 형식 |
 | Autochro 모듈 | **GC1 전용** — GC2에서 호출 금지 | 해당 없음 |
 
 ### merge 시 주의
 - `gc_gc1.py`, `gc_autochro.py` 변경은 GC2에 영향 없어야 함 (분기 유지)
-- `gc_watch.py`, `gc_pipeline.py`, `gc_state.py` 수정 시 **GC2 am/pm 슬롯 로직** regression 테스트 필수
+- `gc_watch.py`, `gc_pipeline.py`, `gc_state.py` 수정 시 **GC2/GC3 메일 쿨다운 슬롯** regression 테스트 필수 (`test_gc_mail_cooldown.py`)
 - `gc_profiles.py`의 GC2/GC3 기본값(`AndroidHotspot5841`, `Desktop\KCH`) 변경 금지
 - GC1 env (`iPhone`, `john3556`)가 GC2/GC3 장비 PC의 `Desktop\KCH\gc_automation.env`에 섞이지 않게 할 것
 
@@ -254,7 +254,7 @@ python gc_automation.py --verify
 ```
 
 - `GC_INSTANCE=gc2`, `Desktop\KCH`, `AndroidHotspot5841` 확인
-- GC2 watch가 기존처럼 acam mtime + am/pm 슬롯 동작하는지 확인
+- GC2 watch가 acam/Report mtime + 3시간 메일 쿨다운 슬롯 동작하는지 확인
 
 ### 6.5 GC1 장비 PC로 forward deploy
 
@@ -341,16 +341,16 @@ REQUIRED_HOTSPOT=AndroidHotspot5841
 2. **세션당 1회** Autochro export + PDF 파싱 + 엑셀 + 메일
 3. 90초 미만 끊김 → 동일 세션 (중복 발송 없음)
 4. 90초 이상 껐다 켬 → 새 세션, 1회 더 처리 가능
-5. 오전/오후 슬롯 **없음** (`gc1_unlimited_auto_send`)
+5. 메일 쿨다운·오전/오후 슬롯 **없음** (`gc1_unlimited_auto_send`)
 
-### GC2/GC3 (AndroidHotspot5841)
+### GC2/GC3 (iptime 3종)
 1. 새 `acam`/`Report` mtime 감지
-2. **오전 1회 + 오후 1회** 자동 메일 (`DAILY_SEND_LIMIT=2`, 12시 기준)
+2. **3시간 쿨다운 슬롯 1/1** — SMTP 발송+검증 성공 후 0/1 (`AUTO_MAIL_COOLDOWN_HOURS`, 기본 3)
 3. reconnect debounce: 45초
 4. 새 날짜 시퀀스에 시료명 없으면 watch skip (force 시 `--sample-name` 지정)
 
 ### force (공통)
-- watch·핫스팟·일일한도 **모두 무시**
+- watch·핫스팟·메일 쿨다운 **모두 무시**
 - GC1 force: Autochro PDF 재보내기 포함 전체 pipeline
 - Cursor 개시 문구도 동일하게 force
 
@@ -363,8 +363,8 @@ REQUIRED_HOTSPOT=AndroidHotspot5841
 - [ ] `python gc_automation.py --show-profile` → gc2, KCH, 8860, AndroidHotspot5841
 - [ ] `python gc_automation.py --verify` → heartbeat OK
 - [ ] `Desktop\KCH\gc_automation.env`가 GC2 값 유지 (GC1 iPhone 설정 없음)
-- [ ] watch 시작 후 acam mtime 변경 시 처리 동작
-- [ ] 오전 슬롯 1회, 오후 슬롯 1회 한도 유지
+- [ ] watch 시작 후 acam/Report mtime 변경 시 처리 동작
+- [ ] 메일 쿨다운 슬롯: 발송·검증 후 0/1, 3시간 후 1/1 (`test_gc_mail_cooldown.py`)
 - [ ] force (`gc_동작해줘.bat`) 정상 엑셀+메일
 - [ ] GC1 모듈(`gc_autochro`, `gc_gc1`)이 GC2 실행 경로에서 호출되지 않음
 
@@ -381,7 +381,7 @@ REQUIRED_HOTSPOT=AndroidHotspot5841
 ### 단위 테스트
 ```bat
 cd C:\Users\User\chemstation-gc-automation
-python -m pytest test_gc_sanitize.py test_gc_force_auth.py -q
+python -m unittest test_gc_sanitize test_gc_force_auth test_gc_mail_cooldown -q
 ```
 
 ---

@@ -3,8 +3,8 @@
 gc_wifi.py — Windows Wi-Fi SSID, SMTP 준비, 실행 허용 게이트
 
 check_runtime_gate():
-  · watch/일반 실행 전 — SSID 일치 (슬롯 한도 없음 — session_based)
-  · force=True — SSID·슬롯 모두 생략 (개시 요청·--force)
+  · watch/일반 실행 전 — SSID 일치 + GC2/GC3 메일 쿨다운 슬롯
+  · force=True — SSID·쿨다운 모두 생략 (개시 요청·--force)
 
 wait_for_smtp_internet(): Android/iPhone 핫스pot 직후 DNS 지연 대비
 """
@@ -175,8 +175,9 @@ def check_runtime_gate(
     """
     수동 실행 전 허용 여부.
 
-    force=True: 핫스팟·일일 한도 모두 무시 (사용자 수동 요청).
-    watch 자동: session_based — 오전/오후 슬롯 없음, 핫스pot 세션당 1회는 gc_watch 가 담당.
+    force=True: 핫스팟·메일 쿨다운 모두 무시 (사용자 수동 요청).
+    watch 자동 GC2/GC3: last_auto_mail_sent_at 기준 3시간(기본) 쿨다운 슬롯.
+    watch 자동 GC1: 쿨다운 없음 — 핫스pot 세션당 1회는 gc_watch 가 담당.
     """
     if not skip_wifi_check and not force:
         connected = get_connected_wifi_ssid()

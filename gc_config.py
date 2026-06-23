@@ -74,13 +74,13 @@ def default_watch_status_txt() -> str:
 
 
 # ---------------------------------------------------------------------------
-# GC2 핫스팟 / 자동 메일 한도
+# GC2/GC3 핫스팟 / 자동 메일 쿨다운 슬롯
 # ---------------------------------------------------------------------------
 
 # GC2/GC3 Wi-Fi 게이트 SSID (쉼표 구분). 구 AndroidHotspot5841 → 연구실 iptime 3종.
 REQUIRED_HOTSPOT_SSID = "iptime,iptime 2,iptime_5G"
 
-# GC2/GC3 — 레거시 상수 (am/pm 슬롯; 현재는 session_based_auto_send 로 한도 미사용)
+# 레거시 (am/pm 표시·구형 state 호환)
 DAILY_SEND_LIMIT = 2
 AFTERNOON_START_HOUR = 12
 
@@ -127,6 +127,9 @@ def _env_int(name: str, default: int, minimum: int = 0) -> int:
     except ValueError:
         return default
 
+
+# GC2/GC3 — 자동 메일 쿨다운(시간). 성공 발송·SMTP 검증 후 N시간 동안 슬롯 0/1.
+AUTO_MAIL_COOLDOWN_HOURS = _env_int("AUTO_MAIL_COOLDOWN_HOURS", 3, minimum=1)
 
 # 핫스팟 직후 DNS·SMTP 준비 대기 (getaddrinfo failed 방지)
 SMTP_INTERNET_WAIT_MAX_SEC = _env_int("SMTP_INTERNET_WAIT_MAX_SEC", 120)
@@ -217,7 +220,7 @@ class AppConfig:
       detector           : TCD | FID
       required_ssid      : --watch / 자동 메일에 필요한 Wi-Fi SSID
       skip_wifi_check    : 테스트용 핫스팟 검사 생략
-      force              : 사용자 수동 --force (핫스팟·일일한도 무시)
+      force              : 사용자 수동 --force (핫스팟·메일 쿨다운 무시)
       allow_prompt       : False 면 시료명 없을 때 input() 대신 실패 (--watch 용)
       send_state_file    : 처리·발송 기록 JSON 경로
       chemstation_mode   : auto | 8860 | chem32 (GC3 Chem32)

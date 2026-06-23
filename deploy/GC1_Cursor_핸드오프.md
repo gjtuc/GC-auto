@@ -56,7 +56,7 @@ GC1 Autochro→PDF→엑셀→메일 **핵심 로직(`gc_autochro`, `gc_gc1`)은
 ### GC1 watch (기존)
 - 핫스팟 **iPhone** 연결 edge → 세션당 1회 처리
 - **90초** reconnect debounce (`GC1_HOTSPOT_RECONNECT_MIN_SEC`)
-- 오전/오후 슬롯 **없음**
+- 메일 쿨다운·오전/오후 슬롯 **없음** (GC1 전용)
 
 ### GC1 env (운영)
 ```ini
@@ -102,10 +102,10 @@ GC2가 GC1 baseline을 merge한 뒤 **실운영·테스트**하면서 넣은 개
 - 일시 오류 451/timeout 시 재시도
 - env: `SMTP_INTERNET_WAIT_MAX_SEC`, `SMTP_SEND_RETRIES`
 
-### 3.6 자동 메일 한도 정책 통일 (`gc_state.py`)
-- GC1/GC2/GC3 모두 `session_based_auto_send` — **오전/오후 슬롯 한도 없음**
-- 핫스팟 **세션당 1회** 자동 처리·메일 (GC1 기존 정책과 동일 방향)
-- `force`(`GC1_동작해줘.bat`, Cursor 「진행」)는 한도 무시
+### 3.6 자동 메일 한도 정책 (`gc_state.py`)
+- **GC1**: 쿨다운·슬롯 없음 — 핫스팟 **세션당 1회** 자동 처리·메일
+- **GC2/GC3**: **3시간 쿨다운 슬롯 1/1** (`AUTO_MAIL_COOLDOWN_HOURS`, 기본 3) — SMTP 발송+검증 성공 후 0/1
+- `force`(`GC1_동작해줘.bat`, Cursor 「진행」)는 쿨다운·슬롯 무시
 
 ### 3.7 GC2 전용 코드는 GC1 실행 경로에서 호출 안 함
 - `gc_chemstation.py`, `gc_chem32.py` — GC1 profile에서 미사용
