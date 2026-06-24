@@ -12,5 +12,5 @@ python "%~dp0gc_instance.py" --stop-watch
 
 
 
-timeout /t 2 >nul
+ping -n 3 127.0.0.1 >nul
 

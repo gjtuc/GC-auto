@@ -49,9 +49,11 @@ gc_watch.py — --watch 핫스팟 감시 루프
 from __future__ import annotations
 
 import os
+import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from gc_config import AppConfig, hotspot_reconnect_min_sec
 from gc_chem32 import find_active_sample_folder, resolve_chemstation_mode
@@ -106,6 +108,8 @@ class WatchRunner:
         self._hotspot_was_connected = False
         self._hotspot_lost_at: float | None = None
         self._pipeline_running = False
+        self._heartbeat_stop = threading.Event()
+        self._last_status: dict[str, Any] = {}
         self._started_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self._reporter = StatusReporter(
             watch_opts.status_json_path,
@@ -145,6 +149,13 @@ class WatchRunner:
         if recover_stale_pending_email(self.watch_opts.send_state_file, self.config.excel_output_dir):
             print("[안내] 이전 엑셀-only 처리 감지 — 다음 핫스팟 연결 시 메일 재시도")
 
+        heartbeat_thread = threading.Thread(
+            target=self._heartbeat_worker,
+            name="gc-watch-heartbeat",
+            daemon=True,
+        )
+        heartbeat_thread.start()
+
         try:
             while True:
                 self._tick()
@@ -152,18 +163,48 @@ class WatchRunner:
         except KeyboardInterrupt:
             print("\n[안내] 사용자가 감시를 종료했습니다 (Ctrl+C).")
         finally:
+            self._heartbeat_stop.set()
             self._publish_stopped()
+
+    def _heartbeat_worker(self) -> None:
+        """pipeline·SMTP·acam 스캔이 메인 루프를 막아도 JSON·MMDDHHmm 갱신."""
+        interval = max(15, self.watch_opts.watch_interval)
+        while not self._heartbeat_stop.wait(interval):
+            snap = dict(self._last_status)
+            if not snap:
+                continue
+            try:
+                self._reporter.publish(
+                    alive=True,
+                    status_code=str(snap.get("code", "wifi_ok")),
+                    message=str(snap.get("message", "")),
+                    wifi_ssid=snap.get("wifi_ssid"),
+                    wifi_ready=bool(snap.get("wifi_ready")),
+                    last_action=snap.get("last_action"),
+                    sequence_folder=snap.get("sequence_folder"),
+                )
+            except Exception as exc:
+                print(f"[경고] heartbeat 갱신 실패: {exc}")
 
     def _publish(self, code: str, message: str, **extra) -> None:
         wifi_ready = is_required_hotspot_connected(
             self.config.required_ssid,
             self.config.skip_wifi_check,
         )
+        wifi_ssid = get_connected_wifi_ssid()
+        self._last_status = {
+            "code": code,
+            "message": message,
+            "wifi_ssid": wifi_ssid,
+            "wifi_ready": wifi_ready,
+            "last_action": extra.get("last_action"),
+            "sequence_folder": extra.get("sequence_folder"),
+        }
         self._reporter.publish(
             alive=True,
             status_code=code,
             message=message,
-            wifi_ssid=get_connected_wifi_ssid(),
+            wifi_ssid=wifi_ssid,
             wifi_ready=wifi_ready,
             **extra,
         )

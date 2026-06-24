@@ -104,6 +104,26 @@ def _heartbeat_fresh(alive: bool, hb_epoch: float | None) -> bool:
     return (time.time() - hb_epoch) <= WATCH_HEARTBEAT_STALE_SEC
 
 
+def _watch_heartbeat_stale(
+    status_json: str,
+) -> tuple[bool, float, int | None]:
+    """heartbeat JSON·파일 mtime 기준 멈춤 여부 (hb 필드 없어도 파일 나이로 판별)."""
+    alive, hb_epoch, status_pid = _parse_heartbeat(status_json)
+    now = time.time()
+    if hb_epoch is not None:
+        age = now - hb_epoch
+        if not alive or age > WATCH_HEARTBEAT_STALE_SEC:
+            return True, age, status_pid
+        return False, age, status_pid
+    try:
+        age = now - os.path.getmtime(status_json)
+    except OSError:
+        age = float(WATCH_HEARTBEAT_STALE_SEC + 1)
+    if age > WATCH_HEARTBEAT_STALE_SEC:
+        return True, age, status_pid
+    return False, age, status_pid
+
+
 def _find_healthy_watch(status_json: str) -> int | None:
     alive, hb_epoch, status_pid = _parse_heartbeat(status_json)
     if not _heartbeat_fresh(alive, hb_epoch):
@@ -148,21 +168,23 @@ def _monitor_existing_watch(status_json: str, poll_sec: int) -> None:
 
     while True:
         time.sleep(poll_sec)
-        alive, hb_epoch, status_pid = _parse_heartbeat(status_json)
+        _, _, status_pid = _parse_heartbeat(status_json)
         if status_pid and _pid_alive(status_pid):
             supervised_pid = status_pid
 
-        if hb_epoch is not None:
-            age = time.time() - hb_epoch
-            if not alive or age > WATCH_HEARTBEAT_STALE_SEC:
-                if not stale_reported:
-                    print(
-                        f"[watchdog] heartbeat {int(age)}초 경과 — watch 멈춤 감지, 재시작합니다"
-                    )
-                    stale_reported = True
-                if supervised_pid and _pid_alive(supervised_pid):
-                    _kill_pid(supervised_pid)
-                return
+        stale, age, status_pid = _watch_heartbeat_stale(status_json)
+        if stale:
+            if not stale_reported:
+                print(
+                    f"[watchdog] heartbeat {int(age)}초 경과 — watch 멈춤 감지, 재시작합니다"
+                )
+                stale_reported = True
+            target = supervised_pid
+            if status_pid and _pid_alive(status_pid):
+                target = status_pid
+            if target and _pid_alive(target):
+                _kill_pid(target)
+            return
 
         if supervised_pid and not _pid_alive(supervised_pid):
             print("[watchdog] watch 프로세스 종료 감지 — 재시작합니다")
@@ -196,32 +218,29 @@ def supervise_watch(script_dir: str, poll_sec: int = 30) -> None:
             watch_cmd,
             cwd=script_dir,
             env=os.environ.copy(),
+            creationflags=_SUBPROCESS_FLAGS,
         )
         stale_reported = False
 
         while proc.poll() is None:
             time.sleep(poll_sec)
-            alive, hb_epoch, status_pid = _parse_heartbeat(status_json)
-            now = time.time()
-
-            if hb_epoch is not None:
-                age = now - hb_epoch
-                if alive and age > WATCH_HEARTBEAT_STALE_SEC:
-                    if not stale_reported:
-                        print(
-                            f"[watchdog] heartbeat {int(age)}초 경과 — watch 멈춤 감지, 재시작합니다"
-                        )
-                        stale_reported = True
-                    target_pid = proc.pid
-                    if status_pid and _pid_alive(status_pid):
-                        target_pid = status_pid
-                    _kill_pid(target_pid)
-                    try:
-                        proc.wait(timeout=15)
-                    except subprocess.TimeoutExpired:
-                        _kill_pid(proc.pid)
-                        proc.wait(timeout=5)
-                    break
+            stale, age, status_pid = _watch_heartbeat_stale(status_json)
+            if stale:
+                if not stale_reported:
+                    print(
+                        f"[watchdog] heartbeat {int(age)}초 경과 — watch 멈춤 감지, 재시작합니다"
+                    )
+                    stale_reported = True
+                target_pid = proc.pid
+                if status_pid and _pid_alive(status_pid):
+                    target_pid = status_pid
+                _kill_pid(target_pid)
+                try:
+                    proc.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    _kill_pid(proc.pid)
+                    proc.wait(timeout=5)
+                break
 
             if proc.poll() is not None:
                 break

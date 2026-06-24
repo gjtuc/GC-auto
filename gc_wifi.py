@@ -98,8 +98,13 @@ def hotspot_wait_reason(required_ssid: str) -> str:
 def check_smtp_dns_resolvable(host: str = NAVER_SMTP_HOST) -> bool:
     """smtp.naver.com 등 SMTP 호스트 DNS 조회 가능 여부."""
     try:
-        socket.getaddrinfo(host, NAVER_SMTP_PORT, type=socket.SOCK_STREAM)
-        return True
+        prev = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(min(15.0, float(SMTP_SOCKET_TIMEOUT_SEC)))
+        try:
+            socket.getaddrinfo(host, NAVER_SMTP_PORT, type=socket.SOCK_STREAM)
+            return True
+        finally:
+            socket.setdefaulttimeout(prev)
     except OSError:
         return False
 
