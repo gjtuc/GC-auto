@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-data_pc_watchdog.py — 은규 PC watch 백그라운드 감시·자동 재시작
+data_pc_watchdog.py — 데이터 PC watch 백그라운드 감시·자동 재시작
 
 Windows 로그인 시 Task Scheduler로 실행.
 watch 프로세스가 멈추면 자동 재시작합니다.
@@ -16,17 +16,36 @@ import sys
 import time
 from datetime import datetime
 
+def _pythonw_executable() -> str:
+    """콘솔 창 없이 실행 — Windows 자동 감시용."""
+    exe = sys.executable
+    if os.path.basename(exe).lower() == "pythonw.exe":
+        return exe
+    candidate = os.path.join(os.path.dirname(exe), "pythonw.exe")
+    if os.path.isfile(candidate):
+        return candidate
+    return exe
+
+
+def _pythonw_cmd(*script_args: str) -> list[str]:
+    return [_pythonw_executable(), *script_args]
+
+
 _SUBPROCESS_FLAGS = 0
 if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW"):
     _SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW
 
 
 def _default_script_dir() -> str:
-    return os.path.join(os.path.expanduser("~"), "gc-data-pc")
+    return os.path.join(os.path.expanduser("~"), "Desktop", ".cursor")
 
 
 def _status_json(script_dir: str) -> str:
-    return os.path.join(script_dir, "PEG", ".data_pc_watch_status.json")
+    for sub in ("KCH", "PEG"):
+        folder = os.path.join(script_dir, sub)
+        if os.path.isdir(folder):
+            return os.path.join(folder, ".data_pc_watch_status.json")
+    return os.path.join(script_dir, ".data_pc_watch_status.json")
 
 
 def _log_path() -> str:
@@ -117,7 +136,6 @@ def _stale_sec() -> int:
 
 
 def is_watch_healthy(script_dir: str) -> bool:
-    """watch 가 살아 있고 heartbeat 가 최신이면 True."""
     status_path = _status_json(script_dir)
     alive, hb_epoch, status_pid = _parse_status(status_path)
     if not status_pid or not _pid_alive(status_pid):
@@ -126,7 +144,6 @@ def is_watch_healthy(script_dir: str) -> bool:
 
 
 def _find_watchdog_pids() -> list[int]:
-    """실행 중인 data_pc_watchdog.py PID."""
     if sys.platform != "win32":
         return []
     try:
@@ -160,10 +177,6 @@ def _find_watchdog_pids() -> list[int]:
 
 
 def ensure_watch_running(script_dir: str, *, hidden: bool = True) -> bool:
-    """
-    로그인 작업이 실패했거나 watch 가 죽었을 때 강제 기동.
-    이미 정상이면 False, 새로 시작하면 True.
-    """
     if is_watch_healthy(script_dir):
         return False
     if _find_watchdog_pids():
@@ -174,16 +187,17 @@ def ensure_watch_running(script_dir: str, *, hidden: bool = True) -> bool:
     if os.path.isfile(vbs):
         _log("[ensure] hidden VBS 로 watchdog 강제 시작")
         flags = _SUBPROCESS_FLAGS if hidden else 0
-        subprocess.Popen(
-            ["wscript.exe", vbs],
-            creationflags=flags,
-        )
+        subprocess.Popen(["wscript.exe", vbs], creationflags=flags)
         return True
 
     _log("[ensure] VBS 없음 - watchdog 직접 시작")
     flags = _SUBPROCESS_FLAGS if hidden else 0
     subprocess.Popen(
-        [sys.executable, os.path.join(script_dir, "data_pc_watchdog.py"), "--script-dir", script_dir],
+        _pythonw_cmd(
+            os.path.join(script_dir, "data_pc_watchdog.py"),
+            "--script-dir",
+            script_dir,
+        ),
         cwd=script_dir,
         creationflags=flags,
     )
@@ -198,7 +212,7 @@ def supervise(script_dir: str, *, poll_sec: int = 30, hidden: bool = True) -> No
         _log(f"[오류] 스크립트 없음: {watch_script}")
         sys.exit(1)
 
-    watch_cmd = [sys.executable, watch_script, "--watch"]
+    watch_cmd = _pythonw_cmd(watch_script, "--watch")
     env = os.environ.copy()
     env.setdefault("PYTHONPYCACHEPREFIX", os.path.join(os.path.expanduser("~"), ".cursor", "gc-python-cache"))
     env.setdefault("GC_DATA_PC_RUNTIME", os.path.join(os.path.expanduser("~"), ".cursor", "gc-runtime-temp"))
@@ -244,7 +258,7 @@ def supervise(script_dir: str, *, poll_sec: int = 30, hidden: bool = True) -> No
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="은규 PC data_pc watch 감시")
+    parser = argparse.ArgumentParser(description="데이터 PC watch 감시")
     parser.add_argument("--script-dir", default=_default_script_dir())
     parser.add_argument("--poll-sec", type=int, default=30)
     parser.add_argument("--visible", action="store_true", help="콘솔 창 표시 (디버그용)")
