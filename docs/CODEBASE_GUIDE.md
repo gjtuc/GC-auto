@@ -93,11 +93,14 @@ env 파일 `GC_INSTANCE=gc1|gc2|gc3`, `CHEMSTATION_MODE=gc1|8860|chem32`
 ```
 data_pc/
 ├── 촉매 반응 계산.py     ← 메인 (IMAP → 계산 → G: → Origin)
+├── data_pc_watch.py      ← --watch Wi-Fi 감시·쿨다운
+├── data_pc_watchdog.py   ← watch 자동 재시작
 ├── gc_automation.env.example
 └── KCH/inbox, processed/
 ```
 
 - **설치:** `deploy/STEP3_data_pc.md`
+- **자동 감시:** `deploy/DATA_PC_WATCH.md` (1시간 쿨다운, G: 잠금 15분 재시도)
 - **교정:** 파일 상단 `USER SETTINGS` — GC2/GC3는 차헌 실측값, **GC1은 `deploy/STEP7_gc1_calib.md`**
 - **장비 PC에서 실행 금지** (Origin·G: 없음)
 

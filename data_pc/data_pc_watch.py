@@ -122,6 +122,30 @@ def load_watch_config(script_dir: str) -> dict:
     }
 
 
+def _watch_log_path() -> str:
+    """pythonw 백그라운드 실행 시에도 이벤트 추적용 파일 로그."""
+    path = os.path.join(
+        os.path.expanduser("~"), ".cursor", "gc-runtime-temp", "data_pc_watch.log"
+    )
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    return path
+
+
+def _log(message: str) -> None:
+    line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {message}"
+    try:
+        with open(_watch_log_path(), "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except OSError:
+        pass
+
+
+def _emit(message: str) -> None:
+    """콘솔(python) + 파일 로그(pythonw) 동시 기록."""
+    _log(message)
+    print(message)
+
+
 def _write_json(path: str, payload: dict) -> None:
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -170,6 +194,7 @@ def _mark_pipeline_success(state_path: str) -> None:
             "gdrive_retry_pending": False,
         },
     )
+    _log(f"[쿨다운] 정상 완료 — 1시간 쿨다운 적용 (last_pipeline_at={now})")
 
 
 def _mark_gdrive_retry(state_path: str) -> None:
@@ -180,6 +205,10 @@ def _mark_gdrive_retry(state_path: str) -> None:
             "last_gdrive_attempt_at": now,
             "gdrive_retry_pending": True,
         },
+    )
+    _log(
+        f"[G: 재시도] 잠금 상태 — 1시간 쿨다운 미적용, "
+        f"last_gdrive_attempt_at={now}"
     )
 
 
@@ -220,6 +249,7 @@ class DataPcWatchRunner:
         state = _load_state(state_path)
         if state.get("gdrive_retry_pending"):
             if self._g_drive_check and self._g_drive_check():
+                _log("[G: 재시도] G: 경로 접근 가능 — 즉시 파이프라인 재시도")
                 return 0
             last = _parse_epoch(state.get("last_gdrive_attempt_at"))
             if last is None:
@@ -276,7 +306,7 @@ class DataPcWatchRunner:
             return
         self._pipeline_running = True
         try:
-            print(f"\n[실행] {reason}")
+            _emit(f"\n[실행] {reason}")
             self._publish("running_pipeline", reason)
             result = self.process_callback()
             count, gdrive_retry = _parse_pipeline_result(result)
@@ -285,18 +315,19 @@ class DataPcWatchRunner:
                 _mark_gdrive_retry(state_path)
                 retry_min = self.config["gdrive_retry_sec"] // 60
                 msg = (
-                    f"G: 잠금 — {retry_min}분 후 재시도 "
+                    f"[완료] G: 잠금 — {retry_min}분 후 재시도 "
                     f"(1시간 쿨다운 미적용, 미처리 메일 유지)"
                 )
-                print(f"[완료] {msg}")
+                _emit(msg)
                 self._publish("gdrive_retry", msg, workflow_count=count)
             else:
                 _mark_pipeline_success(state_path)
-                msg = f"파이프라인 완료 - {count}건 시료 반영"
-                print(f"[완료] {msg}")
+                msg = f"[완료] 파이프라인 완료 - {count}건 시료 반영"
+                _emit(msg)
                 self._publish("pipeline_done", msg, workflow_count=count)
         except Exception as exc:
-            print(f"[오류] 파이프라인 실패: {exc}")
+            _emit(f"[오류] 파이프라인 실패: {exc}")
+            _log(f"[trace] {type(exc).__name__}: {exc}")
             self._publish("error", str(exc))
         finally:
             self._pipeline_running = False
@@ -319,13 +350,19 @@ class DataPcWatchRunner:
         reconnect = self.config["reconnect_min_sec"]
         ssid = self.config["required_ssid"]
 
-        print(f"[안내] 데이터 PC Wi-Fi 감시 - {interval}초 간격, SSID: {ssid}")
-        print(
+        _emit(f"[안내] 데이터 PC Wi-Fi 감시 - {interval}초 간격, SSID: {ssid}")
+        _emit(
             f"       Wi-Fi 연결 유지 중 자동 파이프라인 "
             f"({cooldown_h}시간 쿨다운, G: 잠금 시 {self.config['gdrive_retry_sec'] // 60}분 재시도)"
         )
-        print(f"       순간 끊김({reconnect}초 미만 재연결) - 동일 세션")
-        print("       종료: Ctrl+C")
+        _emit(f"       로그: {_watch_log_path()}")
+        _emit(f"       상태: {self.config['status_json']}")
+        _emit(f"       순간 끊김({reconnect}초 미만 재연결) - 동일 세션")
+        _emit("       종료: Ctrl+C")
+        _log(
+            f"[시작] watch pid={os.getpid()} cooldown={cooldown_h}h "
+            f"gdrive_retry={self.config['gdrive_retry_sec']}s interval={interval}s"
+        )
         self._publish("starting", "데이터 PC Wi-Fi 감시 시작")
         hb = threading.Thread(target=self._heartbeat_worker, name="data-pc-watch-hb", daemon=True)
         hb.start()
@@ -371,7 +408,7 @@ class DataPcWatchRunner:
             self._wifi_was_connected = False
             reason = self._wait_reason(ssid)
             self._publish("waiting_wifi", reason)
-            print(f"[대기] {reason}")
+            _emit(f"[대기] {reason}")
             return
 
         if not self._wifi_was_connected:
@@ -387,6 +424,7 @@ class DataPcWatchRunner:
                     self._publish("wifi_ok", msg)
                     return
             print("\n[감지] Wi-Fi 연결됨")
+            _log("[Wi-Fi] 연결 감지 — 쿨다운·파이프라인 판정 시작")
             self._wifi_was_connected = True
 
         remaining = self._cooldown_remaining()
@@ -400,7 +438,8 @@ class DataPcWatchRunner:
                 remaining_sec=remaining,
             )
             if remaining % 300 < self.config["interval_sec"]:
-                print(f"[대기] 자동 파이프라인 쿨다운 - {remaining // 60}분 {remaining % 60}초 남음")
+                line = f"[대기] {label} - {remaining // 60}분 {remaining % 60}초 남음"
+                _emit(line)
             return
 
         if self._pipeline_running:

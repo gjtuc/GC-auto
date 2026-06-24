@@ -76,8 +76,16 @@ python "c:\Users\user\Desktop\.cursor\촉매 반응 계산.py"
 | (없음) | 메일 → 계산 → G: → Origin 전체 |
 | `--no-archive` | 계산만 (G:·Origin 생략) |
 | `--manual 파일.xlsx` | 지정 엑셀만 처리 |
+| `--watch` | Wi-Fi 감시 + 자동 파이프라인 ([`deploy/DATA_PC_WATCH.md`](../deploy/DATA_PC_WATCH.md)) |
+| `--poll-once` | 메일 1회 확인 후 종료 |
 
-G:가 없으면 SecuYouSB 로그인 후 재실행.
+G: 없으면 SecuYouSB 로그인 후 재실행. `--watch` 시 G: 잠금은 **15분마다 재시도** (1시간 쿨다운 미적용).
+
+### 자동 감시 로그·등록
+
+- 로그: `%USERPROFILE%\.cursor\gc-runtime-temp\data_pc_watch.log`
+- 상태: `KCH\.data_pc_watch_status.json`
+- 차헌 autostart: `deploy\gc_data_pc_install_autostart_chaheon.bat`
 
 ---
 

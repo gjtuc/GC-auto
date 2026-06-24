@@ -70,3 +70,21 @@ zip 인수인계 문서: `docs/00_인수인계_설명.md` §5
 | 데이터 PC | `data_pc/촉매 반응 계산.py` |
 
 **장비 PC에서 촉매 반응 계산.py 실행 금지** (Origin·G: 환경 다름)
+
+---
+
+## 자동 감시 (`--watch`)
+
+Wi-Fi 연결 시 메일·계산·Origin 자동 실행. 상세: **`deploy/DATA_PC_WATCH.md`**
+
+차헌 PC Windows 등록:
+
+```bat
+deploy\gc_data_pc_install_autostart_chaheon.bat
+```
+
+| 옵션 | 의미 |
+|------|------|
+| `--watch` | 백그라운드 감시 (pythonw + 작업 스케줄러 권장) |
+| `--poll-once` | 메일 1회 확인 후 종료 |
+| `--no-wifi-check` | 테스트용 SSID 검사 생략 |

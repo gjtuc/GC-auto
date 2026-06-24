@@ -23,6 +23,8 @@
     "pc_naming": "차헌 PC (role=data_pc). GC2/GC3 **장비** PC(GC8860 등)와 별개 물리 PC.",
     "gc2_equipment_pc": "GC2/GC3 장비 PC — ChemStation + gc_automation.py (별도 PC, 예: GC8860)",
     "env_location": "본 PC: Desktop\\.cursor\\gc_automation.env (IMAP). 장비: Desktop\\KCH\\",
+    "data_pc_watch": "자동 감시: deploy/DATA_PC_WATCH.md, gc_data_pc_install_autostart_chaheon.bat",
+    "watch_logs": "%USERPROFILE%\\.cursor\\gc-runtime-temp\\data_pc_watch.log",
     "eungyu_pc": "은규 PC Wi-Fi·env는 별도 — data_pc/gc_automation.env.example (iPhone). 본인이 직접 관리.",
     "best_id": "smbios_uuid 또는 machine_guid",
     "doc": "docs/PC_NAMING.md"

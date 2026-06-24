@@ -140,6 +140,10 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
   GC1 교정:     USER SETTINGS GC1 블록 — **아직 실측 필요**
 
   설치: deploy/STEP3_data_pc.md
+  자동 감시: deploy/DATA_PC_WATCH.md
+    · data_pc_watch.py — Wi-Fi poll, 1h 쿨다운, G: 잠금 15min 재시도
+    · data_pc_watchdog.py — Task Scheduler + pythonw 숨김 실행
+    · 로그: %USERPROFILE%\\.cursor\\gc-runtime-temp\\data_pc_watch.log
 
 =============================================================================
 [PC 식별 — machine_profile.json]

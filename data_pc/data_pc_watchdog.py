@@ -2,8 +2,11 @@
 """
 data_pc_watchdog.py — 데이터 PC watch 백그라운드 감시·자동 재시작
 
-Windows 로그인 시 Task Scheduler로 실행.
+Windows 로그인 시 Task Scheduler로 실행 (차헌: Chaheon_GC_DataPC_Watch).
 watch 프로세스가 멈추면 자동 재시작합니다.
+
+로그: %USERPROFILE%\\.cursor\\gc-runtime-temp\\data_pc_watchdog.log
+가이드: deploy/DATA_PC_WATCH.md
 """
 
 from __future__ import annotations
@@ -229,7 +232,7 @@ def supervise(script_dir: str, *, poll_sec: int = 30, hidden: bool = True) -> No
             _log(f"[watchdog] heartbeat stale - PID {status_pid} 종료")
             _kill_pid(status_pid)
 
-        _log("[watchdog] watch 프로세스 시작")
+        _log(f"[watchdog] watch 프로세스 시작 (pythonw={_pythonw_executable()})")
         flags = _SUBPROCESS_FLAGS if hidden else 0
         proc = subprocess.Popen(
             watch_cmd,

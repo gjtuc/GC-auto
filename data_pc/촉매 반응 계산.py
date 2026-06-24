@@ -2093,6 +2093,13 @@ def process_new_gc_emails(opju_path=None, auto_archive=True):
         else:
             print(f"\n[1단계 완료] {read_count}건 메일 읽음 · 반영 실패로 G: 재시도 필요")
 
+        if gdrive_retry_needed:
+            print(
+                "       [G: 잠금] 3~4단계 보류 — watch 가 "
+                f"{int(os.getenv('DATA_PC_GDRIVE_RETRY_SEC', '900')) // 60}분마다 재시도 "
+                "(1시간 쿨다운 미적용, 미처리 메일 유지)"
+            )
+
     except imaplib.IMAP4.error as exc:
         print(f"[오류] IMAP 인증/접속 실패: {exc}")
         return PipelineRunResult(0)

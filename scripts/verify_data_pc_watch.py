@@ -101,7 +101,7 @@ def main() -> int:
         errors="replace",
         env=env,
     )
-    time.sleep(8)
+    time.sleep(12)
     proc.terminate()
     try:
         wout, _ = proc.communicate(timeout=15)
