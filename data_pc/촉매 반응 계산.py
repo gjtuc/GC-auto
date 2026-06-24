@@ -176,7 +176,7 @@ GC2_DRM_INITIAL_CO2 = 50000
 GC2_CALIB = {'H2': 9.9496, 'CO': 97.4074, 'CH4': 25.4261, 'CO2': 77.5254, 'C2H4': 29.8598, 'C2H6': 24.8321}
 GC2_TIME = {'H2': (0.4, 0.55), 'CO': (1.3, 1.5), 'CH4': (3.0, 3.6), 'CO2': (5.2, 5.5), 'C2H4': (8.7, 8.9), 'C2H6': (9.5, 10.0)}
 
-# [2] GC3 **장비** 교정 (DRME) — 차헌 PC에서 사용
+# [2] GC3 **장비** 교정 (DRE / DRME) — 차헌 PC에서 사용. 동일 CALIB·나눗셈 수식.
 GC3_INITIAL_C2H6 = 15000
 GC3_INITIAL_CO2  = 45000
 GC3_YIELD_BASE_H2 = 75000   # C2H6_ppm × 5  (1.5% → 75000)
@@ -1399,14 +1399,14 @@ def process_excel(input_file):
     df_p = pd.DataFrame()
 
     # 🚨 [교차 검증] 파일명 반응 타입이 최우선 — 장비·파일명 불일치는 경고만
+    # GC3: DRE·DRME 모두 정상 조합 (동일 장비·교정, 2026-06-24). DRM 파일명만 경고.
     if eq == 'GC2' and reaction_target == 'DRME':
         all_warnings.append(
             f"⚠️ [교차 검증] 피크는 GC2인데 파일명은 DRME입니다. 파일명 기준으로 DRME 계산합니다."
         )
-    elif eq == 'GC3' and reaction_target in ['DRM', 'DRE']:
+    elif eq == 'GC3' and reaction_target == 'DRM':
         all_warnings.append(
-            f"⚠️ [교차 검증] 피크는 GC3인데 파일명은 {reaction_target}입니다. "
-            f"파일명 기준으로 {reaction_target} 계산합니다."
+            f"⚠️ [교차 검증] 피크는 GC3인데 파일명은 DRM입니다. 파일명 기준으로 DRM 계산합니다."
         )
     elif eq == 'GC1' and reaction_target == 'DRME':
         all_warnings.append(
@@ -1464,7 +1464,7 @@ def process_excel(input_file):
                     'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
             out_name = _calc_output_path(input_file, '_GC2_DRE_계산완료')
 
-    # [수식 적용 단계: GC3 (DRME)]
+    # [수식 적용 단계: GC3 (DRE / DRME)] — reaction_target 으로 출력 접미사만 구분
     elif eq == 'GC3':
         df_t, warn_t = parse_gc_sheet(df_gc3_tcd, 'TCD', 'GC3', GC3_TIME_TCD)
         df_f, warn_f = parse_gc_sheet(df_gc3_fid, 'FID', 'GC3', GC3_TIME_FID)
