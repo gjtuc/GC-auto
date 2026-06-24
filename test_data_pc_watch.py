@@ -15,8 +15,10 @@ if DATA_PC not in sys.path:
 
 from data_pc_watch import (  # noqa: E402
     DataPcWatchRunner,
-    _read_last_pipeline_epoch,
-    _save_last_pipeline,
+    _load_state,
+    _mark_gdrive_retry,
+    _mark_pipeline_success,
+    _parse_epoch,
     _state_json_path,
     load_watch_config,
 )
@@ -30,6 +32,7 @@ class TestDataPcWatch(unittest.TestCase):
             self.assertEqual(cfg["cooldown_sec"], 3600)
             self.assertEqual(cfg["cooldown_hours"], 1)
             self.assertEqual(cfg["interval_sec"], 15)
+            self.assertEqual(cfg["gdrive_retry_sec"], 900)
 
     def test_load_watch_config_from_env_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -46,11 +49,11 @@ class TestDataPcWatch(unittest.TestCase):
 
         def fake_process():
             calls.append(time.time())
-            return 0
+            return type("R", (), {"workflow_count": 0, "gdrive_retry_needed": False})()
 
         with tempfile.TemporaryDirectory() as tmp:
             state = _state_json_path(tmp)
-            _save_last_pipeline(state)
+            _mark_pipeline_success(state)
             config = {
                 "required_ssid": "iptime",
                 "cooldown_sec": 3600,
@@ -60,6 +63,7 @@ class TestDataPcWatch(unittest.TestCase):
                 "skip_wifi_check": True,
                 "status_json": os.path.join(tmp, "status.json"),
                 "state_json": state,
+                "gdrive_retry_sec": 900,
             }
             runner = DataPcWatchRunner(tmp, config, fake_process)
             with patch.object(runner, "_is_connected", return_value=True):
@@ -86,6 +90,7 @@ class TestDataPcWatch(unittest.TestCase):
                 "skip_wifi_check": True,
                 "status_json": os.path.join(tmp, "status.json"),
                 "state_json": _state_json_path(tmp),
+                "gdrive_retry_sec": 900,
             }
             runner = DataPcWatchRunner(tmp, config, fake_process)
             with patch.object(runner, "_is_connected", return_value=True):
@@ -119,15 +124,65 @@ class TestDataPcWatch(unittest.TestCase):
                         runner._run_pipeline("test")
             self.assertEqual(calls, [1])
 
+    def test_gdrive_retry_uses_shorter_cooldown(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = _state_json_path(tmp)
+            os.makedirs(os.path.dirname(state), exist_ok=True)
+            _mark_gdrive_retry(state)
+            config = {
+                "required_ssid": "iptime",
+                "cooldown_sec": 3600,
+                "cooldown_hours": 1,
+                "interval_sec": 1,
+                "reconnect_min_sec": 90,
+                "skip_wifi_check": True,
+                "status_json": os.path.join(tmp, "status.json"),
+                "state_json": state,
+                "gdrive_retry_sec": 900,
+            }
+            runner = DataPcWatchRunner(
+                tmp,
+                config,
+                lambda: type("R", (), {"workflow_count": 0, "gdrive_retry_needed": True})(),
+                g_drive_check=lambda: False,
+            )
+            remaining = runner._cooldown_remaining()
+            self.assertGreater(remaining, 800)
+            self.assertLessEqual(remaining, 900)
+
+    def test_gdrive_unlocked_skips_retry_wait(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            state = _state_json_path(tmp)
+            _mark_gdrive_retry(state)
+            config = {
+                "required_ssid": "iptime",
+                "cooldown_sec": 3600,
+                "cooldown_hours": 1,
+                "interval_sec": 1,
+                "reconnect_min_sec": 90,
+                "skip_wifi_check": True,
+                "status_json": os.path.join(tmp, "status.json"),
+                "state_json": state,
+                "gdrive_retry_sec": 900,
+            }
+            runner = DataPcWatchRunner(
+                tmp,
+                config,
+                lambda: 0,
+                g_drive_check=lambda: True,
+            )
+            self.assertEqual(runner._cooldown_remaining(), 0)
+
     def test_state_roundtrip(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = _state_json_path(tmp)
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            self.assertIsNone(_read_last_pipeline_epoch(path))
-            _save_last_pipeline(path)
-            epoch = _read_last_pipeline_epoch(path)
+            self.assertIsNone(_parse_epoch(_load_state(path).get("last_pipeline_at")))
+            _mark_pipeline_success(path)
+            epoch = _parse_epoch(_load_state(path).get("last_pipeline_at"))
             self.assertIsNotNone(epoch)
             self.assertAlmostEqual(epoch, datetime.now().timestamp(), delta=5)
+            self.assertFalse(_load_state(path).get("gdrive_retry_pending"))
 
 
 if __name__ == "__main__":

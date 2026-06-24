@@ -15,6 +15,13 @@ import json
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timedelta
+from typing import NamedTuple
+
+
+class PipelineRunResult(NamedTuple):
+    """watch 쿨다운 판정용 — G: 잠금 시 gdrive_retry_needed=True (1시간 쿨다운 생략)."""
+    workflow_count: int
+    gdrive_retry_needed: bool = False
 
 '''
 =============================================================================
@@ -1997,7 +2004,7 @@ def process_new_gc_emails(opju_path=None, auto_archive=True):
     if not email_addr or not app_password:
         print("\n[오류] 메일 계정 설정 없음 — 바탕화면 gc_automation.env 확인")
         print("       NAVER_EMAIL, NAVER_APP_PASSWORD 필요")
-        return 0
+        return PipelineRunResult(0)
 
     os.makedirs(DATA_PC_INBOX_DIR, exist_ok=True)
     print(f"\n[1단계] 네이버 메일 접속 — 받은·보낸·내게쓴 ({email_addr})")
@@ -2042,10 +2049,11 @@ def process_new_gc_emails(opju_path=None, auto_archive=True):
         )
         if not pending_all:
             print("\n       → 처리할 gc_automation 메일이 없습니다. (이미 처리됨 또는 미수신)")
-            return 0
+            return PipelineRunResult(0)
 
         print(f"       → 처리 순서: 오래된 메일부터 {len(pending_all)}건")
 
+        gdrive_retry_needed = False
         for item in pending_all:
             source_label = _MAIL_SOURCE_LABELS.get(item["source"], item["source"])
             print(f"\n       → 반영: {item['subject']}")
@@ -2071,6 +2079,8 @@ def process_new_gc_emails(opju_path=None, auto_archive=True):
                     workflow_count += 1
                 else:
                     mail_ok = False
+                    if auto_archive and opju_path is None and not _is_g_drive_available():
+                        gdrive_retry_needed = True
                     print("       [경고] 워크플로 실패 — 같은 시료 메일은 재시도 가능")
 
             if mail_ok and _mark_mail_seen_and_logged(mail, item, done_keys):
@@ -2085,14 +2095,14 @@ def process_new_gc_emails(opju_path=None, auto_archive=True):
 
     except imaplib.IMAP4.error as exc:
         print(f"[오류] IMAP 인증/접속 실패: {exc}")
-        return 0
+        return PipelineRunResult(0)
     finally:
         try:
             mail.logout()
         except Exception:
             pass
 
-    return workflow_count
+    return PipelineRunResult(workflow_count, gdrive_retry_needed)
 
 def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True):
     """
@@ -2217,12 +2227,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--watch",
         action="store_true",
-        help="iPhone 핫스팟 감시 — 연결 후 DATA_PC_HOTSPOT_DELAY_SEC 뒤 자동 파이프라인",
+        help="Wi-Fi 감시 — 연결 유지 중 1시간 쿨다운으로 자동 파이프라인",
     )
     parser.add_argument(
         "--no-wifi-check",
         action="store_true",
-        help="--watch 테스트용 — 핫스팟 SSID 검사 생략",
+        help="--watch 테스트용 — Wi-Fi SSID 검사 생략",
     )
     args = parser.parse_args()
 
@@ -2256,11 +2266,11 @@ if __name__ == "__main__":
         sys.exit(0)
 
     if args.poll_once:
-        count = process_new_gc_emails(
+        result = process_new_gc_emails(
             opju_path=args.opju,
             auto_archive=not args.no_archive and args.opju is None,
         )
-        sys.exit(0 if count >= 0 else 1)
+        sys.exit(0 if result.workflow_count >= 0 else 1)
 
     # 기본 모드: 1단계 = 네이버 메일 수신
     while True:

@@ -4,7 +4,7 @@ data_pc_watch.py — 데이터 PC Wi-Fi 감시 → 메일·계산·Origin 자동
 
 [흐름] GC2/GC3 장비 PC watch 와 동일 원리:
   · REQUIRED_HOTSPOT Wi-Fi 연결 유지 중 DATA_PC_WATCH_INTERVAL_SEC(15초) 폴링
-  · 자동 파이프라인 = DATA_PC_AUTO_MAIL_COOLDOWN_HOURS(기본 1시간) 쿨다운만
+  · G: 잠금 시 DATA_PC_GDRIVE_RETRY_SEC(기본 15분) 재시도 — 1시간 쿨다운 미적용
   · 부팅 직후 미처리 메일 1회 (DATA_PC_BOOT_MAIL_CHECK)
 
 [설정] Desktop\\.cursor\\gc_automation.env
@@ -25,7 +25,7 @@ import sys
 import threading
 import time
 from datetime import datetime
-from typing import Callable, Optional
+from typing import Any, Callable, Optional
 
 
 def _repo_roots() -> list[str]:
@@ -115,6 +115,8 @@ def load_watch_config(script_dir: str) -> dict:
         "skip_wifi_check": _env_bool("DATA_PC_SKIP_WIFI_CHECK"),
         "boot_mail_check": _env_bool("DATA_PC_BOOT_MAIL_CHECK", True),
         "boot_network_wait_sec": _env_int("DATA_PC_BOOT_NETWORK_WAIT_SEC", 90, minimum=10),
+        # G: 잠금 시 재시도 간격 — 작업 스케줄러 Ensure(15분)와 동일
+        "gdrive_retry_sec": _env_int("DATA_PC_GDRIVE_RETRY_SEC", 900, minimum=60),
         "status_json": _status_json_path(script_dir),
         "state_json": _state_json_path(script_dir),
     }
@@ -129,25 +131,62 @@ def _write_json(path: str, payload: dict) -> None:
         pass
 
 
-def _read_last_pipeline_epoch(state_path: str) -> Optional[float]:
+def _load_state(state_path: str) -> dict:
     if not os.path.isfile(state_path):
-        return None
+        return {}
     try:
         with open(state_path, encoding="utf-8") as f:
             data = json.load(f)
-        raw = data.get("last_pipeline_at")
-        if not raw:
-            return None
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_state(state_path: str, patch: dict) -> None:
+    data = _load_state(state_path)
+    data.update(patch)
+    _write_json(state_path, data)
+
+
+def _parse_epoch(raw: Optional[str]) -> Optional[float]:
+    if not raw:
+        return None
+    try:
         return datetime.strptime(str(raw), "%Y-%m-%d %H:%M:%S").timestamp()
-    except (OSError, json.JSONDecodeError, ValueError):
+    except ValueError:
         return None
 
 
-def _save_last_pipeline(state_path: str) -> None:
-    _write_json(
+def _read_last_pipeline_epoch(state_path: str) -> Optional[float]:
+    return _parse_epoch(_load_state(state_path).get("last_pipeline_at"))
+
+
+def _mark_pipeline_success(state_path: str) -> None:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _save_state(
         state_path,
-        {"last_pipeline_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+        {
+            "last_pipeline_at": now,
+            "gdrive_retry_pending": False,
+        },
     )
+
+
+def _mark_gdrive_retry(state_path: str) -> None:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _save_state(
+        state_path,
+        {
+            "last_gdrive_attempt_at": now,
+            "gdrive_retry_pending": True,
+        },
+    )
+
+
+def _parse_pipeline_result(result: Any) -> tuple[int, bool]:
+    if hasattr(result, "workflow_count"):
+        return int(result.workflow_count), bool(getattr(result, "gdrive_retry_needed", False))
+    return int(result), False
 
 
 class DataPcWatchRunner:
@@ -157,11 +196,13 @@ class DataPcWatchRunner:
         self,
         script_dir: str,
         config: dict,
-        process_callback: Callable[[], int],
+        process_callback: Callable[[], Any],
+        g_drive_check: Optional[Callable[[], bool]] = None,
     ):
         self.script_dir = script_dir
         self.config = config
         self.process_callback = process_callback
+        self._g_drive_check = g_drive_check
         self._wifi_was_connected = False
         self._wifi_lost_at: Optional[float] = None
         self._pipeline_running = False
@@ -175,11 +216,21 @@ class DataPcWatchRunner:
         ) = _import_gc_wifi()
 
     def _cooldown_remaining(self) -> int:
-        last = _read_last_pipeline_epoch(self.config["state_json"])
+        state_path = self.config["state_json"]
+        state = _load_state(state_path)
+        if state.get("gdrive_retry_pending"):
+            if self._g_drive_check and self._g_drive_check():
+                return 0
+            last = _parse_epoch(state.get("last_gdrive_attempt_at"))
+            if last is None:
+                return 0
+            retry_sec = self.config["gdrive_retry_sec"]
+            return max(0, int(retry_sec - (time.time() - last)))
+
+        last = _read_last_pipeline_epoch(state_path)
         if last is None:
             return 0
-        elapsed = time.time() - last
-        return max(0, int(self.config["cooldown_sec"] - elapsed))
+        return max(0, int(self.config["cooldown_sec"] - (time.time() - last)))
 
     def _publish(self, code: str, message: str, **extra) -> None:
         wifi_ssid = self._get_ssid()
@@ -227,11 +278,23 @@ class DataPcWatchRunner:
         try:
             print(f"\n[실행] {reason}")
             self._publish("running_pipeline", reason)
-            count = self.process_callback()
-            _save_last_pipeline(self.config["state_json"])
-            msg = f"파이프라인 완료 - {count}건 시료 반영"
-            print(f"[완료] {msg}")
-            self._publish("pipeline_done", msg, workflow_count=count)
+            result = self.process_callback()
+            count, gdrive_retry = _parse_pipeline_result(result)
+            state_path = self.config["state_json"]
+            if gdrive_retry:
+                _mark_gdrive_retry(state_path)
+                retry_min = self.config["gdrive_retry_sec"] // 60
+                msg = (
+                    f"G: 잠금 — {retry_min}분 후 재시도 "
+                    f"(1시간 쿨다운 미적용, 미처리 메일 유지)"
+                )
+                print(f"[완료] {msg}")
+                self._publish("gdrive_retry", msg, workflow_count=count)
+            else:
+                _mark_pipeline_success(state_path)
+                msg = f"파이프라인 완료 - {count}건 시료 반영"
+                print(f"[완료] {msg}")
+                self._publish("pipeline_done", msg, workflow_count=count)
         except Exception as exc:
             print(f"[오류] 파이프라인 실패: {exc}")
             self._publish("error", str(exc))
@@ -259,7 +322,7 @@ class DataPcWatchRunner:
         print(f"[안내] 데이터 PC Wi-Fi 감시 - {interval}초 간격, SSID: {ssid}")
         print(
             f"       Wi-Fi 연결 유지 중 자동 파이프라인 "
-            f"({cooldown_h}시간 쿨다운, GC2/GC3 장비 PC와 동일)"
+            f"({cooldown_h}시간 쿨다운, G: 잠금 시 {self.config['gdrive_retry_sec'] // 60}분 재시도)"
         )
         print(f"       순간 끊김({reconnect}초 미만 재연결) - 동일 세션")
         print("       종료: Ctrl+C")
@@ -328,9 +391,12 @@ class DataPcWatchRunner:
 
         remaining = self._cooldown_remaining()
         if remaining > 0:
+            state = _load_state(self.config["state_json"])
+            code = "gdrive_retry_wait" if state.get("gdrive_retry_pending") else "cooldown"
+            label = "G: 재시도" if state.get("gdrive_retry_pending") else "쿨다운"
             self._publish(
-                "cooldown",
-                f"쿨다운 대기 - {remaining}초 남음",
+                code,
+                f"{label} 대기 - {remaining}초 남음",
                 remaining_sec=remaining,
             )
             if remaining % 300 < self.config["interval_sec"]:
@@ -358,22 +424,28 @@ def run_data_pc_watch(
     if skip_wifi_check:
         config["skip_wifi_check"] = True
 
-    def _process() -> int:
-        import importlib.util
+    calc_path = os.path.join(script_dir, "촉매 반응 계산.py")
+    import importlib.util
 
-        calc_path = os.path.join(script_dir, "촉매 반응 계산.py")
-        spec = importlib.util.spec_from_file_location("gc_calc_watch", calc_path)
-        if spec is None or spec.loader is None:
-            raise RuntimeError(f"스크립트 로드 실패: {calc_path}")
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules["gc_calc_watch"] = mod
-        spec.loader.exec_module(mod)
-        return mod.process_new_gc_emails(
+    spec = importlib.util.spec_from_file_location("gc_calc_watch", calc_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"스크립트 로드 실패: {calc_path}")
+    calc_mod = importlib.util.module_from_spec(spec)
+    sys.modules["gc_calc_watch"] = calc_mod
+    spec.loader.exec_module(calc_mod)
+
+    def _process():
+        return calc_mod.process_new_gc_emails(
             opju_path=opju_path,
             auto_archive=auto_archive,
         )
 
-    DataPcWatchRunner(script_dir, config, _process).run_forever()
+    DataPcWatchRunner(
+        script_dir,
+        config,
+        _process,
+        g_drive_check=calc_mod._is_g_drive_available,
+    ).run_forever()
 
 
 if __name__ == "__main__":

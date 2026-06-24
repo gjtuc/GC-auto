@@ -90,6 +90,7 @@ def main() -> int:
     # 6) watch 8s no-wifi-check
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
+    env["DATA_PC_BOOT_MAIL_CHECK"] = "0"
     proc = subprocess.Popen(
         [sys.executable, "-u", calc, "--watch", "--no-wifi-check"],
         cwd=DESKTOP_CURSOR,
