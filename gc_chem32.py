@@ -10,7 +10,7 @@ gc_chem32.py — Chem32 / GC7890 (GC3) Data 경로·Report 파싱
   계산·Origin은 **차헌 PC** (Desktop\\.cursor). 본 PC는 gc_automation.py 만.
 
 GC3 폴더 구조:
-  DATA / {시료 폴더} / {REACTION 시퀀스} / 001F0101.D / Report.TXT, REPORT01/02.CSV
+  DATA / {시료 폴더} / {REACTION 시퀀스} / 001F0101.D·002F0201.D … / Report.TXT
 
 피크 개수는 가변 — FID·TCD 각각 Report 에 있는 만큼만 사용.
 출력·메일 흐름은 GC2와 동일 (Desktop\\KCH).
@@ -58,7 +58,7 @@ REACTION_DT = re.compile(
 SEQUENCE_TRAILING_DT = re.compile(
     r"(\d{4})-(\d{2})-(\d{2})\s+(\d{2})-(\d{2})-(\d{2})\s*$",
 )
-CHEM32_INJECTION_RE = re.compile(r"^001F(\d+)\.D$", re.IGNORECASE)
+CHEM32_INJECTION_RE = re.compile(r"^(\d{3})F(\d+)\.D$", re.IGNORECASE)
 SAMPLE_FOLDER_DATE_RE = re.compile(r"^(\d{8})\s+(.+)$")
 SAMPLE_FOLDER_YYMMDD_RE = re.compile(r"^(\d{6})_(.+)$")
 REPORT_PEAK_LINE = re.compile(
@@ -204,6 +204,14 @@ def _sequence_sort_key(sequence_path: str) -> datetime:
     return datetime.fromtimestamp(os.path.getmtime(sequence_path))
 
 
+def _parse_injection_folder_name(folder_name: str) -> Optional[Tuple[int, int]]:
+    """001F0199.D → (1, 199), 002F0201.D → (2, 201) — 시퀀스 줄 번호 롤오버."""
+    match = CHEM32_INJECTION_RE.match(folder_name)
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
 def find_chem32_injection_folders(sequence_folder: str) -> List[str]:
     injections = []
     try:
@@ -215,12 +223,13 @@ def find_chem32_injection_folders(sequence_folder: str) -> List[str]:
     return sorted(injections, key=_injection_sort_key)
 
 
-def _injection_sort_key(injection_path: str) -> Tuple[int, float]:
+def _injection_sort_key(injection_path: str) -> Tuple[int, int, float]:
     name = os.path.basename(injection_path)
-    match = CHEM32_INJECTION_RE.match(name)
-    if match:
-        return (int(match.group(1)), os.path.getmtime(injection_path))
-    return (0, os.path.getmtime(injection_path))
+    parsed = _parse_injection_folder_name(name)
+    if parsed:
+        batch, number = parsed
+        return (batch, number, os.path.getmtime(injection_path))
+    return (0, 0, os.path.getmtime(injection_path))
 
 
 def find_report_txt(injection_folder: str) -> Optional[str]:
@@ -456,7 +465,12 @@ def collect_reported_injections(sample_folder: str) -> List[Tuple[str, str]]:
         for injection_path in find_chem32_injection_folders(sequence_path):
             if find_report_txt(injection_path):
                 collected.append((injection_path, sequence_path))
-    collected.sort(key=lambda item: (_sequence_sort_key(item[1]), _injection_sort_key(item[0])))
+    collected.sort(
+        key=lambda item: (
+            _sequence_sort_key(item[1]),
+            _injection_sort_key(item[0]),
+        )
+    )
     return collected
 
 

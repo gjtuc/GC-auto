@@ -132,6 +132,15 @@ class TestGcChem32(unittest.TestCase):
         self.assertEqual(len(fid_cycles), len(tcd_cycles))
         self.assertEqual(len(fid_cycles), len(matched))
 
+    def test_chem32_injection_folder_002f_rollover(self):
+        from gc_chem32 import CHEM32_INJECTION_RE, _parse_injection_folder_name
+
+        self.assertIsNotNone(CHEM32_INJECTION_RE.match("001F0199.D"))
+        self.assertIsNotNone(CHEM32_INJECTION_RE.match("002F0201.D"))
+        self.assertEqual(_parse_injection_folder_name("001F0199.D"), (1, 199))
+        self.assertEqual(_parse_injection_folder_name("002F0201.D"), (2, 201))
+        self.assertLess(_parse_injection_folder_name("001F0199.D"), _parse_injection_folder_name("002F0201.D"))
+
     def test_parse_report_injection_datetime(self):
         dt = parse_report_injection_datetime(REPORT_TXT)
         self.assertIsNone(dt)  # fixture Report has no Injection Date header
