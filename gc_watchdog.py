@@ -226,6 +226,13 @@ def _monitor_existing_watch(status_json: str, poll_sec: int) -> None:
 
 def supervise_watch(script_dir: str, poll_sec: int = 30) -> None:
     """watch subprocess 실행 — heartbeat 멈춤 시 kill 후 재시작."""
+    try:
+        from gc_wifi_autoconnect import ensure_wifi_connected
+
+        ensure_wifi_connected(script_dir)
+    except Exception as exc:
+        print(f"[watchdog] Wi-Fi 자동 연결 생략: {exc}")
+
     watch_cmd = [sys.executable, os.path.join(script_dir, "gc_automation.py"), "--watch"]
     status_json = default_watch_status_json()
 

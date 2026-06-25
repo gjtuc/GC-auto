@@ -11,6 +11,8 @@ set PYTHONUTF8=
 
 cd /d "%~dp0"
 
+python "%~dp0gc_wifi_autoconnect.py"
+
 python "%~dp0gc_watchdog.py" --supervise
 
 exit /b %ERRORLEVEL%

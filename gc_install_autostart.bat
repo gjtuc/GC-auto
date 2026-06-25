@@ -9,7 +9,9 @@ if not exist "%~dp0gc_start_watch.bat" (
 )
 
 set "TASK_NAME=ChemStation_GC_Watch"
+set "WIFI_TASK=ChemStation_GC_WiFi"
 set "RUN_CMD=%~dp0gc_start_watch.bat"
+set "WIFI_CMD=%~dp0gc_wifi_autoconnect.bat"
 
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
 schtasks /Create /TN "%TASK_NAME%" /SC ONLOGON /TR "\"%RUN_CMD%\"" /F
@@ -19,10 +21,14 @@ if errorlevel 1 (
     exit /b 1
 )
 
+schtasks /Delete /TN "%WIFI_TASK%" /F >nul 2>&1
+schtasks /Create /TN "%WIFI_TASK%" /SC ONLOGON /TR "\"%WIFI_CMD%\"" /F
+
 echo.
 echo  [완료] Windows 로그인 시 자동으로 GC 감시가 시작됩니다.
 echo.
 echo  작업 이름: %TASK_NAME%
+echo  Wi-Fi 자동 연결: %WIFI_TASK%
 echo  실행 파일: %RUN_CMD%
 echo.
 echo  확인: 작업 스케줄러 ^(taskschd.msc^) - 작업 스케줄러 라이브러리

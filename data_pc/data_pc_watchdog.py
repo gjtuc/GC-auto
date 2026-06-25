@@ -179,6 +179,18 @@ def _find_watchdog_pids() -> list[int]:
     return pids
 
 
+def _ensure_wifi(script_dir: str) -> None:
+    try:
+        repo = os.path.join(script_dir, "GC-auto-push")
+        if os.path.isdir(repo) and repo not in sys.path:
+            sys.path.insert(0, repo)
+        from gc_wifi_autoconnect import ensure_wifi_connected
+
+        ensure_wifi_connected(script_dir)
+    except Exception as exc:
+        _log(f"[wifi] 자동 연결 생략: {exc}")
+
+
 def ensure_watch_running(script_dir: str, *, hidden: bool = True) -> bool:
     if is_watch_healthy(script_dir):
         return False
@@ -221,6 +233,7 @@ def supervise(script_dir: str, *, poll_sec: int = 30, hidden: bool = True) -> No
     env.setdefault("GC_DATA_PC_RUNTIME", os.path.join(os.path.expanduser("~"), ".cursor", "gc-runtime-temp"))
 
     _log(f"[watchdog] 시작 script_dir={script_dir} stale={stale_sec}s")
+    _ensure_wifi(script_dir)
 
     while True:
         alive, hb_epoch, status_pid = _parse_status(status_path)
@@ -272,6 +285,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     if args.ensure_once:
+        _ensure_wifi(args.script_dir)
         started = ensure_watch_running(args.script_dir, hidden=not args.visible)
         _log("[ensure] 강제 시작" if started else "[ensure] 이미 정상")
         sys.exit(0)

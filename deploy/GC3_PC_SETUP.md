@@ -81,6 +81,7 @@ notepad %USERPROFILE%\Desktop\KCH\gc_automation.env
 | `CHEMSTATION_MODE` | `chem32` |
 | `CHEMSTATION_DATA_PATH` | `C:\Chem32\1\Data` |
 | `REQUIRED_HOTSPOT` | `iptime,iptime 2,iptime_5G` (GC2와 동일) |
+| `IPTIME_WIFI_PSK` | `12121212` — 부팅 시 WLAN 자동 연결 (`gc_wifi_autoconnect.py`) |
 | `NAVER_APP_PASSWORD` | 네이버 앱 비밀번호 (실제 값) |
 
 확인:

@@ -67,6 +67,7 @@ notepad deploy\gc_automation.env.gc2
 | `EXCEL_OUTPUT_DIR` | `Desktop\KCH` | `박은규` 아님 |
 | `CHEMSTATION_MODE` | `8860` (GC3: `chem32`) | `gc1` 아님 |
 | `REQUIRED_HOTSPOT` | `iptime,iptime 2,iptime_5G` (구 `AndroidHotspot5841`) | `iPhone` 아님 |
+| `IPTIME_WIFI_PSK` | `12121212` — 부팅 시 WLAN 자동 연결 (`gc_wifi_autoconnect.py`) | — |
 | `NAVER_EMAIL` | `kimcha0809@...` | `john3556@...` 아님 |
 
 **repo의 `deploy/gc_automation.env.gc2` 를 그대로 덮어쓰지 말 것** — 기존 앱비밀번호 유지.
@@ -82,6 +83,7 @@ notepad deploy\gc_automation.env.gc2
 | `iptime_5G` |
 
 - env: `REQUIRED_HOTSPOT=iptime,iptime 2,iptime_5G` (쉼표 구분)
+- env: `IPTIME_WIFI_PSK=12121212` — 재부팅 후 iptime 자동 연결 (`gc_wifi_autoconnect.py`, `gc_install_autostart.bat`)
 - PC가 세 SSID 중 **어디에 붙어 있어도** GC2 역할(acam → xlsx → 메일)만 수행하면 됨. GC1·데이터 PC 설정은 변경 없음.
 - 참고: `deploy/machine_profile.reference.gc8860.json`
 

@@ -45,6 +45,19 @@ def main() -> int:
     check("cooldown 1hr", cfg.get("cooldown_sec") == 3600)
     check("iptime ssid", "iptime" in cfg.get("required_ssid", ""))
 
+    # 2b) wifi autoconnect module
+    sys.path.insert(0, REPO)
+    try:
+        from gc_wifi_autoconnect import _load_config, _connect_order
+
+        ssids, psk = _load_config(DESKTOP_CURSOR)
+        check("wifi autoconnect import", True, f"psk_set={bool(psk)}")
+        check("wifi psk default", psk == "12121212")
+        order = _connect_order(ssids)
+        check("wifi 5g first", order[0] == "iptime_5G")
+    except Exception as exc:
+        check("wifi autoconnect import", False, str(exc))
+
     # 3) watchdog pythonw
     from data_pc_watchdog import _pythonw_cmd, _pythonw_executable
 
@@ -83,7 +96,7 @@ def main() -> int:
         text=True,
         encoding="utf-8",
         errors="replace",
-        timeout=30,
+        timeout=90,
     )
     check("watchdog ensure-once", r2.returncode == 0, f"code={r2.returncode}")
 

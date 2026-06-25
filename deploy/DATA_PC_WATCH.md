@@ -22,6 +22,8 @@ Desktop\.cursor\
   촉매 반응 계산.py      --watch 진입
   data_pc_watch.py       Wi-Fi poll · 쿨다운 · 파이프라인 호출
   data_pc_watchdog.py    watch 프로세스 감시·재시작
+  data_pc_wifi_autoconnect.py  부팅 시 iptime WLAN 자동 연결
+  gc_wifi_autoconnect.py   GC2/GC3·데이터 PC 공통 Wi-Fi 모듈
   gc_data_pc_*.bat/vbs   Windows 자동 시작 (차헌)
   gc_automation.env      아래 DATA_PC_* 설정
   KCH\
@@ -36,6 +38,7 @@ Desktop\.cursor\
 | 키 | 기본 | 설명 |
 |----|------|------|
 | `REQUIRED_HOTSPOT` | 차헌: `iptime,iptime 2,iptime_5G` | Wi-Fi 게이트 SSID (쉼표 구분) |
+| `IPTIME_WIFI_PSK` | `12121212` | 부팅 시 WLAN 프로필 등록·자동 연결 |
 | `DATA_PC_AUTO_MAIL_COOLDOWN_HOURS` | `1` | 정상 시 파이프라인 최소 간격 (GC2/GC3 메일 쿨다운과 동일) |
 | `DATA_PC_GDRIVE_RETRY_SEC` | `900` | G: 잠금 시 재시도 간격(초). 작업 스케줄러 Ensure(15분)와 맞춤 |
 | `DATA_PC_WATCH_INTERVAL_SEC` | `15` | Wi-Fi 폴링 간격 |
@@ -57,6 +60,7 @@ deploy\gc_data_pc_install_autostart_chaheon.bat
 
 | 작업 이름 | 주기 | 동작 |
 |-----------|------|------|
+| `Chaheon_GC_DataPC_WiFi` | 로그인 | iptime WLAN 자동 연결 |
 | `Chaheon_GC_DataPC_Watch` | 로그인 | `pythonw` + VBS — **콘솔 창 없음** |
 | `Chaheon_GC_DataPC_Watch_Ensure` | 15분 | watch 죽었으면 재기동 |
 
