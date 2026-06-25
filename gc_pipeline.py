@@ -314,6 +314,7 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
         tcd_cycles,
         matched_paths,
         analysis_gaps,
+        gap_injections,
     )
     if not fid_cycles and not tcd_cycles:
         return ProcessResult(

@@ -117,7 +117,13 @@ class TestGc3GapE2E(unittest.TestCase):
             after_last_at=datetime(2026, 6, 1, 10, 0, 0),
             before_first_at=datetime(2026, 6, 1, 11, 0, 0),
         )
-        tcd_out, fid_out = insert_analysis_gap_markers(tcd, fid, paths, [gap])
+        tcd_out, fid_out = insert_analysis_gap_markers(
+            tcd,
+            fid,
+            paths,
+            [gap],
+            [(path, os.path.dirname(path)) for path in paths],
+        )
         tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
         tmp.close()
         write_chem32_excel(tmp.name, fid_out, tcd_out)

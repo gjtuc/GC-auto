@@ -680,18 +680,26 @@ def sequence_folder_of_injection(injection_path: str) -> str:
     return os.path.basename(os.path.dirname(injection_path))
 
 
-def gap_marker_cycle(gap: AnalysisGap) -> List[dict]:
+def gap_marker_cycle(
+    gap: AnalysisGap,
+    *,
+    after_folder: str = "",
+    before_folder: str = "",
+) -> List[dict]:
     """
     엑셀 1주입 자리 — 분석 중단·미수집 사이클 표시 행.
 
     차헌 PC 계약: data_pc/gc_gap_contract.py (Symmetry GC_GAP:N= 로 N 파싱).
     """
     n = gap.missing_cycles
+    where = ""
+    if after_folder and before_folder:
+        where = f" · {after_folder}→{before_folder}"
     return [
         {
             "#": "중단",
             "Time": f"약 {n}사이클 미수집",
-            "Area": f"공백 {format_duration_korean(gap.gap_sec)}",
+            "Area": f"공백 {format_duration_korean(gap.gap_sec)}{where}",
             "Height": f"잔여 {format_duration_korean(gap.remainder_sec)} 버림",
             "Width": gap.after_last_at.strftime("%m-%d %H:%M"),
             "Area%": gap.before_first_at.strftime("%m-%d %H:%M"),
@@ -700,11 +708,38 @@ def gap_marker_cycle(gap: AnalysisGap) -> List[dict]:
     ]
 
 
+def _gap_marker_excel_position(
+    gap: AnalysisGap,
+    matched_injection_paths: List[str],
+    all_injections: List[Tuple[str, str]],
+) -> Optional[int]:
+    """
+    갭 행을 넣을 엑셀 주입 목록 인덱스.
+
+  gap.after_injection_index 는 collect_reported_injections 기준이고,
+  엑셀에는 sliding·미완료 필터를 통과한 주입만 있으므로, 갭 직전까지
+  실측에 포함된 마지막 주입 뒤에 삽입한다.
+    """
+    path_to_all_index = {path: index for index, (path, _) in enumerate(all_injections)}
+    insert_pos = 0
+    matched_before_gap = False
+    for excel_pos, matched_path in enumerate(matched_injection_paths):
+        all_index = path_to_all_index.get(matched_path)
+        if all_index is None or all_index > gap.after_injection_index:
+            continue
+        insert_pos = excel_pos + 1
+        matched_before_gap = True
+    if not matched_before_gap:
+        return 0
+    return insert_pos
+
+
 def insert_analysis_gap_markers(
     fid_cycles: List[List[dict]],
     tcd_cycles: List[List[dict]],
     matched_injection_paths: List[str],
     analysis_gaps: List[AnalysisGap],
+    all_injections: Optional[List[Tuple[str, str]]] = None,
 ) -> Tuple[List[List[dict]], List[List[dict]]]:
     """
     연속 주입 사이 공백을 엑셀 주입 목록에 표시 행으로 삽입.
@@ -716,13 +751,35 @@ def insert_analysis_gap_markers(
     if len(fid_cycles) != len(tcd_cycles) != len(matched_injection_paths):
         raise ValueError("FID/TCD/경로 개수 불일치")
 
+    if all_injections is None:
+        all_injections = [(path, "") for path in matched_injection_paths]
+
     fid_out = list(fid_cycles)
     tcd_out = list(tcd_cycles)
-    for gap in sorted(analysis_gaps, key=lambda item: item.after_injection_index, reverse=True):
-        marker = gap_marker_cycle(gap)
-        pos = gap.after_injection_index + 1
-        if pos < 0 or pos > len(fid_out):
+    pending: List[Tuple[int, List[dict]]] = []
+    for gap in analysis_gaps:
+        pos = _gap_marker_excel_position(gap, matched_injection_paths, all_injections)
+        if pos is None or pos < 0 or pos > len(fid_out):
+            print(
+                f"[경고] 갭 행 삽입 생략 — 엑셀 위치 {pos} "
+                f"(갭 #{gap.after_injection_index + 1}→#{gap.before_injection_index + 1})"
+            )
             continue
+        after_folder = os.path.basename(all_injections[gap.after_injection_index][0])
+        before_folder = os.path.basename(all_injections[gap.before_injection_index][0])
+        marker = gap_marker_cycle(
+            gap,
+            after_folder=after_folder,
+            before_folder=before_folder,
+        )
+        pending.append((pos, marker))
+        print(
+            f"[안내] 엑셀 갭 행 삽입 위치 #{pos + 1} — "
+            f"약 {gap.missing_cycles}사이클 미수집 "
+            f"({after_folder}→{before_folder})"
+        )
+
+    for pos, marker in sorted(pending, key=lambda item: item[0], reverse=True):
         fid_out.insert(pos, marker)
         tcd_out.insert(pos, marker)
     return fid_out, tcd_out

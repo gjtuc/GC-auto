@@ -268,12 +268,54 @@ class TestGcChem32(unittest.TestCase):
             after_last_at=datetime(2026, 6, 1, 10, 0, 0),
             before_first_at=datetime(2026, 6, 1, 11, 0, 0),
         )
-        fid_out, tcd_out = insert_analysis_gap_markers(fid, tcd, paths, [gap])
+        fid_out, tcd_out = insert_analysis_gap_markers(fid, tcd, paths, [gap], [
+            (paths[0], r"C:\s\SEQ_A"),
+            (paths[1], r"C:\s\SEQ_A"),
+            (paths[2], r"C:\s\SEQ_B"),
+        ])
         self.assertEqual(len(fid_out), 4)
         self.assertEqual(fid_out[3], peak)
         self.assertEqual(fid_out[2][0]["#"], "중단")
         self.assertIn("6사이클", fid_out[2][0]["Time"])
         self.assertEqual(fid_out[2][0]["Symmetry"], "GC_GAP:N=6")
+
+    def test_insert_gap_marker_maps_full_injection_index_to_excel(self):
+        """002F 등 엑셀에서 빠진 주입이 갭 경계여도 마지막 실측 뒤에 중단 행 삽입."""
+        peak = [{"#": 1, "Time": 1.0, "Area": 1.0, "Height": 1.0, "Width": 1.0, "Area%": 1.0, "Symmetry": ""}]
+        fid = [peak, peak]
+        tcd = [peak, peak]
+        matched_paths = [
+            r"C:\s\SEQ\001F0199.D",
+            r"C:\s\SEQ2\001F0102.D",
+        ]
+        all_injections = [
+            (r"C:\s\SEQ\001F0199.D", r"C:\s\SEQ"),
+            (r"C:\s\SEQ\002F0209.D", r"C:\s\SEQ"),
+            (r"C:\s\SEQ2\001F0101.D", r"C:\s\SEQ2"),
+            (r"C:\s\SEQ2\001F0102.D", r"C:\s\SEQ2"),
+        ]
+        gap = AnalysisGap(
+            after_injection_index=1,
+            before_injection_index=2,
+            after_sequence="SEQ",
+            before_sequence="SEQ2",
+            gap_sec=3 * 3600 + 4 * 60,
+            interval_sec=3791.0,
+            missing_cycles=2,
+            remainder_sec=3451.0,
+            after_last_at=datetime(2026, 6, 25, 8, 53, 0),
+            before_first_at=datetime(2026, 6, 25, 11, 57, 0),
+        )
+        fid_out, tcd_out = insert_analysis_gap_markers(
+            fid, tcd, matched_paths, [gap], all_injections
+        )
+        self.assertEqual(len(fid_out), 3)
+        self.assertEqual(fid_out[0], peak)
+        self.assertEqual(fid_out[1][0]["#"], "중단")
+        self.assertIn("002F0209.D", fid_out[1][0]["Area"])
+        self.assertIn("001F0101.D", fid_out[1][0]["Area"])
+        self.assertEqual(fid_out[2], peak)
+        self.assertEqual(len(tcd_out), 3)
 
 
 if __name__ == "__main__":
