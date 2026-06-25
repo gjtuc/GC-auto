@@ -108,6 +108,7 @@ class WatchRunner:
         self.script_dir = script_dir
         self._hotspot_was_connected = False
         self._hotspot_lost_at: float | None = None
+        self._last_wait_log_at: float | None = None
         self._pipeline_running = False
         self._heartbeat_stop = threading.Event()
         self._last_status: dict[str, Any] = {}
@@ -247,11 +248,19 @@ class WatchRunner:
         if not is_required_hotspot_connected(self.config.required_ssid, self.config.skip_wifi_check):
             if self._hotspot_was_connected:
                 self._hotspot_lost_at = time.monotonic()
+                ts = datetime.now().strftime("%H:%M:%S")
+                reason = hotspot_wait_reason(self.config.required_ssid)
+                print(f"[Wi-Fi] {ts} 연결 끊김 — {reason}")
             self._hotspot_was_connected = False
             reason = hotspot_wait_reason(self.config.required_ssid)
             self._publish("waiting_wifi", reason)
-            print(f"[대기] {reason}")
+            now = time.monotonic()
+            if self._last_wait_log_at is None or (now - self._last_wait_log_at) >= 300:
+                print(f"[대기] {reason}")
+                self._last_wait_log_at = now
             return
+
+        self._last_wait_log_at = None
 
         min_gap = hotspot_reconnect_min_sec(self.config.chemstation_mode)
         if not self._hotspot_was_connected:
@@ -289,6 +298,9 @@ class WatchRunner:
             return
 
         print("\n[감지] 핫스팟 연결됨 — 새 데이터 확인")
+        ssid = get_connected_wifi_ssid()
+        if ssid:
+            print(f"[Wi-Fi] {datetime.now().strftime('%H:%M:%S')} 연결됨 — {ssid}")
         self._on_hotspot_connected(just_connected=True)
 
     def _gc1_has_pending_work(self) -> bool:
