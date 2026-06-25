@@ -603,6 +603,68 @@ def detect_analysis_gaps(sample_folder: str) -> Tuple[List[AnalysisGap], Optiona
     return gaps, interval_sec
 
 
+def sequence_folder_of_injection(injection_path: str) -> str:
+    """001F0101.D 주입 폴더 경로 → REACTION 시퀀스 폴더 basename."""
+    return os.path.basename(os.path.dirname(injection_path))
+
+
+def gap_marker_cycle(gap: AnalysisGap) -> List[dict]:
+    """엑셀 1주입 자리 — 분석 중단·미수집 사이클 표시 행."""
+    return [
+        {
+            "#": "중단",
+            "Time": f"약 {gap.missing_cycles}사이클 미수집",
+            "Area": f"공백 {format_duration_korean(gap.gap_sec)}",
+            "Height": f"잔여 {format_duration_korean(gap.remainder_sec)} 버림",
+            "Width": gap.after_last_at.strftime("%m-%d %H:%M"),
+            "Area%": gap.before_first_at.strftime("%m-%d %H:%M"),
+            "Symmetry": "",
+        }
+    ]
+
+
+def insert_analysis_gap_markers(
+    fid_cycles: List[List[dict]],
+    tcd_cycles: List[List[dict]],
+    matched_injection_paths: List[str],
+    analysis_gaps: List[AnalysisGap],
+) -> Tuple[List[List[dict]], List[List[dict]]]:
+    """
+    시퀀스 사이 공백을 엑셀 주입 목록에 표시 행으로 삽입.
+
+    예: 사이클1,2,3 → [중단 N사이클] → 사이클9,10 …
+    """
+    if not analysis_gaps or not matched_injection_paths:
+        return fid_cycles, tcd_cycles
+    if len(fid_cycles) != len(tcd_cycles) != len(matched_injection_paths):
+        raise ValueError("FID/TCD/경로 개수 불일치")
+
+    seq_by_index = [sequence_folder_of_injection(path) for path in matched_injection_paths]
+    insert_after: List[Tuple[int, AnalysisGap]] = []
+    for gap in analysis_gaps:
+        after_idx = None
+        before_idx = None
+        for index, seq_name in enumerate(seq_by_index):
+            if seq_name == gap.after_sequence:
+                after_idx = index
+            if before_idx is None and seq_name == gap.before_sequence:
+                before_idx = index
+        if after_idx is not None and before_idx is not None and before_idx > after_idx:
+            insert_after.append((after_idx, gap))
+
+    if not insert_after:
+        return fid_cycles, tcd_cycles
+
+    fid_out = list(fid_cycles)
+    tcd_out = list(tcd_cycles)
+    for after_idx, gap in sorted(insert_after, key=lambda item: item[0], reverse=True):
+        marker = gap_marker_cycle(gap)
+        pos = after_idx + 1
+        fid_out.insert(pos, marker)
+        tcd_out.insert(pos, marker)
+    return fid_out, tcd_out
+
+
 def log_analysis_gaps(gaps: List[AnalysisGap], interval_sec: Optional[float]) -> None:
     """분석 중단 구간 — 콘솔 안내."""
     if not interval_sec:
@@ -836,7 +898,7 @@ def build_merged_injection_cycles(
     _log_in_progress_injections(sample_folder)
     injections = collect_reported_injections(sample_folder)
     if not injections:
-        return [], [], [], 0
+        return [], [], [], 0, []
 
     print(f"[안내] Report 있는 주입 {len(injections)}개 (시퀀스 {len(find_sequence_folders(sample_folder))}개)")
 
@@ -845,14 +907,14 @@ def build_merged_injection_cycles(
 
     complete_injections, incomplete_skipped = _filter_complete_injection_pairs(injections)
     if not complete_injections:
-        return [], [], [], incomplete_skipped
+        return [], [], [], incomplete_skipped, []
 
     tcd_cycles, matched_paths, skipped = build_detector_cycles(complete_injections, "TCD")
     skipped += incomplete_skipped
     if not tcd_cycles:
         fid_cycles, matched_paths, skipped_fid = build_detector_cycles(complete_injections, "FID")
         skipped += skipped_fid
-        return fid_cycles, [], matched_paths, skipped
+        return fid_cycles, [], matched_paths, skipped, matched_paths
 
     fid_cycles: List[List[dict]] = []
     for injection_path in matched_paths:
@@ -872,4 +934,4 @@ def build_merged_injection_cycles(
         )
 
     matched_labels = [os.path.basename(path) for path in matched_paths]
-    return fid_cycles, tcd_cycles, matched_labels, skipped
+    return fid_cycles, tcd_cycles, matched_labels, skipped, matched_paths

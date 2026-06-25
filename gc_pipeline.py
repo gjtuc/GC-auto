@@ -66,6 +66,7 @@ from gc_chem32 import (
     find_active_sample_folder,
     get_first_analysis_date,
     get_latest_report_mtime,
+    insert_analysis_gap_markers,
     resolve_chemstation_mode,
 )
 from gc_gc1 import (
@@ -301,9 +302,17 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
     if not sample_folder:
         return ProcessResult(ok=False, fail_reason="Chem32 시료 폴더 없음")
 
-    fid_cycles, tcd_cycles, matched_labels, skipped = build_merged_injection_cycles(sample_folder)
+    fid_cycles, tcd_cycles, matched_labels, skipped, matched_paths = build_merged_injection_cycles(
+        sample_folder
+    )
     analysis_gaps, gap_interval = detect_analysis_gaps(sample_folder)
     gap_email_lines = analysis_gaps_email_lines(analysis_gaps, gap_interval)
+    fid_cycles, tcd_cycles = insert_analysis_gap_markers(
+        fid_cycles,
+        tcd_cycles,
+        matched_paths,
+        analysis_gaps,
+    )
     if not fid_cycles and not tcd_cycles:
         return ProcessResult(
             ok=False,

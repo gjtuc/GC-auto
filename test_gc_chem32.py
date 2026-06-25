@@ -3,12 +3,14 @@
 
 import os
 import unittest
+from datetime import datetime
 
 from gc_console import setup_console_encoding
 
 setup_console_encoding()
 
 from gc_chem32 import (
+    AnalysisGap,
     analysis_gaps_email_lines,
     build_merged_injection_cycles,
     collect_reported_injections,
@@ -21,7 +23,9 @@ from gc_chem32 import (
     find_sample_folders,
     find_sequence_folders,
     format_duration_korean,
+    gap_marker_cycle,
     get_latest_sequence_datetime,
+    insert_analysis_gap_markers,
     parse_sequence_datetime,
     parse_report_txt,
     resolve_chemstation_mode,
@@ -76,7 +80,7 @@ class TestGcChem32(unittest.TestCase):
         sample = os.path.join(FIXTURE_ROOT, "20260101 sample DRM")
         injections = collect_reported_injections(sample)
         self.assertEqual(len(injections), 1)
-        fid_cycles, tcd_cycles, matched, skipped = build_merged_injection_cycles(sample)
+        fid_cycles, tcd_cycles, matched, skipped, _paths = build_merged_injection_cycles(sample)
         self.assertEqual(skipped, 0)
         self.assertEqual(len(fid_cycles), 1)
         self.assertEqual(len(tcd_cycles), 1)
@@ -123,7 +127,7 @@ class TestGcChem32(unittest.TestCase):
 
     def test_merged_fid_tcd_cycle_count_equal(self):
         sample = os.path.join(FIXTURE_ROOT, "20260101 sample DRM")
-        fid_cycles, tcd_cycles, matched, _skipped = build_merged_injection_cycles(sample)
+        fid_cycles, tcd_cycles, matched, _skipped, _paths = build_merged_injection_cycles(sample)
         self.assertEqual(len(fid_cycles), len(tcd_cycles))
         self.assertEqual(len(fid_cycles), len(matched))
 
@@ -203,6 +207,31 @@ class TestGcChem32(unittest.TestCase):
         lines = analysis_gaps_email_lines(gaps, interval)
         self.assertTrue(any("미수집" in line for line in lines))
         self.assertIn("버림", "\n".join(lines))
+
+    def test_insert_gap_marker_between_cycles(self):
+        peak = [{"#": 1, "Time": 1.0, "Area": 1.0, "Height": 1.0, "Width": 1.0, "Area%": 1.0, "Symmetry": ""}]
+        fid = [peak, peak, peak]
+        tcd = [peak, peak, peak]
+        paths = [
+            r"C:\s\SEQ_A\001F0101.D",
+            r"C:\s\SEQ_A\001F0102.D",
+            r"C:\s\SEQ_B\001F0101.D",
+        ]
+        gap = AnalysisGap(
+            after_sequence="SEQ_A",
+            before_sequence="SEQ_B",
+            gap_sec=3600.0,
+            interval_sec=600.0,
+            missing_cycles=6,
+            remainder_sec=0.0,
+            after_last_at=datetime(2026, 6, 1, 10, 0, 0),
+            before_first_at=datetime(2026, 6, 1, 11, 0, 0),
+        )
+        fid_out, tcd_out = insert_analysis_gap_markers(fid, tcd, paths, [gap])
+        self.assertEqual(len(fid_out), 4)
+        self.assertEqual(fid_out[3], peak)
+        self.assertEqual(fid_out[2][0]["#"], "중단")
+        self.assertIn("6사이클", fid_out[2][0]["Time"])
 
 
 if __name__ == "__main__":

@@ -229,7 +229,7 @@ def run_validate(args: argparse.Namespace) -> int:
         _audit_sliding_chain(sample_folder, "FID")
 
     print("\n=== 병합 결과 (pipeline 과 동일) ===")
-    fid_cycles, tcd_cycles, matched, skipped = build_merged_injection_cycles(sample_folder)
+    fid_cycles, tcd_cycles, matched, skipped, matched_paths = build_merged_injection_cycles(sample_folder)
     gaps, gap_interval = detect_analysis_gaps(sample_folder)
     if gap_interval:
         print(f"\n사이클 간격 추정: {format_duration_korean(gap_interval)}")
