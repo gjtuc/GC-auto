@@ -22,6 +22,10 @@ if not exist "%GC_HOME%\data_pc_watchdog.py" (
 if not exist "%GC_HOME%\data_pc_wifi_autoconnect.py" (
     copy /Y "%DEPLOY%..\data_pc\data_pc_wifi_autoconnect.py" "%GC_HOME%\data_pc_wifi_autoconnect.py" >nul
 )
+REM data_pc_runtime 패키지 — supervisor (watchdog+watch 대체)
+if not exist "%GC_HOME%\data_pc_runtime\__main__.py" (
+    xcopy /E /I /Y "%DEPLOY%..\data_pc\data_pc_runtime" "%GC_HOME%\data_pc_runtime\" >nul
+)
 if not exist "%GC_HOME%\GC-auto-push\gc_wifi_autoconnect.py" (
     if not exist "%GC_HOME%\GC-auto-push" mkdir "%GC_HOME%\GC-auto-push"
     copy /Y "%DEPLOY%..\gc_wifi_autoconnect.py" "%GC_HOME%\GC-auto-push\gc_wifi_autoconnect.py" >nul
@@ -30,6 +34,7 @@ if not exist "%GC_HOME%\GC-auto-push\gc_wifi_autoconnect.py" (
 copy /Y "%DEPLOY%gc_data_pc_start_watch_hidden_chaheon.vbs" "%VBS%" >nul
 copy /Y "%DEPLOY%gc_data_pc_watch_loop_chaheon.bat" "%GC_HOME%\gc_data_pc_watch_loop.bat" >nul
 copy /Y "%DEPLOY%gc_data_pc_ensure_watch_chaheon.bat" "%GC_HOME%\gc_data_pc_ensure_watch.bat" >nul
+copy /Y "%DEPLOY%gc_data_pc_ensure_watch_hidden_chaheon.vbs" "%GC_HOME%\gc_data_pc_ensure_watch_hidden.vbs" >nul
 copy /Y "%DEPLOY%gc_data_pc_wifi_autoconnect_chaheon.bat" "%GC_HOME%\gc_data_pc_wifi_autoconnect.bat" >nul
 
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
@@ -40,9 +45,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
-set "ENSURE_BAT=%GC_HOME%\gc_data_pc_ensure_watch.bat"
+set "ENSURE_VBS=%GC_HOME%\gc_data_pc_ensure_watch_hidden.vbs"
 schtasks /Delete /TN "%ENSURE_TASK%" /F >nul 2>&1
-schtasks /Create /TN "%ENSURE_TASK%" /SC MINUTE /MO 15 /TR "%ENSURE_BAT%" /F
+schtasks /Create /TN "%ENSURE_TASK%" /SC MINUTE /MO 15 /TR "wscript.exe %ENSURE_VBS%" /F
 
 set "WIFI_BAT=%GC_HOME%\gc_data_pc_wifi_autoconnect.bat"
 schtasks /Delete /TN "%WIFI_TASK%" /F >nul 2>&1

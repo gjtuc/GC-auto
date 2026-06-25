@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-data_pc_watchdog.py — 데이터 PC watch 백그라운드 감시·자동 재시작
+data_pc_watchdog.py — [레거시 호환] data_pc_runtime 위임 래퍼
 
-Windows 로그인 시 Task Scheduler로 실행 (차헌: Chaheon_GC_DataPC_Watch).
-watch 프로세스가 멈추면 자동 재시작합니다.
+2026-06 이전: watchdog(watch 감시) + data_pc_watch(폴링) 이중 프로세스 구조.
+  → Origin .opju 중복 op.open, Read-Only 확인창 수동 Yes 문제 유발.
 
-로그: %USERPROFILE%\\.cursor\\gc-runtime-temp\\data_pc_watchdog.log
+현재: main() 이 **항상** `pythonw -m data_pc_runtime` 으로 위임한다.
+  · 로그인 VBS / Ensure VBS 는 이미 data_pc_runtime 을 직접 기동
+  · 작업 스케줄러·수동 실행이 옛 경로(data_pc_watchdog.py)를 써도 동일 런타임 사용
+
+로그: %USERPROFILE%\\.cursor\\gc-runtime-temp\\data_pc_watchdog.log (위임 기록)
 가이드: deploy/DATA_PC_WATCH.md
 """
 
@@ -273,6 +277,24 @@ def supervise(script_dir: str, *, poll_sec: int = 30, hidden: bool = True) -> No
         time.sleep(5)
 
 
+def _redirect_to_runtime(script_dir: str, *, ensure_once: bool) -> int:
+    """구 watchdog/watch 진입점 → data_pc_runtime supervisor 로 위임.
+
+    ensure_once=True  : 작업 스케줄러 15분 Ensure (supervisor 없으면 1회 기동)
+    ensure_once=False : 로그인 시 상주 supervisor (VBS 가 직접 -m 호출하는 경우와 동일)
+    """
+    cmd = [_pythonw_executable(), "-m", "data_pc_runtime", "--script-dir", script_dir]
+    if ensure_once:
+        cmd.append("--ensure-once")
+    _log(f"[watchdog] data_pc_runtime 위임: {' '.join(cmd)}")
+    proc = subprocess.run(
+        cmd,
+        cwd=script_dir,
+        creationflags=_SUBPROCESS_FLAGS,
+    )
+    return int(proc.returncode or 0)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="데이터 PC watch 감시")
     parser.add_argument("--script-dir", default=_default_script_dir())
@@ -284,12 +306,7 @@ def main() -> None:
         help="watch 미동작 시 1회 강제 시작 (작업 스케줄러 안전망)",
     )
     args = parser.parse_args()
-    if args.ensure_once:
-        _ensure_wifi(args.script_dir)
-        started = ensure_watch_running(args.script_dir, hidden=not args.visible)
-        _log("[ensure] 강제 시작" if started else "[ensure] 이미 정상")
-        sys.exit(0)
-    supervise(args.script_dir, poll_sec=args.poll_sec, hidden=not args.visible)
+    sys.exit(_redirect_to_runtime(args.script_dir, ensure_once=args.ensure_once))
 
 
 if __name__ == "__main__":
