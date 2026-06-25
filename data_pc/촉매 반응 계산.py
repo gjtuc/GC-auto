@@ -1291,27 +1291,63 @@ def setup_experiment_folder(source_excel, calculated_excel, reaction_type):
 # ==========================================
 # KCH 원본 엑셀: Time/Area 열, # 행으로 사이클 구분.
 # GC2: H2 RT 구간으로 장비 판별. GC3: TCD+FID 시트 병합(DRME).
+# GC3 갭: gc_chem32 가 삽입한 "중단" 행 → data_pc/gc_gap_contract.py 계약.
+from gc_gap_contract import is_cycle_header_row, parse_gap_missing_cycles
+
+
 def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
     warnings = []
+    gap_cycles = set()
     cycle_num, cycle_list, unassigned_list = 1, [], []  # 1주입 = Cycle 1 (KCH 첫 블록에 헤더 없음)
 
-    for index, row in df_raw.iterrows():
-        if str(row['Time']).isalpha() or str(row.iloc[0]).startswith('#'):
-            cycle_num += 1; continue
-            
-        if pd.notna(row['Time']) and pd.notna(row['Area']):
-            try: t, a = float(row['Time']), float(row['Area'])
-            except: continue
-            
+    rows = list(df_raw.iterrows())
+    i = 0
+    while i < len(rows):
+        _index, row = rows[i]
+
+        if is_cycle_header_row(row):
+            # 헤더 + 중단 행 쌍: N사이클 건너뛰고 다음 실측 Cycle 번호 맞춤
+            if i + 1 < len(rows) and parse_gap_missing_cycles(rows[i + 1][1]) is not None:
+                missing = parse_gap_missing_cycles(rows[i + 1][1])
+                last_cycle = max((c["Cycle"] for c in cycle_list), default=cycle_num - 1)
+                start_gap = last_cycle + 1
+                end_gap = last_cycle + missing
+                for k in range(start_gap, end_gap + 1):
+                    gap_cycles.add(k)
+                warnings.append(
+                    f"⚠️ [분석 공백] Cycle {start_gap}~{end_gap} 미수집 "
+                    f"({missing}사이클, GC3 분석 중단 구간)"
+                )
+                cycle_num = last_cycle + missing
+                i += 2
+                continue
+            cycle_num += 1
+            i += 1
+            continue
+
+        if parse_gap_missing_cycles(row) is not None:
+            i += 1
+            continue
+
+        if pd.notna(row.get("Time")) and pd.notna(row.get("Area")):
+            try:
+                t, a = float(row["Time"]), float(row["Area"])
+            except (ValueError, TypeError):
+                i += 1
+                continue
+
             gas = None
             for gas_name, (t_min, t_max) in time_bounds.items():
                 if t_min <= t <= t_max:
                     gas = f"{gas_name} Area"
                     break
-            
-            if gas: cycle_list.append({'Cycle': cycle_num, 'Gas': gas, 'Area': a, 'Time': t})
-            else: unassigned_list.append({'Cycle': cycle_num, 'Time': t, 'Area': a})
-                
+
+            if gas:
+                cycle_list.append({"Cycle": cycle_num, "Gas": gas, "Area": a, "Time": t})
+            else:
+                unassigned_list.append({"Cycle": cycle_num, "Time": t, "Area": a})
+        i += 1
+
     df_extracted = pd.DataFrame(cycle_list)
     if df_extracted.empty:
         df_pivot = pd.DataFrame()
@@ -1332,6 +1368,10 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
                 else:
                     warnings.append(f"⚠️ [비정상 피크] Cycle {c}에서 '{g}' 피크가 비정상적으로 쪼개졌습니다. 합산 결과가 앞뒤 사이클과 크게 다릅니다!")
 
+    if gap_cycles:
+        all_idx = sorted(set(df_pivot.index) | gap_cycles) if not df_pivot.empty else sorted(gap_cycles)
+        df_pivot = df_pivot.reindex(all_idx) if not df_pivot.empty else pd.DataFrame(index=all_idx)
+
     # 🚨 [검증 2] 검출 범위 미세 이탈(Out of Bounds) — 유효 피크 0개여도 unassigned 검사
     for un in unassigned_list:
         if un['Area'] < 10: continue
@@ -1340,7 +1380,7 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
                 warnings.append(f"⚠️ [검출 어긋남] Cycle {un['Cycle']}에서 '{gas_name}' 피크가 설정 범위에서 0.1분 벗어난 위치({un['Time']}분)에서 검출되었습니다!")
                 break
 
-    return df_pivot, warnings
+    return df_pivot, warnings, gap_cycles
 
 # ==========================================
 # 기능 3: 수율/전환율 계산 · 물질수지 이상 감지
@@ -1432,7 +1472,7 @@ def process_excel(input_file):
 
     # [수식 적용 단계: GC2 (DRE / DRM)]
     if eq == 'GC2':
-        df_p, warn = parse_gc_sheet(df_gc2_raw, None, 'GC2', GC2_TIME)
+        df_p, warn, _gap = parse_gc_sheet(df_gc2_raw, None, 'GC2', GC2_TIME)
         all_warnings.extend(warn)
         for g in ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area']:
             if g not in df_p.columns: df_p[g] = 0
@@ -1473,8 +1513,9 @@ def process_excel(input_file):
 
     # [수식 적용 단계: GC3 (DRE / DRME)] — reaction_target 으로 출력 접미사만 구분
     elif eq == 'GC3':
-        df_t, warn_t = parse_gc_sheet(df_gc3_tcd, 'TCD', 'GC3', GC3_TIME_TCD)
-        df_f, warn_f = parse_gc_sheet(df_gc3_fid, 'FID', 'GC3', GC3_TIME_FID)
+        df_t, warn_t, gap_t = parse_gc_sheet(df_gc3_tcd, 'TCD', 'GC3', GC3_TIME_TCD)
+        df_f, warn_f, gap_f = parse_gc_sheet(df_gc3_fid, 'FID', 'GC3', GC3_TIME_FID)
+        gap_cycles = gap_t | gap_f
         all_warnings.extend(warn_t); all_warnings.extend(warn_f)
         df_p = pd.concat([df_t, df_f], axis=1).fillna(0)
         
@@ -1497,11 +1538,17 @@ def process_excel(input_file):
                 'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
         gc3_suffix = '_GC3_DRE_계산완료' if reaction_target == 'DRE' else '_GC3_DRME_계산완료'
         out_name = _calc_output_path(input_file, gc3_suffix)
+        if gap_cycles:
+            for cyc in gap_cycles:
+                if cyc in df_p.index:
+                    df_p.loc[cyc] = np.nan
+                if cyc in df_result.index:
+                    df_result.loc[cyc] = np.nan
 
     # [수식 적용 단계: GC1 (DRE / DRM) — GC3 와 동일 나눗셈 교정, FID+TCD 병합]
     elif eq == 'GC1':
-        df_t, warn_t = parse_gc_sheet(df_gc1_tcd, 'TCD', 'GC1', GC1_TIME_TCD)
-        df_f, warn_f = parse_gc_sheet(df_gc1_fid, 'FID', 'GC1', GC1_TIME_FID)
+        df_t, warn_t, _gap_t = parse_gc_sheet(df_gc1_tcd, 'TCD', 'GC1', GC1_TIME_TCD)
+        df_f, warn_f, _gap_f = parse_gc_sheet(df_gc1_fid, 'FID', 'GC1', GC1_TIME_FID)
         all_warnings.extend(warn_t)
         all_warnings.extend(warn_f)
         df_p = pd.concat([df_t, df_f], axis=1).fillna(0)

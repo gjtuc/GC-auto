@@ -14,6 +14,7 @@
 |------|------|
 | 1 | 네이버 IMAP 메일 수신 → `KCH/inbox/` |
 | 2 | 수율·전환율 계산 → `KCH/processed/` |
+| 2b | GC3 분석 중단 시 엑셀 `중단` 행 → `gc_gap_contract.py` 로 N사이클 건너뜀 (Origin 열 정렬) |
 | 3 | G: 실험 폴더 생성·갱신 |
 | 4 | Origin `.opju` 워크시트 열 추가 |
 
@@ -24,6 +25,7 @@
 ```
 Desktop\.cursor\
   촉매 반응 계산.py
+  gc_gap_contract.py       ← GC3 갭 행 계약 (촉매 반응 계산.py 와 같은 폴더)
   gc_automation.env          ← example 복사 후 작성
   KCH\
     inbox\

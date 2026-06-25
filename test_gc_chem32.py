@@ -232,6 +232,7 @@ class TestGcChem32(unittest.TestCase):
         self.assertEqual(fid_out[3], peak)
         self.assertEqual(fid_out[2][0]["#"], "중단")
         self.assertIn("6사이클", fid_out[2][0]["Time"])
+        self.assertEqual(fid_out[2][0]["Symmetry"], "GC_GAP:N=6")
 
 
 if __name__ == "__main__":

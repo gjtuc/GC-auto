@@ -8,7 +8,16 @@ GC3 Win7 PC - USB 배포 (차헌)
    - AUTO_MAIL_COOLDOWN_HOURS=3 이 있으면 삭제하거나 =1 로 변경 (기본 1시간)
 4. gc_stop_watch.bat 후 gc_start_watch.bat (또는 gc_install_autostart 재로그인)
 
-이번 zip 포함 수정 (2026-06-25)
+이번 zip 포함 수정 (2026-06-16)
+--------------------------------
+  [gc_chem32] 분석 중단 갭 — floor(공백/주입간격) 미수집 사이클, 엑셀 중단 행 삽입
+  [gc_chem32] Symmetry GC_GAP:N= 머신 파싱 (차헌 PC 와 계약: data_pc/gc_gap_contract.py)
+  [gc_pipeline] 갭 감지 → FID/TCD 엑셀·메일 본문 안내
+
+차헌 PC (별도 배포 — data_pc/촉매 반응 계산.py)
+  [parse_gc_sheet] 중단 행 읽어 Cycle N칸 건너뜀, Origin 열 정렬 유지
+
+이전 zip (2026-06-25)
 --------------------------------
   [gc_chem32] 시료 폴더 자동 선택 — DATA 전 시료 스캔 후 시퀀스 폴더명 끝
               YYYY-MM-DD HH-MM-SS 가 가장 늦은 시료 1개 선택 (mtime 아님)

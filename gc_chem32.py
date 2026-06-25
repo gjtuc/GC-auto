@@ -609,16 +609,21 @@ def sequence_folder_of_injection(injection_path: str) -> str:
 
 
 def gap_marker_cycle(gap: AnalysisGap) -> List[dict]:
-    """엑셀 1주입 자리 — 분석 중단·미수집 사이클 표시 행."""
+    """
+    엑셀 1주입 자리 — 분석 중단·미수집 사이클 표시 행.
+
+    차헌 PC 계약: data_pc/gc_gap_contract.py (Symmetry GC_GAP:N= 로 N 파싱).
+    """
+    n = gap.missing_cycles
     return [
         {
             "#": "중단",
-            "Time": f"약 {gap.missing_cycles}사이클 미수집",
+            "Time": f"약 {n}사이클 미수집",
             "Area": f"공백 {format_duration_korean(gap.gap_sec)}",
             "Height": f"잔여 {format_duration_korean(gap.remainder_sec)} 버림",
             "Width": gap.after_last_at.strftime("%m-%d %H:%M"),
             "Area%": gap.before_first_at.strftime("%m-%d %H:%M"),
-            "Symmetry": "",
+            "Symmetry": f"GC_GAP:N={n}",
         }
     ]
 

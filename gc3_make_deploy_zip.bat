@@ -21,6 +21,13 @@ set "DESKTOP_KCH=%USERPROFILE%\Desktop\KCH"
 if not exist "%DESKTOP_KCH%" mkdir "%DESKTOP_KCH%"
 copy /y "%DEST%" "%DESKTOP_KCH%\GC3_chem32-gc-automation.zip" >nul
 
+for %%D in (E D) do (
+    if exist "%%D:\" (
+        copy /y "%DEST%" "%%D:\GC3_chem32-gc-automation.zip" >nul 2>&1
+        if not errorlevel 1 echo  [USB] %%D:\GC3_chem32-gc-automation.zip
+    )
+)
+
 echo.
 echo  [완료] %DEST%
 echo  [복사] %DESKTOP_KCH%\GC3_chem32-gc-automation.zip
