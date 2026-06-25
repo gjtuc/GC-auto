@@ -95,6 +95,7 @@ from gc_config import AppConfig
 from gc_mailer import generate_email_body, send_email_via_smtp
 from gc_sanitize import sanitize_seq_date
 from gc_state import can_auto_send_for_mode, gc1_unlimited_auto_send
+from gc_watch_log import watch_log
 
 
 def _gc1_output_date(report, config: AppConfig) -> str:
@@ -179,6 +180,8 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
     if not sequence_folder:
         return ProcessResult(ok=False, fail_reason="시퀀스 폴더 없음")
 
+    watch_log("단계", f"acam 데이터 읽기 — {os.path.basename(sequence_folder)}")
+
     injection_folders = find_injection_folders(sequence_folder)
     if not injection_folders:
         print("[경고] F-... .D 주입 폴더가 없습니다.")
@@ -210,6 +213,8 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
         print("\n[안내] 추출된 피크 데이터 없음.")
         return ProcessResult(ok=False, sequence_folder=sequence_folder, fail_reason="피크 없음")
 
+    watch_log("단계", f"acam 파싱 완료 — 주입 {len(cycle_peaks_list)}개")
+
     first_label = injection_labels[0] if injection_labels else None
     cycle_peaks_list, skipped_first, skipped_first_info = drop_first_cycle_if_startup_noise(
         cycle_peaks_list,
@@ -234,6 +239,8 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
     output_path = build_output_filename(config.excel_output_dir, sample_name, seq_date)
     latest_mtime = get_latest_injection_acam_mtime(sequence_folder)
 
+    watch_log("단계", f"엑셀 저장 — {sample_name} ({len(cycle_peaks_list)}주입)")
+
     try:
         df = build_stacked_dataframe(cycle_peaks_list)
         df.to_excel(output_path, index=False, sheet_name="Sheet1")
@@ -244,6 +251,7 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
         email_sent = False
         email_body = None
         if config.send_email:
+            watch_log("단계", f"메일 발송 — {os.path.basename(output_path)}")
             email_body = generate_email_body(
                 sample_name,
                 seq_date,
@@ -262,8 +270,14 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
                 email_body,
                 script_dir,
             )
+            if email_sent:
+                watch_log("단계", "메일 발송 완료")
+            else:
+                watch_log("단계", "메일 발송 보류 (쿨다운·SMTP)")
         else:
             print("\n[안내] 이메일 건너뜀 (--no-email)")
+
+        watch_log("단계", f"엑셀 저장 완료 — {os.path.basename(output_path)}")
 
         action_bits = ["엑셀 저장"]
         if email_sent:
@@ -317,9 +331,13 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
     print(f"\n[안내] 분석 날짜(시퀀스 최초 실행): {analysis_date}")
     print(f"[안내] 시료: '{sample_name}'")
 
+    watch_log("단계", f"Report 파싱 — {os.path.basename(sample_folder)}")
+
     output_path = build_output_filename(config.excel_output_dir, sample_name, analysis_date)
     latest_mtime = get_latest_report_mtime(sample_folder)
     total_peaks = sum(len(c) for c in fid_cycles) + sum(len(c) for c in tcd_cycles)
+
+    watch_log("단계", f"엑셀 저장(FID+TCD) — {sample_name}")
 
     try:
         write_chem32_excel(output_path, fid_cycles, tcd_cycles)
@@ -332,6 +350,7 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
         email_sent = False
         email_body = None
         if config.send_email:
+            watch_log("단계", f"메일 발송 — {os.path.basename(output_path)}")
             email_body = generate_email_body(
                 sample_name,
                 analysis_date,
@@ -353,8 +372,14 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
                 email_body,
                 script_dir,
             )
+            if email_sent:
+                watch_log("단계", "메일 발송 완료")
+            else:
+                watch_log("단계", "메일 발송 보류 (쿨다운·SMTP)")
         else:
             print("\n[안내] 이메일 건너뜀 (--no-email)")
+
+        watch_log("단계", f"엑셀 저장 완료 — {os.path.basename(output_path)}")
 
         action_bits = ["Chem32 엑셀(FID+TCD)"]
         if email_sent:
@@ -399,6 +424,7 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
         if skip_export and not config.force:
             print("[Autochro] PDF 내보내기 건너뜀 (watch에서 이미 실행됨)")
         else:
+            watch_log("단계", "Autochro PDF 내보내기")
             # config.force → watch/개시 요청 시 Autochro PDF 항상 재내보내기
             export_ok, _, export_msg = ensure_gc1_pdf_exported(
                 config.excel_output_dir,
@@ -409,6 +435,7 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
                 return ProcessResult(ok=False, fail_reason=f"Autochro PDF 내보내기 실패 — {export_msg}")
             if export_msg and export_msg not in ("CRM 변경 없음", "Autochro 자동화 비활성"):
                 print(f"[Autochro] {export_msg}")
+                watch_log("단계", f"Autochro — {export_msg}")
 
     pdf_path = find_active_pdf(config)
     if not pdf_path:
@@ -452,6 +479,7 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
         )
 
     print(f"\n[안내] GC1 PDF: {os.path.basename(pdf_path)}")
+    watch_log("단계", f"PDF 파싱 — {os.path.basename(pdf_path)}")
     analysis_date = _gc1_output_date(report, config)
     print(f"[안내] 분석 날짜: {analysis_date}")
     print(f"[안내] 시료: '{sample_name}'")
@@ -475,6 +503,8 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
     latest_mtime = get_latest_pdf_mtime(pdf_path)
     total_peaks = sum(len(c) for c in report.fid_cycles) + sum(len(c) for c in report.tcd_cycles)
 
+    watch_log("단계", f"엑셀 저장 — {sample_name}")
+
     try:
         write_gc1_excel(output_path, report.fid_cycles, report.tcd_cycles)
         print(f"\n[성공] {output_path}")
@@ -486,6 +516,7 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
         email_sent = False
         email_body = None
         if config.send_email:
+            watch_log("단계", f"메일 발송 — {os.path.basename(output_path)}")
             email_body = generate_email_body(
                 sample_name,
                 analysis_date,
@@ -507,8 +538,14 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
                 email_body,
                 script_dir,
             )
+            if email_sent:
+                watch_log("단계", "메일 발송 완료")
+            else:
+                watch_log("단계", "메일 발송 보류 (쿨다운·SMTP)")
         else:
             print("\n[안내] 이메일 건너뜀 (--no-email)")
+
+        watch_log("단계", f"엑셀 저장 완료 — {os.path.basename(output_path)}")
 
         action_bits = ["GC1 PDF 엑셀(FID+TCD)"]
         if email_sent:

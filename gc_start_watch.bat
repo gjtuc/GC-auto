@@ -16,7 +16,7 @@ if not exist "%~dp0gc_automation.py" (
     exit /b 1
 )
 
-for %%m in (gc_config gc_console gc_instance gc_profiles gc_gc1 gc_autochro gc_chemstation gc_chem32 gc_kch gc_mailer gc_state gc_wifi gc_status gc_pipeline gc_watch gc_request gc_error_handler) do (
+for %%m in (gc_config gc_console gc_instance gc_profiles gc_gc1 gc_autochro gc_chemstation gc_chem32 gc_kch gc_mailer gc_state gc_wifi gc_status gc_pipeline gc_watch gc_watch_log gc_request gc_error_handler gc_watchdog) do (
     if not exist "%~dp0%%m.py" (
         echo [오류] %%m.py 가 없습니다. gc_*.py 모듈 전체가 같은 폴더에 있어야 합니다.
         pause

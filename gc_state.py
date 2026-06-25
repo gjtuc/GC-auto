@@ -55,6 +55,7 @@ from gc_config import (
     AFTERNOON_START_HOUR,
     AUTO_MAIL_COOLDOWN_HOURS,
     DAILY_SEND_LIMIT,
+    PENDING_EMAIL_RETRY_INTERVAL_SEC,
     PENDING_EMAIL_SEND_RETRIES,
     PENDING_EMAIL_SMTP_WAIT_MAX_SEC,
 )
@@ -381,6 +382,50 @@ def get_pending_email_retry(state: dict) -> Optional[dict]:
     return None
 
 
+def _parse_state_timestamp(raw: str) -> Optional[datetime]:
+    if not raw:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime(str(raw).strip(), fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def pending_email_retry_due(
+    state_path: str,
+    interval_sec: Optional[int] = None,
+    now: Optional[datetime] = None,
+) -> bool:
+    """미발송 메일 재시도 주기(기본 30초)가 됐는지."""
+    interval = (
+        PENDING_EMAIL_RETRY_INTERVAL_SEC
+        if interval_sec is None
+        else max(15, int(interval_sec))
+    )
+    pending = get_pending_email_retry(load_send_state(state_path))
+    if not pending:
+        return False
+    anchor = pending.get("last_retry_at") or pending.get("failed_at")
+    anchor_dt = _parse_state_timestamp(str(anchor or ""))
+    if anchor_dt is None:
+        return True
+    now = now or datetime.now()
+    return (now - anchor_dt).total_seconds() >= interval
+
+
+def record_pending_email_retry_attempt(state_path: str) -> None:
+    """DNS/SMTP 실패 후에도 다음 재시도까지 interval 유지."""
+    state = load_send_state(state_path)
+    pending = get_pending_email_retry(state)
+    if not pending:
+        return
+    pending["last_retry_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    pending["retry_count"] = int(pending.get("retry_count", 0)) + 1
+    save_send_state(state_path, state)
+
+
 def set_pending_email_retry(
     state_path: str,
     *,
@@ -402,7 +447,10 @@ def set_pending_email_retry(
     }
     save_send_state(state_path, state)
     print(f"[안내] 메일 재발송 대기 등록 — {os.path.basename(excel_path)}")
-    print(f"       watch가 핫스팟 연결 중 {os.getenv('PENDING_EMAIL_RETRY_INTERVAL_SEC', '60')}초마다 자동 재시도 (성공까지)")
+    print(
+        f"       watch가 핫스팟 연결 중 {PENDING_EMAIL_RETRY_INTERVAL_SEC}초마다 "
+        "자동 재시도 (성공까지)"
+    )
 
 
 def clear_pending_email_retry(state_path: str) -> None:
@@ -485,14 +533,29 @@ def try_pending_email_retry(
     if not allowed:
         return False, f"{slot_reason} — 재발송 보류"
 
+    if not pending_email_retry_due(state_path):
+        return False, ""
+
     excel_path = pending["excel_path"]
     if not os.path.isfile(excel_path):
         clear_pending_email_retry(state_path)
         return False, "재발송 대기 엑셀 파일 없음 — 대기 항목 삭제"
 
+    from gc_wifi import smtp_internet_wait_reason
+
+    net_reason = smtp_internet_wait_reason()
+    if net_reason:
+        record_pending_email_retry_attempt(state_path)
+        return (
+            False,
+            f"{net_reason} — {PENDING_EMAIL_RETRY_INTERVAL_SEC}초 후 재발송 재시도",
+        )
+
     from gc_mailer import send_email_via_smtp
+    from gc_watch_log import watch_log
 
     print(f"\n[진행] 미발송 메일 재시도 — {os.path.basename(excel_path)}")
+    watch_log("단계", f"미발송 메일 재시도 — {os.path.basename(excel_path)}")
     attempts_before = int(pending.get("retry_count", 0))
     ok = send_email_via_smtp(
         excel_path,
@@ -517,12 +580,10 @@ def try_pending_email_retry(
             attempts=attempts_before,
         )
         return True, summary
+    record_pending_email_retry_attempt(state_path)
     state = load_send_state(state_path)
     pending = get_pending_email_retry(state)
     if pending:
-        pending["retry_count"] = int(pending.get("retry_count", 0)) + 1
-        pending["last_retry_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        save_send_state(state_path, state)
         log_gc_event(
             excel_output_dir,
             "mail_retry_fail",

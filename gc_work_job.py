@@ -34,6 +34,7 @@ from gc_state import (
     save_send_state,
     set_pending_email_retry,
 )
+from gc_watch_log import watch_log
 
 ACTIVE_JOB_KEY = "active_work_job"
 STEP_ORDER = ("prepare", "excel", "mail")
@@ -128,10 +129,15 @@ def mark_job_step(state_path: str, step: str, done: bool = True) -> None:
     steps[step] = done
     state[ACTIVE_JOB_KEY] = job
     save_send_state(state_path, state)
+    label = STEP_LABELS.get(step, step)
+    status = "완료" if done else "재시도"
+    watch_log("단계", f"{label} {status}")
 
 
 def set_job_last_step(state_path: str, step: str) -> None:
     update_active_job(state_path, last_step=step)
+    label = STEP_LABELS.get(step, step)
+    watch_log("단계", f"{label} 진행 중")
 
 
 def mark_job_interrupted(
@@ -151,6 +157,7 @@ def mark_job_interrupted(
     state[ACTIVE_JOB_KEY] = job
     save_send_state(state_path, state)
     step_label = STEP_LABELS.get(job.get("last_step") or "", job.get("last_step") or "")
+    watch_log("작업", f"중단 — '{step_label}' 단계부터 재개 예정")
     print(
         f"[안내] 핫스pot 끊김/중단 — 작업 미완료 "
         f"(재연결 시 '{step_label}' 단계부터 다시)"

@@ -27,11 +27,13 @@ import json
 import os
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime
 
 from gc_config import WATCH_HEARTBEAT_STALE_SEC, default_watch_status_json
 from gc_console import setup_console_encoding
+from gc_watch_log import watch_activity_log_path
 
 setup_console_encoding()
 
@@ -124,6 +126,37 @@ def _watch_heartbeat_stale(
     return False, age, status_pid
 
 
+def _start_activity_log_tail() -> threading.Event:
+    """watch 숨김 프로세스 활동 로그 → GC Watch 창에 실시간 표시."""
+    log_path = watch_activity_log_path()
+    stop = threading.Event()
+
+    def _worker() -> None:
+        pos = 0
+        if os.path.isfile(log_path):
+            try:
+                pos = os.path.getsize(log_path)
+            except OSError:
+                pos = 0
+        while not stop.is_set():
+            try:
+                if os.path.isfile(log_path):
+                    with open(log_path, encoding="utf-8") as f:
+                        f.seek(pos)
+                        chunk = f.read()
+                        if chunk:
+                            for line in chunk.splitlines():
+                                if line.strip():
+                                    print(line)
+                            pos = f.tell()
+            except OSError:
+                pass
+            stop.wait(0.4)
+
+    threading.Thread(target=_worker, name="gc-watch-activity-tail", daemon=True).start()
+    return stop
+
+
 def _find_healthy_watch(status_json: str) -> int | None:
     alive, hb_epoch, status_pid = _parse_heartbeat(status_json)
     if not _heartbeat_fresh(alive, hb_epoch):
@@ -196,11 +229,14 @@ def supervise_watch(script_dir: str, poll_sec: int = 30) -> None:
     watch_cmd = [sys.executable, os.path.join(script_dir, "gc_automation.py"), "--watch"]
     status_json = default_watch_status_json()
 
+    _start_activity_log_tail()
+
     print(
         f"[watchdog] GC watch 감시 시작 — heartbeat {WATCH_HEARTBEAT_STALE_SEC}초 이상 "
         "멈추면 재시작"
     )
     print(f"[watchdog] 상태 파일: {status_json}")
+    print(f"[watchdog] 활동 로그: {watch_activity_log_path()}")
 
     from gc_instance import kill_other_watch_processes
 

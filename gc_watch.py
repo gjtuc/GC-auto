@@ -73,6 +73,7 @@ from gc_state import (
     try_pending_email_retry,
 )
 from gc_status import StatusReporter
+from gc_watch_log import watch_log
 from gc_wifi import (
     check_runtime_gate,
     get_connected_wifi_ssid,
@@ -143,6 +144,8 @@ class WatchRunner:
         print(f"       순간 끊김({reconnect_sec}초 미만 재연결) — 동일 세션, 중복 없음")
         print(f"       바탕화면 확인: MMDDHHmm.txt (핫스팟 연결 중에만 갱신)")
         print(f"       수동 force: gc_동작해줘.bat 또는 Cursor")
+
+        watch_log("watch", "감시 루프 시작")
 
         self._publish("starting", "감시 시작됨")
 
@@ -246,6 +249,8 @@ class WatchRunner:
         if not is_required_hotspot_connected(self.config.required_ssid, self.config.skip_wifi_check):
             if self._hotspot_was_connected:
                 self._hotspot_lost_at = time.monotonic()
+                reason = hotspot_wait_reason(self.config.required_ssid)
+                watch_log("Wi-Fi", f"연결 끊김 — {reason}")
             self._hotspot_was_connected = False
             reason = hotspot_wait_reason(self.config.required_ssid)
             self._publish("waiting_wifi", reason)
@@ -262,6 +267,7 @@ class WatchRunner:
                         f"핫스팟 순간 끊김 ({int(gap_sec)}초) — "
                         f"동일 세션 ({min_gap}초 미만 재연결, 재처리 안 함)"
                     )
+                    watch_log("Wi-Fi", f"순간 끊김 {int(gap_sec)}초 — 동일 세션 유지")
                     self._publish("wifi_ok", msg)
                     print(f"[안내] {msg}")
                     return
@@ -282,12 +288,15 @@ class WatchRunner:
                     return
             elif self._gc23_has_pending_work():
                 print("\n[감지] GC2/GC3 새 데이터 — 핫스팟 연결 유지 중 처리")
+                watch_log("작업", "새 데이터 감지 — 처리 시작")
                 self._on_hotspot_connected(just_connected=False)
                 return
             self._publish("wifi_ok", "핫스팟 연결 유지 중 — 새 데이터 있으면 자동 처리")
             return
 
         print("\n[감지] 핫스팟 연결됨 — 새 데이터 확인")
+        ssid = get_connected_wifi_ssid() or self.config.required_ssid
+        watch_log("Wi-Fi", f"연결됨 — {ssid}")
         self._on_hotspot_connected(just_connected=True)
 
     def _gc1_has_pending_work(self) -> bool:
@@ -317,7 +326,7 @@ class WatchRunner:
             return False
         state = load_send_state(self.watch_opts.send_state_file)
         if get_pending_email_retry(state):
-            return True
+            return pending_email_retry_due(self.watch_opts.send_state_file)
         if not os.path.isdir(self.config.data_path):
             return False
         mode = resolve_chemstation_mode(self.config.data_path, self.config.chemstation_mode)
@@ -468,6 +477,7 @@ class WatchRunner:
                 sequence_folder=pdf_path,
             )
             print(f"[진행] GC1 핫스pot 세션 — {pdf_path}")
+            watch_log("작업", f"GC1 처리 시작 — {os.path.basename(pdf_path)}")
             self._pipeline_running = True
             try:
                 result = run_processing(self.config, self.script_dir)
@@ -476,6 +486,7 @@ class WatchRunner:
                 self._pipeline_running = False
             if result.ok and result.sequence_folder and result.latest_acam_mtime is not None:
                 self._record_result(result)
+                watch_log("작업", f"GC1 처리 완료 — {result.action_summary or 'OK'}")
                 self._publish(
                     "done",
                     "GC1 처리 완료 — 핫스pot 유지 중 반복 없음, 끊었다 재연결 시 다시",
@@ -484,6 +495,7 @@ class WatchRunner:
                 )
             else:
                 reason = result.fail_reason or "처리 실패"
+                watch_log("작업", f"GC1 처리 실패 — {reason}")
                 failed_pdf = result.sequence_folder or pdf_path
                 if failed_pdf:
                     mark_gc1_pdf_attempt_failed(
@@ -528,9 +540,11 @@ class WatchRunner:
                 sequence_folder=sample_folder,
             )
             print(f"[진행] Chem32 — {sample_folder}")
+            watch_log("작업", f"Chem32 처리 시작 — {os.path.basename(sample_folder)}")
             result = run_processing(self.config, self.script_dir)
             if result.ok and result.sequence_folder and result.latest_acam_mtime is not None:
                 self._record_result(result)
+                watch_log("작업", f"Chem32 처리 완료 — {result.action_summary or 'OK'}")
                 self._publish(
                     "done",
                     "Chem32 처리 완료 — 새 Report 있으면 자동 재처리",
@@ -539,6 +553,7 @@ class WatchRunner:
                 )
             else:
                 reason = result.fail_reason or "처리 실패"
+                watch_log("작업", f"Chem32 처리 실패 — {reason}")
                 self._publish(
                     "error",
                     f"{reason} — 수동 실행 또는 Report 생성 확인",
@@ -590,10 +605,12 @@ class WatchRunner:
             sequence_folder=sequence_folder,
         )
         print(f"[진행] 새 데이터 — {sequence_folder}")
+        watch_log("작업", f"처리 시작 — {os.path.basename(sequence_folder)}")
 
         result = run_processing(self.config, self.script_dir)
         if result.ok and result.sequence_folder and result.latest_acam_mtime is not None:
             self._record_result(result)
+            watch_log("작업", f"처리 완료 — {result.action_summary or 'OK'}")
             self._publish(
                 "done",
                 "처리 완료 — 새 데이터 있으면 자동 재처리",
@@ -602,6 +619,7 @@ class WatchRunner:
             )
         else:
             reason = result.fail_reason or "처리 실패"
+            watch_log("작업", f"처리 실패 — {reason}")
             code = "need_sample_name" if "시료" in reason else "error"
             self._publish(
                 code,
