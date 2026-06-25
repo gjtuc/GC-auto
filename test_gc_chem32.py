@@ -9,14 +9,18 @@ from gc_console import setup_console_encoding
 setup_console_encoding()
 
 from gc_chem32 import (
+    analysis_gaps_email_lines,
     build_merged_injection_cycles,
     collect_reported_injections,
     cycles_match,
     default_sample_name_from_folder,
     describe_cycle_mismatch,
+    detect_analysis_gaps,
+    estimate_missing_cycles_floor,
     find_active_sample_folder,
     find_sample_folders,
     find_sequence_folders,
+    format_duration_korean,
     get_latest_sequence_datetime,
     parse_sequence_datetime,
     parse_report_txt,
@@ -163,6 +167,42 @@ class TestGcChem32(unittest.TestCase):
         self.assertEqual(len(injections), 3)
         latest = get_latest_sequence_datetime(sample)
         self.assertEqual(latest.strftime("%Y-%m-%d %H:%M:%S"), "2026-06-09 13:53:26")
+
+    def test_estimate_missing_cycles_floor_remainder_discarded(self):
+        gap_sec = 3 * 3600 + 15 * 60
+        interval_sec = 58 * 60 + 23
+        missing, remainder = estimate_missing_cycles_floor(gap_sec, interval_sec)
+        self.assertEqual(missing, 3)
+        self.assertGreaterEqual(remainder, 19 * 60)
+        self.assertLess(remainder, 20 * 60)
+
+    def test_short_gap_counts_as_zero_missing(self):
+        interval_sec = 58 * 60 + 23
+        missing, remainder = estimate_missing_cycles_floor(39 * 60, interval_sec)
+        self.assertEqual(missing, 0)
+        self.assertAlmostEqual(remainder, 39 * 60, delta=1)
+
+    def test_detect_analysis_gaps_on_gc3_e2e_sample(self):
+        sample = os.path.join(
+            os.path.dirname(__file__),
+            "testdata",
+            "gc3_e2e",
+            "Chem32",
+            "1",
+            "DATA",
+            "20260611 DRME 600C Ni0.1g8g_Ni5_Ce5",
+        )
+        if not os.path.isdir(sample):
+            self.skipTest("gc3_e2e fixture missing")
+        gaps, interval = detect_analysis_gaps(sample)
+        self.assertIsNotNone(interval)
+        self.assertGreater(interval, 3000)
+        self.assertGreaterEqual(len(gaps), 1)
+        total = sum(gap.missing_cycles for gap in gaps)
+        self.assertGreaterEqual(total, 20)
+        lines = analysis_gaps_email_lines(gaps, interval)
+        self.assertTrue(any("미수집" in line for line in lines))
+        self.assertIn("버림", "\n".join(lines))
 
 
 if __name__ == "__main__":

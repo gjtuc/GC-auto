@@ -82,6 +82,7 @@ def generate_email_body(
     chem32: bool = False,
     fid_cycles: int = 0,
     tcd_cycles: int = 0,
+    chem32_extra_lines: Optional[List[str]] = None,
 ) -> str:
     """메일 본문 (플레인 텍스트)."""
     lines = [
@@ -115,6 +116,9 @@ def generate_email_body(
             lines.append(f"  - {name}")
     else:
         lines.extend(["", "[경고] sequence.acam_ 없음: 없음"])
+
+    if chem32_extra_lines:
+        lines.extend(chem32_extra_lines)
 
     return "\n".join(lines) + "\n"
 

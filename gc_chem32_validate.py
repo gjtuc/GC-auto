@@ -32,11 +32,13 @@ from gc_chem32 import (
     cycles_match,
     default_sample_name_from_folder,
     describe_cycle_mismatch,
+    detect_analysis_gaps,
     find_active_sample_folder,
     find_chem32_injection_folders,
     find_report_txt,
     find_sample_folders,
     find_sequence_folders,
+    format_duration_korean,
     get_latest_sequence_datetime,
     parse_injection_reports,
     _resolve_reference_index,
@@ -228,6 +230,18 @@ def run_validate(args: argparse.Namespace) -> int:
 
     print("\n=== 병합 결과 (pipeline 과 동일) ===")
     fid_cycles, tcd_cycles, matched, skipped = build_merged_injection_cycles(sample_folder)
+    gaps, gap_interval = detect_analysis_gaps(sample_folder)
+    if gap_interval:
+        print(f"\n사이클 간격 추정: {format_duration_korean(gap_interval)}")
+    if gaps:
+        total_missing = sum(g.missing_cycles for g in gaps)
+        print(f"분석 중단 구간 {len(gaps)}곳 — 추정 미수집 약 {total_missing}사이클 (floor, 잔여 버림)")
+        for index, gap in enumerate(gaps, start=1):
+            print(
+                f"  {index}. {gap.after_last_at:%Y-%m-%d %H:%M} → {gap.before_first_at:%H:%M}  "
+                f"공백 {format_duration_korean(gap.gap_sec)} → 약 {gap.missing_cycles}사이클 "
+                f"(잔여 {format_duration_korean(gap.remainder_sec)} 버림)"
+            )
     default_name = default_sample_name_from_folder(sample_folder)
     print(f"시료명(자동): {default_name!r}")
     print(

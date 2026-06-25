@@ -59,8 +59,10 @@ from datetime import datetime
 from typing import List, Optional
 
 from gc_chem32 import (
+    analysis_gaps_email_lines,
     build_merged_injection_cycles,
     default_sample_name_from_folder,
+    detect_analysis_gaps,
     find_active_sample_folder,
     get_first_analysis_date,
     get_latest_report_mtime,
@@ -300,6 +302,8 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
         return ProcessResult(ok=False, fail_reason="Chem32 시료 폴더 없음")
 
     fid_cycles, tcd_cycles, matched_labels, skipped = build_merged_injection_cycles(sample_folder)
+    analysis_gaps, gap_interval = detect_analysis_gaps(sample_folder)
+    gap_email_lines = analysis_gaps_email_lines(analysis_gaps, gap_interval)
     if not fid_cycles and not tcd_cycles:
         return ProcessResult(
             ok=False,
@@ -349,6 +353,7 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
                 chem32=True,
                 fid_cycles=len(fid_cycles),
                 tcd_cycles=len(tcd_cycles),
+                chem32_extra_lines=gap_email_lines or None,
             )
             email_sent = _try_auto_email(
                 config,

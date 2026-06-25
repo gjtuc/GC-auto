@@ -27,6 +27,12 @@ GC3 폴더 구조:
      (20260608, REACTION, TCD-FID 등 방법명 접두는 무시)
   3) 그 시각이 가장 늦은 시료 폴더 1개 선택 (동률 시 Report mtime → 폴더 mtime)
   4) 선택된 시료 안 모든 시퀀스를 시각순 병합 → 엑셀 1개 + 메일
+
+[분석 중단 구간 — detect_analysis_gaps]
+  · 주입 Report 시각 간 중앙값 = 사이클 1회 소요 시간(추정)
+  · 시퀀스 A 마지막 주입 → 시퀀스 B 첫 주입 공백을 나눗셈:
+      빠진 사이클 = floor(공백 / 추정간격), 나머지 분·초는 버림(오차로 간주)
+  · 예: 공백 3시간 15분, 간격 58분 23초 → 3사이클 미수집, 잔여 ~19분 버림
 """
 
 from __future__ import annotations
@@ -35,7 +41,10 @@ import csv
 import glob
 import os
 import re
+import statistics
+from dataclasses import dataclass
 from datetime import datetime
+from itertools import groupby
 from typing import Dict, List, Optional, Tuple
 
 from gc_config import AREA_MATCH_TOLERANCE, RT_TOLERANCE
@@ -440,6 +449,183 @@ def collect_reported_injections(sample_folder: str) -> List[Tuple[str, str]]:
     return collected
 
 
+@dataclass(frozen=True)
+class AnalysisGap:
+    """시퀀스 사이 분석 중단 — floor(공백/간격) 만큼 사이클 미수집 추정."""
+
+    after_sequence: str
+    before_sequence: str
+    gap_sec: float
+    interval_sec: float
+    missing_cycles: int
+    remainder_sec: float
+    after_last_at: datetime
+    before_first_at: datetime
+
+
+def analysis_gaps_email_lines(
+    gaps: List[AnalysisGap],
+    interval_sec: Optional[float],
+) -> List[str]:
+    """메일 본문용 분석 중단 구간 요약."""
+    if interval_sec is None:
+        return []
+    lines = [
+        "",
+        f"[분석 중단] 사이클 간격 추정(중앙값): {format_duration_korean(interval_sec)}",
+    ]
+    if not gaps:
+        lines.append("  시퀀스 간 긴 공백(미수집 사이클) 없음")
+        return lines
+    total = sum(gap.missing_cycles for gap in gaps)
+    lines.append(
+        f"  추정 미수집 사이클 합계: 약 {total}개 "
+        "(공백÷간격 floor, 나머지 분·초는 버림)"
+    )
+    for index, gap in enumerate(gaps, start=1):
+        lines.append(
+            f"  {index}. {gap.after_last_at.strftime('%m-%d %H:%M')} → "
+            f"{gap.before_first_at.strftime('%m-%d %H:%M')}  "
+            f"공백 {format_duration_korean(gap.gap_sec)} → "
+            f"약 {gap.missing_cycles}사이클 "
+            f"(잔여 {format_duration_korean(gap.remainder_sec)} 버림)"
+        )
+    return lines
+
+
+def format_duration_korean(sec: float) -> str:
+    """초 → 'N시간 M분 S초' (0이 아닌 단위만)."""
+    total = max(0, int(round(sec)))
+    hours, rem = divmod(total, 3600)
+    minutes, seconds = divmod(rem, 60)
+    parts: List[str] = []
+    if hours:
+        parts.append(f"{hours}시간")
+    if minutes:
+        parts.append(f"{minutes}분")
+    if seconds or not parts:
+        parts.append(f"{seconds}초")
+    return " ".join(parts)
+
+
+def estimate_missing_cycles_floor(gap_sec: float, interval_sec: float) -> Tuple[int, float]:
+    """
+    나눗셈 여몫 버림 — floor(공백/간격) = 미수집 사이클, 나머지 초는 오차로 폐기.
+
+    예: 3시간 15분 / 58분 23초 → 3사이클, 잔여 약 19분
+    """
+    if interval_sec <= 0 or gap_sec <= 0:
+        return 0, max(0.0, gap_sec)
+    missing = int(gap_sec // interval_sec)
+    remainder = gap_sec - missing * interval_sec
+    return missing, remainder
+
+
+def _injection_report_mtime(injection_path: str) -> Optional[float]:
+    report_path = find_report_txt(injection_path)
+    if not report_path:
+        return None
+    try:
+        return os.path.getmtime(report_path)
+    except OSError:
+        return None
+
+
+def median_injection_interval_sec(
+    injections: List[Tuple[str, str]],
+    *,
+    min_delta_sec: float = 60.0,
+) -> Optional[float]:
+    """연속 주입 Report mtime 차이의 중앙값(초) — 사이클 1회 소요 추정."""
+    times: List[float] = []
+    for injection_path, _sequence_path in injections:
+        mtime = _injection_report_mtime(injection_path)
+        if mtime is not None:
+            times.append(mtime)
+    times.sort()
+    deltas = [
+        times[index] - times[index - 1]
+        for index in range(1, len(times))
+        if times[index] > times[index - 1] and (times[index] - times[index - 1]) >= min_delta_sec
+    ]
+    if not deltas:
+        return None
+    return float(statistics.median(deltas))
+
+
+def detect_analysis_gaps(sample_folder: str) -> Tuple[List[AnalysisGap], Optional[float]]:
+    """
+    시퀀스 간 긴 공백 → floor 나눗셈으로 미수집 사이클 수 추정.
+
+    Returns:
+        (gaps, median_interval_sec)
+    """
+    injections = collect_reported_injections(sample_folder)
+    interval_sec = median_injection_interval_sec(injections)
+    if not interval_sec or len(injections) < 2:
+        return [], interval_sec
+
+    seq_blocks: List[Tuple[str, float, float]] = []
+    for sequence_path, group in groupby(injections, key=lambda item: item[1]):
+        chunk = list(group)
+        times = [
+            mtime
+            for injection_path, _ in chunk
+            if (mtime := _injection_report_mtime(injection_path)) is not None
+        ]
+        if not times:
+            continue
+        seq_blocks.append((sequence_path, min(times), max(times)))
+
+    seq_blocks.sort(key=lambda item: _sequence_sort_key(item[0]))
+    gaps: List[AnalysisGap] = []
+    for index in range(1, len(seq_blocks)):
+        prev_path, _prev_first, prev_last = seq_blocks[index - 1]
+        curr_path, curr_first, _curr_last = seq_blocks[index]
+        gap_sec = curr_first - prev_last
+        if gap_sec <= 0:
+            continue
+        missing, remainder = estimate_missing_cycles_floor(gap_sec, interval_sec)
+        if missing < 1:
+            continue
+        gaps.append(
+            AnalysisGap(
+                after_sequence=os.path.basename(prev_path),
+                before_sequence=os.path.basename(curr_path),
+                gap_sec=gap_sec,
+                interval_sec=interval_sec,
+                missing_cycles=missing,
+                remainder_sec=remainder,
+                after_last_at=datetime.fromtimestamp(prev_last),
+                before_first_at=datetime.fromtimestamp(curr_first),
+            )
+        )
+    return gaps, interval_sec
+
+
+def log_analysis_gaps(gaps: List[AnalysisGap], interval_sec: Optional[float]) -> None:
+    """분석 중단 구간 — 콘솔 안내."""
+    if not interval_sec:
+        return
+    print(
+        f"[안내] 사이클 간격 추정(중앙값): {format_duration_korean(interval_sec)} "
+        f"({interval_sec:.0f}초)"
+    )
+    if not gaps:
+        print("[안내] 시퀀스 간 긴 분석 중단(미수집 사이클) 없음")
+        return
+    total_missing = sum(gap.missing_cycles for gap in gaps)
+    print(f"[안내] 분석 중단 구간 {len(gaps)}곳 — 추정 미수집 사이클 합계 {total_missing}개")
+    for index, gap in enumerate(gaps, start=1):
+        print(
+            f"  ({index}) {gap.after_last_at.strftime('%m-%d %H:%M')} → "
+            f"{gap.before_first_at.strftime('%m-%d %H:%M')}  "
+            f"공백 {format_duration_korean(gap.gap_sec)}  "
+            f"→ 약 {gap.missing_cycles}사이클 미수집 "
+            f"(잔여 {format_duration_korean(gap.remainder_sec)} 버림)"
+        )
+
+
 def _cycle_signature(peaks: List[dict]) -> Tuple[Tuple[float, float], ...]:
     return tuple(
         (round(float(peak["Time"]), 3), round(float(peak["Area"]), 1)) for peak in peaks
@@ -653,6 +839,9 @@ def build_merged_injection_cycles(
         return [], [], [], 0
 
     print(f"[안내] Report 있는 주입 {len(injections)}개 (시퀀스 {len(find_sequence_folders(sample_folder))}개)")
+
+    analysis_gaps, _interval = detect_analysis_gaps(sample_folder)
+    log_analysis_gaps(analysis_gaps, _interval)
 
     complete_injections, incomplete_skipped = _filter_complete_injection_pairs(injections)
     if not complete_injections:
