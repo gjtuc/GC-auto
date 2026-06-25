@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
-"""002F 롤오버 + 시퀀스 연결 검증 — PASS/FAIL 출력."""
+"""
+002F 롤오버 + 시퀀스 연결 검증 — PASS/FAIL 출력.
+
+Chem32 실데이터에서 001F0199→002F0201 연결, 갭 2사이클(구 001F-only 정규식 11사이클 오류) 확인.
+
+사용: python scripts/verify_002f_connection.py
+"""
 from __future__ import annotations
 
 import io

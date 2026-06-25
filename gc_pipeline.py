@@ -309,6 +309,7 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
     analysis_gaps, gap_interval = detect_analysis_gaps(sample_folder)
     gap_injections = collect_reported_injections(sample_folder)
     gap_email_lines = analysis_gaps_email_lines(analysis_gaps, gap_interval, gap_injections)
+    # 엑셀 갭 행: 메일과 동일 갭이지만 삽입 위치는 matched_paths 기준 (전체 주입 # ≠ 엑셀 행 #)
     fid_cycles, tcd_cycles = insert_analysis_gap_markers(
         fid_cycles,
         tcd_cycles,

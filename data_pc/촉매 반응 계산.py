@@ -1291,7 +1291,9 @@ def setup_experiment_folder(source_excel, calculated_excel, reaction_type):
 # ==========================================
 # KCH 원본 엑셀: Time/Area 열, # 행으로 사이클 구분.
 # GC2: H2 RT 구간으로 장비 판별. GC3: TCD+FID 시트 병합(DRME).
-# GC3 갭: gc_chem32 가 삽입한 "중단" 행 → data_pc/gc_gap_contract.py 계약.
+# GC3 갭: gc_chem32 가 FID/TCD 시트에 삽입한 ``#``+``중단`` 블록.
+# N = parse_gap_missing_cycles (Time 또는 Symmetry GC_GAP:N=).
+# gap_cycles → process_excel 에서 해당 Cycle NaN (Origin 시간축 정렬).
 from gc_gap_contract import is_cycle_header_row, parse_gap_missing_cycles
 
 
@@ -1306,7 +1308,7 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
         _index, row = rows[i]
 
         if is_cycle_header_row(row):
-            # 헤더 + 중단 행 쌍: N사이클 건너뛰고 다음 실측 Cycle 번호 맞춤
+            # Chem32 레이아웃: [헤더 # Time …][중단 행 1줄] — N사이클 건너뛰기
             if i + 1 < len(rows) and parse_gap_missing_cycles(rows[i + 1][1]) is not None:
                 missing = parse_gap_missing_cycles(rows[i + 1][1])
                 last_cycle = max((c["Cycle"] for c in cycle_list), default=cycle_num - 1)

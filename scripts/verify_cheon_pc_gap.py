@@ -1,5 +1,15 @@
 # -*- coding: utf-8 -*-
-"""차헌 PC가 GC3 갭 행(중단)을 올바르게 파싱하는지 E2E 검증."""
+"""
+차헌 PC가 GC3 갭 행(중단)을 올바르게 파싱하는지 E2E 검증.
+
+GC3 장비 PC에서 만든 xlsx 를 촉매 반응 계산.parse_gc_sheet 로 읽어
+  · ``중단`` 행 존재 · N=2 파싱 · gap_cycles {100,101} · FID/TCD 일치
+를 PASS/FAIL 로 출력.
+
+사용:
+  python scripts/verify_cheon_pc_gap.py
+  (선택) Downloads 의 구 xlsx 와 비교 — 갭 행 없으면 차헌 PC가 공백을 모름
+"""
 from __future__ import annotations
 
 import importlib.util

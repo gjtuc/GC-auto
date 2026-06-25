@@ -33,6 +33,14 @@ GC3 폴더 구조:
   · 연속 주입 사이 공백만 검사 (시퀀스 폴더 경계와 무관)
   · 주입 Report 시각 간 중앙값 = 사이클 1회 소요 시간(추정)
   · floor(공백 / 추정간격) = 미수집 사이클, 나머지 분·초는 버림
+
+[엑셀 갭 행 — gap_marker_cycle / insert_analysis_gap_markers]
+  · 메일 본문 + FID/TCD 시트 모두에 공백 표시 (차헌 PC는 **엑셀만** 읽음)
+  · `#`=중단, Time=약 N사이클 미수집, Symmetry=GC_GAP:N=N → data_pc/gc_gap_contract.py
+  · Area=공백 기간·폴더명(002F0209→001F0101)은 사람용; 차헌 PC 파서는 Time/Symmetry 만 사용
+  · 갭 인덱스는 collect_reported_injections(전체 Report) 기준 — 엑셀은 sliding 통과분만
+    있으므로 _gap_marker_excel_position 으로 “마지막 실측 주입” 뒤에 삽입 (002F FID 미완료 등)
+  · 검증: scripts/verify_cheon_pc_gap.py (촉매 반응 계산.parse_gc_sheet E2E)
 """
 
 from __future__ import annotations
@@ -687,9 +695,12 @@ def gap_marker_cycle(
     before_folder: str = "",
 ) -> List[dict]:
     """
-    엑셀 1주입 자리 — 분석 중단·미수집 사이클 표시 행.
+    엑셀 1주입 자리 — 분석 중단·미수집 사이클 표시 행 (FID/TCD 시트 공통 1행).
 
-    차헌 PC 계약: data_pc/gc_gap_contract.py (Symmetry GC_GAP:N= 로 N 파싱).
+    차헌 PC 계약 (data_pc/gc_gap_contract.py):
+      · 머신 파싱: Time ``약 {N}사이클 미수집`` 또는 Symmetry ``GC_GAP:N={N}``
+      · parse_gc_sheet 가 N칸 Cycle 을 비우고 Origin 열 정렬
+    Area 의 ``· 폴더A→폴더B`` 는 표시 전용 — 파서는 무시.
     """
     n = gap.missing_cycles
     where = ""
@@ -742,9 +753,12 @@ def insert_analysis_gap_markers(
     all_injections: Optional[List[Tuple[str, str]]] = None,
 ) -> Tuple[List[List[dict]], List[List[dict]]]:
     """
-    연속 주입 사이 공백을 엑셀 주입 목록에 표시 행으로 삽입.
+    연속 주입 사이 공백을 엑셀 주입 목록에 ``중단`` 표시 행으로 삽입.
 
-    예: 사이클1,2,3 → [중단 N사이클] → 사이클9,10 …
+    all_injections: collect_reported_injections() — 갭 #번호·메일과 동일 기준.
+    matched_*: build_merged_injection_cycles() 통과분만 (002F FID 미완료 등은 여기 없음).
+
+    예: 실측 … Cycle99 → [중단 2사이클] → 실측 Cycle102 …
     """
     if not analysis_gaps or not matched_injection_paths:
         return fid_cycles, tcd_cycles
