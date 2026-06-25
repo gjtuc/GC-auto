@@ -24,7 +24,7 @@ copy /Y "%DEPLOY%gc_data_pc_watch_loop_chaheon.bat" "%GC_HOME%\gc_data_pc_watch_
 copy /Y "%DEPLOY%gc_data_pc_ensure_watch_chaheon.bat" "%GC_HOME%\gc_data_pc_ensure_watch.bat" >nul
 
 schtasks /Delete /TN "%TASK_NAME%" /F >nul 2>&1
-schtasks /Create /TN "%TASK_NAME%" /SC ONLOGON /TR "wscript.exe \"%VBS%\"" /F
+schtasks /Create /TN "%TASK_NAME%" /SC ONLOGON /TR "wscript.exe %VBS%" /F
 if errorlevel 1 (
     echo [error] schtasks failed - try run as administrator
     pause
@@ -33,7 +33,7 @@ if errorlevel 1 (
 
 set "ENSURE_BAT=%GC_HOME%\gc_data_pc_ensure_watch.bat"
 schtasks /Delete /TN "%ENSURE_TASK%" /F >nul 2>&1
-schtasks /Create /TN "%ENSURE_TASK%" /SC MINUTE /MO 15 /TR "\"%ENSURE_BAT%\"" /F
+schtasks /Create /TN "%ENSURE_TASK%" /SC MINUTE /MO 15 /TR "%ENSURE_BAT%" /F
 
 echo.
 echo [OK] Logon autostart: %TASK_NAME%
