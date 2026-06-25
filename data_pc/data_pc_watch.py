@@ -39,16 +39,30 @@ def _repo_roots() -> list[str]:
 
 
 def _import_gc_wifi():
+    """GC-auto-push gc_wifi 우선 — GC-auto 구버전(단일 SSID)과 혼동 방지."""
+    last_err: ImportError | None = None
     for repo in _repo_roots():
-        if os.path.isdir(repo) and repo not in sys.path:
-            sys.path.insert(0, repo)
-    from gc_wifi import (
-        get_connected_wifi_ssid,
-        hotspot_wait_reason,
-        is_required_hotspot_connected,
-    )
+        if not os.path.isdir(repo):
+            continue
+        if not os.path.isfile(os.path.join(repo, "gc_wifi.py")):
+            continue
+        if repo in sys.path:
+            sys.path.remove(repo)
+        sys.path.insert(0, repo)
+        try:
+            import importlib
 
-    return get_connected_wifi_ssid, is_required_hotspot_connected, hotspot_wait_reason
+            mod = importlib.import_module("gc_wifi")
+            if not hasattr(mod, "parse_required_ssids"):
+                continue
+            return (
+                mod.get_connected_wifi_ssid,
+                mod.is_required_hotspot_connected,
+                mod.hotspot_wait_reason,
+            )
+        except ImportError as exc:
+            last_err = exc
+    raise ImportError("gc_wifi (parse_required_ssids 지원) 없음") from last_err
 
 
 def _env_bool(name: str, default: bool = False) -> bool:

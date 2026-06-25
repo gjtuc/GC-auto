@@ -58,6 +58,20 @@ def main() -> int:
     except Exception as exc:
         check("wifi autoconnect import", False, str(exc))
 
+    # 2c) data_pc_watch must use multi-SSID gc_wifi (not GC-auto legacy)
+    from data_pc_watch import _import_gc_wifi
+
+    get_ssid, is_conn, _ = _import_gc_wifi()
+    from dotenv import load_dotenv
+
+    load_dotenv(os.path.join(DESKTOP_CURSOR, "gc_automation.env"))
+    req = os.getenv("REQUIRED_HOTSPOT", "")
+    ssid = get_ssid()
+    if ssid in ("iptime", "iptime_5G", "iptime 2"):
+        check("watch gc_wifi multi-ssid", is_conn(req, False), f"ssid={ssid!r}")
+    else:
+        check("watch gc_wifi multi-ssid", True, f"skip no iptime ssid={ssid!r}")
+
     # 3) watchdog pythonw
     from data_pc_watchdog import _pythonw_cmd, _pythonw_executable
 
