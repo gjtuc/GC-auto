@@ -231,6 +231,10 @@ def supervise_watch(script_dir: str, poll_sec: int = 30) -> None:
 
     _start_activity_log_tail()
 
+    print()
+    print(" [GC Watch] 감시 시작 — heartbeat 멈춤 시 자동 재시작")
+    print(" 종료: 이 창을 닫거나 gc_stop_watch.bat 실행")
+    print()
     print(
         f"[watchdog] GC watch 감시 시작 — heartbeat {WATCH_HEARTBEAT_STALE_SEC}초 이상 "
         "멈추면 재시작"

@@ -37,6 +37,7 @@ from gc_chem32 import (
     find_report_txt,
     find_sample_folders,
     find_sequence_folders,
+    get_latest_sequence_datetime,
     parse_injection_reports,
     _resolve_reference_index,
 )
@@ -195,9 +196,11 @@ def run_validate(args: argparse.Namespace) -> int:
         return 1
 
     samples = find_sample_folders(data_path)
-    print(f"[안내] 시료 후보 {len(samples)}개 (mtime 최신순):")
+    print(f"[안내] 시료 후보 {len(samples)}개 (최신 시퀀스 시각순):")
     for index, path in enumerate(samples[:10]):
-        print(f"  {index + 1}. {os.path.basename(path)}  mtime={datetime.fromtimestamp(os.path.getmtime(path))}")
+        latest = get_latest_sequence_datetime(path)
+        when = latest.strftime("%Y-%m-%d %H:%M:%S") if latest else "시퀀스 시각 없음"
+        print(f"  {index + 1}. {os.path.basename(path)}  최신시퀀스={when}")
 
     sample_folder = None
     if args.sample_folder:

@@ -20,6 +20,13 @@ GC3 폴더 구조:
   · 진행 중 주입: 폴더만 있고 Report 없음 → 제외 (다음 watch 에 포함)
   · TCD sliding match: 직전 주입 대비 RT·Area (DRM 장주기 drift 대응)
   · Area% 과학적 표기(1.000e2) 파싱 지원
+
+[시료 폴더 선택 — find_active_sample_folder]
+  1) DATA 아래 시료 폴더(시퀀스 하위 폴더 보유) 전부 스캔
+  2) 각 시료의 **최신 시퀀스 실행 시각** = 시퀀스 폴더명 끝 YYYY-MM-DD HH-MM-SS
+     (20260608, REACTION, TCD-FID 등 방법명 접두는 무시)
+  3) 그 시각이 가장 늦은 시료 폴더 1개 선택 (동률 시 Report mtime → 폴더 mtime)
+  4) 선택된 시료 안 모든 시퀀스를 시각순 병합 → 엑셀 1개 + 메일
 """
 
 from __future__ import annotations
@@ -38,8 +45,13 @@ REACTION_DT = re.compile(
     r"REACTION\s+(\d{4})-(\d{2})-(\d{2})\s+(\d{2})-(\d{2})-(\d{2})",
     re.IGNORECASE,
 )
+# 시퀀스 폴더명 끝의 실행 시각 — 방법명 접두(20260608, TCD-FID 등) 무시
+SEQUENCE_TRAILING_DT = re.compile(
+    r"(\d{4})-(\d{2})-(\d{2})\s+(\d{2})-(\d{2})-(\d{2})\s*$",
+)
 CHEM32_INJECTION_RE = re.compile(r"^001F(\d+)\.D$", re.IGNORECASE)
 SAMPLE_FOLDER_DATE_RE = re.compile(r"^(\d{8})\s+(.+)$")
+SAMPLE_FOLDER_YYMMDD_RE = re.compile(r"^(\d{6})_(.+)$")
 REPORT_PEAK_LINE = re.compile(
     r"^\s*(\d+)\s+([\d.]+)\s+(\S+)\s+([\d.]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s*$"
 )
@@ -81,6 +93,41 @@ def _is_sequence_folder(folder_path: str) -> bool:
     return False
 
 
+def parse_sequence_datetime(sequence_path: str) -> Optional[datetime]:
+    """시퀀스 폴더명 끝 YYYY-MM-DD HH-MM-SS → datetime (방법명 접두 무시)."""
+    match = SEQUENCE_TRAILING_DT.search(os.path.basename(sequence_path))
+    if not match:
+        return None
+    y, mo, d, h, mi, s = map(int, match.groups())
+    return datetime(y, mo, d, h, mi, s)
+
+
+def get_latest_sequence_datetime(sample_folder: str) -> Optional[datetime]:
+    """시료 폴더 안 시퀀스 중 가장 늦은 실행 시각."""
+    latest: Optional[datetime] = None
+    for sequence_path in find_sequence_folders(sample_folder):
+        dt = parse_sequence_datetime(sequence_path)
+        if dt is None:
+            try:
+                dt = datetime.fromtimestamp(os.path.getmtime(sequence_path))
+            except OSError:
+                continue
+        if latest is None or dt > latest:
+            latest = dt
+    return latest
+
+
+def _sample_rank_key(sample_path: str) -> Tuple[datetime, float, float]:
+    """시료 폴더 우선순위: 최신 시퀀스 시각 → Report mtime → 폴더 mtime."""
+    seq_dt = get_latest_sequence_datetime(sample_path) or datetime.min
+    report_mtime = get_latest_report_mtime(sample_path) or 0.0
+    try:
+        folder_mtime = os.path.getmtime(sample_path)
+    except OSError:
+        folder_mtime = 0.0
+    return (seq_dt, report_mtime, folder_mtime)
+
+
 def find_sample_folders(data_path: str) -> List[str]:
     folders = []
     try:
@@ -89,11 +136,7 @@ def find_sample_folders(data_path: str) -> List[str]:
                 folders.append(entry.path)
     except OSError:
         return []
-    return sorted(
-        folders,
-        key=lambda path: get_latest_report_mtime(path) or os.path.getmtime(path),
-        reverse=True,
-    )
+    return sorted(folders, key=_sample_rank_key, reverse=True)
 
 
 def find_active_sample_folder(
@@ -113,7 +156,12 @@ def find_active_sample_folder(
     samples = find_sample_folders(data_path)
     if samples:
         chosen = samples[0]
-        print(f"[안내] Chem32 시료 폴더 자동 선택: {chosen}")
+        latest = get_latest_sequence_datetime(chosen)
+        when = latest.strftime("%Y-%m-%d %H:%M:%S") if latest else "시퀀스 시각 없음"
+        print(
+            f"[안내] Chem32 시료 폴더 자동 선택: {chosen}\n"
+            f"       (DATA 내 {len(samples)}개 시료 중 최신 시퀀스 {when})"
+        )
         return chosen
     return None
 
@@ -130,10 +178,9 @@ def find_sequence_folders(sample_folder: str) -> List[str]:
 
 
 def _sequence_sort_key(sequence_path: str) -> datetime:
-    match = REACTION_DT.search(os.path.basename(sequence_path))
-    if match:
-        y, mo, d, h, mi, s = map(int, match.groups())
-        return datetime(y, mo, d, h, mi, s)
+    dt = parse_sequence_datetime(sequence_path)
+    if dt is not None:
+        return dt
     return datetime.fromtimestamp(os.path.getmtime(sequence_path))
 
 
@@ -176,22 +223,26 @@ def find_report_csv(injection_folder: str, index: int) -> Optional[str]:
 
 
 def get_first_analysis_date(sample_folder: str) -> str:
-    """시퀀스 최초 실행일 YYYYMMDD — 폴더명 REACTION 날짜 중 가장 이른 값."""
+    """시퀀스 최초 실행일 YYYYMMDD — 시퀀스 폴더명 끝 날짜 중 가장 이른 값."""
     earliest = None
     for sequence_path in find_sequence_folders(sample_folder):
-        match = REACTION_DT.search(os.path.basename(sequence_path))
-        if not match:
+        dt = parse_sequence_datetime(sequence_path)
+        if dt is None:
             continue
-        y, mo, d, *_ = map(int, match.groups())
-        dt = datetime(y, mo, d)
-        if earliest is None or dt < earliest:
-            earliest = dt
+        day = datetime(dt.year, dt.month, dt.day)
+        if earliest is None or day < earliest:
+            earliest = day
     if earliest:
         return earliest.strftime("%Y%m%d")
     folder_name = os.path.basename(sample_folder)
     head = re.match(r"^(\d{8})", folder_name)
     if head:
         return head.group(1)
+    yymmdd = SAMPLE_FOLDER_YYMMDD_RE.match(folder_name)
+    if yymmdd:
+        yy = int(yymmdd.group(1)[:2])
+        century = 2000 if yy < 80 else 1900
+        return f"{century + yy}{yymmdd.group(1)[2:]}"
     return datetime.fromtimestamp(os.path.getmtime(sample_folder)).strftime("%Y%m%d")
 
 
@@ -200,6 +251,9 @@ def default_sample_name_from_folder(sample_folder: str) -> str:
     match = SAMPLE_FOLDER_DATE_RE.match(name)
     if match:
         return match.group(2).strip()
+    yymmdd = SAMPLE_FOLDER_YYMMDD_RE.match(name)
+    if yymmdd:
+        return yymmdd.group(2).strip()
     return name.strip()
 
 

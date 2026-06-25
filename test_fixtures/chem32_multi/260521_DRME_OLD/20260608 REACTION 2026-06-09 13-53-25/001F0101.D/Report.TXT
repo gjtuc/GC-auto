@@ -1,0 +1,7 @@
+Signal FID1A,  Range:0.0 - 0.5 min
+#  RT(min)  Name  RT(min)  Area  %Area  Height
+  1  0.523  CH4  0.52  12345.6  45.2  100.1
+  2  1.102  C2H6  1.10  8901.2  32.6  80.2
+Signal TCD1A,  Range:0.0 - 0.5 min
+  1  0.312  H2  0.31  5500.0  60.0  90.0
+  2  2.450  CO2  2.45  3666.7  40.0  60.0

@@ -552,10 +552,8 @@ def try_pending_email_retry(
         )
 
     from gc_mailer import send_email_via_smtp
-    from gc_watch_log import watch_log
 
     print(f"\n[진행] 미발송 메일 재시도 — {os.path.basename(excel_path)}")
-    watch_log("단계", f"미발송 메일 재시도 — {os.path.basename(excel_path)}")
     attempts_before = int(pending.get("retry_count", 0))
     ok = send_email_via_smtp(
         excel_path,

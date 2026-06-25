@@ -8,7 +8,16 @@ GC3 Win7 PC - USB 배포 (차헌)
    - AUTO_MAIL_COOLDOWN_HOURS=3 이 있으면 삭제하거나 =1 로 변경 (기본 1시간)
 4. gc_stop_watch.bat 후 gc_start_watch.bat (또는 gc_install_autostart 재로그인)
 
-이번 zip 포함 수정 (2026-06-23)
+이번 zip 포함 수정 (2026-06-25)
+--------------------------------
+  [gc_chem32] 시료 폴더 자동 선택 — DATA 전 시료 스캔 후 시퀀스 폴더명 끝
+              YYYY-MM-DD HH-MM-SS 가 가장 늦은 시료 1개 선택 (mtime 아님)
+  [gc_chem32] 선택된 시료 안 모든 REACTION 시퀀스 시간순 병합 → 엑셀 1개
+  [gc_chem32] 260525_ / 20260620 등 폴더명·TCD-FID 접두 무관, 끝 시각만 사용
+  [gc_watch]  GC Watch 검은창 — GC2 와 동일 [안내]/[진행] 형식 (stdout tee)
+  [gc_watchdog] 한글 안내 문구 WriteConsoleW 로 출력 (bat echo 깨짐 방지)
+
+이전 zip (2026-06-23)
 --------------------------------
   [gc_chem32] sliding match — DRM 장주기, 직전 주입 대비 Area 비교
   [gc_chem32] FID/TCD 1:1 쌍, Area% 1.000e2 파싱, 미완료 Report 제외

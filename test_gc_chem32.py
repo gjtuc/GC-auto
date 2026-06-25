@@ -15,6 +15,10 @@ from gc_chem32 import (
     default_sample_name_from_folder,
     describe_cycle_mismatch,
     find_active_sample_folder,
+    find_sample_folders,
+    find_sequence_folders,
+    get_latest_sequence_datetime,
+    parse_sequence_datetime,
     parse_report_txt,
     resolve_chemstation_mode,
 )
@@ -23,6 +27,11 @@ FIXTURE_ROOT = os.path.join(
     os.path.dirname(__file__),
     "test_fixtures",
     "chem32",
+)
+MULTI_FIXTURE_ROOT = os.path.join(
+    os.path.dirname(__file__),
+    "test_fixtures",
+    "chem32_multi",
 )
 REPORT_TXT = os.path.join(
     FIXTURE_ROOT,
@@ -113,6 +122,47 @@ class TestGcChem32(unittest.TestCase):
         fid_cycles, tcd_cycles, matched, _skipped = build_merged_injection_cycles(sample)
         self.assertEqual(len(fid_cycles), len(tcd_cycles))
         self.assertEqual(len(fid_cycles), len(matched))
+
+    def test_parse_sequence_datetime_trailing_only(self):
+        dt = parse_sequence_datetime(
+            r"C:\Data\sample\20260608 REACTION 2026-06-09 10-26-46"
+        )
+        self.assertIsNotNone(dt)
+        self.assertEqual(dt.strftime("%Y-%m-%d %H:%M:%S"), "2026-06-09 10:26:46")
+        tcd = parse_sequence_datetime(
+            r"C:\Data\sample\REACTION_TCD-FID 297 CYCLE 2026-06-05 17-26-24"
+        )
+        self.assertEqual(tcd.strftime("%Y-%m-%d %H:%M:%S"), "2026-06-05 17:26:24")
+
+    def test_default_sample_name_yymmdd_underscore(self):
+        name = default_sample_name_from_folder(
+            os.path.join(MULTI_FIXTURE_ROOT, "260521_DRME_OLD")
+        )
+        self.assertEqual(name, "DRME_OLD")
+
+    def test_find_active_sample_by_latest_sequence_not_folder_mtime(self):
+        active = find_active_sample_folder(MULTI_FIXTURE_ROOT)
+        self.assertIsNotNone(active)
+        self.assertIn("20260620 DRE active", active)
+        ranked = find_sample_folders(MULTI_FIXTURE_ROOT)
+        self.assertIn("20260620 DRE active", ranked[0])
+
+    def test_merge_multiple_sequences_inside_active_sample(self):
+        sample = os.path.join(MULTI_FIXTURE_ROOT, "20260620 DRE active")
+        sequences = find_sequence_folders(sample)
+        self.assertEqual(len(sequences), 3)
+        self.assertEqual(
+            os.path.basename(sequences[0]),
+            "20260608 REACTION 2026-06-09 11-00-00",
+        )
+        self.assertEqual(
+            os.path.basename(sequences[-1]),
+            "20260608 REACTION 2026-06-09 13-53-26",
+        )
+        injections = collect_reported_injections(sample)
+        self.assertEqual(len(injections), 3)
+        latest = get_latest_sequence_datetime(sample)
+        self.assertEqual(latest.strftime("%Y-%m-%d %H:%M:%S"), "2026-06-09 13:53:26")
 
 
 if __name__ == "__main__":
