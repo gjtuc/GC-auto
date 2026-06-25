@@ -10,8 +10,8 @@ GC3 Win7 PC - USB 배포 (차헌)
 
 이번 zip 포함 수정 (2026-06-16)
 --------------------------------
-  [gc_chem32] 분석 중단 갭 — floor(공백/주입간격) 미수집 사이클, 엑셀 중단 행 삽입
-  [gc_chem32] Symmetry GC_GAP:N= 머신 파싱 (차헌 PC 와 계약: data_pc/gc_gap_contract.py)
+  [gc_chem32] 분석 중단 갭 — Injection Date(실제 주입 시각) 기준, 연속 주입 사이만 검사
+  [gc_chem32] (수정) 파일 mtime·시퀀스 폴더 경계 비교 제거 — 12시간 오탐 방지
   [gc_pipeline] 갭 감지 → FID/TCD 엑셀·메일 본문 안내
 
 차헌 PC (별도 배포 — data_pc/촉매 반응 계산.py)

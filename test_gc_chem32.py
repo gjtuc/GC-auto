@@ -26,6 +26,7 @@ from gc_chem32 import (
     gap_marker_cycle,
     get_latest_sequence_datetime,
     insert_analysis_gap_markers,
+    parse_report_injection_datetime,
     parse_sequence_datetime,
     parse_report_txt,
     resolve_chemstation_mode,
@@ -131,6 +132,29 @@ class TestGcChem32(unittest.TestCase):
         self.assertEqual(len(fid_cycles), len(tcd_cycles))
         self.assertEqual(len(fid_cycles), len(matched))
 
+    def test_parse_report_injection_datetime(self):
+        dt = parse_report_injection_datetime(REPORT_TXT)
+        self.assertIsNone(dt)  # fixture Report has no Injection Date header
+
+        e2e_report = os.path.join(
+            os.path.dirname(__file__),
+            "testdata",
+            "gc3_e2e",
+            "Chem32",
+            "1",
+            "DATA",
+            "20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3",
+            "20260608 REACTION 2026-06-20 16-14-24",
+            "001F0175.D",
+            "Report.TXT",
+        )
+        if os.path.isfile(e2e_report):
+            dt = parse_report_injection_datetime(e2e_report)
+            self.assertIsNotNone(dt)
+            self.assertEqual(dt.year, 2026)
+            self.assertEqual(dt.month, 6)
+            self.assertEqual(dt.day, 23)
+
     def test_parse_sequence_datetime_trailing_only(self):
         dt = parse_sequence_datetime(
             r"C:\Data\sample\20260608 REACTION 2026-06-09 10-26-46"
@@ -186,6 +210,12 @@ class TestGcChem32(unittest.TestCase):
         self.assertEqual(missing, 0)
         self.assertAlmostEqual(remainder, 39 * 60, delta=1)
 
+    def test_normal_injection_spacing_not_counted_as_gap(self):
+        """연속 주입 간격 ≈1사이클이면 missing=1 → 분석 중단 아님."""
+        interval_sec = 63 * 60 + 11
+        missing, _ = estimate_missing_cycles_floor(interval_sec * 1.05, interval_sec)
+        self.assertEqual(missing, 1)
+
     def test_detect_analysis_gaps_on_gc3_e2e_sample(self):
         sample = os.path.join(
             os.path.dirname(__file__),
@@ -218,6 +248,8 @@ class TestGcChem32(unittest.TestCase):
             r"C:\s\SEQ_B\001F0101.D",
         ]
         gap = AnalysisGap(
+            after_injection_index=1,
+            before_injection_index=2,
             after_sequence="SEQ_A",
             before_sequence="SEQ_B",
             gap_sec=3600.0,

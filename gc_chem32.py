@@ -29,10 +29,10 @@ GC3 폴더 구조:
   4) 선택된 시료 안 모든 시퀀스를 시각순 병합 → 엑셀 1개 + 메일
 
 [분석 중단 구간 — detect_analysis_gaps]
+  · 주입 Report.TXT 의 **Injection Date** (실제 주입 시각) 사용 — 파일 mtime 아님
+  · 연속 주입 사이 공백만 검사 (시퀀스 폴더 경계와 무관)
   · 주입 Report 시각 간 중앙값 = 사이클 1회 소요 시간(추정)
-  · 시퀀스 A 마지막 주입 → 시퀀스 B 첫 주입 공백을 나눗셈:
-      빠진 사이클 = floor(공백 / 추정간격), 나머지 분·초는 버림(오차로 간주)
-  · 예: 공백 3시간 15분, 간격 58분 23초 → 3사이클 미수집, 잔여 ~19분 버림
+  · floor(공백 / 추정간격) = 미수집 사이클, 나머지 분·초는 버림
 """
 
 from __future__ import annotations
@@ -63,6 +63,17 @@ SAMPLE_FOLDER_DATE_RE = re.compile(r"^(\d{8})\s+(.+)$")
 SAMPLE_FOLDER_YYMMDD_RE = re.compile(r"^(\d{6})_(.+)$")
 REPORT_PEAK_LINE = re.compile(
     r"^\s*(\d+)\s+([\d.]+)\s+(\S+)\s+([\d.]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s*$"
+)
+INJECTION_DATE_LINE = re.compile(
+    r"^Injection Date\s*:\s*(.+?)(?:\s+Inj\s*:|$)",
+    re.IGNORECASE,
+)
+INJECTION_DATE_FORMATS = (
+    "%m/%d/%Y %I:%M:%S %p",
+    "%m/%d/%Y %H:%M:%S",
+    "%d/%m/%Y %I:%M:%S %p",
+    "%d/%m/%Y %H:%M:%S",
+    "%Y-%m-%d %H:%M:%S",
 )
 
 
@@ -451,8 +462,10 @@ def collect_reported_injections(sample_folder: str) -> List[Tuple[str, str]]:
 
 @dataclass(frozen=True)
 class AnalysisGap:
-    """시퀀스 사이 분석 중단 — floor(공백/간격) 만큼 사이클 미수집 추정."""
+    """연속 주입 사이 분석 중단 — floor(공백/간격) 만큼 사이클 미수집 추정."""
 
+    after_injection_index: int
+    before_injection_index: int
     after_sequence: str
     before_sequence: str
     gap_sec: float
@@ -521,6 +534,39 @@ def estimate_missing_cycles_floor(gap_sec: float, interval_sec: float) -> Tuple[
     return missing, remainder
 
 
+def parse_report_injection_datetime(report_path: str) -> Optional[datetime]:
+    """Report.TXT 헤더 Injection Date → 실제 주입 시각 (Chem32 표준)."""
+    try:
+        with _open_chem32_text(report_path) as report_file:
+            for line in report_file:
+                match = INJECTION_DATE_LINE.match(line.strip())
+                if not match:
+                    continue
+                raw = match.group(1).strip()
+                for fmt in INJECTION_DATE_FORMATS:
+                    try:
+                        return datetime.strptime(raw, fmt)
+                    except ValueError:
+                        continue
+    except OSError:
+        return None
+    return None
+
+
+def _injection_analysis_timestamp(injection_path: str) -> Optional[float]:
+    """주입 시각(초) — Injection Date 우선, 없으면 Report mtime."""
+    report_path = find_report_txt(injection_path)
+    if not report_path:
+        return None
+    injected = parse_report_injection_datetime(report_path)
+    if injected is not None:
+        return injected.timestamp()
+    try:
+        return os.path.getmtime(report_path)
+    except OSError:
+        return None
+
+
 def _injection_report_mtime(injection_path: str) -> Optional[float]:
     report_path = find_report_txt(injection_path)
     if not report_path:
@@ -536,12 +582,12 @@ def median_injection_interval_sec(
     *,
     min_delta_sec: float = 60.0,
 ) -> Optional[float]:
-    """연속 주입 Report mtime 차이의 중앙값(초) — 사이클 1회 소요 추정."""
+    """연속 주입 Injection Date 차이의 중앙값(초) — 사이클 1회 소요 추정."""
     times: List[float] = []
     for injection_path, _sequence_path in injections:
-        mtime = _injection_report_mtime(injection_path)
-        if mtime is not None:
-            times.append(mtime)
+        stamp = _injection_analysis_timestamp(injection_path)
+        if stamp is not None:
+            times.append(stamp)
     times.sort()
     deltas = [
         times[index] - times[index - 1]
@@ -555,7 +601,9 @@ def median_injection_interval_sec(
 
 def detect_analysis_gaps(sample_folder: str) -> Tuple[List[AnalysisGap], Optional[float]]:
     """
-    시퀀스 간 긴 공백 → floor 나눗셈으로 미수집 사이클 수 추정.
+    연속 주입 사이 긴 공백 → floor 나눗셈으로 미수집 사이클 수 추정.
+
+    시퀀스 폴더가 바뀌어도, 실제 마지막·다음 주입 시각(Injection Date)만 본다.
 
     Returns:
         (gaps, median_interval_sec)
@@ -565,39 +613,35 @@ def detect_analysis_gaps(sample_folder: str) -> Tuple[List[AnalysisGap], Optiona
     if not interval_sec or len(injections) < 2:
         return [], interval_sec
 
-    seq_blocks: List[Tuple[str, float, float]] = []
-    for sequence_path, group in groupby(injections, key=lambda item: item[1]):
-        chunk = list(group)
-        times = [
-            mtime
-            for injection_path, _ in chunk
-            if (mtime := _injection_report_mtime(injection_path)) is not None
-        ]
-        if not times:
-            continue
-        seq_blocks.append((sequence_path, min(times), max(times)))
+    timed: List[Tuple[int, str, str, float]] = []
+    for index, (injection_path, sequence_path) in enumerate(injections):
+        stamp = _injection_analysis_timestamp(injection_path)
+        if stamp is not None:
+            timed.append((index, injection_path, sequence_path, stamp))
 
-    seq_blocks.sort(key=lambda item: _sequence_sort_key(item[0]))
     gaps: List[AnalysisGap] = []
-    for index in range(1, len(seq_blocks)):
-        prev_path, _prev_first, prev_last = seq_blocks[index - 1]
-        curr_path, curr_first, _curr_last = seq_blocks[index]
-        gap_sec = curr_first - prev_last
+    for pos in range(1, len(timed)):
+        prev_index, prev_path, prev_seq, prev_stamp = timed[pos - 1]
+        curr_index, curr_path, curr_seq, curr_stamp = timed[pos]
+        gap_sec = curr_stamp - prev_stamp
         if gap_sec <= 0:
             continue
         missing, remainder = estimate_missing_cycles_floor(gap_sec, interval_sec)
-        if missing < 1:
+        # 정상 주입 간격(≈1사이클)은 제외 — 2사이클 이상 비었을 때만 분석 중단
+        if missing < 2:
             continue
         gaps.append(
             AnalysisGap(
-                after_sequence=os.path.basename(prev_path),
-                before_sequence=os.path.basename(curr_path),
+                after_injection_index=prev_index,
+                before_injection_index=curr_index,
+                after_sequence=os.path.basename(prev_seq),
+                before_sequence=os.path.basename(curr_seq),
                 gap_sec=gap_sec,
                 interval_sec=interval_sec,
                 missing_cycles=missing,
                 remainder_sec=remainder,
-                after_last_at=datetime.fromtimestamp(prev_last),
-                before_first_at=datetime.fromtimestamp(curr_first),
+                after_last_at=datetime.fromtimestamp(prev_stamp),
+                before_first_at=datetime.fromtimestamp(curr_stamp),
             )
         )
     return gaps, interval_sec
@@ -635,7 +679,7 @@ def insert_analysis_gap_markers(
     analysis_gaps: List[AnalysisGap],
 ) -> Tuple[List[List[dict]], List[List[dict]]]:
     """
-    시퀀스 사이 공백을 엑셀 주입 목록에 표시 행으로 삽입.
+    연속 주입 사이 공백을 엑셀 주입 목록에 표시 행으로 삽입.
 
     예: 사이클1,2,3 → [중단 N사이클] → 사이클9,10 …
     """
@@ -644,27 +688,13 @@ def insert_analysis_gap_markers(
     if len(fid_cycles) != len(tcd_cycles) != len(matched_injection_paths):
         raise ValueError("FID/TCD/경로 개수 불일치")
 
-    seq_by_index = [sequence_folder_of_injection(path) for path in matched_injection_paths]
-    insert_after: List[Tuple[int, AnalysisGap]] = []
-    for gap in analysis_gaps:
-        after_idx = None
-        before_idx = None
-        for index, seq_name in enumerate(seq_by_index):
-            if seq_name == gap.after_sequence:
-                after_idx = index
-            if before_idx is None and seq_name == gap.before_sequence:
-                before_idx = index
-        if after_idx is not None and before_idx is not None and before_idx > after_idx:
-            insert_after.append((after_idx, gap))
-
-    if not insert_after:
-        return fid_cycles, tcd_cycles
-
     fid_out = list(fid_cycles)
     tcd_out = list(tcd_cycles)
-    for after_idx, gap in sorted(insert_after, key=lambda item: item[0], reverse=True):
+    for gap in sorted(analysis_gaps, key=lambda item: item.after_injection_index, reverse=True):
         marker = gap_marker_cycle(gap)
-        pos = after_idx + 1
+        pos = gap.after_injection_index + 1
+        if pos < 0 or pos > len(fid_out):
+            continue
         fid_out.insert(pos, marker)
         tcd_out.insert(pos, marker)
     return fid_out, tcd_out

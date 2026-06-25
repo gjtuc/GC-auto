@@ -73,6 +73,8 @@ class TestGcGapContract(unittest.TestCase):
 
     def test_gap_marker_cycle_includes_machine_symmetry(self):
         gap = AnalysisGap(
+            after_injection_index=0,
+            before_injection_index=1,
             after_sequence="A",
             before_sequence="B",
             gap_sec=3600.0,
@@ -104,6 +106,8 @@ class TestGc3GapE2E(unittest.TestCase):
             r"C:\s\SEQ_B\001F0102.D",
         ]
         gap = AnalysisGap(
+            after_injection_index=2,
+            before_injection_index=3,
             after_sequence="SEQ_A",
             before_sequence="SEQ_B",
             gap_sec=missing * 600.0,
@@ -147,6 +151,8 @@ class TestGc3GapE2E(unittest.TestCase):
     def test_stacked_dataframe_roundtrip_shape(self):
         peak = [_tcd_peak()]
         gap = AnalysisGap(
+            after_injection_index=1,
+            before_injection_index=2,
             after_sequence="A",
             before_sequence="B",
             gap_sec=600.0,
