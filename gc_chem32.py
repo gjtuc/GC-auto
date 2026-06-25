@@ -479,13 +479,15 @@ class AnalysisGap:
 def analysis_gaps_email_lines(
     gaps: List[AnalysisGap],
     interval_sec: Optional[float],
+    injections: Optional[List[Tuple[str, str]]] = None,
 ) -> List[str]:
-    """메일 본문용 분석 중단 구간 요약."""
+    """메일 본문용 분석 중단 구간 요약 (주입 번호·폴더명 선택)."""
     if interval_sec is None:
         return []
     lines = [
         "",
         f"[분석 중단] 사이클 간격 추정(중앙값): {format_duration_korean(interval_sec)}",
+        "  (Report.TXT Injection Date 기준, 연속 주입 사이 2사이클 이상 공백)",
     ]
     if not gaps:
         lines.append("  시퀀스 간 긴 공백(미수집 사이클) 없음")
@@ -496,12 +498,24 @@ def analysis_gaps_email_lines(
         "(공백÷간격 floor, 나머지 분·초는 버림)"
     )
     for index, gap in enumerate(gaps, start=1):
+        inj_note = ""
+        if injections:
+            try:
+                after_folder = os.path.basename(injections[gap.after_injection_index][0])
+                before_folder = os.path.basename(injections[gap.before_injection_index][0])
+                inj_note = (
+                    f"  [#{gap.after_injection_index + 1} {after_folder} → "
+                    f"#{gap.before_injection_index + 1} {before_folder}]"
+                )
+            except (IndexError, TypeError):
+                pass
         lines.append(
             f"  {index}. {gap.after_last_at.strftime('%m-%d %H:%M')} → "
             f"{gap.before_first_at.strftime('%m-%d %H:%M')}  "
             f"공백 {format_duration_korean(gap.gap_sec)} → "
             f"약 {gap.missing_cycles}사이클 "
             f"(잔여 {format_duration_korean(gap.remainder_sec)} 버림)"
+            + (f"\n     {inj_note.strip()}" if inj_note else "")
         )
     return lines
 

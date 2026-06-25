@@ -41,6 +41,7 @@ from gc_chem32 import (
     format_duration_korean,
     get_latest_sequence_datetime,
     parse_injection_reports,
+    parse_report_injection_datetime,
     _resolve_reference_index,
 )
 from gc_config import AREA_MATCH_TOLERANCE, DEFAULT_GC3_DATA, EXCEL_OUTPUT_DIR, RT_TOLERANCE
@@ -157,6 +158,34 @@ def _audit_sliding_chain(sample_folder: str, detector_key: str = "TCD") -> None:
     print(f"\n[AUDIT 합계] {detector_key} 통과 {total_ok} / 제외 {total_skip}")
 
 
+def _audit_gap_injections(sample_folder: str, gaps, injections) -> None:
+    """분석 중단 구간 전후 Injection Date — Chem32 원본 대조용."""
+    if not gaps:
+        return
+    print("\n=== 갭 주입 시각 감사 (Report Injection Date) ===")
+    for gap_index, gap in enumerate(gaps, start=1):
+        print(
+            f"\n갭 {gap_index}: #{gap.after_injection_index + 1} → #{gap.before_injection_index + 1}  "
+            f"({gap.after_sequence} → {gap.before_sequence})"
+        )
+        lo = max(0, gap.after_injection_index - 2)
+        hi = min(len(injections), gap.before_injection_index + 3)
+        for pos in range(lo, hi):
+            inj_path, seq_path = injections[pos]
+            report = find_report_txt(inj_path)
+            dt = parse_report_injection_datetime(report) if report else None
+            mark = ""
+            if pos == gap.after_injection_index:
+                mark = "  ← 갭 직전"
+            elif pos == gap.before_injection_index:
+                mark = "  ← 갭 직후"
+            when = dt.strftime("%Y-%m-%d %H:%M:%S") if dt else "Injection Date 없음"
+            print(
+                f"  #{pos + 1:3d} {os.path.basename(inj_path):12s}  {when}  "
+                f"({os.path.basename(seq_path)[:48]}){mark}"
+            )
+
+
 def _print_compare_xlsx(
     xlsx_path: str,
     fid_cycles: int,
@@ -231,17 +260,17 @@ def run_validate(args: argparse.Namespace) -> int:
     print("\n=== 병합 결과 (pipeline 과 동일) ===")
     fid_cycles, tcd_cycles, matched, skipped, matched_paths = build_merged_injection_cycles(sample_folder)
     gaps, gap_interval = detect_analysis_gaps(sample_folder)
+    gap_injections = collect_reported_injections(sample_folder)
     if gap_interval:
         print(f"\n사이클 간격 추정: {format_duration_korean(gap_interval)}")
     if gaps:
         total_missing = sum(g.missing_cycles for g in gaps)
         print(f"분석 중단 구간 {len(gaps)}곳 — 추정 미수집 약 {total_missing}사이클 (floor, 잔여 버림)")
-        for index, gap in enumerate(gaps, start=1):
-            print(
-                f"  {index}. {gap.after_last_at:%Y-%m-%d %H:%M} → {gap.before_first_at:%H:%M}  "
-                f"공백 {format_duration_korean(gap.gap_sec)} → 약 {gap.missing_cycles}사이클 "
-                f"(잔여 {format_duration_korean(gap.remainder_sec)} 버림)"
-            )
+        from gc_chem32 import analysis_gaps_email_lines
+
+        for line in analysis_gaps_email_lines(gaps, gap_interval, gap_injections):
+            print(line)
+        _audit_gap_injections(sample_folder, gaps, gap_injections)
     default_name = default_sample_name_from_folder(sample_folder)
     print(f"시료명(자동): {default_name!r}")
     print(

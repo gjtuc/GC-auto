@@ -61,6 +61,7 @@ from typing import List, Optional
 from gc_chem32 import (
     analysis_gaps_email_lines,
     build_merged_injection_cycles,
+    collect_reported_injections,
     default_sample_name_from_folder,
     detect_analysis_gaps,
     find_active_sample_folder,
@@ -306,7 +307,8 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
         sample_folder
     )
     analysis_gaps, gap_interval = detect_analysis_gaps(sample_folder)
-    gap_email_lines = analysis_gaps_email_lines(analysis_gaps, gap_interval)
+    gap_injections = collect_reported_injections(sample_folder)
+    gap_email_lines = analysis_gaps_email_lines(analysis_gaps, gap_interval, gap_injections)
     fid_cycles, tcd_cycles = insert_analysis_gap_markers(
         fid_cycles,
         tcd_cycles,
