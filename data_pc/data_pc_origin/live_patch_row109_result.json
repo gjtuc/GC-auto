@@ -1,0 +1,61 @@
+{
+  "status": "ok",
+  "opju_path": "G:\\연구소\\실험\\실험데이터\\촉매 반응\\DRE 반응(C2H6)\\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test\\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test_Updated.opju",
+  "row": 109,
+  "patches": [
+    {
+      "book": "COyield",
+      "sheet": "Sheet1",
+      "col": 83,
+      "row": 109,
+      "value": 12345,
+      "before": "",
+      "after": "12345"
+    },
+    {
+      "book": "CH4",
+      "sheet": "Sheet1",
+      "col": 83,
+      "row": 109,
+      "value": 23451,
+      "before": "",
+      "after": "23451"
+    },
+    {
+      "book": "H2yield",
+      "sheet": "Sheet1",
+      "col": 83,
+      "row": 109,
+      "value": 34512,
+      "before": "",
+      "after": "34512"
+    },
+    {
+      "book": "CO2conversion",
+      "sheet": "Sheet1",
+      "col": 83,
+      "row": 109,
+      "value": 45123,
+      "before": "",
+      "after": "45123"
+    },
+    {
+      "book": "C2H6conversio",
+      "sheet": "Sheet1",
+      "col": 83,
+      "row": 109,
+      "value": 51234,
+      "before": "",
+      "after": "51234"
+    },
+    {
+      "book": "C2H4",
+      "sheet": "Sheet1",
+      "col": 83,
+      "row": 109,
+      "value": 65432,
+      "before": "",
+      "after": "65432"
+    }
+  ]
+}

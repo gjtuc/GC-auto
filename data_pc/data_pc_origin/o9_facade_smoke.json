@@ -1,0 +1,16 @@
+{
+  "signature": [
+    "opju_path",
+    "df_data",
+    "sample_name",
+    "save_in_place",
+    "identity_key"
+  ],
+  "sheets_updated": 8,
+  "row_count": 107,
+  "ok": true,
+  "log_prefix_ok": true,
+  "stage4_ok": true,
+  "gap_99": "",
+  "gap_100": ""
+}

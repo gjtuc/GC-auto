@@ -1,0 +1,6 @@
+{
+  "exact": 2,
+  "insert": 2,
+  "lt_cmd": "page.xlcolname=0; [Book1]Sheet1!.col=3; [Book1]Sheet1!.insert(GCData);",
+  "lt_calls": 1
+}

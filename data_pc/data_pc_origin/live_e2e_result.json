@@ -1,0 +1,35 @@
+{
+  "status": "ok",
+  "prep": {
+    "ready": true,
+    "reason": "ready",
+    "opju_path": "G:/연구소/실험/실험데이터/촉매 반응/DRE 반응(C2H6)/20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test/20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test.opju",
+    "skip_origin": false,
+    "g_drive_ok": true,
+    "probe_ok": true,
+    "probe_detail": "",
+    "originpro_import_ok": true
+  },
+  "data_source": "G:\\연구소\\실험\\실험데이터\\촉매 반응\\DRE 반응(C2H6)\\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test\\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.xlsx",
+  "sample_name": "20260620 DRE(1.5)@600°C 600CNi5_Ce5_Al2O3",
+  "row_count": 108,
+  "sheets_updated": 6,
+  "warnings": [],
+  "save_in_place": false,
+  "xlsx_path": "G:\\연구소\\실험\\실험데이터\\촉매 반응\\DRE 반응(C2H6)\\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test\\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.xlsx",
+  "df_columns": [
+    "Cycle",
+    "H2 Area",
+    "CO Area",
+    "CO2 Area",
+    "CH4 Area",
+    "C2H4 Area",
+    "C2H6 Area",
+    "C2H6 Conversion (%)",
+    "CO2 Conversion (%)",
+    "H2 Yield (%)",
+    "CO Yield (%)",
+    "CH4 (%)",
+    "C2H4 (%)"
+  ]
+}

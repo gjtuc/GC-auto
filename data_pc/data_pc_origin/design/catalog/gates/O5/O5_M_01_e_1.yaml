@@ -1,0 +1,33 @@
+gate: O5-M-01-e-1
+layer: L4
+parent: O5-M-01
+rollup: [O5-L2-M01, O5-L1-M, O5]
+depends: [O5-M-01-d-1]
+module: data_pc_origin.o5_match
+symbol: keyword_in_text
+assert: "keyword_in_text(text, kw) is True"
+
+quarks:
+  Q1:
+    role: PRE
+    leptons:
+      - { id: Q1-L1, kind: DEP, requires: [O5-M-01-c-1, O5-M-01-d-1] }
+      - { id: Q1-L3, kind: F, fixture: FX-O5-opju-mock.miss_matrix.C1 }
+  Q2:
+    role: EXEC
+    leptons:
+      - { id: Q2-L1, kind: C, expr: "nk = normalize_origin_key(kw)" }
+      - { id: Q2-L2, kind: C, expr: "nt = normalize_origin_key(text)" }
+      - { id: Q2-L3, kind: C, expr: "nk in nt" }
+  Q3:
+    role: POST
+    leptons:
+      - { id: Q3-L1, kind: IN, expr: result is True }
+
+fixtures:
+  FA:
+    bits:
+      - { id: B1, tag: kw, type: str, value: "H2 yield" }
+      - { id: B2, tag: text, type: str, value: "Book1 H2yield DRM Data" }
+      - { id: B3, tag: nk, type: str, value: h2yield }
+      - { id: B4, tag: nt, type: str, value: book1h2yielddrmdata }

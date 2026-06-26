@@ -1,0 +1,23 @@
+{
+  "keyword": "H2 yield",
+  "scanned": 1,
+  "hit": {
+    "raw_search": "Book1 H2yield DRM Data",
+    "norm_kw": "h2yield",
+    "norm_search": "book1h2yielddrmdata",
+    "book": "Book1",
+    "wks": "H2yield",
+    "matched": "True"
+  },
+  "first_miss_fx": null,
+  "candidates": [
+    {
+      "raw_search": "Book1 H2yield DRM Data",
+      "norm_kw": "h2yield",
+      "norm_search": "book1h2yielddrmdata",
+      "book": "Book1",
+      "wks": "H2yield",
+      "matched": "True"
+    }
+  ]
+}
