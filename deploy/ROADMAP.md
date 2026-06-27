@@ -25,6 +25,11 @@
   - [x] 9.0b GC1 장비 PC: `verify_gc2_pull_ready.ps1` (인수인계 준비)
   - [ ] 9.1~9.11 **차헌 GC2 장비 PC**에서 실행
 
+## 보류 / 아이디어 (GC3)
+
+- [ ] **GC3 화면 영역 캡처·OCR** — [`deploy/GC3_SCREEN_REGION_READ.md`](GC3_SCREEN_REGION_READ.md)  
+  Report.TXT 보조·무인 검증용. GC3 PC 사용 가능해질 때 GC8860에서 프로토타입 → zip 배포.
+
 ## PC별 git
 
 ```powershell

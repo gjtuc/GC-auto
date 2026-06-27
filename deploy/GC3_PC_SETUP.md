@@ -152,3 +152,11 @@ gc_install_autostart.bat
 
 GC3 PC는 **GC3 전용 장비 PC** 이므로 `Desktop\KCH\gc_automation.env` 하나만 두고  
 `GC_INSTANCE=gc3` 로 고정합니다. (GC2 env와 혼용 금지)
+
+---
+
+## G. (미구현) 화면 영역 읽기
+
+Chem32 **Report.TXT** 가 주 경로이지만, UI만 있는 정보·자동 캡처+OCR 아이디어는 별도 기록:
+
+→ [`GC3_SCREEN_REGION_READ.md`](GC3_SCREEN_REGION_READ.md) (2026-06-27 메모, 구현 보류)
