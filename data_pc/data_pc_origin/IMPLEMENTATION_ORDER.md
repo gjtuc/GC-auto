@@ -121,15 +121,149 @@
 ## 현재 작업 포인터
 
 ```
-DONE: O0..O9 (287) + O5-DEBUG (5) + O9-L (3) + Phase 8 pipeline — verify --o9-live PASS
-NEXT: live opju 1회 — DATA_PC_SKIP_ORIGIN=0 · DATA_PC_LIVE_OPJU=<G:\…Ni5.opju>
+DONE: O0..O9-EXT + P0..P23-EXT (166) — verify --p23 PASS
+IMAP: python -m data_pc_origin.live_imap --probe
+      DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
+RUNTIME: python -m data_pc_origin.live_runtime --dry
+         python -m data_pc_origin.live_runtime --dry-job
+SUPERVISOR: python -m data_pc_origin.live_supervisor
+            python -m data_pc_runtime.verify --dry-supervisor
+WATCH: python -m data_pc_origin.live_watch
+       DATA_PC_LEGACY_WATCH=1  # 구 DataPcWatchRunner
+ENV: python -m data_pc_origin.live_env
+E2E: python -m data_pc_origin.live_production_e2e
+     DATA_PC_E2E_LIVE=1 python -m data_pc_origin.live_production_e2e --live
+RUN: python -m data_pc_origin.live_production_run --validate-fixture
+     DATA_PC_E2E_LIVE=1 python -m data_pc_origin.live_production_run
+READY: python -m data_pc_origin.live_readiness
+       python -m data_pc_origin.live_readiness --tick
+CUTOVER: python -m data_pc_origin.live_cutover
+         DATA_PC_CUTOVER_APPLY=1 python -m data_pc_origin.live_cutover --apply
+AUTOSTART: python -m data_pc_origin.live_autostart
+GITHUB: python -m data_pc_origin.live_github_snapshot
+        python -m data_pc_origin.live_github_snapshot --sync
+        DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_github_snapshot --push
 ```
 
+## Phase 9 — P층 (메일·엑셀 ↔ Origin)
+
+> 마스터: [`DESIGN_P.md`](DESIGN_P.md) · [`design/catalog/P-REGISTRY.md`](design/catalog/P-REGISTRY.md)
+
+| # | rollup | L4 | module | 상태 |
+|---|--------|-----|--------|------|
+| 37 | P0-T | 6 | `p0_types.py` | **PASS** |
+| 38 | P0-R | 4 | `p0_routing.py` | **PASS** |
+| 39 | **P0** | 10 | — | **PASS** `--p0` |
+| 40 | P1-P | 8 | `p1_payload.py` | **PASS** |
+| 41 | **P1** | 8 | — | **PASS** `--p1` |
+| 42 | P2 | 6 | `p2_paths.py` | **PASS** |
+| 43 | **P2** | 6 | — | **PASS** `--p2` |
+| 44 | P3-S | 4 | `p3_skip.py` | **PASS** |
+| 45 | **P3** | 4 | — | **PASS** `--p3` |
+| 46 | P4-O/M/R | 6 | `p4_origin_stage.py` | **PASS** |
+| 47 | **P4** | 6 | — | **PASS** `--p4` |
+| 48 | P5-W/P/R | 9 | `p5_workflow.py` | **PASS** |
+| 49 | **P5** | 9 | — | **PASS** `--p5` |
+| 50 | P6 | 8 | `p6_catalyst_adapter.py` | **PASS** |
+| 51 | **P6** | 8 | — | **PASS** `--p6` |
+| 52 | P7 | 4 | `p7_mail_hook.py` | **PASS** |
+| 53 | **P7** | 4 | — | **PASS** `--p7` |
+| 54 | **P** | 55 | 합본 | **PASS** `--p` |
+| 55 | P8-B | 4 | `workflow_bridge.py` | **PASS** |
+| 56 | **P8** | 4 | — | **PASS** `--p8` |
+| 57 | P9-L | 4 | `live_workflow.py` | **PASS** |
+| 58 | **P9-EXT** | 63 | P + P9-L | **PASS** `--p9-live` |
+| 59 | P10-F | 3 | `live_full_archive.py` | **PASS** |
+| 60 | P10-M | 4 | `live_mail.py` | **PASS** |
+| 61 | **P10-EXT** | 70 | P9-EXT + P10 | **PASS** `--p10` |
+| 62 | P11-K | 4 | `live_kch.py` | **PASS** |
+| 63 | **P11-EXT** | 74 | P10-EXT + P11-K | **PASS** `--p11` |
+| 64 | P12-F | 4 | `live_full_native.py` | **PASS** |
+| 65 | **P12-EXT** | 78 | P11-EXT + P12-F | **PASS** `--p12` |
+| 66 | P13-I | 4 | `p13_imap_adapter.py` | **PASS** |
+| 67 | P13-M | 4 | `live_imap.py` | **PASS** |
+| 68 | **P13-EXT** | 86 | P12-EXT + P13 | **PASS** `--p13` |
+| 69 | P14-R | 4 | `p14_runtime_bridge.py` | **PASS** |
+| 70 | P14-J | 4 | `live_runtime.py` | **PASS** |
+| 71 | **P14-EXT** | 94 | P13-EXT + P14 | **PASS** `--p14` |
+| 72 | P15-S | 4 | `layer4_supervisor.py` | **PASS** |
+| 73 | P15-H | 4 | `live_supervisor.py` | **PASS** |
+| 74 | **P15-EXT** | 102 | P14-EXT + P15 | **PASS** `--p15` |
+| 75 | P16-W | 4 | `p16_watch_bridge.py` | **PASS** |
+| 76 | P16-H | 4 | `live_watch.py` | **PASS** |
+| 77 | **P16-EXT** | 110 | P15-EXT + P16 | **PASS** `--p16` |
+| 78 | P17-E | 4 | `p17_env_config.py` | **PASS** |
+| 79 | P17-H | 4 | `live_env.py` | **PASS** |
+| 80 | **P17-EXT** | 118 | P16-EXT + P17 | **PASS** `--p17` |
+| 81 | P18-P | 4 | `p18_production_e2e.py` | **PASS** |
+| 82 | P18-L | 4 | `live_production_e2e.py` | **PASS** |
+| 83 | **P18-EXT** | 126 | P17-EXT + P18 | **PASS** `--p18` |
+| 84 | P19-V | 4 | `p19_live_assert.py` | **PASS** |
+| 85 | P19-R | 4 | `live_production_run.py` | **PASS** |
+| 86 | **P19-EXT** | 134 | P18-EXT + P19 | **PASS** `--p19` |
+| 87 | P20-M | 4 | `p20_readiness.py` | **PASS** |
+| 88 | P20-H | 4 | `live_readiness.py` | **PASS** |
+| 89 | **P20-EXT** | 142 | P19-EXT + P20 | **PASS** `--p20` |
+| 90 | P21-C | 4 | `p21_cutover.py` | **PASS** |
+| 91 | P21-H | 4 | `live_cutover.py` | **PASS** |
+| 92 | **P21-EXT** | 150 | P20-EXT + P21 | **PASS** `--p21` |
+| 93 | P22-A | 4 | `p22_autostart.py` | **PASS** |
+| 94 | P22-H | 4 | `live_autostart.py` | **PASS** |
+| 95 | **P22-EXT** | 158 | P21-EXT + P22 | **PASS** `--p22` |
+| 96 | P23-G | 4 | `p23_github_snapshot.py` | **PASS** |
+| 97 | P23-H | 4 | `live_github_snapshot.py` | **PASS** |
+| 98 | **P23-EXT** | 166 | P22-EXT + P23 | **PASS** `--p23` |
+
 ```bash
-# 설계 참조
-design/catalog/O5-I.md
-design/catalog/FX-O5-opju-mock.yaml
-# 구현 시작 시
-python -m data_pc_origin.verify --gate O5-I-01-a-1
-python -m data_pc_origin.verify --rollup O5-L1-I
+# P23 — GitHub feat/data-pc-origin snapshot
+python -m data_pc_origin.live_github_snapshot
+python -m data_pc_origin.live_github_snapshot --sync
+DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_github_snapshot --push
+python -m data_pc_origin.verify --p23
+
+# P22 — autostart / watch integration smoke
+python -m data_pc_origin.live_autostart
+python -m data_pc_origin.verify --p22
+
+# P21 — operational cutover
+python -m data_pc_origin.live_cutover
+DATA_PC_CUTOVER_APPLY=1 python -m data_pc_origin.live_cutover --apply
+python -m data_pc_origin.verify --p21
+python -m data_pc_origin.live_readiness --tick
+python -m data_pc_origin.verify --p20
+
+# P19 — live run + artifact validation
+python -m data_pc_origin.live_production_run --validate-fixture
+DATA_PC_E2E_LIVE=1 python -m data_pc_origin.live_production_run
+python -m data_pc_origin.verify --p19
+
+# P18 — production full E2E
+python -m data_pc_origin.live_production_e2e
+python -m data_pc_origin.live_production_e2e --prep-live
+DATA_PC_E2E_LIVE=1 python -m data_pc_origin.live_production_e2e --live
+python -m data_pc_origin.verify --p18
+
+# P17 — origin env effective config
+python -m data_pc_origin.live_env
+python -m data_pc_origin.verify --p17
+
+# P16 — --watch → runtime supervisor
+python -m data_pc_origin.live_watch
+python -m data_pc_origin.verify --p16
+
+# P15 — Supervisor ↔ resolve_job_pipeline
+python -m data_pc_origin.live_supervisor
+python -m data_pc_runtime.verify --dry-supervisor
+python -m data_pc_origin.verify --p15
+
+# P14 — JobRunner ↔ live_imap
+python -m data_pc_origin.live_runtime --dry
+python -m data_pc_origin.live_runtime --dry-job
+DATA_PC_ORIGIN_PIPELINE=1 python -m data_pc_origin.verify --p14
+
+# P13 live — IMAP → inbox → FULL_ARCHIVE
+python -m data_pc_origin.live_imap --probe
+python -m data_pc_origin.live_imap --fetch-only
+DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
+DATA_PC_IMAP_LIVE=1 python -m data_pc_origin.verify --p13  # live IMAP unittest
 ```

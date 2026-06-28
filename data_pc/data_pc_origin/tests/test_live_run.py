@@ -4,11 +4,13 @@ import unittest
 from pathlib import Path
 
 from data_pc_origin.live_run import ARTIFACT_NAME, prepare_live_e2e, run_live_e2e
+from data_pc_origin.tests._helpers import without_skip_origin
 
 
 class TestLiveRun(unittest.TestCase):
     def test_prepare_no_path(self) -> None:
-        prep = prepare_live_e2e("")
+        with without_skip_origin():
+            prep = prepare_live_e2e("")
         self.assertFalse(prep.ready)
         self.assertIn("path", prep.reason.lower())
 

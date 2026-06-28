@@ -26,6 +26,9 @@ def _fake_op() -> ModuleType:
 
 
 class TestO3Import(unittest.TestCase):
+    def setUp(self) -> None:
+        reset_originpro_cache()
+
     def tearDown(self) -> None:
         reset_originpro_cache()
 

@@ -43,5 +43,142 @@
 | O9-P pipeline | **PASS** (3/3) | `verify --rollup O9-P` | bridge hook |
 | O9-L live | **PASS** (3/3) | `verify --o9-live` | `live_run.py` dry skip |
 | Pipeline | **WIRED** | `촉매 반응 계산.py` → `run_origin_update` | SKIP unchanged |
+| P0 workflow | **PASS** (10/10) | `verify --p0` | types·routing |
+| P1 payload | **PASS** (8/8) | `verify --p1` | metadata·mapping |
+| P2 paths | **PASS** (6/6) | `verify --p2` | opju·save |
+| P3 skip | **PASS** (4/4) | `verify --p3` | SKIP_ORIGIN |
+| P4 origin | **PASS** (6/6) | `verify --p4` | mock bridge |
+| P5 workflow | **PASS** (9/9) | `verify --p5` | route×skip |
+| P6 adapter | **PASS** (8/8) | `verify --p6` | importlib mock |
+| P7 mail | **PASS** (4/4) | `verify --p7` | mail→P5 |
+| **P** | **PASS** (59/59) | `verify --p` | P0..P8 |
+| P8 bridge | **PASS** (4/4) | `verify --p8` | 촉매 위임 |
+| P9-L live | **PASS** (4/4) | `verify --p9-live` | `live_workflow.py` |
+| P10-F live | **PASS** (3/3) | `verify --p10` | FULL_ARCHIVE in-place |
+| P10-M live | **PASS** (4/4) | `verify --p10` | mail sim → `_Updated.opju` |
+| **P10-EXT** | **PASS** (70/70) | `verify --p10` | P9-EXT + P10 |
+| P11-K live | **PASS** (4/4) | `verify --p11` | KCH native process_excel |
+| **P11-EXT** | **PASS** (74/74) | `verify --p11` | P10-EXT + P11-K |
+| P12-F live | **PASS** (4/4) | `verify --p12` | FULL native s2+s3 |
+| **P12-EXT** | **PASS** (78/78) | `verify --p12` | P11-EXT + P12-F |
+| P13-I probe | **PASS** (4/4) | `verify --p13` | IMAP prep · masked |
+| P13-M mail | **PASS** (4/4) | `verify --p13` | fetch → P7 → P8 |
+| **P13-EXT** | **PASS** (86/86) | `verify --p13` | P12-EXT + P13 |
+| P14-R bridge | **PASS** (4/4) | `verify --p14` | RuntimePipelineResult |
+| P14-J job | **PASS** (4/4) | `verify --p14` | JobRunner dry-job |
+| **P14-EXT** | **PASS** (94/94) | `verify --p14` | P13-EXT + P14 |
+| P15-S supervisor | **PASS** (4/4) | `verify --p15` | resolve in L4 |
+| P15-H harness | **PASS** (4/4) | `verify --p15` | dry tick |
+| **P15-EXT** | **PASS** (102/102) | `verify --p15` | P14-EXT + P15 |
+| P16-W watch | **PASS** (4/4) | `verify --p16` | runtime delegate |
+| P16-H harness | **PASS** (4/4) | `verify --p16` | dry tick |
+| **P16-EXT** | **PASS** (110/110) | `verify --p16` | P15-EXT + P16 |
+| P17-E env | **PASS** (4/4) | `verify --p17` | defaults · mask |
+| P17-H report | **PASS** (4/4) | `verify --p17` | live_env |
+| **P17-EXT** | **PASS** (118/118) | `verify --p17` | P16-EXT + P17 |
+| P18-P prep | **PASS** (4/4) | `verify --p18` | production stack |
+| P18-L harness | **PASS** (4/4) | `verify --p18` | dry/live gate |
+| **P18-EXT** | **PASS** (126/126) | `verify --p18` | P17-EXT + P18 |
+| P19-V assert | **PASS** (4/4) | `verify --p19` | row/sheet rules |
+| P19-R run | **PASS** (4/4) | `verify --p19` | live_production_run |
+| **P19-EXT** | **PASS** (134/134) | `verify --p19` | P18-EXT + P19 |
+| P20-M manifest | **PASS** (4/4) | `verify --p20` | stack rollup |
+| P20-H harness | **PASS** (4/4) | `verify --p20` | live_readiness |
+| **P20-EXT** | **PASS** (142/142) | `verify --p20` | P19-EXT + P20 |
+| P21-C cutover | **PASS** (4/4) | `verify --p21` | plan · apply · gate |
+| P21-H harness | **PASS** (4/4) | `verify --p21` | live_cutover |
+| **P21-EXT** | **PASS** (150/150) | `verify --p21` | P20-EXT + P21 |
+| P22-A scan | **PASS** (4/4) | `verify --p22` | bat/VBS/watchdog |
+| P22-H harness | **PASS** (4/4) | `verify --p22` | live_autostart |
+| **P22-EXT** | **PASS** (158/158) | `verify --p22` | P21-EXT + P22 |
+| P23-G snapshot | **PASS** (4/4) | `verify --p23` | sync plan |
+| P23-H harness | **PASS** (4/4) | `verify --p23` | live_github_snapshot |
+| **P23-EXT** | **PASS** (166/166) | `verify --p23` | P22-EXT + P23 |
 
 규칙: **L4 나노 PASS → L3 → L2 → L1 → L0** · 형제는 선행 형제 PASS 후 · **사용자 승인** 후 다음 구현.
+
+### P10 live 실행 검증 (2026-06-25)
+
+| harness | artifact | live 결과 |
+|---------|----------|-----------|
+| `live_full_archive.py` | `live_full_archive_result.json` | ok · 6 sheets · save_in_place |
+| `live_mail.py` | `live_mail_result.json` | ok · 6 sheets · `_Updated.opju` |
+
+### P11-K live 실행 검증 (2026-06-28)
+
+| harness | artifact | live 결과 |
+|---------|----------|-----------|
+| `live_kch.py --stage2-only` | `live_kch_result.json` | ok · **135행** · KCH inbox 원본 |
+| `live_kch.py` (OPJU) | `live_kch_result.json` | ok · 6 sheets · 135행 · `_Updated.opju` |
+
+Companion shortcut(108행)과 달리 **process_excel 직접** 경로 확인.
+
+### P12-F live 실행 검증 (2026-06-28)
+
+| harness | artifact | live 결과 |
+|---------|----------|-----------|
+| `live_full_native.py --dry` | `live_full_native_result.json` | ok · experiment_basename · DRE |
+| `live_full_native.py` live | `live_full_native_result.json` | ok · **135행** · G: 폴더 갱신 · save_in_place |
+
+P10-F(stage3 주입)과 달리 **setup_experiment_folder** 실제 호출 → `20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3` 폴더 갱신.
+
+### P13 live 실행 검증 (2026-06-28)
+
+| harness | artifact | live 결과 |
+|---------|----------|-----------|
+| `live_imap --probe` | `live_imap_result.json` | ok · pending 3건 |
+| `live_imap --fetch-only` | same | ok · inbox xlsx 저장 |
+| `live_imap` (full) | same | ok · **161행** · 6 sheets · G: in-place |
+
+실제 IMAP 수신 → `process_excel` → `setup_experiment_folder` → Origin (production path).
+
+### P14 runtime bridge 실행 검증 (2026-06-28)
+
+| harness | artifact | 결과 |
+|---------|----------|------|
+| `live_runtime --dry` | `live_runtime_result.json` | dry_run · pipeline 0건 |
+| `live_runtime --dry-job` | same | JobRunner pipeline_done |
+| `DATA_PC_ORIGIN_PIPELINE=1` + L3 | `layer3_job.run_job_once` | P14 → live_imap |
+
+### P15 supervisor 실행 검증 (2026-06-28)
+
+| harness | artifact | 결과 |
+|---------|----------|------|
+| `live_supervisor` (default) | `live_supervisor_result.json` | dry_tick · pipeline_done |
+| `data_pc_runtime.verify --dry-supervisor` | — | L4 mock tick regression |
+
+### P16 watch 실행 검증 (2026-06-28)
+
+| harness | artifact | 결과 |
+|---------|----------|------|
+| `live_watch` (default) | `live_watch_result.json` | dry_tick · runtime_origin |
+| `촉매 반응 계산.py --watch` | — | `run_watch_via_runtime` 위임 |
+
+### P17 env 실행 검증 (2026-06-28)
+
+| harness | artifact | 결과 |
+|---------|----------|------|
+| `live_env` | `live_env_result.json` | origin_pipeline · masked keys |
+| `gc_automation.env` | — | `DATA_PC_ORIGIN_PIPELINE=1` 추가 |
+
+### P18 production E2E 실행 검증 (2026-06-28)
+
+| harness | artifact | 결과 |
+|---------|----------|------|
+| `live_production_e2e` (default) | `live_production_e2e_result.json` | dry_prep · stack |
+| `--prep-live` | same | IMAP probe (optional) |
+| `--live` + `DATA_PC_E2E_LIVE=1` | same | full imap workflow |
+
+### P19 live run 실행 검증 (2026-06-28)
+
+| harness | artifact | live 결과 |
+|---------|----------|-----------|
+| `live_production_run --validate-fixture` | `live_production_run_result.json` | validation ok · 161행 fixture |
+| `DATA_PC_E2E_LIVE=1 live_production_run` | same | **161행 · 6 sheets · G: in-place · validation ok** |
+
+### P20 readiness 실행 검증 (2026-06-28)
+
+| harness | artifact | 결과 |
+|---------|----------|------|
+| `live_readiness` | `live_readiness_result.json` | ready · 6 checks · stack wired |
+| `live_readiness --tick` | same | + supervisor_dry_tick pipeline_done |

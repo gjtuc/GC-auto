@@ -1,0 +1,7 @@
+{
+  "bridge_hook": "run_origin_update",
+  "sheets_updated": 8,
+  "save_in_place": false,
+  "skipped_ok": true,
+  "skip_reason_nonempty": true
+}

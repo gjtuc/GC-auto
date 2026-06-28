@@ -2194,6 +2194,21 @@ def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True, skip_or
     skip_origin=True / DATA_PC_SKIP_ORIGIN=1: 4단계 Origin 생략 (G: xlsx 는 auto_archive 시 반영).
     G: 없으면 GDriveUnavailableError → 안내 출력, saved_excel 경로는 DATA_PC/processed.
     """
+    import sys
+
+    from data_pc_origin.workflow_bridge import run_workflow_bridged
+
+    return run_workflow_bridged(
+        excel_path,
+        opju_path=opju_path,
+        auto_archive=auto_archive,
+        skip_origin=skip_origin,
+        catalyst_module=sys.modules[__name__],
+    )
+
+
+def _run_workflow_for_file_legacy(excel_path, opju_path=None, auto_archive=True, skip_origin=None):
+    """구현 보존 — data_pc_origin P층 미사용 시 참고용."""
     skip_origin = _skip_origin_enabled(skip_origin)
     if not os.path.exists(excel_path) or not excel_path.lower().endswith((".xlsx", ".xls")):
         print("❌ 올바른 엑셀 파일이 아닙니다.")

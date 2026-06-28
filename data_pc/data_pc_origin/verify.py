@@ -130,6 +130,31 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--o8", action="store_true", help="O8: job layer (11) + unittest")
     parser.add_argument("--o9", action="store_true", help="O9: facade (10) + unittest")
     parser.add_argument("--o9-live", action="store_true", help="O9 live harness: O9(10)+L(3) + unittest")
+    parser.add_argument("--p0", action="store_true", help="P0: workflow types (10) after O9-EXT + unittest")
+    parser.add_argument("--p1", action="store_true", help="P1: payload (8) after P0 + unittest")
+    parser.add_argument("--p2", action="store_true", help="P2: paths (6) after P1 + unittest")
+    parser.add_argument("--p3", action="store_true", help="P3: skip (4) after P2 + unittest")
+    parser.add_argument("--p4", action="store_true", help="P4: origin stage (6) after P3 + unittest")
+    parser.add_argument("--p5", action="store_true", help="P5: workflow (9) after P4 + unittest")
+    parser.add_argument("--p6", action="store_true", help="P6: catalyst adapter (8) after P5 + unittest")
+    parser.add_argument("--p7", action="store_true", help="P7: mail hook (4) after P6 + unittest")
+    parser.add_argument("--p", action="store_true", help="P0..P8 full (59 gates) + unittest")
+    parser.add_argument("--p8", action="store_true", help="P8: workflow bridge (4) after P7 + unittest")
+    parser.add_argument("--p9-live", action="store_true", help="P9-L: live workflow (4) after P8 + unittest")
+    parser.add_argument("--p10", action="store_true", help="P10: live FULL+mail (7) after P9-L + unittest")
+    parser.add_argument("--p11", action="store_true", help="P11-K: KCH native stage2 (4) after P10 + unittest")
+    parser.add_argument("--p12", action="store_true", help="P12-F: FULL native stage2+3 (4) after P11 + unittest")
+    parser.add_argument("--p23", action="store_true", help="P23: GitHub snapshot (8) after P22 + unittest")
+    parser.add_argument("--p22", action="store_true", help="P22: autostart smoke (8) after P21 + unittest")
+    parser.add_argument("--p21", action="store_true", help="P21: operational cutover (8) after P20 + unittest")
+    parser.add_argument("--p20", action="store_true", help="P20: readiness manifest (8) after P19 + unittest")
+    parser.add_argument("--p19", action="store_true", help="P19: live assert (8) after P18 + unittest")
+    parser.add_argument("--p18", action="store_true", help="P18: production E2E (8) after P17 + unittest")
+    parser.add_argument("--p17", action="store_true", help="P17: origin env defaults (8) after P16 + unittest")
+    parser.add_argument("--p16", action="store_true", help="P16: watch bridge (8) after P15 + unittest")
+    parser.add_argument("--p15", action="store_true", help="P15: supervisor bridge (8) after P14 + unittest")
+    parser.add_argument("--p14", action="store_true", help="P14: runtime bridge (8) after P13 + unittest")
+    parser.add_argument("--p13", action="store_true", help="P13: IMAP probe+mail (8) after P12 + unittest")
     parser.add_argument("--list", action="store_true", help="전체 gate 순서 출력")
     args = parser.parse_args(argv)
 
@@ -173,6 +198,331 @@ def main(argv: list[str] | None = None) -> int:
         for line in log:
             print(line)
         return code
+
+    if args.p:
+        print("=== data_pc_origin verify: P full (59 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P8 (59) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P full verify failed")
+        return 1
+
+    if args.p23:
+        print("=== data_pc_origin verify: P23 (GitHub snapshot 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P23")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P23-EXT (166) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P23 verify failed")
+        return 1
+
+    if args.p22:
+        print("=== data_pc_origin verify: P22 (autostart 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P22")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P22-EXT (158) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P22 verify failed")
+        return 1
+
+    if args.p21:
+        print("=== data_pc_origin verify: P21 (cutover 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P21")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P21-EXT (150) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P21 verify failed")
+        return 1
+
+    if args.p20:
+        print("=== data_pc_origin verify: P20 (readiness 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P20")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P20-EXT (142) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P20 verify failed")
+        return 1
+
+    if args.p19:
+        print("=== data_pc_origin verify: P19 (live assert 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P19")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P19-EXT (134) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P19 verify failed")
+        return 1
+
+    if args.p18:
+        print("=== data_pc_origin verify: P18 (production E2E 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P18")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P18-EXT (126) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P18 verify failed")
+        return 1
+
+    if args.p17:
+        print("=== data_pc_origin verify: P17 (origin env 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P17")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P17-EXT (118) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P17 verify failed")
+        return 1
+
+    if args.p16:
+        print("=== data_pc_origin verify: P16 (watch bridge 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P16")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P16-EXT (110) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P16 verify failed")
+        return 1
+
+    if args.p15:
+        print("=== data_pc_origin verify: P15 (supervisor bridge 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P15")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P15-EXT (102) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P15 verify failed")
+        return 1
+
+    if args.p14:
+        print("=== data_pc_origin verify: P14 (runtime bridge 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P14")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P14-EXT (94) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P14 verify failed")
+        return 1
+
+    if args.p13:
+        print("=== data_pc_origin verify: P13 (IMAP 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P13")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P13-EXT (86) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P13 verify failed")
+        return 1
+
+    if args.p12:
+        print("=== data_pc_origin verify: P12-F (FULL native 4 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P12")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P12-EXT (78) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P12 verify failed")
+        return 1
+
+    if args.p11:
+        print("=== data_pc_origin verify: P11-K (KCH native stage2 4 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P11")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P11-EXT (74) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P11 verify failed")
+        return 1
+
+    if args.p10:
+        print("=== data_pc_origin verify: P10 (live FULL+mail 7 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P10")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P10-EXT (70) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P10 verify failed")
+        return 1
+
+    if args.p9_live:
+        print("=== data_pc_origin verify: P9-L (live workflow 4 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P9-L")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P8 + P9-L (63) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P9-L verify failed")
+        return 1
+
+    if args.p8:
+        print("=== data_pc_origin verify: P8 (workflow bridge 4 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P8")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P8 (59) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P8 verify failed")
+        return 1
+
+    if args.p7:
+        print("=== data_pc_origin verify: P7 (mail 4 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P7")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P7 (55) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P7 verify failed")
+        return 1
+
+    if args.p6:
+        print("=== data_pc_origin verify: P6 (adapter 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P6")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P6 (51) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P6 verify failed")
+        return 1
+
+    if args.p5:
+        print("=== data_pc_origin verify: P5 (workflow 9 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P5")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P5 (43) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P5 verify failed")
+        return 1
+
+    if args.p4:
+        print("=== data_pc_origin verify: P4 (origin stage 6 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P4")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P4 (34) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P4 verify failed")
+        return 1
+
+    if args.p3:
+        print("=== data_pc_origin verify: P3 (skip 4 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P3")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P3 (28) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P3 verify failed")
+        return 1
+
+    if args.p2:
+        print("=== data_pc_origin verify: P2 (paths 6 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P2")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P2 (24) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P2 verify failed")
+        return 1
+
+    if args.p1:
+        print("=== data_pc_origin verify: P1 (payload 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P1")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0 + P1 (18) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P1 verify failed")
+        return 1
+
+    if args.p0:
+        print("=== data_pc_origin verify: P0 (workflow 10 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P0")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0 (10) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P0 verify failed")
+        return 1
 
     if args.o9_live:
         print("=== data_pc_origin verify: O9-L (O9 10 + live harness 3 gates + unittest) ===\n")

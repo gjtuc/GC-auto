@@ -47,9 +47,41 @@
 | O5-R | #114–117 | 4 |
 | **O5 core** | #1–105 | **105** |
 
+## P층 — 메일·엑셀 ↔ Origin (55 L4 설계)
+
+| L0 | 파일 | L4 | 상태 |
+|----|------|-----|------|
+| **P-REGISTRY** | [P-REGISTRY.md](P-REGISTRY.md) | 55 | P0 **PASS** |
+| P0-T,R | [P0-T.md](P0-T.md) · [P0-R.md](P0-R.md) | 10 | 구현 **PASS** |
+| P1-P | [P1-P.md](P1-P.md) | 8 | 구현 **PASS** |
+| P2 | [P2.md](P2.md) | 6 | 구현 **PASS** |
+| P3-S | [P3-S.md](P3-S.md) | 4 | 구현 **PASS** |
+| P4 | [P4.md](P4.md) | 6 | 구현 **PASS** |
+| P5 | [P5.md](P5.md) | 9 | 구현 **PASS** |
+| P6 | [P6.md](P6.md) | 8 | 구현 **PASS** |
+| P7 | [P7.md](P7.md) | 4 | 구현 **PASS** |
+| P8-B | [P8-B.md](P8-B.md) | 4 | 구현 **PASS** |
+| P9-L | [P9-L.md](P9-L.md) | 4 | 구현 **PASS** |
+| P10-F,M | [P10.md](P10.md) | 7 | 구현 **PASS** |
+| P11-K | [P11.md](P11.md) | 4 | 구현 **PASS** |
+| P12-F | [P12.md](P12.md) | 4 | 구현 **PASS** |
+| P13-I,M | [P13.md](P13.md) | 8 | 구현 **PASS** |
+| P14-R,J | [P14.md](P14.md) | 8 | 구현 **PASS** |
+| P15-S,H | [P15.md](P15.md) | 8 | 구현 **PASS** |
+| P16-W,H | [P16.md](P16.md) | 8 | 구현 **PASS** |
+| P17-E,H | [P17.md](P17.md) | 8 | 구현 **PASS** |
+| P18-P,L | [P18.md](P18.md) | 8 | 구현 **PASS** |
+| P19-V,R | [P19.md](P19.md) | 8 | 구현 **PASS** |
+| P20-M,H | [P20.md](P20.md) | 8 | 구현 **PASS** |
+| P21-C,H | [P21.md](P21.md) | 8 | 구현 **PASS** |
+| P22-A,H | [P22.md](P22.md) | 8 | 구현 **PASS** |
+| P23-G,H | [P23.md](P23.md) | 8 | 구현 **PASS** |
+
 ## 구현 포인터
 
 ```
-NEXT code: O5-I-01-a-1  (registry #1)
-설계: O5-REGISTRY.md 형제 순서 = verify 체인
+DONE: P23 — GitHub feat/data-pc-origin snapshot
+verify: python -m data_pc_origin.verify --p23   # 166 gates
+GITHUB: python -m data_pc_origin.live_github_snapshot [--sync] [--push]
+AUTOSTART: python -m data_pc_origin.live_autostart
 ```

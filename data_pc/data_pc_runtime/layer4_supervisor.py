@@ -31,7 +31,6 @@ from data_pc_runtime.layer3_job import (
     JobRunner,
     PipelineCallback,
     _log,
-    load_calc_pipeline,
     load_gate_config,
 )
 
@@ -172,11 +171,18 @@ class Supervisor:
         self.store = StateStore(self.paths)
         self.sup_cfg = sup_cfg or load_supervisor_config(script_dir)
         self.gate = gate or load_gate_config(script_dir)
-        self.job = job or JobRunner(
-            self.paths,
-            pipeline or load_calc_pipeline(script_dir),
-            store=self.store,
-        )
+        if job is None:
+            resolved = pipeline
+            if resolved is None:
+                from data_pc_origin.p14_runtime_bridge import resolve_job_pipeline
+
+                resolved = resolve_job_pipeline(script_dir)
+            job = JobRunner(
+                self.paths,
+                resolved,
+                store=self.store,
+            )
+        self.job = job
         self._stop = threading.Event()
         self._hb_interval = max(15, self.sup_cfg.poll_sec)
 

@@ -471,6 +471,12 @@ def run_data_pc_watch(
     skip_wifi_check: bool = False,
 ) -> None:
     """촉매 반응 계산.py --watch 진입점."""
+    from data_pc_origin.p16_watch_bridge import run_watch_via_runtime, should_use_runtime_watch
+
+    if should_use_runtime_watch():
+        run_watch_via_runtime(script_dir, skip_wifi_check=skip_wifi_check)
+        return
+
     config = load_watch_config(script_dir)
     if not config:
         sys.exit(1)

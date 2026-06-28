@@ -1,0 +1,7 @@
+{
+  "env_skip": true,
+  "blocked_by_env_only": false,
+  "explicit_false_overrides_env": true,
+  "reason_when_skip": "[4단계] Origin 건너뜀 — --no-origin / DATA_PC_SKIP_ORIGIN",
+  "reason_when_run": ""
+}
