@@ -120,18 +120,19 @@
 |---|------|--------|------|
 | 153 | bridge 위임 (정적+실행) | `live_pipeline_bridge.py` | **PASS** |
 | 154 | SKIP_ORIGIN=0 fixture 실행 | `live_phase8_origin.py` | **PASS** |
-| 155 | SKIP_ORIGIN=0 COM live | `live_run` / `live_workflow` | 대기 (G: · Origin) |
+| 155 | SKIP_ORIGIN=0 COM live | `live_phase8_origin --try-live` | **PASS** (G: DRE test) |
 
 ---
 
 ## 현재 작업 포인터
 
 ```
-DONE: Phase 8 #154 live_phase8_origin PASS (fixture 8 sheets · live_tier=fixture_only)
-NEXT: Phase 8 #155 — COM live (`DATA_PC_LIVE_OPJU` + G: · originpro) · `gh auth login` 후 `--pr` (선택)
+DONE: Phase 8 #155 COM live PASS (20260626 DRE Ni5_Ce5_Al2O3_test · 6 sheets · 108 rows)
+NEXT: Phase 8 완료 — 운영 env `DATA_PC_DEFAULT_EQUIPMENT=GC3` · `gh auth login` 후 merge PR (선택)
 ```
 PIPELINE: python -m data_pc_origin.live_pipeline_bridge
 PHASE8: python -m data_pc_origin.live_phase8_origin [--try-live OPJU]
+  # 예: DATA_PC_SKIP_ORIGIN=0 DATA_PC_DEFAULT_EQUIPMENT=GC3 DATA_PC_LIVE_OPJU="G:\...\test.opju"
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
 RUNTIME: python -m data_pc_origin.live_runtime --dry
