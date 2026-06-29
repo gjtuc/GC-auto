@@ -1,49 +1,118 @@
 ---
-description: 큐 시작 — AGENT_TASK_QUEUE.md 단계를 한 번에 하나씩, stop Hook으로 자동 이어가기
+description: 작업 큐 — 큐 시작/긴 작업지시 개시, stop Hook 자동 이어가기·종료
 alwaysApply: true
 ---
 
-# Agent 작업 큐 (자동 이어가기)
+# Agent 작업 큐 (자동 이어가기 + 종료)
 
-## 개시 문구
+> 전체 가이드: https://github.com/gjtuc/hook/blob/main/docs/GUIDE.md  
+> 개시제 전문: https://github.com/gjtuc/hook/blob/main/INIT_MESSAGE.md
 
-아래 **어느 하나**면 **코드 작업 큐** 개시 (은규 PC `촉매 반응 계산.py` 파이프라인과 **별개**):
+---
 
-| 트리거 |
-|--------|
-| `큐 시작`, `큐시작`, `queue start` |
-| `코드 큐`, `코드큐` |
+## 1. 개시 문구 (개시제)
 
-`진행` / `시작` / `해봐` 만 단독으로 오면 **은규 PC initiation 규칙 우선** — 본 큐는 시작하지 않음.
+아래 **어느 하나**면 작업 큐를 **시작**한다.
 
-## 개시 시 (되묻지 말 것)
+| 유형 | 트리거 |
+|------|--------|
+| 짧음 | `큐 시작`, `큐시작`, `queue start`, `코드 큐`, `코드큐` |
+| 긴 작업지시 | `남은 것도 하나씩`, `재배열`, `기초적인 단계부터`, `코드 검증과 실행 검증`, `다음 할까요 묻지` 등 INIT_MESSAGE.md 와 **동일 의도**의 긴 메시지 |
 
-1. `.cursor/agent_queue_state.json` 을 다음으로 덮어씀:
+`진행` / `시작` / `해봐` **만** 단독으로 오면 **은규 PC initiation** (`촉매 반응 계산.py`) 우선 — **본 큐는 시작하지 않음.** 코드 큐는 `큐 시작` 또는 긴 작업지시 사용.
+
+**개시 시 반드시:**
+
+1. `.cursor/agent_queue_state.json` 저장:
    ```json
    {"armed": true, "status": "running", "updated": "<ISO8601>"}
    ```
-2. `.cursor/AGENT_TASK_QUEUE.md` 에서 **첫 `- [ ]` 한 줄만** 골라 그 단계만 수행.
-3. 본문에 검증·실행·주석 요구가 없어도 **항상** 적용:
-   - 정적 검증 (린트·py_compile·관련 pytest)
-   - **직접 실행** 테스트 (코드 검증 ≠ 실행 검증)
-   - 결과로 의도·문법 확인 후 주석
-4. 단계 끝나면 해당 줄 `[x]`, **짧게 보고**. 「다음 할까요?」 **금지**.
-5. 사람만 가능한 일(비밀번호, Origin GUI, 장비 PC 실측)이면:
-   - `agent_queue_state.json` → `"armed": false, "status": "blocked"`
-   - 무엇이 막혔는지만 질문하고 멈춤.
+2. `.cursor/AGENT_TASK_QUEUE.md` 에서 **파일 위부터 첫 `- [ ]` 한 줄만** 선택해 수행.
 
-## 턴 중
+---
 
-- **한 단계만** — 큐의 다른 `[ ]` 건드리지 말 것.
-- stop Hook(`task_queue_continue.ps1`)이 다음 단계 followup을 넣음 — 사용자에게 `다음`/`계속` 요청 금지.
+## 2. 턴 중 규칙 (매 단계 공통)
 
-## 큐 전부 `[x]`일 때
+### 2-1. 범위
 
-- `agent_queue_state.json` → `armed: false`, `status: complete`
-- 종료 보고 후 **추가 작업 제안 없이** 멈춤.
+- **이번 턴 = 큐의 현재 `- [ ]` 한 줄만.** 다른 `[ ]` 수정·선행 작업 금지.
+- 완료 즉시 해당 줄을 `- [x]`로 변경.
 
-## 관련 파일
+### 2-2. 코드 검증 (읽기·정적)
 
-- `.cursor/AGENT_TASK_QUEUE.md` — 단계 목록
-- `.cursor/hooks/task_queue_continue.ps1` — stop Hook
-- `docs/GIT_AUTO_SYNC.md` — 기존 stop git sync와 병행
+- 린트, `python -m py_compile`, 관련 `pytest` 등 **실행 전** 정적 확인.
+- «코드가 맞아 보인다»로 끝내지 말 것.
+
+### 2-3. 실행 검증 (직접 돌려보기)
+
+- 만든 스크립트·Hook·테스트를 **직접 실행**.
+- exit code, stdout/stderr, 생성 파일 내용 확인.
+- **코드 검증 ≠ 실행 검증** — 둘 다 필수.
+
+### 2-4. 의도·문법·주석
+
+- 실행 **결과**로 출력·파일이 설계와 맞는지 확인.
+- 선택한 문법·API가 적절한지 코드 재검토.
+- 비자명한 로직에 **주석** (과도한 주석은 지양).
+
+### 2-5. 보고·대화
+
+- 단계 끝: **짧게** 보고.
+- 「다음 할까요?」「계속할까요?」 **절대 금지** — stop Hook이 followup 삽입.
+- 사용자에게 `다음` / `계속` 입력 **요청 금지**.
+
+---
+
+## 3. Hook 동작 (에이전트가 호출하지 않음)
+
+턴 종료 시 Cursor가 `.cursor/hooks.json` 의 **stop** Hook을 자동 실행.
+
+| Hook | 조건 | 동작 |
+|------|------|------|
+| `task_queue_continue.py` | armed, `[ ]` 남음 | `followup_message` → 다음 단계 |
+| `task_queue_continue.py` | armed, `[ ]` 없음 | `complete` + `request_quit_cursor` |
+| `task_queue_quit_cursor.py` | `request_quit_cursor` | Cursor 앱 종료 (2초 후) |
+
+에이전트는 Hook을 **선택·실행하지 않는다.** `[x]`·`agent_queue_state.json` 만 맞추면 된다.
+
+---
+
+## 4. 블로커 (사람만 가능)
+
+비밀번호, 2FA, Origin GUI, 장비 PC 실측 등 **에이전트가 불가**한 경우:
+
+```json
+{"armed": false, "status": "blocked", "updated": "<ISO8601>"}
+```
+
+무엇이 막혔는지만 질문. followup·종료 Hook이 더 이상 이어가지 않음.
+
+---
+
+## 5. 큐 전부 `[x]` (종결)
+
+1. 마지막 줄 `[x]` 후 짧은 종료 보고.
+2. `agent_queue_state.json` 은 continue Hook이 `complete` 로 설정 (직접 `request_quit_cursor` 써도 됨).
+3. **추가 작업 제안·새 Phase 제안 없이** 대화 종료.
+4. quit Hook이 Cursor 종료 (`GC_AGENT_QUEUE_QUIT_CURSOR=0` 이면 종료만 생략).
+
+---
+
+## 6. 관련 파일
+
+| 경로 | 용도 |
+|------|------|
+| `.cursor/AGENT_TASK_QUEUE.md` | 단계 목록 |
+| `.cursor/agent_queue_state.json` | armed / status |
+| `.cursor/hooks/task_queue_continue.py` | 이어가기 |
+| `.cursor/hooks/task_queue_quit_cursor.py` | 종료 |
+| `.cursor/hooks/task_queue_followup_template.txt` | followup 본문 |
+
+---
+
+## 7. 금지 사항 요약
+
+- 한 턴에 여러 `[ ]` 동시 처리
+- Hook 실행을 사용자에게 요청
+- 실행 검증 없이 `[x]`만 표시
+- 완료 후 「더 할까요?」

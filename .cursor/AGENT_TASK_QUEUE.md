@@ -7,17 +7,19 @@
 |------|------|
 | 본 문서 | 단계 목록 (`[ ]` / `[x]`) |
 | `.cursor/agent_queue_state.json` | armed / complete / blocked |
-| `.cursor/hooks/task_queue_continue.ps1` | 턴 끝에 다음 단계 자동 전송 |
+| `.cursor/hooks/task_queue_continue.py` | 미완료 → 다음 단계 followup 자동 전송 |
+| `.cursor/hooks/task_queue_quit_cursor.py` | 전부 완료 → Cursor 종료 (약 2초 후) |
 
-**끝나면:** Hook이 `{}`만 내서 자동 멈춤. `status: complete` 확인.
+**끝나면:** continue Hook이 `complete` + quit Hook이 Cursor 종료. 종료 끄기: `GC_AGENT_QUEUE_QUIT_CURSOR=0`
 
 ---
 
 ## 단계 (기초 → 고급, 한 턴에 하나)
 
 - [x] **T01** `task_queue_continue.ps1` + `hooks.json` 등록 — stop Hook이 followup 또는 `{}` 반환하는지 stdin 시뮬레이션으로 실행 검증
-- [ ] **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 쓰기, 첫 `[ ]` 단계만 수행, 완료 시 `[x]`
-- [ ] **T03** Hook 통합 dry-run — `armed`+미완료 큐 → followup JSON; 큐 전부 `[x]` → `complete`+`{}`
+- [x] **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 쓰기, 첫 `[ ]` 단계만 수행, 완료 시 `[x]`
+- [x] **T03** Hook 통합 dry-run — `test_task_queue_continue.ps1` ALL PASS
+- [x] **T03b** quit Hook — 큐 전부 `[x]` 시 Cursor 자동 종료 (`task_queue_quit_cursor.py`)
 - [ ] **T04** `deploy/ROADMAP.md` Step 8 — repo 내 E2E 보조 스크립트·테스트 정리 (`verify_e2e_prerequisites.ps1`, `test_e2e_mail_auth.py` 문서·주석 정합)
 - [ ] **T05** `data_pc/` — `--help`·`--no-archive` 경로 단위 테스트 스크립트 또는 pytest 추가 (실행 검증 포함)
 - [ ] **T06** `deploy/STEP7_gc1_calib.md` — CALIB 실측 전 repo 측 RT 검증 유틸·주석 (PC 실측은 블로커 시 `blocked`)

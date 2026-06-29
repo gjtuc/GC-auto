@@ -11,7 +11,11 @@
         "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/auto_git_sync.ps1"
       },
       {
-        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/task_queue_continue.ps1",
+        "command": "python .cursor/hooks/task_queue_continue.py",
+        "loop_limit": null
+      },
+      {
+        "command": "python .cursor/hooks/task_queue_quit_cursor.py",
         "loop_limit": null
       }
     ]
