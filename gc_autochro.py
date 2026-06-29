@@ -30,8 +30,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 
   저장 stem 은 gc_automation.env 의 AUTOCHRO_DATA_NAME 이 아니라,
   **제어목록 왼쪽 트리에서 파란 선택된 실험 데이터명** + 창 제목에서 읽습니다.
-  format_data_name_for_pdf_filename() 이 260616dre(3)ni-ce →
-  「260616 dre@(3) ni-ce.pdf」 형식으로 변환합니다.
+  읽은 문자열을 **그대로** PDF 파일명으로 쓰며 (날짜·@·공백 재조합 없음),
+  Windows 금지문자만 제거합니다.
 
 =============================================================================
 [UI 자동화 함정 — pywinauto win32]
@@ -117,57 +117,12 @@ def format_data_name_for_pdf_filename(raw: str) -> str:
     """
     Autochro 데이터명 → PDF 저장 stem.
 
-    260616dre(3)ni-ce  → 260616 dre@(3) ni-ce
-    (날짜 뒤 공백, 반응@농도, 농도 뒤 공백)
+    UI·창 제목에서 읽은 문자열을 변환하지 않고 그대로 쓰고,
+    Windows 파일명 금지문자만 제거합니다.
     """
     text = raw.strip().split(".")[0].strip()
     if not text:
         raise ValueError("Autochro 데이터명이 비어 있음")
-
-    spaced = re.sub(r"\s+", " ", text)
-    match = re.match(
-        r"^(\d{6})\s+([a-zA-Z0-9.]+)@\(([^)]+)\)\s+(.+)$",
-        spaced,
-        re.I,
-    )
-    if match:
-        return (
-            f"{match.group(1)} {match.group(2)}@({match.group(3)}) {match.group(4).strip()}"
-        )
-
-    match = re.match(
-        r"^(\d{6})([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]*\(([^)]+)\)[\s\-_]*(.*)$",
-        text,
-        re.I,
-    )
-    if match and match.group(4).strip():
-        date, reaction, concentration, sample = match.groups()
-        return f"{date} {reaction}@({concentration}) {sample.strip()}"
-
-    match = re.match(
-        r"^(\d{6})([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]+(.+?)[\s\-_]*\(([^)]+)\)$",
-        text,
-        re.I,
-    )
-    if match:
-        date, reaction, sample, concentration = match.groups()
-        return f"{date} {reaction}@({concentration}) {sample.strip()}"
-
-    match = re.match(
-        r"^(\d{6})[\s\-_]+([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]*\(([^)]+)\)[\s\-_]*(.*)$",
-        text,
-        re.I,
-    )
-    if match:
-        date, reaction, concentration, sample = match.groups()
-        sample = sample.strip()
-        if sample:
-            return f"{date} {reaction}@({concentration}) {sample}"
-
-    match = re.match(r"^(\d{6})(.+)$", text)
-    if match:
-        return f"{match.group(1)} {match.group(2).strip()}"
-
     return sanitize_sample_name(text)
 
 
