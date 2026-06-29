@@ -2,7 +2,7 @@
 
 > **main에 병합하지 않은 백업 브랜치**. 문제 시 이 브랜치에서 복구.
 
-## 포함 (P23 sync 2026-06-29 05:42 UTC)
+## 포함 (P23 sync 2026-06-29 06:01 UTC)
 
 - `data_pc/data_pc_origin/` — O0..O9 + P층 (158 gates)
 - `data_pc/data_pc_runtime/` — L0..L4 supervisor

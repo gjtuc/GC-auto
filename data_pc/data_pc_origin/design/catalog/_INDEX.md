@@ -88,12 +88,14 @@
 | P33-G,H | [P33.md](P33.md) | 8 | 구현 **PASS** |
 | P34-G,H | [P34.md](P34.md) | 8 | 구현 **PASS** |
 | P35-G,H | [P35.md](P35.md) | 8 | 구현 **PASS** |
+| P36-G,H | [P36.md](P36.md) | 8 | 구현 **PASS** |
 
 ## 구현 포인터
 
 ```
-DONE: P35 — GitHub push (post-P34)
-verify: python -m data_pc_origin.verify --p35   # 262 gates
+DONE: P36 — GitHub refresh P34–P35
+verify: python -m data_pc_origin.verify --p36   # 270 gates
+P36: python -m data_pc_origin.live_p36_github_refresh [--sync] [--push]
 P35: python -m data_pc_origin.live_p35_github_push [--push]
 P34: python -m data_pc_origin.live_p34_github_refresh [--sync] [--push]
 P33: python -m data_pc_origin.live_p33_github_push [--push]

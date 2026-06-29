@@ -144,6 +144,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--p10", action="store_true", help="P10: live FULL+mail (7) after P9-L + unittest")
     parser.add_argument("--p11", action="store_true", help="P11-K: KCH native stage2 (4) after P10 + unittest")
     parser.add_argument("--p12", action="store_true", help="P12-F: FULL native stage2+3 (4) after P11 + unittest")
+    parser.add_argument("--p36", action="store_true", help="P36: GitHub refresh P34-P35 (8) after P35 + unittest")
     parser.add_argument("--p35", action="store_true", help="P35: GitHub push (8) after P34 + unittest")
     parser.add_argument("--p34", action="store_true", help="P34: GitHub refresh P32-P33 (8) after P33 + unittest")
     parser.add_argument("--p33", action="store_true", help="P33: GitHub push (8) after P32 + unittest")
@@ -222,6 +223,19 @@ def main(argv: list[str] | None = None) -> int:
             print("\n[OK] O0..O9-EXT + P0..P8 (59) gates + unit tests passed")
             return 0
         print("\n[FAIL] P full verify failed")
+        return 1
+
+    if args.p36:
+        print("=== data_pc_origin verify: P36 (GitHub refresh P34-P35 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P36")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P36-EXT (270) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P36 verify failed")
         return 1
 
     if args.p35:
