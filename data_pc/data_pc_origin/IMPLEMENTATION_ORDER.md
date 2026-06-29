@@ -121,7 +121,7 @@
 ## 현재 작업 포인터
 
 ```
-DONE: O0..O9-EXT + P0..P32-EXT (238) — verify --p32 PASS
+DONE: O0..O9-EXT + P0..P33-EXT (246) — verify --p33 PASS
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
 RUNTIME: python -m data_pc_origin.live_runtime --dry
@@ -162,7 +162,9 @@ P31: python -m data_pc_origin.live_p31_merge_pr
 P32: python -m data_pc_origin.live_p32_github_refresh
      python -m data_pc_origin.live_p32_github_refresh --sync
      DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p32_github_refresh --push
-MERGE: python -m data_pc_origin.live_merge_readiness [--pr]
+P33: python -m data_pc_origin.live_p33_github_push
+     DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p33_github_push --push
+P31: python -m data_pc_origin.live_p31_merge_pr [--pr]
 ```
 
 ## Phase 9 — P층 (메일·엑셀 ↔ Origin)
@@ -260,8 +262,16 @@ MERGE: python -m data_pc_origin.live_merge_readiness [--pr]
 | 123 | P32-G | 4 | `p32_github_refresh.py` | **PASS** |
 | 124 | P32-H | 4 | `live_p32_github_refresh.py` | **PASS** |
 | 125 | **P32-EXT** | 238 | P31-EXT + P32 | **PASS** `--p32` |
+| 126 | P33-G | 4 | `p33_github_push.py` | **PASS** |
+| 127 | P33-H | 4 | `live_p33_github_push.py` | **PASS** |
+| 128 | **P33-EXT** | 246 | P32-EXT + P33 | **PASS** `--p33` |
 
 ```bash
+# P33 — GitHub push
+python -m data_pc_origin.live_p33_github_push
+DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p33_github_push --push
+python -m data_pc_origin.verify --p33
+
 # P32 — GitHub refresh (P30–P31)
 python -m data_pc_origin.live_p32_github_refresh
 python -m data_pc_origin.live_p32_github_refresh --sync

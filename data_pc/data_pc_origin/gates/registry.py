@@ -1005,6 +1005,22 @@ P32_H_GATES: List[str] = [
 
 P32_IMPLEMENTATION_ORDER: List[str] = list(P32_G_GATES) + list(P32_H_GATES)
 
+P33_G_GATES: List[str] = [
+    "P33-G-01-a-1",
+    "P33-G-02-a-1",
+    "P33-G-03-a-1",
+    "P33-G-04-a-1",
+]
+
+P33_H_GATES: List[str] = [
+    "P33-H-01-a-1",
+    "P33-H-02-a-1",
+    "P33-H-03-a-1",
+    "P33-H-04-a-1",
+]
+
+P33_IMPLEMENTATION_ORDER: List[str] = list(P33_G_GATES) + list(P33_H_GATES)
+
 P_IMPLEMENTATION_ORDER: List[str] = (
     list(P0_IMPLEMENTATION_ORDER)
     + list(P1_IMPLEMENTATION_ORDER)
@@ -1064,6 +1080,10 @@ P30_EXTENDED_ORDER: List[str] = list(P29_EXTENDED_ORDER) + list(P30_IMPLEMENTATI
 P31_EXTENDED_ORDER: List[str] = list(P30_EXTENDED_ORDER) + list(P31_IMPLEMENTATION_ORDER)
 
 P32_EXTENDED_ORDER: List[str] = list(P31_EXTENDED_ORDER) + list(P32_IMPLEMENTATION_ORDER)
+
+P33_EXTENDED_ORDER: List[str] = list(P32_EXTENDED_ORDER) + list(P33_IMPLEMENTATION_ORDER)
+
+P33_LAST_EXTENDED_GATE = P33_EXTENDED_ORDER[-1]
 
 P32_LAST_EXTENDED_GATE = P32_EXTENDED_ORDER[-1]
 
@@ -1184,6 +1204,7 @@ P29_DEPS = _depends_chain(P29_IMPLEMENTATION_ORDER, head=P28_IMPLEMENTATION_ORDE
 P30_DEPS = _depends_chain(P30_IMPLEMENTATION_ORDER, head=P29_IMPLEMENTATION_ORDER[-1])
 P31_DEPS = _depends_chain(P31_IMPLEMENTATION_ORDER, head=P30_IMPLEMENTATION_ORDER[-1])
 P32_DEPS = _depends_chain(P32_IMPLEMENTATION_ORDER, head=P31_IMPLEMENTATION_ORDER[-1])
+P33_DEPS = _depends_chain(P33_IMPLEMENTATION_ORDER, head=P32_IMPLEMENTATION_ORDER[-1])
 
 _O0_O1_PREFIX: List[str] = list(O0_IMPLEMENTATION_ORDER) + list(O1_IMPLEMENTATION_ORDER)
 _O0_O1_O2_PREFIX: List[str] = _O0_O1_PREFIX + list(O2_IMPLEMENTATION_ORDER)
@@ -1418,6 +1439,10 @@ ROLLUPS: Dict[str, List[str]] = {
     "P32-H": list(P32_H_GATES),
     "P32": list(P32_IMPLEMENTATION_ORDER),
     "P32-EXT": list(P32_EXTENDED_ORDER),
+    "P33-G": list(P33_G_GATES),
+    "P33-H": list(P33_H_GATES),
+    "P33": list(P33_IMPLEMENTATION_ORDER),
+    "P33-EXT": list(P33_EXTENDED_ORDER),
     "P": list(P_IMPLEMENTATION_ORDER),
 }
 
@@ -1526,6 +1551,8 @@ def register_gate(
             dep = P31_DEPS[gate_id]
         elif gate_id in P32_DEPS:
             dep = P32_DEPS[gate_id]
+        elif gate_id in P33_DEPS:
+            dep = P33_DEPS[gate_id]
         else:
             dep = frozenset()
     else:
@@ -2994,6 +3021,128 @@ def rollup_gate_ids(rollup_id: str) -> List[str]:
             + list(P30_IMPLEMENTATION_ORDER)
             + list(P31_IMPLEMENTATION_ORDER)
             + list(P32_IMPLEMENTATION_ORDER)
+        )
+    if rollup_id == "P33-G":
+        return (
+            _O0_THROUGH_P7_PREFIX
+            + list(P8_IMPLEMENTATION_ORDER)
+            + list(P9_L_GATES)
+            + list(P10_IMPLEMENTATION_ORDER)
+            + list(P11_IMPLEMENTATION_ORDER)
+            + list(P12_IMPLEMENTATION_ORDER)
+            + list(P13_IMPLEMENTATION_ORDER)
+            + list(P14_IMPLEMENTATION_ORDER)
+            + list(P15_IMPLEMENTATION_ORDER)
+            + list(P16_IMPLEMENTATION_ORDER)
+            + list(P17_IMPLEMENTATION_ORDER)
+            + list(P18_IMPLEMENTATION_ORDER)
+            + list(P19_IMPLEMENTATION_ORDER)
+            + list(P20_IMPLEMENTATION_ORDER)
+            + list(P21_IMPLEMENTATION_ORDER)
+            + list(P22_IMPLEMENTATION_ORDER)
+            + list(P23_IMPLEMENTATION_ORDER)
+            + list(P24_IMPLEMENTATION_ORDER)
+            + list(P25_IMPLEMENTATION_ORDER)
+            + list(P26_IMPLEMENTATION_ORDER)
+            + list(P27_IMPLEMENTATION_ORDER)
+            + list(P28_IMPLEMENTATION_ORDER)
+            + list(P29_IMPLEMENTATION_ORDER)
+            + list(P30_IMPLEMENTATION_ORDER)
+            + list(P31_IMPLEMENTATION_ORDER)
+            + list(P32_IMPLEMENTATION_ORDER)
+            + list(P33_G_GATES)
+        )
+    if rollup_id == "P33-H":
+        return (
+            _O0_THROUGH_P7_PREFIX
+            + list(P8_IMPLEMENTATION_ORDER)
+            + list(P9_L_GATES)
+            + list(P10_IMPLEMENTATION_ORDER)
+            + list(P11_IMPLEMENTATION_ORDER)
+            + list(P12_IMPLEMENTATION_ORDER)
+            + list(P13_IMPLEMENTATION_ORDER)
+            + list(P14_IMPLEMENTATION_ORDER)
+            + list(P15_IMPLEMENTATION_ORDER)
+            + list(P16_IMPLEMENTATION_ORDER)
+            + list(P17_IMPLEMENTATION_ORDER)
+            + list(P18_IMPLEMENTATION_ORDER)
+            + list(P19_IMPLEMENTATION_ORDER)
+            + list(P20_IMPLEMENTATION_ORDER)
+            + list(P21_IMPLEMENTATION_ORDER)
+            + list(P22_IMPLEMENTATION_ORDER)
+            + list(P23_IMPLEMENTATION_ORDER)
+            + list(P24_IMPLEMENTATION_ORDER)
+            + list(P25_IMPLEMENTATION_ORDER)
+            + list(P26_IMPLEMENTATION_ORDER)
+            + list(P27_IMPLEMENTATION_ORDER)
+            + list(P28_IMPLEMENTATION_ORDER)
+            + list(P29_IMPLEMENTATION_ORDER)
+            + list(P30_IMPLEMENTATION_ORDER)
+            + list(P31_IMPLEMENTATION_ORDER)
+            + list(P32_IMPLEMENTATION_ORDER)
+            + list(P33_IMPLEMENTATION_ORDER)
+        )
+    if rollup_id == "P33":
+        return (
+            _O0_THROUGH_P7_PREFIX
+            + list(P8_IMPLEMENTATION_ORDER)
+            + list(P9_L_GATES)
+            + list(P10_IMPLEMENTATION_ORDER)
+            + list(P11_IMPLEMENTATION_ORDER)
+            + list(P12_IMPLEMENTATION_ORDER)
+            + list(P13_IMPLEMENTATION_ORDER)
+            + list(P14_IMPLEMENTATION_ORDER)
+            + list(P15_IMPLEMENTATION_ORDER)
+            + list(P16_IMPLEMENTATION_ORDER)
+            + list(P17_IMPLEMENTATION_ORDER)
+            + list(P18_IMPLEMENTATION_ORDER)
+            + list(P19_IMPLEMENTATION_ORDER)
+            + list(P20_IMPLEMENTATION_ORDER)
+            + list(P21_IMPLEMENTATION_ORDER)
+            + list(P22_IMPLEMENTATION_ORDER)
+            + list(P23_IMPLEMENTATION_ORDER)
+            + list(P24_IMPLEMENTATION_ORDER)
+            + list(P25_IMPLEMENTATION_ORDER)
+            + list(P26_IMPLEMENTATION_ORDER)
+            + list(P27_IMPLEMENTATION_ORDER)
+            + list(P28_IMPLEMENTATION_ORDER)
+            + list(P29_IMPLEMENTATION_ORDER)
+            + list(P30_IMPLEMENTATION_ORDER)
+            + list(P31_IMPLEMENTATION_ORDER)
+            + list(P32_IMPLEMENTATION_ORDER)
+            + list(P33_IMPLEMENTATION_ORDER)
+        )
+    if rollup_id == "P33-EXT":
+        return _O0_THROUGH_O9_EXT_PREFIX + list(P33_EXTENDED_ORDER)
+    if rollup_id.startswith("P33-"):
+        return (
+            _O0_THROUGH_P7_PREFIX
+            + list(P8_IMPLEMENTATION_ORDER)
+            + list(P9_L_GATES)
+            + list(P10_IMPLEMENTATION_ORDER)
+            + list(P11_IMPLEMENTATION_ORDER)
+            + list(P12_IMPLEMENTATION_ORDER)
+            + list(P13_IMPLEMENTATION_ORDER)
+            + list(P14_IMPLEMENTATION_ORDER)
+            + list(P15_IMPLEMENTATION_ORDER)
+            + list(P16_IMPLEMENTATION_ORDER)
+            + list(P17_IMPLEMENTATION_ORDER)
+            + list(P18_IMPLEMENTATION_ORDER)
+            + list(P19_IMPLEMENTATION_ORDER)
+            + list(P20_IMPLEMENTATION_ORDER)
+            + list(P21_IMPLEMENTATION_ORDER)
+            + list(P22_IMPLEMENTATION_ORDER)
+            + list(P23_IMPLEMENTATION_ORDER)
+            + list(P24_IMPLEMENTATION_ORDER)
+            + list(P25_IMPLEMENTATION_ORDER)
+            + list(P26_IMPLEMENTATION_ORDER)
+            + list(P27_IMPLEMENTATION_ORDER)
+            + list(P28_IMPLEMENTATION_ORDER)
+            + list(P29_IMPLEMENTATION_ORDER)
+            + list(P30_IMPLEMENTATION_ORDER)
+            + list(P31_IMPLEMENTATION_ORDER)
+            + list(P32_IMPLEMENTATION_ORDER)
+            + gates
         )
     if rollup_id == "P32-EXT":
         return _O0_THROUGH_O9_EXT_PREFIX + list(P32_EXTENDED_ORDER)
