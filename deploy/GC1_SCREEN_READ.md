@@ -85,9 +85,11 @@ set GC_SCREEN_SHOW_FOCUS=1
 set GC_SCREEN_FOCUS_MS=1200
 ```
 
-- 빨간 네모 = OCR 직전 영역 (창 전체 → 패널 순)
-- 클릭 시 찾은 글자 주위에 더 작은 네모
-- 배경 투명, 클릭은 Autochro로 통과
+- 빨간 네모 = **지금 OCR 중인 단계**의 화면 영역만 (동시에 하나)
+- **전체 창** OCR → 전체 네모 → 끝나면 **즉시 사라짐**
+- **패널** OCR → 더 작은 네모만 → 끝나면 사라짐 → **fine** 단계면 그 영역에 다시 표시
+- 클릭 시 찾은 **글자 주위** 작은 네모
+- 기본 최소 **280ms** (`GC_SCREEN_FOCUS_MS` 150~400)
 - `--show-focus` 없으면 네모 없이 백그라운드만
 
 캡처 PNG: `%USERPROFILE%\.cursor\gc-screen-capture\`

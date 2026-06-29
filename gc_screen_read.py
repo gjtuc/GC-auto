@@ -17,10 +17,11 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple, TypeVar
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CONFIG = os.path.join(SCRIPT_DIR, "deploy", "screen_regions.gc1.json")
@@ -256,13 +257,111 @@ def focus_overlay_enabled() -> bool:
 
 
 def focus_duration_ms() -> int:
+    """단계당 네모 최소 표시 시간 (OCR이 더 길면 그동안 유지)."""
     raw = os.getenv("GC_SCREEN_FOCUS_MS", "").strip()
     if raw:
         try:
-            return max(200, int(raw))
+            return max(150, min(400, int(raw)))
         except ValueError:
             pass
-    return 900
+    return 280
+
+
+_T = TypeVar("_T")
+
+
+class FocusOverlay:
+    """
+    단계마다 하나의 빨간 네모만 표시.
+    다음 단계로 넘어가면 이전 네모는 즉시 제거 후 새 영역에만 표시.
+    """
+
+    def __init__(self) -> None:
+        self._stop = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+
+    def hide(self) -> None:
+        self._stop.set()
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=2.0)
+        self._stop = threading.Event()
+        self._thread = None
+
+    def show(self, box: Box, *, border: int = 3, color: str = "red") -> None:
+        if not focus_overlay_enabled():
+            return
+        self.hide()
+        stop = self._stop
+
+        def _run() -> None:
+            import tkinter as tk
+
+            root = tk.Tk()
+            root.overrideredirect(True)
+            root.attributes("-topmost", True)
+            chroma = "#010102"
+            root.configure(bg=chroma)
+            try:
+                root.wm_attributes("-transparentcolor", chroma)
+            except tk.TclError:
+                pass
+            w = max(1, box.width)
+            h = max(1, box.height)
+            root.geometry(f"{w}x{h}+{box.left}+{box.top}")
+            canvas = tk.Canvas(root, width=w, height=h, bg=chroma, highlightthickness=0)
+            canvas.pack(fill="both", expand=True)
+            pad = max(1, border)
+            canvas.create_rectangle(
+                pad,
+                pad,
+                w - pad,
+                h - pad,
+                outline=color,
+                width=border,
+                fill=chroma,
+            )
+
+            def _poll() -> None:
+                if stop.is_set():
+                    root.quit()
+                    return
+                root.after(40, _poll)
+
+            _poll()
+            root.mainloop()
+            try:
+                root.destroy()
+            except tk.TclError:
+                pass
+
+        self._thread = threading.Thread(target=_run, daemon=True)
+        self._thread.start()
+        time.sleep(0.04)
+
+    def stage(self, box: Box, work: Callable[[], _T], *, min_ms: Optional[int] = None) -> _T:
+        if not focus_overlay_enabled():
+            return work()
+        minimum = focus_duration_ms() if min_ms is None else min_ms
+        t0 = time.perf_counter()
+        self.show(box)
+        try:
+            return work()
+        finally:
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
+            if elapsed_ms < minimum:
+                time.sleep((minimum - elapsed_ms) / 1000.0)
+            self.hide()
+
+
+_FOCUS = FocusOverlay()
+
+
+def focus_stage(box: Box, work: Callable[[], _T], *, min_ms: Optional[int] = None) -> _T:
+    return _FOCUS.stage(box, work, min_ms=min_ms)
+
+
+def focus_hide() -> None:
+    _FOCUS.hide()
 
 
 def flash_focus_box(
@@ -272,53 +371,13 @@ def flash_focus_box(
     border: int = 3,
     color: str = "red",
 ) -> None:
-    """
-    전체 화면 위에 속이 빈 빨간 네모 — 지금 OCR/캡처하는 영역 표시.
-    Windows tkinter transparent overlay (클릭은 아래 창으로 통과).
-    """
+    """단일 영역 미리보기 (focus / calibrate 명령)."""
     if not focus_overlay_enabled():
         return
     ms = focus_duration_ms() if duration_ms is None else duration_ms
-
-    def _run_overlay() -> None:
-        import tkinter as tk
-
-        root = tk.Tk()
-        root.overrideredirect(True)
-        root.attributes("-topmost", True)
-        chroma = "#010102"
-        root.configure(bg=chroma)
-        try:
-            root.wm_attributes("-transparentcolor", chroma)
-        except tk.TclError:
-            pass
-        w = max(1, box.width)
-        h = max(1, box.height)
-        root.geometry(f"{w}x{h}+{box.left}+{box.top}")
-        canvas = tk.Canvas(root, width=w, height=h, bg=chroma, highlightthickness=0)
-        canvas.pack(fill="both", expand=True)
-        pad = max(1, border)
-        canvas.create_rectangle(
-            pad,
-            pad,
-            w - pad,
-            h - pad,
-            outline=color,
-            width=border,
-            fill=chroma,
-        )
-        root.after(ms, root.quit)
-        root.mainloop()
-        try:
-            root.destroy()
-        except tk.TclError:
-            pass
-
-    import threading
-
-    thread = threading.Thread(target=_run_overlay, daemon=True)
-    thread.start()
-    time.sleep(ms / 1000.0 + 0.06)
+    _FOCUS.show(box, border=border, color=color)
+    time.sleep(ms / 1000.0)
+    _FOCUS.hide()
 
 
 def token_screen_box(token: OcrToken, region_box: Box, scale: float) -> Box:
@@ -355,53 +414,77 @@ def read_region_hierarchical(
 
     result = HierarchicalReadResult(window_box=window_box)
     target_box, chain = resolve_region_box(config, region_id, window_box)
-
-    flash_focus_box(window_box, color="red")
-    full_img = capture_box(window_box)
     full_scale = float(config.get("zoom_pipeline", {}).get("full", 1.0))
-    full_up = upscale_image(full_img, full_scale)
-    full_text, full_tokens = ocr_image(full_up)
-    result.stages.append(
-        ReadStageResult(
-            "full",
-            full_scale,
-            "autochro_window",
-            save_debug_image(full_img, "full_window") if save_images else "",
-            full_tokens,
-            full_text,
-        )
-    )
-
-    flash_focus_box(target_box, color="red")
-    panel_img = capture_box(target_box)
     stage_name, panel_scale = stage_scale(config, region_id)
-    panel_up = upscale_image(panel_img, panel_scale)
-    panel_text, panel_tokens = ocr_image(panel_up)
-    result.stages.append(
-        ReadStageResult(
-            stage_name,
-            panel_scale,
-            region_id,
-            save_debug_image(panel_up, f"{region_id}_{stage_name}") if save_images else "",
-            panel_tokens,
-            panel_text,
-        )
-    )
-
     fine_scale = float(config.get("zoom_pipeline", {}).get("fine", 3.5))
-    if fine_scale > 1.01 and stage_name in ("fine", "panel"):
-        fine_up = upscale_image(panel_up, fine_scale)
-        fine_text, fine_tokens = ocr_image(fine_up)
+
+    try:
+        def _full_stage() -> None:
+            nonlocal full_img, full_text, full_tokens
+            full_img = capture_box(window_box)
+            full_up = upscale_image(full_img, full_scale)
+            full_text, full_tokens = ocr_image(full_up)
+
+        full_img = None
+        full_text, full_tokens = "", []
+        focus_stage(window_box, _full_stage)
         result.stages.append(
             ReadStageResult(
-                "fine_extra",
-                fine_scale,
-                region_id,
-                save_debug_image(fine_up, f"{region_id}_fine2") if save_images else "",
-                fine_tokens,
-                fine_text,
+                "full",
+                full_scale,
+                "autochro_window",
+                save_debug_image(full_img, "full_window") if save_images and full_img else "",
+                full_tokens,
+                full_text,
             )
         )
+
+        panel_img = None
+        panel_text, panel_tokens = "", []
+
+        def _panel_stage() -> None:
+            nonlocal panel_img, panel_text, panel_tokens
+            panel_img = capture_box(target_box)
+            panel_up = upscale_image(panel_img, panel_scale)
+            panel_text, panel_tokens = ocr_image(panel_up)
+
+        focus_stage(target_box, _panel_stage)
+        panel_up = upscale_image(panel_img, panel_scale) if panel_img else None
+        result.stages.append(
+            ReadStageResult(
+                stage_name,
+                panel_scale,
+                region_id,
+                save_debug_image(panel_up, f"{region_id}_{stage_name}")
+                if save_images and panel_up
+                else "",
+                panel_tokens,
+                panel_text,
+            )
+        )
+
+        if fine_scale > 1.01 and stage_name in ("fine", "panel") and panel_up is not None:
+
+            def _fine_stage() -> None:
+                nonlocal fine_text, fine_tokens
+                fine_up = upscale_image(panel_up, fine_scale)
+                fine_text, fine_tokens = ocr_image(fine_up)
+
+            fine_text, fine_tokens = "", []
+            focus_stage(target_box, _fine_stage)
+            fine_up = upscale_image(panel_up, fine_scale)
+            result.stages.append(
+                ReadStageResult(
+                    "fine_extra",
+                    fine_scale,
+                    region_id,
+                    save_debug_image(fine_up, f"{region_id}_fine2") if save_images else "",
+                    fine_tokens,
+                    fine_text,
+                )
+            )
+    finally:
+        focus_hide()
 
     _log(f"[눈] region={region_id} chain={' → '.join(chain)}")
     for st in result.stages:
@@ -477,10 +560,15 @@ def read_and_click_text(
         path = save_debug_image(up, f"click_miss_{region_id}")
         raise RuntimeError(f"텍스트 없음: {text!r} — {path}")
     best = max(hits, key=lambda t: t.confidence)
-    flash_focus_box(token_screen_box(best, region_box, scale), color="red", border=2)
+    token_box = token_screen_box(best, region_box, scale)
+
+    def _click() -> None:
+        x, y = token_screen_center(best, region_box, scale)
+        click_screen(x, y, button=button)
+
+    focus_stage(token_box, _click, min_ms=200)
     x, y = token_screen_center(best, region_box, scale)
     _log(f"[클릭] {text!r} → ({x},{y}) conf={best.confidence:.0f}")
-    click_screen(x, y, button=button)
     return x, y
 
 
