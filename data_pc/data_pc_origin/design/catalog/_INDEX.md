@@ -80,12 +80,18 @@
 | P25-N,H | [P25.md](P25.md) | 8 | 구현 **PASS** |
 | P26-W,H | [P26.md](P26.md) | 8 | 구현 **PASS** |
 | P27-G,H | [P27.md](P27.md) | 8 | 구현 **PASS** |
+| P28-M,H | [P28.md](P28.md) | 8 | 구현 **PASS** |
+| P29-G,H | [P29.md](P29.md) | 8 | 구현 **PASS** |
+| P30-G,H | [P30.md](P30.md) | 8 | 구현 **PASS** |
 
 ## 구현 포인터
 
 ```
-DONE: P27 — GitHub refresh sync
-verify: python -m data_pc_origin.verify --p27   # 198 gates
+DONE: P30 — GitHub push
+verify: python -m data_pc_origin.verify --p30   # 222 gates
+P30: python -m data_pc_origin.live_p30_github_push [--push]
+P29: python -m data_pc_origin.live_p29_github_refresh [--sync] [--push]
+MERGE: python -m data_pc_origin.live_merge_readiness [--pr]
 GITHUB: python -m data_pc_origin.live_github_refresh [--sync] [--push]
 WATCH: python -m data_pc_origin.live_watch_resident [--delegate]
 OPS: python -m data_pc_origin.live_ops_rollup [--tick]

@@ -1304,12 +1304,47 @@ def setup_experiment_folder(source_excel, calculated_excel, reaction_type):
 # GC3 갭: gc_chem32 가 FID/TCD 시트에 삽입한 ``#``+``중단`` 블록.
 # N = parse_gap_missing_cycles (Time 또는 Symmetry GC_GAP:N=).
 # gap_cycles → process_excel 에서 해당 Cycle NaN (Origin 시간축 정렬).
-from gc_gap_contract import is_cycle_header_row, parse_gap_missing_cycles
+# 빈 주입(# Time Area … 반복, 숫자 피크 없음)도 gap_cycles 와 동일 처리.
+from gc_gap_contract import (
+    format_missing_cycle_warnings,
+    is_cycle_header_row,
+    parse_gap_missing_cycles,
+    row_has_numeric_peak,
+)
+
+
+def _apply_gap_nan_rows(df_p, df_result, gap_cycles):
+    """미수집·빈 주입 Cycle — Origin 시간축 정렬용 NaN."""
+    if not gap_cycles:
+        return
+    for cyc in gap_cycles:
+        if cyc in df_p.index:
+            df_p.loc[cyc] = np.nan
+        if cyc in df_result.index:
+            df_result.loc[cyc] = np.nan
+
+
+def _is_header_only_row(row):
+    return is_cycle_header_row(row) and not row_has_numeric_peak(row)
+
+
+def _header_only_run_len(rows, idx):
+    """idx 포함 역방향 연속 ``# Time Area …`` 행 수."""
+    n = 0
+    j = idx
+    while j >= 0:
+        _, row = rows[j]
+        if not _is_header_only_row(row):
+            break
+        n += 1
+        j -= 1
+    return n
 
 
 def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
     warnings = []
     gap_cycles = set()
+    placeholder_cycles = set()
     cycle_num, cycle_list, unassigned_list = 1, [], []  # 1주입 = Cycle 1 (KCH 첫 블록에 헤더 없음)
 
     rows = list(df_raw.iterrows())
@@ -1321,7 +1356,8 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
             # Chem32 레이아웃: [헤더 # Time …][중단 행 1줄] — N사이클 건너뛰기
             if i + 1 < len(rows) and parse_gap_missing_cycles(rows[i + 1][1]) is not None:
                 missing = parse_gap_missing_cycles(rows[i + 1][1])
-                last_cycle = max((c["Cycle"] for c in cycle_list), default=cycle_num - 1)
+                last_cycle = max((c["Cycle"] for c in cycle_list), default=0)
+                last_cycle = max(last_cycle, cycle_num)
                 start_gap = last_cycle + 1
                 end_gap = last_cycle + missing
                 for k in range(start_gap, end_gap + 1):
@@ -1334,12 +1370,21 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
                 i += 2
                 continue
             cycle_num += 1
+            next_peak = i + 1 < len(rows) and row_has_numeric_peak(rows[i + 1][1])
+            run_len = _header_only_run_len(rows, i)
+            # 단독 헤더 1행 뒤 숫자 피크 = 정상 주입 구분. 연속 헤더-only = 주입마다 피크 미기록.
+            if not (next_peak and run_len == 1):
+                placeholder_cycles.add(cycle_num)
             i += 1
             continue
 
         if parse_gap_missing_cycles(row) is not None:
             i += 1
             continue
+
+        if row_has_numeric_peak(row):
+            while cycle_num in placeholder_cycles or cycle_num in gap_cycles:
+                cycle_num += 1
 
         if pd.notna(row.get("Time")) and pd.notna(row.get("Area")):
             try:
@@ -1379,6 +1424,12 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
                     warnings.append(f"⚠️ [피크 보정] Cycle {c}에서 '{g}' 피크가 여러 개로 검출되어 합산 처리되었습니다.")
                 else:
                     warnings.append(f"⚠️ [비정상 피크] Cycle {c}에서 '{g}' 피크가 비정상적으로 쪼개졌습니다. 합산 결과가 앞뒤 사이클과 크게 다릅니다!")
+
+    gap_cycles |= placeholder_cycles
+    if placeholder_cycles:
+        warnings.extend(
+            format_missing_cycle_warnings(placeholder_cycles, "피크 미기록 (빈 주입)")
+        )
 
     if gap_cycles:
         all_idx = sorted(set(df_pivot.index) | gap_cycles) if not df_pivot.empty else sorted(gap_cycles)
@@ -1484,7 +1535,7 @@ def process_excel(input_file):
 
     # [수식 적용 단계: GC2 (DRE / DRM)]
     if eq == 'GC2':
-        df_p, warn, _gap = parse_gc_sheet(df_gc2_raw, None, 'GC2', GC2_TIME)
+        df_p, warn, gap_cycles = parse_gc_sheet(df_gc2_raw, None, 'GC2', GC2_TIME)
         all_warnings.extend(warn)
         for g in ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area']:
             if g not in df_p.columns: df_p[g] = 0
@@ -1522,6 +1573,7 @@ def process_excel(input_file):
             cols = ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area',
                     'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
             out_name = _calc_output_path(input_file, '_GC2_DRE_계산완료')
+        _apply_gap_nan_rows(df_p, df_result, gap_cycles)
 
     # [수식 적용 단계: GC3 (DRE / DRME)] — reaction_target 으로 출력 접미사만 구분
     elif eq == 'GC3':
@@ -1550,17 +1602,13 @@ def process_excel(input_file):
                 'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
         gc3_suffix = '_GC3_DRE_계산완료' if reaction_target == 'DRE' else '_GC3_DRME_계산완료'
         out_name = _calc_output_path(input_file, gc3_suffix)
-        if gap_cycles:
-            for cyc in gap_cycles:
-                if cyc in df_p.index:
-                    df_p.loc[cyc] = np.nan
-                if cyc in df_result.index:
-                    df_result.loc[cyc] = np.nan
+        _apply_gap_nan_rows(df_p, df_result, gap_cycles)
 
     # [수식 적용 단계: GC1 (DRE / DRM) — GC3 와 동일 나눗셈 교정, FID+TCD 병합]
     elif eq == 'GC1':
-        df_t, warn_t, _gap_t = parse_gc_sheet(df_gc1_tcd, 'TCD', 'GC1', GC1_TIME_TCD)
-        df_f, warn_f, _gap_f = parse_gc_sheet(df_gc1_fid, 'FID', 'GC1', GC1_TIME_FID)
+        df_t, warn_t, gap_t = parse_gc_sheet(df_gc1_tcd, 'TCD', 'GC1', GC1_TIME_TCD)
+        df_f, warn_f, gap_f = parse_gc_sheet(df_gc1_fid, 'FID', 'GC1', GC1_TIME_FID)
+        gap_cycles = gap_t | gap_f
         all_warnings.extend(warn_t)
         all_warnings.extend(warn_f)
         df_p = pd.concat([df_t, df_f], axis=1).fillna(0)
@@ -1596,6 +1644,7 @@ def process_excel(input_file):
             cols = ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area',
                     'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
             out_name = _calc_output_path(input_file, '_GC1_DRE_계산완료')
+        _apply_gap_nan_rows(df_p, df_result, gap_cycles)
 
     # 🚨 [검증 3] 수율/전환율 교차검증 — feed 농도(%) 오기재 패턴 감지
     all_warnings.extend(_validate_yield_conversion(df_result, reaction_target, feed_source_desc))

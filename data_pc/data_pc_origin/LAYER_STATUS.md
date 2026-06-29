@@ -106,6 +106,15 @@
 | P27-G refresh | **PASS** (4/4) | `verify --p27` | P24–P26 markers |
 | P27-H harness | **PASS** (4/4) | `verify --p27` | live_github_refresh |
 | **P27-EXT** | **PASS** (198/198) | `verify --p27` | P26-EXT + P27 |
+| P28-M merge | **PASS** (4/4) | `verify --p28` | ops · sync · diff |
+| P28-H harness | **PASS** (4/4) | `verify --p28` | live_merge_readiness |
+| **P28-EXT** | **PASS** (206/206) | `verify --p28` | P27-EXT + P28 |
+| P29-G refresh | **PASS** (4/4) | `verify --p29` | P27–P28 markers |
+| P29-H harness | **PASS** (4/4) | `verify --p29` | live_p29_github_refresh |
+| **P29-EXT** | **PASS** (214/214) | `verify --p29` | P28-EXT + P29 |
+| P30-G push | **PASS** (4/4) | `verify --p30` | dest markers · branch |
+| P30-H harness | **PASS** (4/4) | `verify --p30` | live_p30_github_push |
+| **P30-EXT** | **PASS** (222/222) | `verify --p30` | P29-EXT + P30 |
 
 규칙: **L4 나노 PASS → L3 → L2 → L1 → L0** · 형제는 선행 형제 PASS 후 · **사용자 승인** 후 다음 구현.
 

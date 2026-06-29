@@ -121,7 +121,7 @@
 ## 현재 작업 포인터
 
 ```
-DONE: O0..O9-EXT + P0..P27-EXT (198) — verify --p27 PASS
+DONE: O0..O9-EXT + P0..P30-EXT (222) — verify --p30 PASS
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
 RUNTIME: python -m data_pc_origin.live_runtime --dry
@@ -152,6 +152,12 @@ WATCH: python -m data_pc_origin.live_watch_resident
 GITHUB: python -m data_pc_origin.live_github_refresh
         python -m data_pc_origin.live_github_refresh --sync
         DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_github_refresh --push
+P29: python -m data_pc_origin.live_p29_github_refresh
+     python -m data_pc_origin.live_p29_github_refresh --sync
+     DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p29_github_refresh --push
+P30: python -m data_pc_origin.live_p30_github_push
+     DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p30_github_push --push
+MERGE: python -m data_pc_origin.live_merge_readiness [--pr]
 ```
 
 ## Phase 9 — P층 (메일·엑셀 ↔ Origin)
@@ -234,8 +240,33 @@ GITHUB: python -m data_pc_origin.live_github_refresh
 | 108 | P27-G | 4 | `p27_github_refresh.py` | **PASS** |
 | 109 | P27-H | 4 | `live_github_refresh.py` | **PASS** |
 | 110 | **P27-EXT** | 198 | P26-EXT + P27 | **PASS** `--p27` |
+| 111 | P28-M | 4 | `p28_merge_readiness.py` | **PASS** |
+| 112 | P28-H | 4 | `live_merge_readiness.py` | **PASS** |
+| 113 | **P28-EXT** | 206 | P27-EXT + P28 | **PASS** `--p28` |
+| 114 | P29-G | 4 | `p29_github_refresh.py` | **PASS** |
+| 115 | P29-H | 4 | `live_p29_github_refresh.py` | **PASS** |
+| 116 | **P29-EXT** | 214 | P28-EXT + P29 | **PASS** `--p29` |
+| 117 | P30-G | 4 | `p30_github_push.py` | **PASS** |
+| 118 | P30-H | 4 | `live_p30_github_push.py` | **PASS** |
+| 119 | **P30-EXT** | 222 | P29-EXT + P30 | **PASS** `--p30` |
 
 ```bash
+# P30 — GitHub push
+python -m data_pc_origin.live_p30_github_push
+DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p30_github_push --push
+python -m data_pc_origin.verify --p30
+
+# P29 — GitHub refresh (P27–P28)
+python -m data_pc_origin.live_p29_github_refresh
+python -m data_pc_origin.live_p29_github_refresh --sync
+DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p29_github_refresh --push
+python -m data_pc_origin.verify --p29
+
+# P28 — main merge readiness
+python -m data_pc_origin.live_merge_readiness
+DATA_PC_MERGE_PR=1 python -m data_pc_origin.live_merge_readiness --pr
+python -m data_pc_origin.verify --p28
+
 # P27 — GitHub refresh (P24–P26)
 python -m data_pc_origin.live_github_refresh
 python -m data_pc_origin.live_github_refresh --sync
