@@ -45,11 +45,12 @@ def _gate_p12_f_03_a_1() -> None:
 def _gate_p12_f_04_a_1() -> None:
     import data_pc_origin.tests.fixtures.catalyst_mock_module as mock
 
+    sample_name, *_ = mock.generate_sample_name(r"G:\in.xlsx")
     s3 = make_stage3_runner(mock)
     s2 = Stage2RunResult(
         artifacts=Stage2Artifacts(mock.process_excel(r"G:\in.xlsx")[0], r"G:\mock\calc.xlsx"),
         metadata=assemble_stage2_metadata(
-            sample_name=mock.generate_sample_name(r"G:\in.xlsx"),
+            sample_name=sample_name,
             identity_key=mock._experiment_identity_key(r"G:\in.xlsx"),
             saved_excel=r"G:\mock\calc.xlsx",
         ),

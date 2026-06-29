@@ -21,12 +21,12 @@
 | # | rollup | L4 | module | 상태 |
 |---|--------|-----|--------|------|
 | 1 | O0-L1-K | O0-K-01-a-1 … O0-K-02-b-1 (9) | `o0_keys.py` | **PASS** |
-| 2 | O0-L1-I | O0-I-01-a-1 … O0-I-02-b-1 (9) | `o0_identity.py` | **PASS** |
-| 3 | O0-L1-C | O0-C-01-a-1 … O0-C-03-a-1 (11) | `o0_comments.py` | **PASS** |
+| 2 | O0-L1-I | O0-I-01-a-1 … O0-I-03-e-1 (14) | `o0_identity.py` | **PASS** |
+| 3 | O0-L1-C | O0-C-01-a-1 … O0-C-04-e-1 (16) | `o0_comments.py` | **PASS** |
 | 4 | O0-L1-S | O0-S-01-a-1 … O0-S-06-b-1 (16) | `o0_series.py` | **PASS** |
 | 5 | O0-L1-M | O0-M-01-a-1 … O0-M-03-b-1 (10) | `o0_mapping.py` | **PASS** |
 | 6 | O0-L1-T | O0-T-01-a-1 … O0-T-04-a-1 (6) | `o0_types.py` | **PASS** |
-| 7 | **O0** | 위 61 gate 합본 | — | **PASS** `--rollup O0` |
+| 7 | **O0** | 위 71 gate 합본 | — | **PASS** `--rollup O0` |
 
 ---
 
@@ -121,7 +121,9 @@
 ## 현재 작업 포인터
 
 ```
-DONE: O0..O9-EXT + P0..P39-EXT (294) — verify --p39 PASS
+DONE: O6-G equipment-day 가드 실행 검증 (live_equipment_day_guard)
+NEXT: git sync · P28-H 환경 이슈(선택)
+```
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
 RUNTIME: python -m data_pc_origin.live_runtime --dry
@@ -179,6 +181,8 @@ P38: python -m data_pc_origin.live_p38_github_refresh
      DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p38_github_refresh --push
 P39: python -m data_pc_origin.live_p39_github_push
      DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p39_github_push --push
+P40: python -m data_pc_origin.live_p40_merge_pr
+     DATA_PC_MERGE_PR=1 python -m data_pc_origin.live_p40_merge_pr --pr
 P31: python -m data_pc_origin.live_p31_merge_pr [--pr]
 ```
 
@@ -298,8 +302,23 @@ P31: python -m data_pc_origin.live_p31_merge_pr [--pr]
 | 144 | P39-G | 4 | `p39_github_push.py` | **PASS** |
 | 145 | P39-H | 4 | `live_p39_github_push.py` | **PASS** |
 | 146 | **P39-EXT** | 294 | P38-EXT + P39 | **PASS** `--p39` |
+| 147 | P40-M | 4 | `p40_merge_pr.py` | **PASS** |
+| 148 | P40-H | 4 | `live_p40_merge_pr.py` | **PASS** |
+| 149 | **P40-EXT** | 302 | P39-EXT + P40 | **PASS** `--p40` |
+| 150 | P41-M | 4 | `p41_manifest.py` | **PASS** |
+| 151 | P41-H | 4 | `live_p41_manifest.py` | **PASS** |
+| 152 | **P41-EXT** | 310 | P40-EXT + P41 | **PASS** `--p41` |
 
 ```bash
+# P41 — stack manifest (O층 정렬 후)
+python -m data_pc_origin.live_p41_manifest
+python -m data_pc_origin.verify --p41
+
+# P40 — merge PR (post-P39, P31 갱신)
+python -m data_pc_origin.live_p40_merge_pr
+DATA_PC_MERGE_PR=1 python -m data_pc_origin.live_p40_merge_pr --pr
+python -m data_pc_origin.verify --p40
+
 # P39 — GitHub push
 python -m data_pc_origin.live_p39_github_push
 DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p39_github_push --push

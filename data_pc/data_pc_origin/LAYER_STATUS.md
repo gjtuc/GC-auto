@@ -13,7 +13,7 @@
 | 층 | 상태 | 검증 명령 | 비고 |
 |----|------|-----------|------|
 | O0 pure | **PASS** (합본) | `python -m data_pc_origin.verify --o0` | unit=PASS |
-| O0 L4 리프 | **PASS** (61 L4) | `verify --rollup O0` | 61 gates |
+| O0 L4 리프 | **PASS** (71 L4) | `verify --rollup O0` | 71 gates |
 | O1 probes | **PASS** (27 L4) | `verify --rollup O1` | 27 gates |
 | O2 gates | **PASS** (21 L4) | `verify --rollup O2` | 21 gates |
 | O3 session | **PASS** (12 L4) | `verify --rollup O3` | 12 gates |
@@ -29,7 +29,7 @@
 | O6-P plan | **PASS** (4/12) | `verify --rollup O6-P` | insert · occupied |
 | O6-I insert | **PASS** (4/16) | `verify --rollup O6-I` | LT_execute mock |
 | O6-R resolve | **PASS** (2/16) | `verify --rollup O6-R` | exact>identity>insert |
-| O6 column | **PASS** (16/16) | `verify --rollup O6` | full layer |
+| O6 column | **PASS** (20/20) | `verify --rollup O6` | full layer + O6-G guard |
 | O7-P policy | **PASS** (3/9) | `verify --rollup O7-P` | gap · prepare |
 | O7-W write | **PASS** (4/9) | `verify --rollup O7-W` | from_list mock |
 | O7-G gap | **PASS** (2/9) | `verify --rollup O7-G` | idx 99·100 |
@@ -142,6 +142,10 @@
 | P39-G push | **PASS** (4/4) | `verify --p39` | dest markers · remote |
 | P39-H harness | **PASS** (4/4) | `verify --p39` | live_p39_github_push |
 | **P39-EXT** | **PASS** (294/294) | `verify --p39` | P38-EXT + P39 |
+| P40-M merge PR | **PASS** (4/4) | `verify --p40` | post-P39 · structural |
+| P40-H harness | **PASS** (4/4) | `verify --p40` | live_p40_merge_pr |
+| **P40-EXT** | **PASS** (302/302) | `verify --p40` | P39-EXT + P40 |
+| **P41-EXT** | **PASS** (310/310) | `verify --p41` | P40-EXT + P41 · O층 manifest |
 
 규칙: **L4 나노 PASS → L3 → L2 → L1 → L0** · 형제는 선행 형제 PASS 후 · **사용자 승인** 후 다음 구현.
 

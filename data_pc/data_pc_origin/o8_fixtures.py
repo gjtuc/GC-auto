@@ -135,3 +135,23 @@ def fx_job_df_partial() -> _FakeDf:
 
 OPJU_FX = r"G:\test\Ni5_Ce5.opju"
 SAMPLE_JOB = SAMPLE_WRITE
+
+# O6-G 실행 검증 — live GC 와 동일 OCM Comments (equipment-day 가드)
+OCM_LEFT_COMMENT = "20260620 DRE(1.5%)@600°C Ni5/Ce5/Al2O3_OCM 장비"
+OCM_NEW_SAME_DAY = "20260620 DRE(3%)@650°C Ni10/Al2O3_OCM 장비"
+OCM_NEW_NEXT_DAY = "20260621 DRE(1.5%)@600°C Ni5/Ce5/Al2O3_OCM 장비"
+
+
+def fx_job_op_equipment_day_guard() -> tuple[JobMockOp, List[JobSheet]]:
+    """
+    8/8 시트 공통: col1=OCM 실험(20260620) · col2=빈칸.
+
+    O5 매칭 순서상 첫 hit 가 C2H6conversion 이므로 **전 시트** 동일 레이아웃 —
+    어느 시트에서 col_idx 가 잡혀도 O6-G 가 동일하게 발동.
+    """
+    guard_labels = {1: {"C": OCM_LEFT_COMMENT}, 2: {"C": ""}}
+    sheets = [
+        JobSheet(name, labels=guard_labels, cols=3) for name in _DEFAULT_JOB_SHEETS
+    ]
+    book = JobBook("Book1", "DRM Data", sheets)
+    return JobMockOp([book]), sheets

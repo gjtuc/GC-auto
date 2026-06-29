@@ -65,8 +65,8 @@ def _patch_layer_status(
     out: list[str] = []
     for line in lines:
         if o0_gates is not None and line.startswith("| O0 L4 리프 |"):
-            status = "**PASS** (61 L4)" if o0_gates else "FAIL"
-            out.append(f"| O0 L4 리프 | {status} | `verify --rollup O0` | 61 gates |")
+            status = "**PASS** (71 L4)" if o0_gates else "FAIL"
+            out.append(f"| O0 L4 리프 | {status} | `verify --rollup O0` | 71 gates |")
         elif o1_gates is not None and line.startswith("| O1 probes |"):
             status = "**PASS** (27 L4)" if o1_gates else "FAIL"
             out.append(f"| O1 probes | {status} | `verify --rollup O1` | 27 gates |")
@@ -113,7 +113,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="data_pc_origin 층별·게이트 검증")
     parser.add_argument("--gate", metavar="ID", help="단일 L4 gate (선행 gate 자동 실행)")
     parser.add_argument("--rollup", metavar="ID", help="합본 (O0, O1-P, O1, …)")
-    parser.add_argument("--o0", action="store_true", help="O0: 61 gate + unittest")
+    parser.add_argument("--o0", action="store_true", help="O0: 71 gate + unittest")
     parser.add_argument("--o1", action="store_true", help="O1: O0+O1 gates + unittest")
     parser.add_argument("--o2", action="store_true", help="O2: O0+O1+O2 gates + unittest")
     parser.add_argument("--o3", action="store_true", help="O3: O0..O3 gates + unittest")
@@ -144,6 +144,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--p10", action="store_true", help="P10: live FULL+mail (7) after P9-L + unittest")
     parser.add_argument("--p11", action="store_true", help="P11-K: KCH native stage2 (4) after P10 + unittest")
     parser.add_argument("--p12", action="store_true", help="P12-F: FULL native stage2+3 (4) after P11 + unittest")
+    parser.add_argument("--p41", action="store_true", help="P41: stack manifest post-O-alignment (8) after P40 + unittest")
+    parser.add_argument("--p40", action="store_true", help="P40: merge PR post-P39 (8) after P39 + unittest")
     parser.add_argument("--p39", action="store_true", help="P39: GitHub push (8) after P38 + unittest")
     parser.add_argument("--p38", action="store_true", help="P38: GitHub refresh P36-P37 (8) after P37 + unittest")
     parser.add_argument("--p37", action="store_true", help="P37: GitHub push (8) after P36 + unittest")
@@ -226,6 +228,38 @@ def main(argv: list[str] | None = None) -> int:
             print("\n[OK] O0..O9-EXT + P0..P8 (59) gates + unit tests passed")
             return 0
         print("\n[FAIL] P full verify failed")
+        return 1
+
+    if args.p41:
+        from data_pc_origin.gates.registry import rollup_gate_ids
+
+        print("=== data_pc_origin verify: P41 (stack manifest 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P41")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        n = len(rollup_gate_ids("P41"))
+        if gates_ok and unit_ok:
+            print(f"\n[OK] O0..O9-EXT + P0..P41-EXT ({n}) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P41 verify failed")
+        return 1
+
+    if args.p40:
+        from data_pc_origin.gates.registry import rollup_gate_ids
+
+        print("=== data_pc_origin verify: P40 (merge PR post-P39 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P40")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        n = len(rollup_gate_ids("P40"))
+        if gates_ok and unit_ok:
+            print(f"\n[OK] O0..O9-EXT + P0..P40-EXT ({n}) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P40 verify failed")
         return 1
 
     if args.p39:
@@ -883,7 +917,7 @@ def main(argv: list[str] | None = None) -> int:
                 o5_t_gates=True,
                 o5_m_gates=True,
             )
-            print("\n[OK] O0..O4 + O5 core (234) gates + unit tests passed")
+            print("\n[OK] O0..O4 + O5 core (244) gates + unit tests passed")
             return 0
         print("\n[FAIL] O5-M verify failed")
         return 1

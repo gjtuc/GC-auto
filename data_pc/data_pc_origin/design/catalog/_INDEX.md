@@ -92,12 +92,16 @@
 | P37-G,H | [P37.md](P37.md) | 8 | 구현 **PASS** |
 | P38-G,H | [P38.md](P38.md) | 8 | 구현 **PASS** |
 | P39-G,H | [P39.md](P39.md) | 8 | 구현 **PASS** |
+| P40-M,H | [P40.md](P40.md) | 8 | 구현 **PASS** |
+| P41-M,H | [P41.md](P41.md) | 8 | 구현 **PASS** |
 
 ## 구현 포인터
 
 ```
-DONE: P39 — GitHub push (post-P38)
-verify: python -m data_pc_origin.verify --p39   # 294 gates
+DONE: P41 — stack manifest (O층 정렬·게이트 수)
+verify: python -m data_pc_origin.verify --p41   # full stack rollup
+P41: python -m data_pc_origin.live_p41_manifest
+P40: python -m data_pc_origin.live_p40_merge_pr [--pr]
 P39: python -m data_pc_origin.live_p39_github_push [--push]
 P38: python -m data_pc_origin.live_p38_github_refresh [--sync] [--push]
 P37: python -m data_pc_origin.live_p37_github_push [--push]

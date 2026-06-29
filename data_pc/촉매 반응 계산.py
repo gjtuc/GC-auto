@@ -904,10 +904,10 @@ def _experiment_identity_key(source):
     return (date_match.group(1) if date_match else "00000000", name.lower())
 
 def _identity_match_tokens(sample_key):
-    """시료 문자열에서 G: 폴더 중복 비교용 토큰."""
-    tokens = set(re.findall(r'@\d+|\d+\.?\d*g|dre|drm|drme', sample_key.lower()))
-    tokens.update(re.findall(r'[a-z]+\d*|[a-z]{1,2}\d+', sample_key.lower()))
-    return {t for t in tokens if len(t) >= 2 or t.endswith('g')}
+    """시료 문자열에서 G: 폴더 중복 비교용 토큰 — O0-I 위임 (Task C·KCH stem 동일 규칙)."""
+    from data_pc_origin.catalyst_identity_bridge import catalyst_identity_tokens
+
+    return catalyst_identity_tokens(sample_key)
 
 def _folder_matches_experiment_identity(folder_name, identity_key):
     """같은 날짜·시료 실험의 잘못된 폴더명인지 판별."""
@@ -1784,73 +1784,49 @@ def process_excel(input_file):
 # 기능 4: Origin .opju 워크시트 연동 (originpro) — 그래프 plot 은 수동
 # ==========================================
 def _comment_matches_identity(comment, identity_key):
-    """Origin Comments(기존 열)와 KCH identity (날짜·시료) 동일 실험 여부."""
-    if not comment or not identity_key:
-        return False
-    date, sample = identity_key
-    text = comment.strip().lower()
-    if not text.startswith(date):
-        return False
-    tokens = _identity_match_tokens(sample)
-    if not tokens:
-        return False
-    matched = sum(1 for token in tokens if token in text)
-    return matched >= max(2, int(len(tokens) * 0.6))
+    """Origin Comments(기존 열)와 KCH identity 동일 실험 여부 — O0-C 위임 (장비 접미사 strip)."""
+    from data_pc_origin.catalyst_identity_bridge import catalyst_comment_matches_identity
+
+    return catalyst_comment_matches_identity(comment, identity_key)
+
 
 def _comment_sort_date(text):
-    """Origin Comments / 시료명 선두 YYYYMMDD — 열 날짜순 정렬용."""
-    match = re.match(r"^(\d{8})", (text or "").strip())
-    return match.group(1) if match else None
+    """Origin Comments / 시료명 선두 YYYYMMDD — O0-C parse_comment_date 위임."""
+    from data_pc_origin.catalyst_identity_bridge import catalyst_comment_sort_date
+
+    return catalyst_comment_sort_date(text)
 
 def _worksheet_dated_columns(wks):
-    """(col_idx, sort_date) — Comments 에 날짜가 있는 열만, 왼쪽→오른쪽."""
-    dated = []
-    for i in range(1, wks.cols):
-        sort_date = _comment_sort_date(wks.get_label(i, "C") or "")
-        if sort_date:
-            dated.append((i, sort_date))
-    return dated
+    """(col_idx, sort_date) — O6-S dated_columns 위임."""
+    from data_pc_origin.o6_scan import dated_columns
+
+    return dated_columns(wks)
+
 
 def _insert_worksheet_column_before(wks, col_idx):
-    """0-based col_idx 앞에 빈 Y 열 1개 삽입 (기존 열 오른쪽으로 밀림)."""
+    """0-based col_idx 앞에 빈 Y 열 삽입 — O6-I insert_column_before 위임."""
     from originpro.config import po
-    lt_col = col_idx + 1
-    rng = wks.lt_range()
-    po.LT_execute(f"page.xlcolname=0; {rng}.col={lt_col}; {rng}.insert(GCData);")
+
+    from data_pc_origin.o6_insert import insert_column_before
+
+    insert_column_before(wks, col_idx, lt_execute=po.LT_execute)
+
 
 def _find_worksheet_column_for_sample(wks, sample_name, identity_key=None):
     """
-    시료 데이터를 넣을 워크시트 열.
-    · 동일 Comments → 해당 열 갱신
-    · identity_key 일치(재전송) → 해당 열 갱신
-    · 없으면 Comments 날짜(YYYYMMDD)순으로 삽입 — 맨 끝 무조건 추가 금지
+    시료 데이터를 넣을 워크시트 열 — O6-R 위임 (exact → identity → 날짜순 insert).
+
+    운영 파이프라인은 update_origin → O9 가 동일 O6 경로(+장비·날짜 가드) 사용.
+    legacy `_update_origin_legacy` 참고용 — 가드는 skip (구 촉매 동작).
     """
-    for i in range(1, wks.cols):
-        comment = wks.get_label(i, "C")
-        if comment and comment.strip() == sample_name:
-            return i
-    if identity_key:
-        for i in range(1, wks.cols):
-            comment = wks.get_label(i, "C") or ""
-            if _comment_matches_identity(comment, identity_key):
-                return i
+    from data_pc_origin.catalyst_o6_bridge import catalyst_resolve_target_column
 
-    new_date = _comment_sort_date(sample_name)
-    dated_cols = _worksheet_dated_columns(wks)
-    if not new_date:
-        return dated_cols[-1][0] + 1 if dated_cols else 1
-
-    insert_at = None
-    for col_idx, sort_date in dated_cols:
-        if new_date < sort_date:
-            insert_at = col_idx
-            break
-    if insert_at is None:
-        insert_at = dated_cols[-1][0] + 1 if dated_cols else 1
-
-    if insert_at < wks.cols and (wks.get_label(insert_at, "C") or "").strip():
-        _insert_worksheet_column_before(wks, insert_at)
-    return insert_at
+    return catalyst_resolve_target_column(
+        wks,
+        sample_name,
+        identity_key,
+        skip_equipment_day_guard=True,
+    )
 
 def update_origin(opju_path, df_data, sample_name, save_in_place=True, identity_key=None):
     """
