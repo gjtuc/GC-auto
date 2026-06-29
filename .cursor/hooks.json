@@ -9,6 +9,10 @@
     "stop": [
       {
         "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/auto_git_sync.ps1"
+      },
+      {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .cursor/hooks/task_queue_continue.ps1",
+        "loop_limit": null
       }
     ]
   }

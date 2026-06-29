@@ -1,0 +1,49 @@
+---
+description: 큐 시작 — AGENT_TASK_QUEUE.md 단계를 한 번에 하나씩, stop Hook으로 자동 이어가기
+alwaysApply: true
+---
+
+# Agent 작업 큐 (자동 이어가기)
+
+## 개시 문구
+
+아래 **어느 하나**면 **코드 작업 큐** 개시 (은규 PC `촉매 반응 계산.py` 파이프라인과 **별개**):
+
+| 트리거 |
+|--------|
+| `큐 시작`, `큐시작`, `queue start` |
+| `코드 큐`, `코드큐` |
+
+`진행` / `시작` / `해봐` 만 단독으로 오면 **은규 PC initiation 규칙 우선** — 본 큐는 시작하지 않음.
+
+## 개시 시 (되묻지 말 것)
+
+1. `.cursor/agent_queue_state.json` 을 다음으로 덮어씀:
+   ```json
+   {"armed": true, "status": "running", "updated": "<ISO8601>"}
+   ```
+2. `.cursor/AGENT_TASK_QUEUE.md` 에서 **첫 `- [ ]` 한 줄만** 골라 그 단계만 수행.
+3. 본문에 검증·실행·주석 요구가 없어도 **항상** 적용:
+   - 정적 검증 (린트·py_compile·관련 pytest)
+   - **직접 실행** 테스트 (코드 검증 ≠ 실행 검증)
+   - 결과로 의도·문법 확인 후 주석
+4. 단계 끝나면 해당 줄 `[x]`, **짧게 보고**. 「다음 할까요?」 **금지**.
+5. 사람만 가능한 일(비밀번호, Origin GUI, 장비 PC 실측)이면:
+   - `agent_queue_state.json` → `"armed": false, "status": "blocked"`
+   - 무엇이 막혔는지만 질문하고 멈춤.
+
+## 턴 중
+
+- **한 단계만** — 큐의 다른 `[ ]` 건드리지 말 것.
+- stop Hook(`task_queue_continue.ps1`)이 다음 단계 followup을 넣음 — 사용자에게 `다음`/`계속` 요청 금지.
+
+## 큐 전부 `[x]`일 때
+
+- `agent_queue_state.json` → `armed: false`, `status: complete`
+- 종료 보고 후 **추가 작업 제안 없이** 멈춤.
+
+## 관련 파일
+
+- `.cursor/AGENT_TASK_QUEUE.md` — 단계 목록
+- `.cursor/hooks/task_queue_continue.ps1` — stop Hook
+- `docs/GIT_AUTO_SYNC.md` — 기존 stop git sync와 병행

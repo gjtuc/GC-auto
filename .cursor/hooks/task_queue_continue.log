@@ -1,0 +1,5 @@
+﻿[2026-06-29 22:28:09] skip: not armed
+[2026-06-29 22:28:10] followup: **T01** `task_queue_continue.ps1` + `hooks.json` 등록 — stop Hook이 followup 또는 `{}` 반환하는지 stdin 시뮬레이션으로 실행 검증
+[2026-06-29 22:28:11] skip: status=complete
+[2026-06-29 22:28:27] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 쓰기, 첫 `[ ]` 단계만 수행, 완료 시 `[x]`
+[2026-06-29 22:28:50] followup: **T01** `task_queue_continue.ps1` + `hooks.json` 등록 — stop Hook이 followup 또는 `{}` 반환하는지 stdin 시뮬레이션으로 실행 검증
