@@ -1,0 +1,78 @@
+{
+  "_comment": "GC1 Autochro — 창 내부 상대 좌표 (0~1). 캘리브레이션 전 기본값. deploy/GC1_SCREEN_READ.md 참고.",
+  "display_profile": {
+    "width": 1920,
+    "height": 1080,
+    "scale_percent": 100,
+    "notes": "Autochro 창 최대화·배율 100% 기준. PC마다 calibrate 후 box 조정."
+  },
+  "window_title_contains": "Autochro",
+  "zoom_pipeline": {
+    "full": 1.0,
+    "panel": 2.5,
+    "fine": 3.5,
+    "_comment": "연쇄 4x×4x 금지. panel·fine 은 이전 단계 '크롭'에만 적용."
+  },
+  "regions": {
+    "autochro_window": {
+      "parent": null,
+      "box": [0, 0, 1, 1],
+      "stage": "full",
+      "description": "Autochro 메인 창 전체"
+    },
+    "bottom_tabs": {
+      "parent": "autochro_window",
+      "box": [0, 0.92, 0.22, 0.08],
+      "stage": "panel",
+      "description": "왼쪽 아래 분석목록/제어목록 탭"
+    },
+    "left_analysis_tree": {
+      "parent": "autochro_window",
+      "box": [0, 0.08, 0.22, 0.84],
+      "stage": "panel",
+      "description": "분석목록 왼쪽 트리(노란 아이콘·시료명)"
+    },
+    "top_sample_table": {
+      "parent": "autochro_window",
+      "box": [0.22, 0.08, 0.78, 0.22],
+      "stage": "panel",
+      "description": "오른쪽 위 시료 표(전체선택·우클릭)"
+    },
+    "bottom_peak_table": {
+      "parent": "autochro_window",
+      "box": [0.22, 0.72, 0.78, 0.2],
+      "stage": "panel",
+      "description": "아래 피크 결과 표(면적·RT)"
+    },
+    "bottom_peak_table_fine": {
+      "parent": "bottom_peak_table",
+      "box": [0, 0.12, 1, 0.88],
+      "stage": "fine",
+      "description": "피크 표 데이터 행(헤더 제외) — MTD 적용·초기화 검증"
+    },
+    "chromatogram_center": {
+      "parent": "autochro_window",
+      "box": [0.22, 0.3, 0.45, 0.4],
+      "stage": "panel",
+      "description": "가운데 크로마(적분선 확인용, OCR 약함)"
+    }
+  },
+  "read_tasks": {
+    "verify_active_tab_analysis": {
+      "region": "bottom_tabs",
+      "expect_contains": ["분석목록"],
+      "description": "분석목록 탭 활성(파란 선택) 근처 글자"
+    },
+    "verify_peak_table_has_data": {
+      "region": "bottom_peak_table_fine",
+      "expect_numeric_min": 1,
+      "reject_if_mostly_zero": true,
+      "description": "MTD 후 면적/RT 숫자 존재"
+    },
+    "verify_peak_table_cleared": {
+      "region": "bottom_peak_table_fine",
+      "expect_mostly_zero": true,
+      "description": "초기화 후 0.0000 위주"
+    }
+  }
+}
