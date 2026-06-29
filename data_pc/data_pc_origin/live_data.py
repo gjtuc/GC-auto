@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, Tuple
@@ -35,7 +36,7 @@ def _load_catalyst_module():
 
 
 def find_companion_xlsx(opju_path: str) -> Optional[str]:
-    """opju 와 같은 폴더의 계산 xlsx (임시 ~$ 제외, 최신 mtime)."""
+    """opju 와 같은 폴더의 계산 xlsx (임시 ~$ 제외, 장비 토큰 우선 · 최신 mtime)."""
     folder = Path(opju_path).parent
     if not folder.is_dir():
         return None
@@ -46,7 +47,36 @@ def find_companion_xlsx(opju_path: str) -> Optional[str]:
         candidates.append(p)
     if not candidates:
         return None
-    return str(max(candidates, key=lambda p: p.stat().st_mtime))
+
+    def _sort_key(p: Path) -> tuple[int, float]:
+        # _GC2_/_GC3_ 계산완료 파일 우선 — equipment_from_output_file 용
+        has_eq = 0 if re.search(r"_GC[123]_", p.name, re.I) else 1
+        return (has_eq, -p.stat().st_mtime)
+
+    return str(sorted(candidates, key=_sort_key)[0])
+
+
+def _infer_equipment(catalyst: Any, opju_path: str, xlsx: str) -> Optional[str]:
+    """
+    Origin Comments 장비 접미사 — 파일명 _GC2_/_GC3_ → 폴더 내 형제 xlsx → env 기본값.
+
+    companion xlsx 가 KCH stem 만 있을 때(장비 토큰 없음) DATA_PC_DEFAULT_EQUIPMENT 로 보완.
+    """
+    if hasattr(catalyst, "equipment_from_output_file"):
+        eq = catalyst.equipment_from_output_file(xlsx)
+        if eq:
+            return eq
+        folder = Path(opju_path).parent
+        for p in sorted(folder.glob("*.xlsx"), key=lambda x: -x.stat().st_mtime):
+            if p.name.startswith("~$"):
+                continue
+            eq = catalyst.equipment_from_output_file(str(p))
+            if eq:
+                return eq
+    env = os.getenv("DATA_PC_DEFAULT_EQUIPMENT", "").strip().upper()
+    if env in ("GC1", "GC2", "GC3"):
+        return env
+    return None
 
 
 def resolve_live_job(opju_path: str, *, xlsx_path: Optional[str] = None) -> LiveJobContext:
@@ -59,15 +89,19 @@ def resolve_live_job(opju_path: str, *, xlsx_path: Optional[str] = None) -> Live
 
     catalyst = _load_catalyst_module()
     df = pd.read_excel(xlsx)
-    eq = (
-        catalyst.equipment_from_output_file(xlsx)
-        if hasattr(catalyst, "equipment_from_output_file")
-        else None
-    )
+    eq = _infer_equipment(catalyst, opju_path, xlsx)
     sn_result = catalyst.generate_sample_name(xlsx, equipment=eq)
     sample_name = sn_result[0] if isinstance(sn_result, tuple) else sn_result
+    needs_input = sn_result[2] if isinstance(sn_result, tuple) and len(sn_result) > 2 else False
     if not sample_name:
-        raise ValueError(f"Origin Comments 해석 불가: {xlsx}")
+        detail = sn_result[3] if isinstance(sn_result, tuple) and len(sn_result) > 3 else ""
+        raise ValueError(
+            f"Origin Comments 해석 불가: {xlsx}"
+            + (f" — {detail}" if detail else "")
+            + ("" if eq else " (장비: DATA_PC_DEFAULT_EQUIPMENT=GC2|GC3)")
+        )
+    if needs_input:
+        raise ValueError(f"Origin Comments 사용자 입력 필요: {xlsx}")
     identity_key = catalyst._experiment_identity_key(xlsx)
     cols = tuple(str(c) for c in df.columns)
     return LiveJobContext(

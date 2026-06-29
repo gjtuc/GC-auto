@@ -15,8 +15,14 @@ class TestP28MergeReadiness(unittest.TestCase):
     def test_manifest_structural(self) -> None:
         script_dir = str(Path(__file__).resolve().parents[2])
         m = build_merge_readiness_manifest(script_dir)
-        self.assertTrue(merge_structural_ready(m))
+        self.assertTrue(merge_structural_ready(m), m.failures)
         self.assertIn("data_pc_only_diff", m.checks)
+
+    def test_deploy_example_allowed_in_diff(self) -> None:
+        """Task B — deploy/gc_automation.env.*.example 는 merge diff 허용."""
+        from data_pc_origin.p28_merge_readiness import ALLOWED_PREFIXES
+
+        self.assertIn("deploy/", ALLOWED_PREFIXES)
 
 
 class TestLiveMergeReadiness(unittest.TestCase):

@@ -9,7 +9,7 @@ from data_pc_origin.live_workflow import (
     prepare_live_workflow,
     run_live_workflow,
 )
-from data_pc_origin.tests._helpers import without_skip_origin
+from data_pc_origin.tests._helpers import with_live_e2e_env
 
 LIVE_OPJU = (
     r"G:\연구소\실험\실험데이터\촉매 반응\DRE 반응(C2H6)"
@@ -36,7 +36,7 @@ class TestLiveWorkflow(unittest.TestCase):
         if not Path(LIVE_OPJU).is_file():
             self.skipTest("live opju not on disk")
         root = Path(__file__).resolve().parents[1]
-        with without_skip_origin():
+        with with_live_e2e_env():
             out = run_live_workflow(LIVE_OPJU, artifact_dir=root, dry_run=True)
         self.assertEqual(out["status"], "dry_run")
         self.assertGreater(out.get("row_count", 0), 0)

@@ -21,3 +21,22 @@ def without_skip_origin():
             os.environ.pop(key, None)
         else:
             os.environ[key] = prior
+
+
+@contextmanager
+def with_live_e2e_env(*, equipment: str = "GC3"):
+    """G: live dry-run — Origin 실행 + companion xlsx 장비 기본값."""
+    keys = {
+        "DATA_PC_SKIP_ORIGIN": "0",
+        "DATA_PC_DEFAULT_EQUIPMENT": equipment,
+    }
+    prior = {k: os.environ.get(k) for k in keys}
+    os.environ.update(keys)
+    try:
+        yield
+    finally:
+        for k, v in prior.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v

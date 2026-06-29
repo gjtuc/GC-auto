@@ -121,8 +121,8 @@
 ## 현재 작업 포인터
 
 ```
-DONE: git d6930c6 (O0/O6 bridges · P41 · equipment-day harness)
-NEXT: verify --p41 전체 · P28-H 환경(선택)
+DONE: verify --p41 PASS (616 gates + 274 unittest)
+NEXT: 실제 Origin .opju TTY 가드(선택) · P40 merge PR
 ```
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
