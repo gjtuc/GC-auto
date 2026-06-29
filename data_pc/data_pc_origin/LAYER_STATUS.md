@@ -133,6 +133,9 @@
 | P36-G refresh | **PASS** (4/4) | `verify --p36` | P34–P35 markers |
 | P36-H harness | **PASS** (4/4) | `verify --p36` | live_p36_github_refresh |
 | **P36-EXT** | **PASS** (270/270) | `verify --p36` | P35-EXT + P36 |
+| P37-G push | **PASS** (4/4) | `verify --p37` | dest markers · remote |
+| P37-H harness | **PASS** (4/4) | `verify --p37` | live_p37_github_push |
+| **P37-EXT** | **PASS** (278/278) | `verify --p37` | P36-EXT + P37 |
 
 규칙: **L4 나노 PASS → L3 → L2 → L1 → L0** · 형제는 선행 형제 PASS 후 · **사용자 승인** 후 다음 구현.
 
