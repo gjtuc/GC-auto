@@ -94,12 +94,21 @@ def load_gate_config(script_dir: str) -> GateConfig:
         or "iptime,iptime 2,iptime_5G"
     )
     hours = _int("DATA_PC_AUTO_MAIL_COOLDOWN_HOURS", 1)
+    require_wifi = os.getenv("DATA_PC_REQUIRE_WIFI", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    explicit_skip = os.getenv("DATA_PC_SKIP_WIFI_CHECK", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
     return GateConfig(
         required_hotspot=required,
         cooldown_sec=max(0, hours) * 3600,
         gdrive_retry_sec=_int("DATA_PC_GDRIVE_RETRY_SEC", 900),
-        skip_wifi_check=os.getenv("DATA_PC_SKIP_WIFI_CHECK", "").strip().lower()
-        in ("1", "true", "yes"),
+        skip_wifi_check=explicit_skip or not require_wifi,
         check_imap_tcp=False,
     )
 
@@ -117,6 +126,20 @@ def load_calc_pipeline(script_dir: str) -> PipelineCallback:
     fn = getattr(mod, "process_new_gc_emails", None)
     if not callable(fn):
         raise RuntimeError("process_new_gc_emails 없음")
+
+    env_path = os.path.join(script_dir, "gc_automation.env")
+    if os.path.isfile(env_path):
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(env_path)
+        except ImportError:
+            pass
+    if os.getenv("DATA_PC_SKIP_ORIGIN", "").strip().lower() in ("1", "true", "yes", "on"):
+
+        def _pipeline_skip_origin():
+            return fn(skip_origin=True)
+
+        return _pipeline_skip_origin
     return fn
 
 
@@ -252,9 +275,13 @@ def run_job_once(
             skip_wifi_check=True,
             check_imap_tcp=gate.check_imap_tcp,
         )
+    if pipeline is None:
+        from data_pc_origin.p14_runtime_bridge import resolve_job_pipeline
+
+        pipeline = resolve_job_pipeline(script_dir)
     job = JobRunner(
         paths,
-        pipeline or load_calc_pipeline(script_dir),
+        pipeline,
     )
     return job.run_once(
         JobConfig(

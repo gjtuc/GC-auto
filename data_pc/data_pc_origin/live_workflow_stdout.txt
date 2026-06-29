@@ -1,0 +1,33 @@
+
+[2단계] companion xlsx 로드: 20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.xlsx
+ ✅ 엑셀 계산 완료: 20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.xlsx
+ 🏷️ Origin 시료명: 20260620 DRE(1.5)@600°C 600CNi5_Ce5_Al2O3
+ 📊 108행 · 13열
+
+[4단계] Origin 워크시트 — Comments: '20260620 DRE(1.5)@600°C 600CNi5_Ce5_Al2O3'
+  → 워크시트 6개 · 108행 반영
+ ✅ Origin 파일 업데이트 완료! 저장 위치: G:\연구소\실험\실험데이터\촉매 반응\DRE 반응(C2H6)\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test_Updated.opju
+{
+  "status": "ok",
+  "prep": {
+    "ready": true,
+    "reason": "ready",
+    "opju_path": "G:\\연구소\\실험\\실험데이터\\촉매 반응\\DRE 반응(C2H6)\\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test\\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test.opju",
+    "excel_path": "G:\\연구소\\실험\\실험데이터\\촉매 반응\\DRE 반응(C2H6)\\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test\\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.xlsx",
+    "skip_origin": false,
+    "g_drive_ok": true,
+    "probe_ok": true,
+    "probe_detail": "",
+    "originpro_import_ok": true
+  },
+  "mode": "opju_only",
+  "workflow_ok": true,
+  "log_lines": 4,
+  "sheets_updated": 6,
+  "stage4_skipped": false,
+  "save_path": "G:\\연구소\\실험\\실험데이터\\촉매 반응\\DRE 반응(C2H6)\\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test\\20260626 DRE(1.5) 600C Ni5_Ce5_Al2O3_test_Updated.opju",
+  "save_path_exists": true,
+  "data_source": "companion_xlsx",
+  "sample_name": "20260620 DRE(1.5)@600°C 600CNi5_Ce5_Al2O3",
+  "artifact": "C:\\Users\\user\\Desktop\\.cursor\\data_pc_origin\\live_workflow_result.json"
+}

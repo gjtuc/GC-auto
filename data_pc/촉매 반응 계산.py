@@ -9,7 +9,6 @@ import base64
 import time
 import shutil
 import argparse
-import threading
 import imaplib
 import email
 import json
@@ -159,222 +158,6 @@ def _get_originpro():
             print("   G:/Origin 연동(3~4단계)에 필요합니다. 계산만 할 때는 --no-archive 를 사용하세요.")
             sys.exit(1)
     return _originpro
-
-
-# ---------------------------------------------------------------------------
-# Origin 자동화 보조 — [4단계] update_origin() 전용
-#
-# [배경]
-#   originpro(op.open)는 동일 .opju 를 다른 Python/Origin 세션이 이미 열고 있으면
-#   GUI 확인창을 띄운다:
-#     "The file is opened in another instance of Origin.
-#      Do you still want to open it as Read-Only?"
-#   예전에는 watchdog+watch 가 중복 기동되며 이 창이 반복되어 수동 Yes 가 필요했다.
-#
-# [대응 — 3겹]
-#   1) KCH\.origin_update.lock
-#        Origin 4단계(열기→워크시트 반영→저장→exit) 전 구간을 PID 파일로 직렬화.
-#        data_pc_runtime 파이프라인 락과 별개 — Origin COM 세션만 보호.
-#   2) _origin_exit_quiet()
-#        op.open 직전 이 프로세스의 이전 originpro 외부 세션(op.oext) 정리.
-#   3) _origin_dialog_watcher + Win32 EnumWindows
-#        op.open / op.save 동안 백그라운드 스레드가 Read-Only 확인창을 감지해 Yes 클릭.
-#        (잔여 경쟁·Origin 내부 잠금 지연 대비 — 완전 차단은 1)+2)가 담당)
-#
-# [로그] %USERPROFILE%\.cursor\gc-runtime-temp\origin_automation.log
-# [운영] 차헌·은규 PC 공통 — SCRIPT_DIR\KCH\.origin_update.lock
-# ---------------------------------------------------------------------------
-
-
-def _origin_update_lock_path():
-    """Origin 4단계 직렬화 락 파일 (KCH 하위, PID 한 줄)."""
-    return os.path.join(SCRIPT_DIR, _DATA_PC_WORK, ".origin_update.lock")
-
-
-def _origin_lock_pid_alive(pid: int) -> bool:
-    """락 파일에 기록된 PID 가 아직 살아 있는지 (Windows: OpenProcess SYNCHRONIZE)."""
-    if pid <= 0:
-        return False
-    if sys.platform != "win32":
-        try:
-            os.kill(pid, 0)
-            return True
-        except OSError:
-            return False
-    import ctypes
-    handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
-    if handle:
-        ctypes.windll.kernel32.CloseHandle(handle)
-        return True
-    return False
-
-
-def _origin_clear_stale_lock():
-    """크래시 등으로 남은 .origin_update.lock 제거 (PID 없으면 stale)."""
-    path = _origin_update_lock_path()
-    if not os.path.isfile(path):
-        return
-    try:
-        with open(path, encoding="ascii") as f:
-            pid = int(f.read().strip())
-    except (OSError, ValueError):
-        try:
-            os.unlink(path)
-        except OSError:
-            pass
-        return
-    if not _origin_lock_pid_alive(pid):
-        try:
-            os.unlink(path)
-        except OSError:
-            pass
-
-
-def _origin_acquire_lock(wait_sec: int = 900):
-    """Origin .opju 동시 열기 방지 — 다른 프로세스 Origin 작업이 끝날 때까지 대기.
-
-    wait_sec 기본 15분: 메일 8건 연속 Origin 시 앞 작업이 길어져도 큐 대기.
-    """
-    path = _origin_update_lock_path()
-    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    deadline = time.time() + wait_sec
-    while time.time() < deadline:
-        _origin_clear_stale_lock()
-        try:
-            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            os.write(fd, str(os.getpid()).encode("ascii"))
-            os.close(fd)
-            return
-        except FileExistsError:
-            time.sleep(2)
-    raise TimeoutError(f"Origin lock timeout ({wait_sec}s): {path}")
-
-
-def _origin_release_lock():
-    """update_origin finally 에서 호출 — 다음 메일/프로세스가 Origin 락 획득 가능."""
-    path = _origin_update_lock_path()
-    try:
-        if os.path.isfile(path):
-            os.unlink(path)
-    except OSError:
-        pass
-
-
-def _origin_exit_quiet(op):
-    """이전 originpro 외부 세션 정리 — op.open 전후·finally 에서 호출."""
-    if not getattr(op, "oext", False):
-        return
-    try:
-        op.exit()
-    except Exception:
-        pass
-
-
-def _origin_window_texts(hwnd) -> str:
-    """Win32: 최상위 창 + 자식 컨트롤 텍스트 수집 (Static 본문 포함)."""
-    import ctypes
-    from ctypes import wintypes
-
-    user32 = ctypes.windll.user32
-    parts: list[str] = []
-
-    @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
-    def _enum_child(ch, _):
-        buf = ctypes.create_unicode_buffer(2048)
-        user32.GetWindowTextW(ch, buf, 2048)
-        if buf.value:
-            parts.append(buf.value)
-        return True
-
-    buf = ctypes.create_unicode_buffer(512)
-    user32.GetWindowTextW(hwnd, buf, 512)
-    if buf.value:
-        parts.append(buf.value)
-    user32.EnumChildWindows(hwnd, _enum_child, 0)
-    return "\n".join(parts)
-
-
-def _origin_click_readonly_yes() -> bool:
-    """Origin Read-Only 확인창에서 Yes 버튼 SendMessage(BM_CLICK).
-
-    본문은 창 제목이 아니라 자식 Static 에 있으므로 _origin_window_texts 로 검색.
-    """
-    if sys.platform != "win32":
-        return False
-    import ctypes
-    from ctypes import wintypes
-
-    user32 = ctypes.windll.user32
-    BM_CLICK = 0x00F5
-    clicked = False
-
-    @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
-    def _enum_btn(hwnd, _):
-        nonlocal clicked
-        buf = ctypes.create_unicode_buffer(32)
-        user32.GetClassNameW(hwnd, buf, 32)
-        if buf.value != "Button":
-            return True
-        user32.GetWindowTextW(hwnd, buf, 32)
-        label = buf.value.replace("&", "")
-        if label.lower() == "yes":
-            user32.SendMessageW(hwnd, BM_CLICK, 0, 0)
-            clicked = True
-            return False
-        return True
-
-    @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
-    def _enum_top(hwnd, _):
-        if not user32.IsWindowVisible(hwnd):
-            return True
-        text = _origin_window_texts(hwnd).lower()
-        if "read-only" not in text and "another instance" not in text:
-            return True
-        user32.EnumChildWindows(hwnd, _enum_btn, 0)
-        return not clicked
-
-    user32.EnumWindows(_enum_top, 0)
-    return clicked
-
-
-def _origin_dialog_watcher(stop_event: threading.Event) -> None:
-    """op.open / op.save 블로킹 구간 동안 0.4초마다 Read-Only 창 Yes 시도."""
-    while not stop_event.wait(0.4):
-        if _origin_click_readonly_yes():
-            _log_origin("[Origin] Read-Only 확인창 — Yes 자동 클릭")
-
-
-def _log_origin(msg: str) -> None:
-    """Origin 자동화 이벤트 (자동 Yes 등) — gc-runtime-temp 에만 기록."""
-    try:
-        log_dir = os.path.join(os.path.expanduser("~"), ".cursor", "gc-runtime-temp")
-        os.makedirs(log_dir, exist_ok=True)
-        with open(os.path.join(log_dir, "origin_automation.log"), "a", encoding="utf-8") as f:
-            f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {msg}\n")
-    except OSError:
-        pass
-
-
-def _open_opju_for_update(op, opju_path: str) -> None:
-    """4단계 진입: 세션 정리 → 숨김 → watcher 기동 → op.open(asksave=False)."""
-    _origin_exit_quiet(op)
-    op.set_show(False)
-    stop = threading.Event()
-    watcher = threading.Thread(
-        target=_origin_dialog_watcher,
-        args=(stop,),
-        name="origin-readonly-watcher",
-        daemon=True,
-    )
-    watcher.start()
-    try:
-        if not op.open(opju_path, asksave=False):
-            _origin_exit_quiet(op)
-            if not op.open(opju_path, asksave=False):
-                raise RuntimeError(f"Origin 프로젝트 열기 실패: {opju_path}")
-    finally:
-        stop.set()
-        watcher.join(timeout=3)
 
 # ==========================================
 # ⚙️ 사용자 설정 (USER SETTINGS)
@@ -580,6 +363,16 @@ def _load_dotenv_files():
             if os.path.isfile(path):
                 load_dotenv(path)
     return True
+
+
+def _skip_origin_enabled(explicit: bool | None = None) -> bool:
+    """True → 4단계 Origin 생략 (메일·엑셀·G: xlsx 까지만). env: DATA_PC_SKIP_ORIGIN=1"""
+    if explicit is not None:
+        return bool(explicit)
+    _load_dotenv_files()
+    return os.getenv("DATA_PC_SKIP_ORIGIN", "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
 
 
 def _g_drive_unavailable_message():
@@ -864,52 +657,167 @@ def _validate_yield_conversion(df_result, reaction_target, feed_source_desc):
         )
     return warnings
 
-def generate_sample_name(filename):
+def equipment_from_output_file(saved_excel):
+    """계산 완료 파일명의 _GC2_/_GC3_/_GC1_ 접미사로 장비 판별."""
+    base = os.path.basename(saved_excel or "")
+    if "_GC3_" in base:
+        return "GC3"
+    if "_GC2_" in base:
+        return "GC2"
+    if "_GC1_" in base:
+        return "GC1"
+    return None
+
+
+def _origin_equipment_suffix(equipment):
+    if equipment == "GC3":
+        return "_OCM 장비"
+    if equipment in ("GC2", "GC1"):
+        return "_DRM 장비"
+    return None
+
+
+def _expand_year_yy(yy):
+    n = int(yy)
+    if n <= 69:
+        return f"20{yy}"
+    return f"19{yy}"
+
+
+def _parse_origin_date(name):
+    """파일명에서 YYYYMMDD 추출 → (date, remainder)."""
+    work = (name or "").strip()
+    m8 = re.match(r"^(\d{8})\b", work)
+    if m8:
+        return m8.group(1), work[m8.end():].strip()
+    m6 = re.match(r"^(\d{6})\b", work)
+    if m6:
+        raw = m6.group(1)
+        return _expand_year_yy(raw[:2]) + raw[2:], work[6:].strip()
+    m = re.search(r"\b(\d{8})\b", work)
+    if m:
+        return m.group(1), work
+    return None, work
+
+
+def _parse_origin_reaction_and_conc(text):
+    work = (text or "").strip()
+    m = re.search(r"\b(DRE|DRM|DRME)\b", work, re.I)
+    if not m:
+        return None, None, work
+    reaction = m.group(1).upper()
+    conc_m = re.search(r"(?:DRE|DRM|DRME)\s*\((\d+\.?\d*)\)", work, re.I)
+    conc = conc_m.group(1) if conc_m else _extract_concentration(work)
+    return reaction, conc, work
+
+
+def _parse_origin_temperature(text):
+    work = (text or "").strip()
+    m = re.search(r"@(\d+)\s*°?C?", work, re.I)
+    if m:
+        return m.group(1), (work[: m.start()] + work[m.end() :]).strip()
+    m = re.search(r"\b(\d{3,4})\s*°?C?\b", work)
+    if m:
+        return m.group(1), (work[: m.start()] + work[m.end() :]).strip()
+    return None, work
+
+
+def _strip_parsed_tokens_from_sample(text, reaction, conc, temp):
+    work = text or ""
+    if reaction:
+        work = re.sub(r"\b" + re.escape(reaction) + r"\b", "", work, count=1, flags=re.I)
+    if conc is not None:
+        work = re.sub(
+            r"(?:DRE|DRM|DRME)\s*\(" + re.escape(str(conc)) + r"\)",
+            "",
+            work,
+            count=1,
+            flags=re.I,
+        )
+        work = re.sub(r"\(" + re.escape(str(conc)) + r"\)", "", work, count=1)
+    if temp:
+        work = re.sub(r"@" + re.escape(str(temp)) + r"\s*°?C?", "", work, flags=re.I)
+        work = re.sub(r"\b" + re.escape(str(temp)) + r"\s*°?C?\b", "", work, count=1)
+    return work.strip(" _-")
+
+
+def _format_origin_sample_part(raw):
+    s = (raw or "").strip(" _-")
+    if not s:
+        return ""
+    return re.sub(r"\s+", " ", s.replace("_", "/")).strip()
+
+
+def _origin_sample_name_issues(date, reaction, conc, temp, sample_part, equipment):
+    issues = []
+    if not date:
+        issues.append("날짜를 YYYYMMDD로 만들 수 없습니다.")
+    if not reaction:
+        issues.append("DRM/DRE/DRME 중 무엇인지 판별할 수 없습니다.")
+    if conc is None:
+        issues.append("농도 괄호가 없거나 숫자 추출이 불가합니다.")
+    if not temp:
+        issues.append("온도 숫자를 찾을 수 없습니다.")
+    if not (sample_part or "").strip():
+        issues.append("시료(촉매)명이 비어 있습니다.")
+    if equipment is None:
+        issues.append("장비(GC2/GC3) 판별이 필요합니다.")
+    elif _origin_equipment_suffix(equipment) is None:
+        issues.append(f"장비 판별 실패: {equipment}")
+    return issues
+
+
+def generate_sample_name(filename, equipment=None):
     """
-    Origin Comments 전용 — DRM / DRE / DRME 공통 엄격 규칙.
+    Origin Comments 전용 — 토큰 파싱.
 
-    (x) = 주반응물 feed 농도(%): DRE/DRME C2H6, DRM CH4 (ppm 설정값 기준).
+    형식: {YYYYMMDD} {반응}({농도%})@{온도°C} {시료명}_{장비접미사}
+    장비 접미사: GC2/GC1 → _DRM 장비, GC3 → _OCM 장비 (equipment 인자).
 
-    촉매 무게 규칙 (2026-06 적용, DRE/DRME/DRM 동일):
-      · KCH 파일명의 "0.25g" 등은 _strip_catalyst_mass() 로 제거 후 Comments 에 기록
-      · 슬래시(/) 뒤에 무게를 붙이지 않음
-        OK: 20260612 DRM(5)@650°C Ni10/Al2O3
-        NG: 20260612 DRM(5)@650°C Ni10/Al2O3/0.25g
-
-    G: 폴더명(generate_experiment_basename)과 혼용하지 말 것 — 폴더에는 무게가 남을 수 있음.
+    Returns:
+        (sample_name | None, warnings, needs_user_input, question)
+    해석 불가 시 임의 기본값 없이 needs_user_input=True — Origin 기록 금지.
     """
+    warnings = []
     name = _normalize_input_basename(filename)
 
-    # gc_automation KCH 형식: "20260613 Ni10-Al2O3 0.25g DRM@650"
-    # → Origin: "20260613 DRM(5)@650°C Ni10/Al2O3" (0.25g 는 Comments 에 미포함)
-    kch_match = re.match(r'^(\d{8})\s+(.+?)\s+(DRE|DRM|DRME)@(\d+)\s*$', name, re.I)
+    kch_match = re.match(r"^(\d{8})\s+(.+?)\s+(DRE|DRM|DRME)@(\d+)\s*$", name, re.I)
     if kch_match:
         date, catalyst, reaction, temp = kch_match.groups()
         reaction = reaction.upper()
-        conc = _extract_concentration(name) or _default_concentration(reaction)
-        cat_fmt = _format_kch_catalyst(catalyst)  # 무게 제거 후 Ni10/Al2O3 형식
-        return f"{date} {reaction}({conc})@{temp}°C {cat_fmt}"
+        conc = _extract_concentration(name)
+        sample_part = _format_origin_sample_part(
+            _strip_catalyst_mass(catalyst).replace("-", "/")
+        )
+        issues = _origin_sample_name_issues(date, reaction, conc, temp, sample_part, equipment)
+        if issues:
+            q = "Origin Comments 생성을 위해 확인이 필요합니다:\n- " + "\n- ".join(issues)
+            return None, warnings, True, q
+        conc_label = f"{conc}%" if not str(conc).endswith("%") else conc
+        suffix = _origin_equipment_suffix(equipment)
+        return (
+            f"{date} {reaction}({conc_label})@{temp}°C {sample_part}{suffix}",
+            warnings,
+            False,
+            "",
+        )
 
-    date_match = re.search(r'(\d{8})', name)
-    date = date_match.group(1) if date_match else "00000000"
-    reaction = get_reaction_type_from_filename(filename)
-    conc = _extract_concentration(name) or _default_concentration(reaction)
+    date, after_date = _parse_origin_date(name)
+    reaction, conc, after_react = _parse_origin_reaction_and_conc(after_date if date else name)
+    temp, after_temp = _parse_origin_temperature(after_react)
+    sample_part = _format_origin_sample_part(
+        _strip_parsed_tokens_from_sample(after_temp, reaction, conc, temp)
+    )
 
-    temp_match = re.search(r'@(\d+)', name)
-    temp = temp_match.group(1) if temp_match else "600"
+    issues = _origin_sample_name_issues(date, reaction, conc, temp, sample_part, equipment)
+    if issues:
+        q = "Origin Comments 생성을 위해 확인이 필요합니다:\n- " + "\n- ".join(issues)
+        return None, warnings, True, q
 
-    cat_str = re.sub(r'\d{8}', '', name)
-    cat_str = re.sub(r'\(GC3[^)]*\)', '', cat_str, flags=re.IGNORECASE)
-    # 반응·부가 접미사 제거 후 촉매 토큰만 남김 (Origin Comments 촉매부)
-    cat_str = re.sub(r'DRME|DRM|DRE|_원본|_GC.*|계산완료|\.xlsx|\.xls|C2H6|CH4', '', cat_str, flags=re.IGNORECASE)
-    # dre@(3) — 농도 표기는 촉매명이 아니므로 제거 (@650 온도는 아래 @\d+ 에서 제거)
-    cat_str = re.sub(r'@\([^)]*\)', '', cat_str)
-    cat_str = re.sub(r'\(?\d+\.?\d*\)?\s*%', '', cat_str)
-    cat_str = re.sub(r'\(\d+\.?\d*\)', '', cat_str)  # DRE(3) 농도 괄호
-    cat_str = re.sub(r'@\d+', '', cat_str)  # @600 온도
-    cat_str = _strip_catalyst_mass(cat_str)  # 비-KCH 파일명 fallback 도 무게 제외
-    cat_str = _format_catalyst_string(cat_str)
-    return f"{date} {reaction}({conc})@{temp}°C {cat_str}"
+    conc_label = f"{conc}%" if not str(conc).endswith("%") else conc
+    suffix = _origin_equipment_suffix(equipment)
+    sample_name = f"{date} {reaction}({conc_label})@{temp}°C {sample_part}{suffix}"
+    return sample_name, warnings, False, ""
 
 def _format_catalyst_string(cat_str):
     """촉매 문자열을 Origin용 포맷(Ni_CVD(...)/Ni5/Al2O3)으로 변환."""
@@ -996,10 +904,10 @@ def _experiment_identity_key(source):
     return (date_match.group(1) if date_match else "00000000", name.lower())
 
 def _identity_match_tokens(sample_key):
-    """시료 문자열에서 G: 폴더 중복 비교용 토큰."""
-    tokens = set(re.findall(r'@\d+|\d+\.?\d*g|dre|drm|drme', sample_key.lower()))
-    tokens.update(re.findall(r'[a-z]+\d*|[a-z]{1,2}\d+', sample_key.lower()))
-    return {t for t in tokens if len(t) >= 2 or t.endswith('g')}
+    """시료 문자열에서 G: 폴더 중복 비교용 토큰 — O0-I 위임 (Task C·KCH stem 동일 규칙)."""
+    from data_pc_origin.catalyst_identity_bridge import catalyst_identity_tokens
+
+    return catalyst_identity_tokens(sample_key)
 
 def _folder_matches_experiment_identity(folder_name, identity_key):
     """같은 날짜·시료 실험의 잘못된 폴더명인지 판별."""
@@ -1375,8 +1283,14 @@ def _build_experiment_basename(name, filename):
     if drme:
         return f"{drme.group(1)} DRME({drme.group(2)}%) {drme.group(3).strip()}"
 
-    sample = generate_sample_name(filename)
-    head = re.match(r'^(\d{8})\s+(DRE|DRM|DRME)\(([^)]+)\)@(\d+)°C\s*(.*)$', sample)
+    sn_result = generate_sample_name(filename)
+    sample = sn_result[0] if isinstance(sn_result, tuple) else sn_result
+    if not sample:
+        return re.sub(r"°C", "", name).replace("/", "-").strip()
+    head = re.match(
+        r"^(\d{8})\s+(DRE|DRM|DRME)\(([^)]+)\)@(\d+)°C\s*(.+?)(?:_DRM 장비|_OCM 장비)?$",
+        sample,
+    )
     if head:
         date, reaction, conc, temp, cat = head.groups()
         reaction = reaction.upper()
@@ -1511,12 +1425,47 @@ def setup_experiment_folder(source_excel, calculated_excel, reaction_type):
 # GC3 갭: gc_chem32 가 FID/TCD 시트에 삽입한 ``#``+``중단`` 블록.
 # N = parse_gap_missing_cycles (Time 또는 Symmetry GC_GAP:N=).
 # gap_cycles → process_excel 에서 해당 Cycle NaN (Origin 시간축 정렬).
-from gc_gap_contract import is_cycle_header_row, parse_gap_missing_cycles
+# 빈 주입(# Time Area … 반복, 숫자 피크 없음)도 gap_cycles 와 동일 처리.
+from gc_gap_contract import (
+    format_missing_cycle_warnings,
+    is_cycle_header_row,
+    parse_gap_missing_cycles,
+    row_has_numeric_peak,
+)
+
+
+def _apply_gap_nan_rows(df_p, df_result, gap_cycles):
+    """미수집·빈 주입 Cycle — Origin 시간축 정렬용 NaN."""
+    if not gap_cycles:
+        return
+    for cyc in gap_cycles:
+        if cyc in df_p.index:
+            df_p.loc[cyc] = np.nan
+        if cyc in df_result.index:
+            df_result.loc[cyc] = np.nan
+
+
+def _is_header_only_row(row):
+    return is_cycle_header_row(row) and not row_has_numeric_peak(row)
+
+
+def _header_only_run_len(rows, idx):
+    """idx 포함 역방향 연속 ``# Time Area …`` 행 수."""
+    n = 0
+    j = idx
+    while j >= 0:
+        _, row = rows[j]
+        if not _is_header_only_row(row):
+            break
+        n += 1
+        j -= 1
+    return n
 
 
 def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
     warnings = []
     gap_cycles = set()
+    placeholder_cycles = set()
     cycle_num, cycle_list, unassigned_list = 1, [], []  # 1주입 = Cycle 1 (KCH 첫 블록에 헤더 없음)
 
     rows = list(df_raw.iterrows())
@@ -1528,7 +1477,8 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
             # Chem32 레이아웃: [헤더 # Time …][중단 행 1줄] — N사이클 건너뛰기
             if i + 1 < len(rows) and parse_gap_missing_cycles(rows[i + 1][1]) is not None:
                 missing = parse_gap_missing_cycles(rows[i + 1][1])
-                last_cycle = max((c["Cycle"] for c in cycle_list), default=cycle_num - 1)
+                last_cycle = max((c["Cycle"] for c in cycle_list), default=0)
+                last_cycle = max(last_cycle, cycle_num)
                 start_gap = last_cycle + 1
                 end_gap = last_cycle + missing
                 for k in range(start_gap, end_gap + 1):
@@ -1541,12 +1491,21 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
                 i += 2
                 continue
             cycle_num += 1
+            next_peak = i + 1 < len(rows) and row_has_numeric_peak(rows[i + 1][1])
+            run_len = _header_only_run_len(rows, i)
+            # 단독 헤더 1행 뒤 숫자 피크 = 정상 주입 구분. 연속 헤더-only = 주입마다 피크 미기록.
+            if not (next_peak and run_len == 1):
+                placeholder_cycles.add(cycle_num)
             i += 1
             continue
 
         if parse_gap_missing_cycles(row) is not None:
             i += 1
             continue
+
+        if row_has_numeric_peak(row):
+            while cycle_num in placeholder_cycles or cycle_num in gap_cycles:
+                cycle_num += 1
 
         if pd.notna(row.get("Time")) and pd.notna(row.get("Area")):
             try:
@@ -1586,6 +1545,12 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
                     warnings.append(f"⚠️ [피크 보정] Cycle {c}에서 '{g}' 피크가 여러 개로 검출되어 합산 처리되었습니다.")
                 else:
                     warnings.append(f"⚠️ [비정상 피크] Cycle {c}에서 '{g}' 피크가 비정상적으로 쪼개졌습니다. 합산 결과가 앞뒤 사이클과 크게 다릅니다!")
+
+    gap_cycles |= placeholder_cycles
+    if placeholder_cycles:
+        warnings.extend(
+            format_missing_cycle_warnings(placeholder_cycles, "피크 미기록 (빈 주입)")
+        )
 
     if gap_cycles:
         all_idx = sorted(set(df_pivot.index) | gap_cycles) if not df_pivot.empty else sorted(gap_cycles)
@@ -1691,7 +1656,7 @@ def process_excel(input_file):
 
     # [수식 적용 단계: GC2 (DRE / DRM)]
     if eq == 'GC2':
-        df_p, warn, _gap = parse_gc_sheet(df_gc2_raw, None, 'GC2', GC2_TIME)
+        df_p, warn, gap_cycles = parse_gc_sheet(df_gc2_raw, None, 'GC2', GC2_TIME)
         all_warnings.extend(warn)
         for g in ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area']:
             if g not in df_p.columns: df_p[g] = 0
@@ -1729,6 +1694,7 @@ def process_excel(input_file):
             cols = ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area',
                     'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
             out_name = _calc_output_path(input_file, '_GC2_DRE_계산완료')
+        _apply_gap_nan_rows(df_p, df_result, gap_cycles)
 
     # [수식 적용 단계: GC3 (DRE / DRME)] — reaction_target 으로 출력 접미사만 구분
     elif eq == 'GC3':
@@ -1757,17 +1723,13 @@ def process_excel(input_file):
                 'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
         gc3_suffix = '_GC3_DRE_계산완료' if reaction_target == 'DRE' else '_GC3_DRME_계산완료'
         out_name = _calc_output_path(input_file, gc3_suffix)
-        if gap_cycles:
-            for cyc in gap_cycles:
-                if cyc in df_p.index:
-                    df_p.loc[cyc] = np.nan
-                if cyc in df_result.index:
-                    df_result.loc[cyc] = np.nan
+        _apply_gap_nan_rows(df_p, df_result, gap_cycles)
 
     # [수식 적용 단계: GC1 (DRE / DRM) — GC3 와 동일 나눗셈 교정, FID+TCD 병합]
     elif eq == 'GC1':
-        df_t, warn_t, _gap_t = parse_gc_sheet(df_gc1_tcd, 'TCD', 'GC1', GC1_TIME_TCD)
-        df_f, warn_f, _gap_f = parse_gc_sheet(df_gc1_fid, 'FID', 'GC1', GC1_TIME_FID)
+        df_t, warn_t, gap_t = parse_gc_sheet(df_gc1_tcd, 'TCD', 'GC1', GC1_TIME_TCD)
+        df_f, warn_f, gap_f = parse_gc_sheet(df_gc1_fid, 'FID', 'GC1', GC1_TIME_FID)
+        gap_cycles = gap_t | gap_f
         all_warnings.extend(warn_t)
         all_warnings.extend(warn_f)
         df_p = pd.concat([df_t, df_f], axis=1).fillna(0)
@@ -1803,6 +1765,7 @@ def process_excel(input_file):
             cols = ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area',
                     'C2H6 Conversion (%)', 'CO2 Conversion (%)', 'H2 Yield (%)', 'CO Yield (%)', 'CH4 (%)', 'C2H4 (%)']
             out_name = _calc_output_path(input_file, '_GC1_DRE_계산완료')
+        _apply_gap_nan_rows(df_p, df_result, gap_cycles)
 
     # 🚨 [검증 3] 수율/전환율 교차검증 — feed 농도(%) 오기재 패턴 감지
     all_warnings.extend(_validate_yield_conversion(df_result, reaction_target, feed_source_desc))
@@ -1821,73 +1784,49 @@ def process_excel(input_file):
 # 기능 4: Origin .opju 워크시트 연동 (originpro) — 그래프 plot 은 수동
 # ==========================================
 def _comment_matches_identity(comment, identity_key):
-    """Origin Comments(기존 열)와 KCH identity (날짜·시료) 동일 실험 여부."""
-    if not comment or not identity_key:
-        return False
-    date, sample = identity_key
-    text = comment.strip().lower()
-    if not text.startswith(date):
-        return False
-    tokens = _identity_match_tokens(sample)
-    if not tokens:
-        return False
-    matched = sum(1 for token in tokens if token in text)
-    return matched >= max(2, int(len(tokens) * 0.6))
+    """Origin Comments(기존 열)와 KCH identity 동일 실험 여부 — O0-C 위임 (장비 접미사 strip)."""
+    from data_pc_origin.catalyst_identity_bridge import catalyst_comment_matches_identity
+
+    return catalyst_comment_matches_identity(comment, identity_key)
+
 
 def _comment_sort_date(text):
-    """Origin Comments / 시료명 선두 YYYYMMDD — 열 날짜순 정렬용."""
-    match = re.match(r"^(\d{8})", (text or "").strip())
-    return match.group(1) if match else None
+    """Origin Comments / 시료명 선두 YYYYMMDD — O0-C parse_comment_date 위임."""
+    from data_pc_origin.catalyst_identity_bridge import catalyst_comment_sort_date
+
+    return catalyst_comment_sort_date(text)
 
 def _worksheet_dated_columns(wks):
-    """(col_idx, sort_date) — Comments 에 날짜가 있는 열만, 왼쪽→오른쪽."""
-    dated = []
-    for i in range(1, wks.cols):
-        sort_date = _comment_sort_date(wks.get_label(i, "C") or "")
-        if sort_date:
-            dated.append((i, sort_date))
-    return dated
+    """(col_idx, sort_date) — O6-S dated_columns 위임."""
+    from data_pc_origin.o6_scan import dated_columns
+
+    return dated_columns(wks)
+
 
 def _insert_worksheet_column_before(wks, col_idx):
-    """0-based col_idx 앞에 빈 Y 열 1개 삽입 (기존 열 오른쪽으로 밀림)."""
+    """0-based col_idx 앞에 빈 Y 열 삽입 — O6-I insert_column_before 위임."""
     from originpro.config import po
-    lt_col = col_idx + 1
-    rng = wks.lt_range()
-    po.LT_execute(f"page.xlcolname=0; {rng}.col={lt_col}; {rng}.insert(GCData);")
+
+    from data_pc_origin.o6_insert import insert_column_before
+
+    insert_column_before(wks, col_idx, lt_execute=po.LT_execute)
+
 
 def _find_worksheet_column_for_sample(wks, sample_name, identity_key=None):
     """
-    시료 데이터를 넣을 워크시트 열.
-    · 동일 Comments → 해당 열 갱신
-    · identity_key 일치(재전송) → 해당 열 갱신
-    · 없으면 Comments 날짜(YYYYMMDD)순으로 삽입 — 맨 끝 무조건 추가 금지
+    시료 데이터를 넣을 워크시트 열 — O6-R 위임 (exact → identity → 날짜순 insert).
+
+    운영 파이프라인은 update_origin → O9 가 동일 O6 경로(+장비·날짜 가드) 사용.
+    legacy `_update_origin_legacy` 참고용 — 가드는 skip (구 촉매 동작).
     """
-    for i in range(1, wks.cols):
-        comment = wks.get_label(i, "C")
-        if comment and comment.strip() == sample_name:
-            return i
-    if identity_key:
-        for i in range(1, wks.cols):
-            comment = wks.get_label(i, "C") or ""
-            if _comment_matches_identity(comment, identity_key):
-                return i
+    from data_pc_origin.catalyst_o6_bridge import catalyst_resolve_target_column
 
-    new_date = _comment_sort_date(sample_name)
-    dated_cols = _worksheet_dated_columns(wks)
-    if not new_date:
-        return dated_cols[-1][0] + 1 if dated_cols else 1
-
-    insert_at = None
-    for col_idx, sort_date in dated_cols:
-        if new_date < sort_date:
-            insert_at = col_idx
-            break
-    if insert_at is None:
-        insert_at = dated_cols[-1][0] + 1 if dated_cols else 1
-
-    if insert_at < wks.cols and (wks.get_label(insert_at, "C") or "").strip():
-        _insert_worksheet_column_before(wks, insert_at)
-    return insert_at
+    return catalyst_resolve_target_column(
+        wks,
+        sample_name,
+        identity_key,
+        skip_equipment_day_guard=True,
+    )
 
 def update_origin(opju_path, df_data, sample_name, save_in_place=True, identity_key=None):
     """
@@ -1895,70 +1834,63 @@ def update_origin(opju_path, df_data, sample_name, save_in_place=True, identity_
 
     · sample_name 은 generate_sample_name() 결과만 사용 (폴더명과 혼용 금지)
     · Comments 형식: 날짜 반응(농도)@온도°C 촉매 — 촉매 무게 없음 (DRE/DRME/DRM 공통)
-    · ORIGIN_MAPPING 으로 엑셀 열 → Origin 워크시트 키워드 매칭
-    · Comments 행에 sample_name 기록 (from_list comments= 인자)
+    · ORIGIN_MAPPING → data_pc_origin (O0~O9) 위임
     · save_in_place=True: G: 아카이브 시 같은 .opju 에 덮어쓰기
-
-    Origin 동시 열기 방지:
-      · _origin_acquire_lock() 으로 4단계 전체 직렬화
-      · Read-Only 확인창은 watcher 가 Yes 자동 클릭 (수동 개입 불필요)
-      · finally 에서 op.exit() + 락 해제
     """
+    from data_pc_origin.pipeline_bridge import run_origin_update
+
+    run_origin_update(
+        opju_path,
+        df_data,
+        sample_name,
+        save_in_place=save_in_place,
+        identity_key=identity_key,
+    )
+
+
+def _update_origin_legacy(opju_path, df_data, sample_name, save_in_place=True, identity_key=None):
+    """구현 보존 — data_pc_origin 미사용 시 참고용 (파이프라인은 run_origin_update 사용)."""
     print(f"\n[4단계] Origin 워크시트 — Comments: '{sample_name}'")
     op = _get_originpro()
-    _origin_acquire_lock()
-    try:
-        _open_opju_for_update(op, opju_path)
-        updated_count = 0
-        n_rows = len(df_data)
+    op.set_show(False)
+    op.open(opju_path)
+    updated_count = 0
+    n_rows = len(df_data)
 
-        for df_col, origin_keyword in ORIGIN_MAPPING.items():
-            if df_col not in df_data.columns:
-                continue
+    for df_col, origin_keyword in ORIGIN_MAPPING.items():
+        if df_col not in df_data.columns:
+            continue
 
-            target_wks = None
-            for book in op.pages('w'):
-                for wks in book:
-                    search_str = f"{book.name} {wks.name} {book.lname}"
-                    if _normalize_origin_key(origin_keyword) in _normalize_origin_key(search_str):
-                        target_wks = wks
-                        break
-                if target_wks:
+        target_wks = None
+        for book in op.pages('w'):
+            for wks in book:
+                search_str = f"{book.name} {wks.name} {book.lname}"
+                if _normalize_origin_key(origin_keyword) in _normalize_origin_key(search_str):
+                    target_wks = wks
                     break
+            if target_wks:
+                break
 
-            if not target_wks:
-                continue
+        if not target_wks:
+            continue
 
-            col_idx = _find_worksheet_column_for_sample(target_wks, sample_name, identity_key)
-            target_wks.from_list(col_idx, df_data[df_col].tolist(), comments=sample_name)
-            updated_count += 1
+        col_idx = _find_worksheet_column_for_sample(target_wks, sample_name, identity_key)
+        target_wks.from_list(col_idx, df_data[df_col].tolist(), comments=sample_name)
+        updated_count += 1
 
-        if updated_count > 0:
-            print(f"  → 워크시트 {updated_count}개 · {n_rows}행 반영")
-            stop = threading.Event()
-            watcher = threading.Thread(
-                target=_origin_dialog_watcher,
-                args=(stop,),
-                name="origin-readonly-watcher-save",
-                daemon=True,
-            )
-            watcher.start()
-            try:
-                if save_in_place:
-                    op.save(opju_path)
-                    print(f" ✅ Origin 저장 완료: {opju_path}")
-                else:
-                    new_opju = opju_path.replace('.opju', '_Updated.opju')
-                    op.save(new_opju)
-                    print(f" ✅ Origin 파일 업데이트 완료! 저장 위치: {new_opju}")
-            finally:
-                stop.set()
-                watcher.join(timeout=3)
+    if updated_count > 0:
+        print(f"  → 워크시트 {updated_count}개 · {n_rows}행 반영")
+        if save_in_place:
+            op.save(opju_path)
+            print(f" ✅ Origin 저장 완료: {opju_path}")
         else:
-            print(" ⚠️ Origin에서 일치하는 데이터 시트를 하나도 찾지 못했습니다.")
-    finally:
-        _origin_exit_quiet(op)
-        _origin_release_lock()
+            new_opju = opju_path.replace('.opju', '_Updated.opju')
+            op.save(new_opju)
+            print(f" ✅ Origin 파일 업데이트 완료! 저장 위치: {new_opju}")
+    else:
+        print(" ⚠️ Origin에서 일치하는 데이터 시트를 하나도 찾지 못했습니다.")
+
+    op.exit()
 
 # ==========================================
 # 기능 5: 네이버 IMAP 메일 수신 (gc_automation.env 계정)
@@ -2274,7 +2206,7 @@ def _mark_mail_seen_and_logged(mail, item, done_keys):
     except imaplib.IMAP4.error:
         return False
 
-def process_new_gc_emails(opju_path=None, auto_archive=True):
+def process_new_gc_emails(opju_path=None, auto_archive=True, skip_origin=None):
     """
     [1단계] 네이버 IMAP — KCH 원본 엑셀 수신 (받은·보낸·내게쓴 메일함).
 
@@ -2284,7 +2216,9 @@ def process_new_gc_emails(opju_path=None, auto_archive=True):
     · 오래된 메일부터 최신 순으로 전건 2~4단계 반영 (같은 시료 재전송은 마지막이 Origin 최종값)
     · BODY.PEEK + .processed_mail_ids.txt 로 중복 처리 방지
     · G: 불가 시 2단계까지 완료, 3~4단계 실패 → 메일 미처리(재시도 가능)
+    · skip_origin / DATA_PC_SKIP_ORIGIN=1 → 4단계 Origin 생략 (엑셀·G: xlsx 까지)
     """
+    skip_origin = _skip_origin_enabled(skip_origin)
     email_addr, app_password = _get_mail_credentials()
     if not email_addr or not app_password:
         print("\n[오류] 메일 계정 설정 없음 — 바탕화면 gc_automation.env 확인")
@@ -2360,6 +2294,7 @@ def process_new_gc_emails(opju_path=None, auto_archive=True):
                     excel_path,
                     opju_path=opju_path,
                     auto_archive=auto_archive and opju_path is None,
+                    skip_origin=skip_origin,
                 ):
                     workflow_count += 1
                 else:
@@ -2396,14 +2331,31 @@ def process_new_gc_emails(opju_path=None, auto_archive=True):
 
     return PipelineRunResult(workflow_count, gdrive_retry_needed)
 
-def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True):
+def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True, skip_origin=None):
     """
     단일 KCH 원본 엑셀에 대한 2→3→4 단계 오케스트레이션.
 
     opju_path 지정 시: G: 폴더 생성 없이 해당 .opju 만 _Updated.opju 로 저장 (--opju).
     auto_archive=False: 2단계 계산만 (--no-archive).
+    skip_origin=True / DATA_PC_SKIP_ORIGIN=1: 4단계 Origin 생략 (G: xlsx 는 auto_archive 시 반영).
     G: 없으면 GDriveUnavailableError → 안내 출력, saved_excel 경로는 DATA_PC/processed.
     """
+    import sys
+
+    from data_pc_origin.workflow_bridge import run_workflow_bridged
+
+    return run_workflow_bridged(
+        excel_path,
+        opju_path=opju_path,
+        auto_archive=auto_archive,
+        skip_origin=skip_origin,
+        catalyst_module=sys.modules[__name__],
+    )
+
+
+def _run_workflow_for_file_legacy(excel_path, opju_path=None, auto_archive=True, skip_origin=None):
+    """구현 보존 — data_pc_origin P층 미사용 시 참고용."""
+    skip_origin = _skip_origin_enabled(skip_origin)
     if not os.path.exists(excel_path) or not excel_path.lower().endswith((".xlsx", ".xls")):
         print("❌ 올바른 엑셀 파일이 아닙니다.")
         return False
@@ -2416,7 +2368,19 @@ def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True):
             print("❌ 장비를 판별할 수 없습니다. (수소 피크 유무 확인)")
             return False
 
-        sample_name = generate_sample_name(excel_path)
+        sample_result = generate_sample_name(excel_path, equipment=equipment_from_output_file(saved_excel))
+        if isinstance(sample_result, tuple):
+            sample_name, sn_warn, needs_input, question = sample_result
+            if sn_warn:
+                all_warnings.extend(sn_warn)
+            if needs_input:
+                all_warnings.append(f"❌ Origin Comments 확인 필요:\n{question}")
+                print(f"\n❓ {question}")
+                if not skip_origin:
+                    print("\n[4단계] Origin 건너뜀 — 파일명 해석 불가")
+                    skip_origin = True
+        else:
+            sample_name = sample_result
         experiment_base = generate_experiment_basename(excel_path)
         reaction_type = reaction_type_from_output_file(saved_excel)
         identity_key = _experiment_identity_key(excel_path)
@@ -2443,6 +2407,9 @@ def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True):
                     return False
                 print("❌ 올바른 Origin 파일(.opju)이 아닙니다.")
                 return False
+            if skip_origin:
+                print("\n[4단계] Origin 건너뜀 — --no-origin / DATA_PC_SKIP_ORIGIN")
+                return True
             update_origin(opju_path, df_final, sample_name, save_in_place=False, identity_key=identity_key)
             return True
 
@@ -2453,6 +2420,11 @@ def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True):
         _, target_opju, archive_xlsx = setup_experiment_folder(
             excel_path, saved_excel, reaction_type
         )
+        if skip_origin:
+            print("\n[4단계] Origin 건너뜀 — --no-origin / DATA_PC_SKIP_ORIGIN")
+            print(f"\n ✅ 완료 — G: 엑셀 반영 (Origin 생략)")
+            print(f"    {archive_xlsx}")
+            return True
         update_origin(target_opju, df_final, sample_name, save_in_place=True, identity_key=identity_key)
         print(f"\n ✅ 전체 완료 — G: 실험 폴더 및 Origin 반영")
         print(f"    {archive_xlsx}")
@@ -2515,11 +2487,16 @@ if __name__ == "__main__":
     parser.add_argument("--manual", action="store_true", help="1단계 메일 건너뛰고 엑셀 파일을 직접 지정")
     parser.add_argument("--opju", default=None, help="Origin .opju 직접 지정 (G: 자동 아카이브 비활성)")
     parser.add_argument("--no-archive", action="store_true", help="G: 실험 폴더 생성 및 Origin 연동 건너뛰기")
+    parser.add_argument(
+        "--no-origin",
+        action="store_true",
+        help="4단계 Origin 생략 (메일·엑셀·G: xlsx 까지). env DATA_PC_SKIP_ORIGIN=1 과 동일",
+    )
     parser.add_argument("--poll-once", action="store_true", help="메일 1회 확인 후 종료 (비대화형)")
     parser.add_argument(
         "--watch",
         action="store_true",
-        help="Wi-Fi 감시 — 연결 유지 중 1시간 쿨다운으로 자동 파이프라인",
+        help="G: 감시 + 1시간 쿨다운 — G: 접근 가능 시 자동 파이프라인",
     )
     parser.add_argument(
         "--no-wifi-check",
@@ -2531,6 +2508,8 @@ if __name__ == "__main__":
     print("=" * 60)
     print(" 🧪 GC 분석 & Origin 자동화 (메일 수신 → 계산 → Origin) 🧪")
     print("=" * 60)
+
+    skip_origin = args.no_origin or _skip_origin_enabled()
 
     if args.watch:
         from data_pc_watch import run_data_pc_watch
@@ -2553,6 +2532,7 @@ if __name__ == "__main__":
                 excel_path,
                 opju_path=args.opju,
                 auto_archive=not args.no_archive and args.opju is None,
+                skip_origin=skip_origin,
             )
             print("-" * 60)
         sys.exit(0)
@@ -2561,6 +2541,7 @@ if __name__ == "__main__":
         result = process_new_gc_emails(
             opju_path=args.opju,
             auto_archive=not args.no_archive and args.opju is None,
+            skip_origin=skip_origin,
         )
         sys.exit(0 if result.workflow_count >= 0 else 1)
 
@@ -2569,6 +2550,7 @@ if __name__ == "__main__":
         process_new_gc_emails(
             opju_path=args.opju,
             auto_archive=not args.no_archive and args.opju is None,
+            skip_origin=skip_origin,
         )
         print("-" * 60)
         again = input("메일 다시 확인: Enter / 종료: q ➔ ").strip().lower()

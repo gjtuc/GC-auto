@@ -15,8 +15,9 @@ PARENT = os.path.dirname(ROOT)
 if PARENT not in sys.path:
     sys.path.insert(0, PARENT)
 
+from data_pc_runtime.layer0_probes import GDriveProbe  # noqa: E402
 from data_pc_runtime.layer1_state import RuntimePaths, RuntimeStatus, StateStore  # noqa: E402
-from data_pc_runtime.layer2_gates import GateConfig  # noqa: E402
+from data_pc_runtime.layer2_gates import GateConfig, GateEvaluator  # noqa: E402
 from data_pc_runtime.layer3_job import JobConfig, JobResult, JobRunner  # noqa: E402
 from data_pc_runtime.layer4_supervisor import (  # noqa: E402
     Supervisor,
@@ -75,7 +76,9 @@ class TestL4Supervisor(unittest.TestCase):
                 return type("R", (), {"workflow_count": 0, "gdrive_retry_needed": False})()
 
             gate = GateConfig(skip_wifi_check=True, cooldown_sec=0)
-            job = JobRunner(paths, pipe, store=StateStore(paths))
+            store = StateStore(paths)
+            evaluator = GateEvaluator(paths, gdrive=GDriveProbe(root=tmp), store=store)
+            job = JobRunner(paths, pipe, store=store, evaluator=evaluator)
             sup = Supervisor(
                 tmp,
                 pipeline=pipe,

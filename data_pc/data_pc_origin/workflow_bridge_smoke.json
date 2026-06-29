@@ -1,0 +1,7 @@
+{
+  "hook": "run_workflow_bridged",
+  "calc_only_ok": true,
+  "opju_skip_ok": true,
+  "log_has_stage2": true,
+  "mode_opju": "opju_only"
+}

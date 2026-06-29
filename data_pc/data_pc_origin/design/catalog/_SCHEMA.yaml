@@ -1,0 +1,53 @@
+# Gate leaf YAML schema (design only) — 1 file = 1 L4 gate 목표
+# Path: gates/O0/O0_K_01_d_1.yaml
+
+gate: O0-K-01-d-1
+layer: L4
+parent: O0-K-01-d
+rollup:
+  - O0-L1-K
+  - O0
+depends:
+  - O0-K-01-c-1
+module: data_pc_origin.o0_keys
+symbol: normalize_origin_key
+assert: 'normalize_origin_key(in) == out'
+
+quarks:
+  Q1:
+    role: PRE
+    leptons:
+      - id: Q1-L1
+        kind: DEP
+        requires: [O0-K-01-c-1]
+      - id: Q1-L2
+        kind: T
+        expr: 'isinstance(in, str) and len(in) > 0'
+  Q2:
+    role: EXEC
+    leptons:
+      - id: Q2-L1
+        kind: CALL
+        expr: 's = in.lower()'
+      - id: Q2-L2
+        kind: CALL
+        expr: "out = re.sub(r'\\s+', '', s)"
+  Q3:
+    role: POST
+    leptons:
+      - id: Q3-L1
+        kind: E
+        expr: 'out == expected'
+      - id: Q3-L2
+        kind: BOOL
+        expr: 'not any(c.isupper() for c in out)'
+
+fixtures:
+  FA:
+    bits:
+      - { id: B1, tag: in, type: str, value: 'H2 yield' }
+      - { id: B2, tag: out, type: str, value: h2yield }
+  FB:
+    bits:
+      - { id: B1, tag: in, type: str, value: H2yield }
+      - { id: B2, tag: out, type: str, value: h2yield }
