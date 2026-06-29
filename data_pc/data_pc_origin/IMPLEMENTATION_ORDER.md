@@ -121,7 +121,7 @@
 ## 현재 작업 포인터
 
 ```
-DONE: O0..O9-EXT + P0..P38-EXT (286) — verify --p38 PASS
+DONE: O0..O9-EXT + P0..P39-EXT (294) — verify --p39 PASS
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
 RUNTIME: python -m data_pc_origin.live_runtime --dry
@@ -177,6 +177,8 @@ P37: python -m data_pc_origin.live_p37_github_push
 P38: python -m data_pc_origin.live_p38_github_refresh
      python -m data_pc_origin.live_p38_github_refresh --sync
      DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p38_github_refresh --push
+P39: python -m data_pc_origin.live_p39_github_push
+     DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p39_github_push --push
 P31: python -m data_pc_origin.live_p31_merge_pr [--pr]
 ```
 
@@ -293,8 +295,16 @@ P31: python -m data_pc_origin.live_p31_merge_pr [--pr]
 | 141 | P38-G | 4 | `p38_github_refresh.py` | **PASS** |
 | 142 | P38-H | 4 | `live_p38_github_refresh.py` | **PASS** |
 | 143 | **P38-EXT** | 286 | P37-EXT + P38 | **PASS** `--p38` |
+| 144 | P39-G | 4 | `p39_github_push.py` | **PASS** |
+| 145 | P39-H | 4 | `live_p39_github_push.py` | **PASS** |
+| 146 | **P39-EXT** | 294 | P38-EXT + P39 | **PASS** `--p39` |
 
 ```bash
+# P39 — GitHub push
+python -m data_pc_origin.live_p39_github_push
+DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p39_github_push --push
+python -m data_pc_origin.verify --p39
+
 # P38 — GitHub refresh (P36–P37)
 python -m data_pc_origin.live_p38_github_refresh
 python -m data_pc_origin.live_p38_github_refresh --sync
