@@ -20,8 +20,18 @@ class TestRegistry(unittest.TestCase):
     def setUpClass(cls) -> None:
         ensure_gates_loaded()
 
+    def test_o0_c_gate_count(self) -> None:
+        from data_pc_origin.gates.registry import O0_C_GATES
+
+        self.assertEqual(len(O0_C_GATES), 16)
+
+    def test_o0_i_gate_count(self) -> None:
+        from data_pc_origin.gates.registry import O0_I_GATES
+
+        self.assertEqual(len(O0_I_GATES), 14)
+
     def test_o0_gate_count(self) -> None:
-        self.assertEqual(len(O0_IMPLEMENTATION_ORDER), 61)
+        self.assertEqual(len(O0_IMPLEMENTATION_ORDER), 71)
 
     def test_o1_gate_count(self) -> None:
         from data_pc_origin.gates.registry import O1_IMPLEMENTATION_ORDER
@@ -92,33 +102,33 @@ class TestRunner(unittest.TestCase):
     def test_run_full_o0_rollup(self) -> None:
         code, log, passed = run_rollup("O0")
         self.assertEqual(code, 0, msg="\n".join(log))
-        self.assertEqual(len(passed), 61)
+        self.assertEqual(len(passed), 71)
 
     def test_run_o1_p_rollup(self) -> None:
         code, log, passed = run_rollup("O1-P")
         self.assertEqual(code, 0, msg="\n".join(log))
-        self.assertEqual(len(passed), 61 + 15)
+        self.assertEqual(len(passed), 71 + 15)
 
     def test_run_o2_e_rollup(self) -> None:
         code, log, passed = run_rollup("O2-E")
         self.assertEqual(code, 0, msg="\n".join(log))
-        self.assertEqual(len(passed), 88 + 6)
+        self.assertEqual(len(passed), 98 + 6)
 
     def test_run_o3_s_rollup(self) -> None:
         code, log, passed = run_rollup("O3-S")
         self.assertEqual(code, 0, msg="\n".join(log))
-        self.assertEqual(len(passed), 109 + 8)
+        self.assertEqual(len(passed), 119 + 8)
 
 
     def test_run_o5_l1_i_rollup(self) -> None:
         code, log, passed = run_rollup("O5-L1-I")
         self.assertEqual(code, 0, msg="\n".join(log))
-        self.assertEqual(len(passed), 129 + 24)
+        self.assertEqual(len(passed), 139 + 24)
 
     def test_run_o5_l1_m_rollup(self) -> None:
         code, log, passed = run_rollup("O5-L1-M")
         self.assertEqual(code, 0, msg="\n".join(log))
-        self.assertEqual(len(passed), 129 + 105)
+        self.assertEqual(len(passed), 139 + 105)
 
 
 if __name__ == "__main__":

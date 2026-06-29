@@ -121,8 +121,8 @@
 ## 현재 작업 포인터
 
 ```
-DONE: O6-G equipment-day 가드 실행 검증 (live_equipment_day_guard)
-NEXT: git sync · P28-H 환경 이슈(선택)
+DONE: git d6930c6 (O0/O6 bridges · P41 · equipment-day harness)
+NEXT: verify --p41 전체 · P28-H 환경(선택)
 ```
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap

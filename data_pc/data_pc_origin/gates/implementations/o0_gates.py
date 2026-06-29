@@ -13,7 +13,9 @@ from data_pc_origin.o0_comments import (
     IdentityKey,
     comment_matches_identity,
     parse_comment_date,
+    parse_equipment_suffix,
     sort_key_from_comment,
+    strip_equipment_suffix,
 )
 from data_pc_origin.o0_identity import (
     identity_match_tokens,
@@ -37,6 +39,7 @@ from data_pc_origin.o0_types import OriginPath, ProbeResult, gap_policy_members
 _IDENTITY_DRE: IdentityKey = ("20260620", "dre(1.5) 600c ni5_ce5_al2o3")
 _SAMPLE_DRE = "dre(1.5) 600c ni5_ce5_al2o3"
 _COMMENT_DRE = "20260620 DRE(1.5)@600°C 600CNi5_Ce5_Al2O3"
+_COMMENT_DRE_SUFFIX = "20260620 DRE(1.5)@600°C Ni5_Ce5_Al2O3_DRM 장비"
 
 
 def _gc3_gap_series(length: int = 107) -> list[float]:
@@ -116,6 +119,40 @@ def register_o0_gates() -> None:
         )[-1],
     )
 
+    # --- O0-I-03 — Task C Comments 형식 (% / @ / 슬래시 촉매) ---
+    _SAMPLE_TASK_C = "dre(1.5) 600c ni5_ce5_al2o3"
+    _COMMENT_TASK_C = (
+        "20260620 DRE(1.5%)@600°C Ni5/Ce5/Al2O3_OCM 장비"
+    )
+
+    register_gate(
+        "O0-I-03-a-1",
+        lambda: _assert("1.5" in identity_match_tokens(_SAMPLE_TASK_C)),
+    )
+    register_gate(
+        "O0-I-03-b-1",
+        lambda: _assert("@600" in identity_match_tokens(_SAMPLE_TASK_C)),
+    )
+    register_gate(
+        "O0-I-03-c-1",
+        lambda: (
+            _assert("ni5" in identity_match_tokens("ni5/ce5/al2o3")),
+            _assert("al2o3" in identity_match_tokens("ni5/ce5/al2o3")),
+        )[-1],
+    )
+    register_gate(
+        "O0-I-03-d-1",
+        lambda: _assert(
+            comment_matches_identity(_COMMENT_TASK_C, _IDENTITY_DRE)
+        ),
+    )
+    register_gate(
+        "O0-I-03-e-1",
+        lambda: _assert(
+            "장비" not in identity_match_tokens("dre ni5 _ocm 장비")
+        ),
+    )
+
     # --- O0-C ---
     register_gate("O0-C-01-a-1", lambda: _assert(parse_comment_date(None) is None))
     register_gate(
@@ -162,6 +199,40 @@ def register_o0_gates() -> None:
     register_gate(
         "O0-C-03-a-1",
         lambda: _assert(sort_key_from_comment("no date") > sort_key_from_comment("20260101 x")),
+    )
+
+    # --- O0-C-04 — 장비 접미사 (Task C: _DRM 장비 / _OCM 장비) ---
+    register_gate(
+        "O0-C-04-a-1",
+        lambda: _assert(
+            strip_equipment_suffix(_COMMENT_DRE_SUFFIX)
+            == "20260620 DRE(1.5)@600°C Ni5_Ce5_Al2O3"
+        ),
+    )
+    register_gate(
+        "O0-C-04-b-1",
+        lambda: _assert(
+            strip_equipment_suffix(
+                "20260620 DRME(1.5%)@600°C Ni5/Al2O3_OCM 장비"
+            )
+            == "20260620 DRME(1.5%)@600°C Ni5/Al2O3"
+        ),
+    )
+    register_gate(
+        "O0-C-04-c-1",
+        lambda: _assert(parse_equipment_suffix(_COMMENT_DRE_SUFFIX) == "GC2"),
+    )
+    register_gate(
+        "O0-C-04-d-1",
+        lambda: _assert(
+            parse_equipment_suffix("20260620 DRE(1.5%)@600°C x_OCM 장비") == "GC3"
+        ),
+    )
+    register_gate(
+        "O0-C-04-e-1",
+        lambda: _assert(
+            comment_matches_identity(_COMMENT_DRE_SUFFIX, _IDENTITY_DRE)
+        ),
     )
 
     # --- O0-S ---

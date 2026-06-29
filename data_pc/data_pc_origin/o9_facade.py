@@ -5,10 +5,14 @@ from __future__ import annotations
 
 import inspect
 import logging
+import os
+import sys
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Tuple
 
+from data_pc_origin.o0_equipment_day import EquipmentDayGuardResult
 from data_pc_origin.o0_types import OriginWarning
+from data_pc_origin.o6_guard import ColumnGuardConfirm
 from data_pc_origin.o1_opju_path import probe_opju_path
 from data_pc_origin.o8_context import build_context
 from data_pc_origin.o8_job import SampleJobResult, run_sample_job
@@ -63,6 +67,32 @@ def print_stage4_ux(
         printer(" ⚠️ Origin에서 일치하는 데이터 시트를 하나도 찾지 못했습니다.")
 
 
+def default_interactive_column_guard_confirm(
+    guard: EquipmentDayGuardResult,
+    *,
+    printer: PrintFn = print,
+) -> bool:
+    """터미널 대화형 — 장비·날짜 규칙 위반 시 사용자 확인."""
+    printer("\n" + "?" * 65)
+    printer(" ❓ [Origin 열 추가 확인] 같은 장비·날짜 규칙")
+    printer(guard.question)
+    printer("?" * 65)
+    try:
+        ans = input("Origin에 새 열을 추가할까요? (y/N): ").strip().lower()
+    except EOFError:
+        return False
+    return ans in ("y", "yes")
+
+
+def _skip_equipment_day_guard_from_env() -> bool:
+    return os.getenv("DATA_PC_SKIP_EQUIPMENT_DAY_GUARD", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
 def update_from_dataframe(
     opju_path: str,
     df_data: Any,
@@ -75,6 +105,8 @@ def update_from_dataframe(
     printer: PrintFn | None = None,
     log_fn: LogFn | None = None,
     job_runner: Callable[..., SampleJobResult] | None = None,
+    column_guard_confirm: ColumnGuardConfirm | None = None,
+    skip_equipment_day_guard: bool | None = None,
 ) -> OriginUpdateResult:
     """
     파이프라인 유일 진입 — O8 job 위임.
@@ -82,6 +114,15 @@ def update_from_dataframe(
     시그니처: 촉매 `update_origin(opju_path, df_data, sample_name, …)` 와 동일 인자.
     """
     _print = printer if printer is not None else print
+    skip_guard = (
+        skip_equipment_day_guard
+        if skip_equipment_day_guard is not None
+        else _skip_equipment_day_guard_from_env()
+    )
+    confirm = column_guard_confirm
+    if confirm is None and sys.stdin.isatty() and not skip_guard:
+        confirm = lambda g: default_interactive_column_guard_confirm(g, printer=_print)
+
     ctx = build_context(
         opju_path,
         df_data,
@@ -97,14 +138,23 @@ def update_from_dataframe(
         op=op,
         opju_probe=probe,
         skip_gate=skip_gate,
+        column_guard_confirm=confirm,
+        skip_equipment_day_guard=bool(skip_guard),
     )
-    print_stage4_ux(
-        sample_name=sample_name,
-        job=job,
-        opju_path=opju_path,
-        save_in_place=save_in_place,
-        printer=_print,
-    )
+    if not job.ok and any(w.code == "equipment_day_guard" for w in job.warnings):
+        for w in job.warnings:
+            if w.code == "equipment_day_guard":
+                _print(f"\n[4단계] Origin 건너뜀 — 사용자 확인 필요")
+                _print(w.detail)
+                break
+    else:
+        print_stage4_ux(
+            sample_name=sample_name,
+            job=job,
+            opju_path=opju_path,
+            save_in_place=save_in_place,
+            printer=_print,
+        )
     origin_log(
         f"done sheets={job.updated_count} rows={job.row_count} ok={job.ok}",
         log_fn=log_fn,

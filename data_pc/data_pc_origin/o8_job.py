@@ -13,6 +13,7 @@ from data_pc_origin.o3_session import OriginSession
 from data_pc_origin.o4_project import open_project, save_project
 from data_pc_origin.o8_save import resolve_save_path
 from data_pc_origin.o5_match import report_missing, resolve_worksheets
+from data_pc_origin.o6_guard import ColumnGuardConfirm, OriginColumnGuardError
 from data_pc_origin.o6_resolve import resolve_target_column
 from data_pc_origin.o7_write import write_column
 from data_pc_origin.o8_context import SampleContext, dataframe_row_count
@@ -54,6 +55,8 @@ def run_writes(
     ctx: SampleContext,
     *,
     lt_execute: LtExecute | None = None,
+    column_guard_confirm: ColumnGuardConfirm | None = None,
+    skip_equipment_day_guard: bool = False,
 ) -> Tuple[int, Optional[int], List[OriginWarning]]:
     """O8-J-04/05 — resolve col once · per-mapping write."""
     hits, misses = resolve_worksheets(op, ctx.mapping, ctx.df)
@@ -69,12 +72,20 @@ def run_writes(
         if wks is None:
             continue
         if col_idx is None:
-            col_idx = resolve_target_column(
-                wks,
-                ctx.sample_name,
-                ctx.identity_key,
-                lt_execute=lt_execute,
-            )
+            try:
+                col_idx = resolve_target_column(
+                    wks,
+                    ctx.sample_name,
+                    ctx.identity_key,
+                    lt_execute=lt_execute,
+                    column_guard_confirm=column_guard_confirm,
+                    skip_equipment_day_guard=skip_equipment_day_guard,
+                )
+            except OriginColumnGuardError as exc:
+                warnings.append(
+                    OriginWarning("equipment_day_guard", exc.guard.question)
+                )
+                return 0, None, warnings
         write_column(wks, col_idx, ctx.df[df_col], ctx.sample_name)
         updated += 1
 
@@ -90,6 +101,8 @@ def run_sample_job(
     session: OriginSession | None = None,
     gate_fn: GateFn = evaluate_origin_gate,
     lt_execute: LtExecute | None = None,
+    column_guard_confirm: ColumnGuardConfirm | None = None,
+    skip_equipment_day_guard: bool = False,
 ) -> SampleJobResult:
     """Dry/mock or live — session finally exit (O8-J-09)."""
     probe = opju_probe or ProbeResult(ok=True, detail="mock")
@@ -109,7 +122,14 @@ def run_sample_job(
 
     if op is not None:
         try:
-            return _run_with_op(op, ctx, n_rows=n_rows, lt_execute=lt_execute)
+            return _run_with_op(
+                op,
+                ctx,
+                n_rows=n_rows,
+                lt_execute=lt_execute,
+                column_guard_confirm=column_guard_confirm,
+                skip_equipment_day_guard=skip_equipment_day_guard,
+            )
         finally:
             exit_fn = getattr(op, "exit", None)
             if callable(exit_fn):
@@ -117,7 +137,14 @@ def run_sample_job(
 
     sess = session or OriginSession()
     with sess as live_op:
-        return _run_with_op(live_op, ctx, n_rows=n_rows, lt_execute=lt_execute)
+        return _run_with_op(
+            live_op,
+            ctx,
+            n_rows=n_rows,
+            lt_execute=lt_execute,
+            column_guard_confirm=column_guard_confirm,
+            skip_equipment_day_guard=skip_equipment_day_guard,
+        )
 
 
 def _run_with_op(
@@ -126,9 +153,17 @@ def _run_with_op(
     *,
     n_rows: int,
     lt_execute: LtExecute | None,
+    column_guard_confirm: ColumnGuardConfirm | None = None,
+    skip_equipment_day_guard: bool = False,
 ) -> SampleJobResult:
     open_project(op, ctx.opju_path)  # type: ignore[arg-type]
-    updated, col_idx, warnings = run_writes(op, ctx, lt_execute=lt_execute)
+    updated, col_idx, warnings = run_writes(
+        op,
+        ctx,
+        lt_execute=lt_execute,
+        column_guard_confirm=column_guard_confirm,
+        skip_equipment_day_guard=skip_equipment_day_guard,
+    )
     saved_path: Optional[str] = None
     if updated > 0:
         saved_path = resolve_save_path(ctx.opju_path, ctx.save_in_place)

@@ -30,3 +30,11 @@ def dated_columns(wks: Any) -> List[Tuple[int, str]]:
         if sort_date:
             dated.append((i, sort_date))
     return dated
+
+
+def comment_at_column(wks: Any, col_idx: int) -> str:
+    """단일 열 Comments(C) — O6 장비·날짜 가드용."""
+    get_label = getattr(wks, "get_label", None)
+    if get_label is None:
+        raise AttributeError("wks.get_label required")
+    return get_label(int(col_idx), "C") or ""

@@ -30,7 +30,8 @@ def comment_matches_identity(comment: str | None, identity_key: IdentityKey | No
     if not comment or not identity_key:
         return False
     date, sample = identity_key
-    text = comment.strip().lower()
+    # 장비 접미사(_DRM/_OCM 장비)는 identity 토큰 비교에서 제외
+    text = strip_equipment_suffix(comment).strip().lower()
     if not text.startswith(date):
         return False
     tokens = identity_match_tokens(sample)
@@ -38,3 +39,28 @@ def comment_matches_identity(comment: str | None, identity_key: IdentityKey | No
         return False
     matched = sum(1 for token in tokens if token in text)
     return matched >= max(2, int(len(tokens) * 0.6))
+
+
+# Origin Comments 끝 장비 접미사 — Task C (GC2→_DRM 장비, GC3→_OCM 장비)
+_EQUIPMENT_SUFFIX_DRM = "_DRM 장비"
+_EQUIPMENT_SUFFIX_OCM = "_OCM 장비"
+
+
+def strip_equipment_suffix(comment: str | None) -> str:
+    """Comments 끝 `_DRM 장비` / `_OCM 장비` 제거 — 열 매칭·정렬용 본문."""
+    text = (comment or "").rstrip()
+    if text.endswith(_EQUIPMENT_SUFFIX_OCM):
+        return text[: -len(_EQUIPMENT_SUFFIX_OCM)].rstrip()
+    if text.endswith(_EQUIPMENT_SUFFIX_DRM):
+        return text[: -len(_EQUIPMENT_SUFFIX_DRM)].rstrip()
+    return text
+
+
+def parse_equipment_suffix(comment: str | None) -> Optional[str]:
+    """Comments 접미사 → 장비 코드. 없으면 None."""
+    text = (comment or "").rstrip()
+    if text.endswith(_EQUIPMENT_SUFFIX_OCM):
+        return "GC3"
+    if text.endswith(_EQUIPMENT_SUFFIX_DRM):
+        return "GC2"
+    return None
