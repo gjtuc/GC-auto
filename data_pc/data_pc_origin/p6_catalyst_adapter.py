@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 from typing import Any, Mapping, Optional
@@ -46,6 +47,27 @@ def load_catalyst_module(path: Path | None = None) -> Any:
     return module
 
 
+def _unpack_sample_name(module, excel_path, saved_excel, warnings):
+    eq = (
+        module.equipment_from_output_file(saved_excel)
+        if hasattr(module, "equipment_from_output_file")
+        else None
+    )
+    result = module.generate_sample_name(excel_path, equipment=eq)
+    if isinstance(result, tuple):
+        name, extra_warn, needs_input, question = result[0], list(result[1]), result[2], result[3]
+        warnings = list(warnings or ())
+        warnings.extend(extra_warn)
+        origin_skip = ""
+        if needs_input:
+            origin_skip = question
+            warnings.append(f"❌ Origin Comments 확인 필요:\n{question}")
+        if not name:
+            name = f"UNRESOLVED_{os.path.basename(excel_path)[:40]}"
+        return name, tuple(warnings), origin_skip
+    return result, tuple(warnings or ()), ""
+
+
 def make_stage2_runner(module: Any) -> Stage2Runner:
     """촉매 process_excel → P5 Stage2RunResult."""
 
@@ -53,16 +75,20 @@ def make_stage2_runner(module: Any) -> Stage2Runner:
         df, saved_excel, warnings, _feed = module.process_excel(excel_path)
         if df is None:
             return None
+        sample_name, warn_tuple, origin_skip = _unpack_sample_name(
+            module, excel_path, str(saved_excel or ""), warnings
+        )
         meta = assemble_stage2_metadata(
-            sample_name=module.generate_sample_name(excel_path),
+            sample_name=sample_name,
             identity_key=module._experiment_identity_key(excel_path),
             saved_excel=str(saved_excel or ""),
         )
         arts = Stage2Artifacts(
             df=df,
             saved_excel=str(saved_excel or ""),
-            warnings=tuple(warnings or ()),
+            warnings=warn_tuple,
             feed_source_desc=str(_feed or ""),
+            origin_skip_reason=origin_skip,
         )
         return Stage2RunResult(artifacts=arts, metadata=meta)
 

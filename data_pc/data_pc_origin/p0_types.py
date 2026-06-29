@@ -31,6 +31,7 @@ class Stage2Artifacts:
     saved_excel: str
     warnings: Tuple[str, ...] = ()
     feed_source_desc: str = ""
+    origin_skip_reason: str = ""
 
 
 @dataclass(frozen=True)

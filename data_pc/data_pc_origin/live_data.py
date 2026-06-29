@@ -59,7 +59,15 @@ def resolve_live_job(opju_path: str, *, xlsx_path: Optional[str] = None) -> Live
 
     catalyst = _load_catalyst_module()
     df = pd.read_excel(xlsx)
-    sample_name = catalyst.generate_sample_name(xlsx)
+    eq = (
+        catalyst.equipment_from_output_file(xlsx)
+        if hasattr(catalyst, "equipment_from_output_file")
+        else None
+    )
+    sn_result = catalyst.generate_sample_name(xlsx, equipment=eq)
+    sample_name = sn_result[0] if isinstance(sn_result, tuple) else sn_result
+    if not sample_name:
+        raise ValueError(f"Origin Comments 해석 불가: {xlsx}")
     identity_key = catalyst._experiment_identity_key(xlsx)
     cols = tuple(str(c) for c in df.columns)
     return LiveJobContext(

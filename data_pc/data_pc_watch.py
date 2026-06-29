@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-data_pc_watch.py — 데이터 PC Wi-Fi 감시 → 메일·계산·Origin 자동 파이프라인
+data_pc_watch.py — 데이터 PC G: 감시 → 메일·계산·Origin 자동 파이프라인
 
-[흐름] GC2/GC3 장비 PC watch 와 동일 원리:
-  · REQUIRED_HOTSPOT Wi-Fi 연결 유지 중 DATA_PC_WATCH_INTERVAL_SEC(15초) 폴링
+[흐름]
+  · G: 접근 가능 시 DATA_PC_WATCH_INTERVAL_SEC(15초) 폴링 + 1시간 쿨다운
   · G: 잠금 시 DATA_PC_GDRIVE_RETRY_SEC(기본 15분) 재시도 — 1시간 쿨다운 미적용
   · 부팅 직후 미처리 메일 1회 (DATA_PC_BOOT_MAIL_CHECK)
 
 [설정] Desktop\\.cursor\\gc_automation.env
-  REQUIRED_HOTSPOT=iptime,iptime 2,iptime_5G   # 차헌 PC
   DATA_PC_AUTO_MAIL_COOLDOWN_HOURS=1
   DATA_PC_WATCH_INTERVAL_SEC=15
+  DATA_PC_SKIP_WIFI_CHECK=1   # 데이터 PC 기본 — Wi-Fi 게이트 비활성
 
 [실행]
   python "촉매 반응 계산.py" --watch
@@ -120,13 +120,21 @@ def load_watch_config(script_dir: str) -> dict:
     if legacy_delay >= 3600 and cooldown_sec < legacy_delay:
         cooldown_sec = legacy_delay
 
+    require_wifi = os.getenv("DATA_PC_REQUIRE_WIFI", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    explicit_skip = _env_bool("DATA_PC_SKIP_WIFI_CHECK")
+    skip_wifi = explicit_skip or not require_wifi
+
     return {
         "required_ssid": required,
         "cooldown_sec": cooldown_sec,
         "cooldown_hours": cooldown_hours,
         "interval_sec": _env_int("DATA_PC_WATCH_INTERVAL_SEC", 15, minimum=5),
         "reconnect_min_sec": _env_int("DATA_PC_HOTSPOT_RECONNECT_MIN_SEC", 90, minimum=0),
-        "skip_wifi_check": _env_bool("DATA_PC_SKIP_WIFI_CHECK"),
+        "skip_wifi_check": skip_wifi,
         "boot_mail_check": _env_bool("DATA_PC_BOOT_MAIL_CHECK", True),
         "boot_network_wait_sec": _env_int("DATA_PC_BOOT_NETWORK_WAIT_SEC", 90, minimum=10),
         # G: 잠금 시 재시도 간격 — 작업 스케줄러 Ensure(15분)와 동일
@@ -233,7 +241,7 @@ def _parse_pipeline_result(result: Any) -> tuple[int, bool]:
 
 
 class DataPcWatchRunner:
-    """Wi-Fi 연결 유지 중 poll + 쿨다운(기본 1시간)마다 파이프라인 1회."""
+    """G: 접근 가능 시 poll + 쿨다운(기본 1시간)마다 파이프라인 1회."""
 
     def __init__(
         self,
@@ -353,7 +361,7 @@ class DataPcWatchRunner:
         print("[부팅] 미처리 메일 확인 (PC 꺼진 동안 수신분)")
         self._publish("boot_mail_check", "부팅 후 미처리 메일 확인 중")
         if not self._wait_for_network(wait):
-            print("[부팅] 네트워크 미준비 - Wi-Fi 감시는 계속됩니다")
+            print("[부팅] 네트워크 미준비 - G: 감시는 계속됩니다")
             self._publish("boot_network_wait", "네트워크 대기 중")
             return
         self._run_pipeline("부팅 후 미처리 메일 → 계산 → Origin")
@@ -364,9 +372,9 @@ class DataPcWatchRunner:
         reconnect = self.config["reconnect_min_sec"]
         ssid = self.config["required_ssid"]
 
-        _emit(f"[안내] 데이터 PC Wi-Fi 감시 - {interval}초 간격, SSID: {ssid}")
+        _emit(f"[안내] 데이터 PC G: 감시 + 1시간 쿨다운 — {interval}초 간격")
         _emit(
-            f"       Wi-Fi 연결 유지 중 자동 파이프라인 "
+            f"       G: 접근 가능 시 자동 파이프라인 "
             f"({cooldown_h}시간 쿨다운, G: 잠금 시 {self.config['gdrive_retry_sec'] // 60}분 재시도)"
         )
         _emit(f"       로그: {_watch_log_path()}")
@@ -377,7 +385,7 @@ class DataPcWatchRunner:
             f"[시작] watch pid={os.getpid()} cooldown={cooldown_h}h "
             f"gdrive_retry={self.config['gdrive_retry_sec']}s interval={interval}s"
         )
-        self._publish("starting", "데이터 PC Wi-Fi 감시 시작")
+        self._publish("starting", "데이터 PC G: 감시 + 1시간 쿨다운 시작")
         hb = threading.Thread(target=self._heartbeat_worker, name="data-pc-watch-hb", daemon=True)
         hb.start()
         self._run_boot_mail_check()
@@ -387,7 +395,7 @@ class DataPcWatchRunner:
                 self._tick()
                 time.sleep(interval)
         except KeyboardInterrupt:
-            print("\n[안내] Wi-Fi 감시 종료 (Ctrl+C)")
+            print("\n[안내] G: 감시 종료 (Ctrl+C)")
         finally:
             self._heartbeat_stop.set()
             _write_json(
@@ -412,11 +420,19 @@ class DataPcWatchRunner:
             _write_json(self.config["status_json"], snap)
 
     def _tick(self) -> None:
+        if self._g_drive_check is not None and not self._g_drive_check():
+            self._publish(
+                "waiting_gdrive",
+                "G: 실험데이터 경로 없음 - SecuYouSB 로그인 대기",
+            )
+            _emit("[대기] G: 미접근")
+            return
+
         ssid = self.config["required_ssid"]
         skip = self.config["skip_wifi_check"]
         reconnect = self.config["reconnect_min_sec"]
 
-        if not self._is_connected(ssid, skip):
+        if not skip and not self._is_connected(ssid, skip):
             if self._wifi_was_connected:
                 self._wifi_lost_at = time.monotonic()
             self._wifi_was_connected = False

@@ -146,31 +146,42 @@ def run_workflow_stages(
                     stage4=None,
                     error_message=hook_err,
                 )
-        probe = probe_stage4_suffix(opju)
-        if not probe.ok:
-            return WorkflowResult(
-                ok=False,
-                mode=mode,
-                stage2=stage2,
-                stage3=stage3,
-                stage4=None,
+        parse_skip = (stage2.artifacts.origin_skip_reason or "").strip()
+        if parse_skip:
+            stage4 = Stage4Result(
+                skipped=True,
+                ok=True,
+                origin=None,
+                skip_reason=(
+                    f"\n[4단계] Origin 건너뜀 — 파일명 해석 불가:\n{parse_skip}"
+                ),
             )
-        payload = build_workflow_payload(stage2, opju_path=opju, mode=mode)
-        stage4 = maybe_run_stage4(
-            payload,
-            options=options,
-            explicit=explicit_skip,
-            environ=environ,
-            runner=origin_runner,
-        )
-        if not stage4.ok:
-            return WorkflowResult(
-                ok=False,
-                mode=mode,
-                stage2=stage2,
-                stage3=stage3,
-                stage4=stage4,
+        else:
+            probe = probe_stage4_suffix(opju)
+            if not probe.ok:
+                return WorkflowResult(
+                    ok=False,
+                    mode=mode,
+                    stage2=stage2,
+                    stage3=stage3,
+                    stage4=None,
+                )
+            payload = build_workflow_payload(stage2, opju_path=opju, mode=mode)
+            stage4 = maybe_run_stage4(
+                payload,
+                options=options,
+                explicit=explicit_skip,
+                environ=environ,
+                runner=origin_runner,
             )
+            if not stage4.ok:
+                return WorkflowResult(
+                    ok=False,
+                    mode=mode,
+                    stage2=stage2,
+                    stage3=stage3,
+                    stage4=stage4,
+                )
 
     return WorkflowResult(
         ok=True,
