@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from data_pc_origin.gates.registry import P30_EXTENDED_ORDER, P39_EXTENDED_ORDER
+from data_pc_origin.gates.registry import P30_EXTENDED_ORDER, P39_EXTENDED_ORDER, P41_EXTENDED_ORDER
 from data_pc_origin.p23_github_snapshot import (
     SNAPSHOT_BRANCH,
     inspect_git_repo,
@@ -247,6 +247,69 @@ def build_merge_readiness_manifest_post39(script_dir: str) -> MergeReadinessMani
     )
 
 
+def build_merge_readiness_manifest_post41(script_dir: str) -> MergeReadinessManifest:
+    """P24 ops + P38 sync + git diff vs main (post-P41 stack manifest)."""
+    repo = repo_root_path(script_dir)
+    git = inspect_git_repo(script_dir)
+    refresh = plan_github_refresh_post37(script_dir)
+    dest = verify_dest_markers_post37(script_dir)
+    ops = build_ops_rollup_manifest(script_dir)
+
+    checks: List[str] = []
+    failures: List[str] = []
+
+    if git.is_repo:
+        checks.append("git_repo")
+    else:
+        failures.append("not a git repo")
+
+    if git.branch == SNAPSHOT_BRANCH:
+        checks.append("on_feat_branch")
+    else:
+        failures.append(f"branch={git.branch!r}")
+
+    if git.remote_branch_exists:
+        checks.append("remote_feat_branch")
+    else:
+        failures.append("remote feat branch missing")
+
+    if ops.production_ready:
+        checks.append("ops_production_ready")
+    else:
+        failures.append(f"ops: {ops.reason}")
+
+    if refresh.markers_ready and dest.get("ok"):
+        checks.append("github_markers_synced")
+    else:
+        failures.append("github markers not synced")
+
+    diff_names, diff_stat, diff_ok = _diff_vs_main(repo)
+    if diff_ok and diff_names:
+        checks.append("diff_vs_main")
+        if _only_data_pc_paths(diff_names):
+            checks.append("data_pc_only_diff")
+        else:
+            failures.append("diff outside data_pc/")
+    elif diff_ok:
+        failures.append("empty diff vs main")
+    else:
+        failures.append("diff stat failed")
+
+    ready = not failures
+    return MergeReadinessManifest(
+        ready=ready,
+        reason="merge_ready" if ready else "; ".join(failures),
+        gate_count=len(P41_EXTENDED_ORDER),
+        branch=SNAPSHOT_BRANCH,
+        base=MAIN_BRANCH,
+        ops_ready=ops.production_ready,
+        github_sync_ready=bool(refresh.markers_ready and dest.get("ok")),
+        checks=checks,
+        failures=failures,
+        diff_stat=diff_stat,
+    )
+
+
 def draft_pr_body(manifest: MergeReadinessManifest) -> str:
     return f"""## Summary
 - Origin pipeline P층 P0–P30 ({manifest.gate_count} gates) on `{manifest.branch}`
@@ -276,6 +339,24 @@ def draft_pr_body_post39(manifest: MergeReadinessManifest) -> str:
 
 ## Test plan
 - [ ] `python -m data_pc_origin.verify --p39` on data PC
+- [ ] `python -m data_pc_origin.live_ops_rollup --tick`
+- [ ] `DATA_PC_NATIVE_LIVE=1 python -m data_pc_origin.live_native_production --live`
+"""
+
+
+def draft_pr_body_post41(manifest: MergeReadinessManifest) -> str:
+    """P40 merge PR 본문 — P41-EXT gate count + verify --p41."""
+    return f"""## Summary
+- Origin pipeline O0–O9 + P0–P41 ({manifest.gate_count} P-EXT gates) on `{manifest.branch}`
+- **Does not auto-merge** — review before merging to `{manifest.base}`
+
+## Readiness
+- ops_production_ready: {manifest.ops_ready}
+- github_sync_ready: {manifest.github_sync_ready}
+- checks: {', '.join(manifest.checks)}
+
+## Test plan
+- [ ] `python -m data_pc_origin.verify --p41` on data PC
 - [ ] `python -m data_pc_origin.live_ops_rollup --tick`
 - [ ] `DATA_PC_NATIVE_LIVE=1 python -m data_pc_origin.live_native_production --live`
 """
@@ -346,6 +427,62 @@ def create_merge_pr_post39(script_dir: str) -> Dict[str, Any]:
     repo = repo_root_path(script_dir)
     body = draft_pr_body_post39(manifest)
     title = f"feat(data-pc): origin pipeline P0–P39 ({manifest.gate_count} gates)"
+    code, out = _run_git(
+        repo,
+        "push",
+        "-u",
+        REMOTE_NAME,
+        SNAPSHOT_BRANCH,
+    )
+    if code != 0:
+        return {"status": "error", "stage": "push", "detail": out, "manifest": manifest.to_dict()}
+
+    try:
+        proc = subprocess.run(
+            [
+                "gh",
+                "pr",
+                "create",
+                "--base",
+                MAIN_BRANCH,
+                "--head",
+                SNAPSHOT_BRANCH,
+                "--title",
+                title,
+                "--body",
+                body,
+            ],
+            cwd=str(repo),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        detail = ((proc.stdout or "") + (proc.stderr or "")).strip()
+        ok = proc.returncode == 0
+        return {
+            "status": "ok" if ok else "error",
+            "stage": "pr_create",
+            "detail": detail,
+            "manifest": manifest.to_dict(),
+        }
+    except OSError as exc:
+        return {
+            "status": "error",
+            "stage": "pr_create",
+            "detail": str(exc),
+            "manifest": manifest.to_dict(),
+        }
+
+
+def create_merge_pr_post41(script_dir: str) -> Dict[str, Any]:
+    """`gh pr create` — post-P41 manifest (structural readiness)."""
+    manifest = build_merge_readiness_manifest_post41(script_dir)
+    if not merge_structural_ready(manifest):
+        return {"status": "error", "stage": "readiness", "manifest": manifest.to_dict()}
+
+    repo = repo_root_path(script_dir)
+    body = draft_pr_body_post41(manifest)
+    title = f"feat(data-pc): origin pipeline P0–P41 ({manifest.gate_count} gates)"
     code, out = _run_git(
         repo,
         "push",

@@ -64,7 +64,7 @@ def _bridge_modules_ok(script_dir: str) -> tuple[bool, List[str]]:
 
 def plan_stack_manifest_post40(script_dir: str) -> StackManifestPlan:
     """P40 PASS 이후 O층 정렬·게이트 수 manifest (P41-M)."""
-    stack_count = len(rollup_gate_ids("P40"))
+    stack_count = len(rollup_gate_ids("P41"))
     p40_ext = len(P40_EXTENDED_ORDER)
     p41_ext = p40_ext + 8  # P41_IMPLEMENTATION_ORDER
     o0_n = len(O0_IMPLEMENTATION_ORDER)

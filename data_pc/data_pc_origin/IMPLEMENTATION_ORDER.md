@@ -116,14 +116,20 @@
 
 `촉매 반응 계산.py` 1곳 → `update_from_dataframe` · `DATA_PC_SKIP_ORIGIN=0`
 
+| # | 항목 | module | 상태 |
+|---|------|--------|------|
+| 153 | bridge 위임 (정적+실행) | `live_pipeline_bridge.py` | **PASS** |
+| 154 | SKIP_ORIGIN=0 실연동 | `live_run` / `live_workflow` | 대기 (G: · Origin) |
+
 ---
 
 ## 현재 작업 포인터
 
 ```
-DONE: verify --p41 PASS (616 gates + 274 unittest)
-NEXT: 실제 Origin .opju TTY 가드(선택) · P40 merge PR
+DONE: P40 post-P41 merge PR PASS · Phase 8 #153 live_pipeline_bridge PASS
+NEXT: Phase 8 #154 — `DATA_PC_SKIP_ORIGIN=0` 실연동 (G: · Origin) · `gh auth login` 후 `--pr` (선택)
 ```
+PIPELINE: python -m data_pc_origin.live_pipeline_bridge
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
 RUNTIME: python -m data_pc_origin.live_runtime --dry
