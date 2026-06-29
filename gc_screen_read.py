@@ -246,6 +246,90 @@ def ensure_output_dir() -> str:
     return out
 
 
+def focus_overlay_enabled() -> bool:
+    return os.getenv("GC_SCREEN_SHOW_FOCUS", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def focus_duration_ms() -> int:
+    raw = os.getenv("GC_SCREEN_FOCUS_MS", "").strip()
+    if raw:
+        try:
+            return max(200, int(raw))
+        except ValueError:
+            pass
+    return 900
+
+
+def flash_focus_box(
+    box: Box,
+    *,
+    duration_ms: Optional[int] = None,
+    border: int = 3,
+    color: str = "red",
+) -> None:
+    """
+    전체 화면 위에 속이 빈 빨간 네모 — 지금 OCR/캡처하는 영역 표시.
+    Windows tkinter transparent overlay (클릭은 아래 창으로 통과).
+    """
+    if not focus_overlay_enabled():
+        return
+    ms = focus_duration_ms() if duration_ms is None else duration_ms
+
+    def _run_overlay() -> None:
+        import tkinter as tk
+
+        root = tk.Tk()
+        root.overrideredirect(True)
+        root.attributes("-topmost", True)
+        chroma = "#010102"
+        root.configure(bg=chroma)
+        try:
+            root.wm_attributes("-transparentcolor", chroma)
+        except tk.TclError:
+            pass
+        w = max(1, box.width)
+        h = max(1, box.height)
+        root.geometry(f"{w}x{h}+{box.left}+{box.top}")
+        canvas = tk.Canvas(root, width=w, height=h, bg=chroma, highlightthickness=0)
+        canvas.pack(fill="both", expand=True)
+        pad = max(1, border)
+        canvas.create_rectangle(
+            pad,
+            pad,
+            w - pad,
+            h - pad,
+            outline=color,
+            width=border,
+            fill=chroma,
+        )
+        root.after(ms, root.quit)
+        root.mainloop()
+        try:
+            root.destroy()
+        except tk.TclError:
+            pass
+
+    import threading
+
+    thread = threading.Thread(target=_run_overlay, daemon=True)
+    thread.start()
+    time.sleep(ms / 1000.0 + 0.06)
+
+
+def token_screen_box(token: OcrToken, region_box: Box, scale: float) -> Box:
+    return Box(
+        region_box.left + int(round(token.box.left / scale)),
+        region_box.top + int(round(token.box.top / scale)),
+        max(1, int(round(token.box.width / scale))),
+        max(1, int(round(token.box.height / scale))),
+    )
+
+
 def save_debug_image(image, tag: str) -> str:
     out = ensure_output_dir()
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -272,6 +356,7 @@ def read_region_hierarchical(
     result = HierarchicalReadResult(window_box=window_box)
     target_box, chain = resolve_region_box(config, region_id, window_box)
 
+    flash_focus_box(window_box, color="red")
     full_img = capture_box(window_box)
     full_scale = float(config.get("zoom_pipeline", {}).get("full", 1.0))
     full_up = upscale_image(full_img, full_scale)
@@ -287,6 +372,7 @@ def read_region_hierarchical(
         )
     )
 
+    flash_focus_box(target_box, color="red")
     panel_img = capture_box(target_box)
     stage_name, panel_scale = stage_scale(config, region_id)
     panel_up = upscale_image(panel_img, panel_scale)
@@ -391,6 +477,7 @@ def read_and_click_text(
         path = save_debug_image(up, f"click_miss_{region_id}")
         raise RuntimeError(f"텍스트 없음: {text!r} — {path}")
     best = max(hits, key=lambda t: t.confidence)
+    flash_focus_box(token_screen_box(best, region_box, scale), color="red", border=2)
     x, y = token_screen_center(best, region_box, scale)
     _log(f"[클릭] {text!r} → ({x},{y}) conf={best.confidence:.0f}")
     click_screen(x, y, button=button)
@@ -437,6 +524,11 @@ def run_read_task(config: dict, task_id: str) -> bool:
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="GC1 Autochro 화면 읽기(눈)")
     p.add_argument("--config", default=DEFAULT_CONFIG)
+    p.add_argument(
+        "--show-focus",
+        action="store_true",
+        help="OCR 전 속이 빈 빨간 네모로 영역 표시 (GC_SCREEN_SHOW_FOCUS=1)",
+    )
     sub = p.add_subparsers(dest="command", required=True)
     sub.add_parser("probe", help="주요 영역 OCR")
     r = sub.add_parser("read")
@@ -452,11 +544,17 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--button", choices=("left", "right"), default="left")
     cal = sub.add_parser("calibrate")
     cal.add_argument("--region", required=True)
+    fo = sub.add_parser("focus", help="영역 네모만 표시 (OCR 없음)")
+    fo.add_argument("--region", required=True)
     return p
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    args = build_parser().parse_args(argv)
+    raw_argv = list(argv) if argv is not None else sys.argv[1:]
+    if "--show-focus" in raw_argv:
+        os.environ["GC_SCREEN_SHOW_FOCUS"] = "1"
+        raw_argv = [a for a in raw_argv if a != "--show-focus"]
+    args = build_parser().parse_args(raw_argv)
     config = load_config(args.config)
     if args.command == "probe":
         for rid in ("bottom_tabs", "left_analysis_tree", "top_sample_table", "bottom_peak_table_fine"):
@@ -492,8 +590,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         if not win:
             return 1
         box, chain = resolve_region_box(config, args.region, win)
+        flash_focus_box(box)
         path = save_debug_image(capture_box(box), f"calibrate_{args.region}")
         _log(f"{path} chain={' → '.join(chain)}")
+        return 0
+    if args.command == "focus":
+        win = find_autochro_window_box(config.get("window_title_contains", "Autochro"))
+        if not win:
+            _log("Autochro 창 없음")
+            return 1
+        box, chain = resolve_region_box(config, args.region, win)
+        _log(f"focus chain={' → '.join(chain)} box=({box.left},{box.top},{box.width},{box.height})")
+        flash_focus_box(box)
         return 0
     return 2
 

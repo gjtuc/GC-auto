@@ -72,7 +72,23 @@ gc_screen_read.bat task verify_peak_table_has_data
 gc_screen_read.bat find --region top_sample_table --text 초기화
 gc_screen_read.bat click --region top_sample_table --text 초기화 --button left
 gc_screen_read.bat probe
+gc_screen_read.bat focus --show-focus --region top_sample_table
 ```
+
+### 실시간 포커스 네모 (속이 빈 빨간 테두리)
+
+캡처 참고 사진처럼 **지금 읽는 영역**만 화면 위에 잠깐 표시:
+
+```bat
+gc_screen_read.bat read --show-focus --region top_sample_table
+set GC_SCREEN_SHOW_FOCUS=1
+set GC_SCREEN_FOCUS_MS=1200
+```
+
+- 빨간 네모 = OCR 직전 영역 (창 전체 → 패널 순)
+- 클릭 시 찾은 글자 주위에 더 작은 네모
+- 배경 투명, 클릭은 Autochro로 통과
+- `--show-focus` 없으면 네모 없이 백그라운드만
 
 캡처 PNG: `%USERPROFILE%\.cursor\gc-screen-capture\`
 
