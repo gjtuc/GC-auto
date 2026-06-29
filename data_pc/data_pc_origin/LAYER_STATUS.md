@@ -94,6 +94,18 @@
 | P23-G snapshot | **PASS** (4/4) | `verify --p23` | sync plan |
 | P23-H harness | **PASS** (4/4) | `verify --p23` | live_github_snapshot |
 | **P23-EXT** | **PASS** (166/166) | `verify --p23` | P22-EXT + P23 |
+| P24-O rollup | **PASS** (4/4) | `verify --p24` | P20–P23 manifest |
+| P24-H harness | **PASS** (4/4) | `verify --p24` | live_ops_rollup |
+| **P24-EXT** | **PASS** (174/174) | `verify --p24` | P23-EXT + P24 |
+| P25-N native | **PASS** (4/4) | `verify --p25` | env file only |
+| P25-H harness | **PASS** (4/4) | `verify --p25` | live_native_production |
+| **P25-EXT** | **PASS** (182/182) | `verify --p25` | P24-EXT + P25 |
+| P26-W resident | **PASS** (4/4) | `verify --p26` | native --watch |
+| P26-H harness | **PASS** (4/4) | `verify --p26` | live_watch_resident |
+| **P26-EXT** | **PASS** (190/190) | `verify --p26` | P25-EXT + P26 |
+| P27-G refresh | **PASS** (4/4) | `verify --p27` | P24–P26 markers |
+| P27-H harness | **PASS** (4/4) | `verify --p27` | live_github_refresh |
+| **P27-EXT** | **PASS** (198/198) | `verify --p27` | P26-EXT + P27 |
 
 규칙: **L4 나노 PASS → L3 → L2 → L1 → L0** · 형제는 선행 형제 PASS 후 · **사용자 승인** 후 다음 구현.
 

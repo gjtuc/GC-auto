@@ -25,6 +25,10 @@ from data_pc_origin.gates.implementations.p20_gates import register_p20_gates
 from data_pc_origin.gates.implementations.p21_gates import register_p21_gates
 from data_pc_origin.gates.implementations.p22_gates import register_p22_gates
 from data_pc_origin.gates.implementations.p23_gates import register_p23_gates
+from data_pc_origin.gates.implementations.p24_gates import register_p24_gates
+from data_pc_origin.gates.implementations.p25_gates import register_p25_gates
+from data_pc_origin.gates.implementations.p26_gates import register_p26_gates
+from data_pc_origin.gates.implementations.p27_gates import register_p27_gates
 from data_pc_origin.gates.implementations.p19_gates import register_p19_gates
 from data_pc_origin.gates.implementations.p18_gates import register_p18_gates
 from data_pc_origin.gates.implementations.p17_gates import register_p17_gates
@@ -102,4 +106,8 @@ def ensure_gates_loaded() -> None:
         register_p21_gates()
         register_p22_gates()
         register_p23_gates()
+        register_p24_gates()
+        register_p25_gates()
+        register_p26_gates()
+        register_p27_gates()
         _GATES_LOADED = True

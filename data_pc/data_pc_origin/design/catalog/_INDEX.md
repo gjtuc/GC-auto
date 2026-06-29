@@ -76,12 +76,17 @@
 | P21-C,H | [P21.md](P21.md) | 8 | 구현 **PASS** |
 | P22-A,H | [P22.md](P22.md) | 8 | 구현 **PASS** |
 | P23-G,H | [P23.md](P23.md) | 8 | 구현 **PASS** |
+| P24-O,H | [P24.md](P24.md) | 8 | 구현 **PASS** |
+| P25-N,H | [P25.md](P25.md) | 8 | 구현 **PASS** |
+| P26-W,H | [P26.md](P26.md) | 8 | 구현 **PASS** |
+| P27-G,H | [P27.md](P27.md) | 8 | 구현 **PASS** |
 
 ## 구현 포인터
 
 ```
-DONE: P23 — GitHub feat/data-pc-origin snapshot
-verify: python -m data_pc_origin.verify --p23   # 166 gates
-GITHUB: python -m data_pc_origin.live_github_snapshot [--sync] [--push]
-AUTOSTART: python -m data_pc_origin.live_autostart
+DONE: P27 — GitHub refresh sync
+verify: python -m data_pc_origin.verify --p27   # 198 gates
+GITHUB: python -m data_pc_origin.live_github_refresh [--sync] [--push]
+WATCH: python -m data_pc_origin.live_watch_resident [--delegate]
+OPS: python -m data_pc_origin.live_ops_rollup [--tick]
 ```

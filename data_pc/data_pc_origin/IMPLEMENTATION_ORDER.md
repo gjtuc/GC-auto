@@ -121,7 +121,7 @@
 ## 현재 작업 포인터
 
 ```
-DONE: O0..O9-EXT + P0..P23-EXT (166) — verify --p23 PASS
+DONE: O0..O9-EXT + P0..P27-EXT (198) — verify --p27 PASS
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
 RUNTIME: python -m data_pc_origin.live_runtime --dry
@@ -143,6 +143,15 @@ AUTOSTART: python -m data_pc_origin.live_autostart
 GITHUB: python -m data_pc_origin.live_github_snapshot
         python -m data_pc_origin.live_github_snapshot --sync
         DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_github_snapshot --push
+OPS: python -m data_pc_origin.live_ops_rollup
+     python -m data_pc_origin.live_ops_rollup --tick
+NATIVE: python -m data_pc_origin.live_native_production
+        DATA_PC_NATIVE_LIVE=1 python -m data_pc_origin.live_native_production --live
+WATCH: python -m data_pc_origin.live_watch_resident
+       python -m data_pc_origin.live_watch_resident --delegate
+GITHUB: python -m data_pc_origin.live_github_refresh
+        python -m data_pc_origin.live_github_refresh --sync
+        DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_github_refresh --push
 ```
 
 ## Phase 9 — P층 (메일·엑셀 ↔ Origin)
@@ -213,8 +222,41 @@ GITHUB: python -m data_pc_origin.live_github_snapshot
 | 96 | P23-G | 4 | `p23_github_snapshot.py` | **PASS** |
 | 97 | P23-H | 4 | `live_github_snapshot.py` | **PASS** |
 | 98 | **P23-EXT** | 166 | P22-EXT + P23 | **PASS** `--p23` |
+| 99 | P24-O | 4 | `p24_ops_rollup.py` | **PASS** |
+| 100 | P24-H | 4 | `live_ops_rollup.py` | **PASS** |
+| 101 | **P24-EXT** | 174 | P23-EXT + P24 | **PASS** `--p24` |
+| 102 | P25-N | 4 | `p25_native_live.py` | **PASS** |
+| 103 | P25-H | 4 | `live_native_production.py` | **PASS** |
+| 104 | **P25-EXT** | 182 | P24-EXT + P25 | **PASS** `--p25` |
+| 105 | P26-W | 4 | `p26_watch_resident.py` | **PASS** |
+| 106 | P26-H | 4 | `live_watch_resident.py` | **PASS** |
+| 107 | **P26-EXT** | 190 | P25-EXT + P26 | **PASS** `--p26` |
+| 108 | P27-G | 4 | `p27_github_refresh.py` | **PASS** |
+| 109 | P27-H | 4 | `live_github_refresh.py` | **PASS** |
+| 110 | **P27-EXT** | 198 | P26-EXT + P27 | **PASS** `--p27` |
 
 ```bash
+# P27 — GitHub refresh (P24–P26)
+python -m data_pc_origin.live_github_refresh
+python -m data_pc_origin.live_github_refresh --sync
+DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_github_refresh --push
+python -m data_pc_origin.verify --p27
+
+# P26 — watch resident smoke
+python -m data_pc_origin.live_watch_resident
+python -m data_pc_origin.live_watch_resident --delegate
+python -m data_pc_origin.verify --p26
+
+# P25 — native env production live (no override)
+python -m data_pc_origin.live_native_production
+DATA_PC_NATIVE_LIVE=1 python -m data_pc_origin.live_native_production --live
+python -m data_pc_origin.verify --p25
+
+# P24 — operational closure rollup
+python -m data_pc_origin.live_ops_rollup
+python -m data_pc_origin.live_ops_rollup --tick
+python -m data_pc_origin.verify --p24
+
 # P23 — GitHub feat/data-pc-origin snapshot
 python -m data_pc_origin.live_github_snapshot
 python -m data_pc_origin.live_github_snapshot --sync

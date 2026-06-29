@@ -144,6 +144,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--p10", action="store_true", help="P10: live FULL+mail (7) after P9-L + unittest")
     parser.add_argument("--p11", action="store_true", help="P11-K: KCH native stage2 (4) after P10 + unittest")
     parser.add_argument("--p12", action="store_true", help="P12-F: FULL native stage2+3 (4) after P11 + unittest")
+    parser.add_argument("--p27", action="store_true", help="P27: GitHub refresh (8) after P26 + unittest")
+    parser.add_argument("--p26", action="store_true", help="P26: watch resident smoke (8) after P25 + unittest")
+    parser.add_argument("--p25", action="store_true", help="P25: native env live (8) after P24 + unittest")
+    parser.add_argument("--p24", action="store_true", help="P24: ops rollup (8) after P23 + unittest")
     parser.add_argument("--p23", action="store_true", help="P23: GitHub snapshot (8) after P22 + unittest")
     parser.add_argument("--p22", action="store_true", help="P22: autostart smoke (8) after P21 + unittest")
     parser.add_argument("--p21", action="store_true", help="P21: operational cutover (8) after P20 + unittest")
@@ -210,6 +214,58 @@ def main(argv: list[str] | None = None) -> int:
             print("\n[OK] O0..O9-EXT + P0..P8 (59) gates + unit tests passed")
             return 0
         print("\n[FAIL] P full verify failed")
+        return 1
+
+    if args.p27:
+        print("=== data_pc_origin verify: P27 (GitHub refresh 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P27")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P27-EXT (198) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P27 verify failed")
+        return 1
+
+    if args.p26:
+        print("=== data_pc_origin verify: P26 (watch resident 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P26")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P26-EXT (190) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P26 verify failed")
+        return 1
+
+    if args.p25:
+        print("=== data_pc_origin verify: P25 (native live 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P25")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P25-EXT (182) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P25 verify failed")
+        return 1
+
+    if args.p24:
+        print("=== data_pc_origin verify: P24 (ops rollup 8 gates + unittest) ===\n")
+        gates_ok, gate_log = _run_rollup_gates("P24")
+        for line in gate_log:
+            print(line)
+        print()
+        unit_ok = _run_unit_tests("test_*.py")
+        if gates_ok and unit_ok:
+            print("\n[OK] O0..O9-EXT + P0..P24-EXT (174) gates + unit tests passed")
+            return 0
+        print("\n[FAIL] P24 verify failed")
         return 1
 
     if args.p23:

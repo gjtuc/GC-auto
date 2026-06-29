@@ -237,7 +237,7 @@ def _write_snapshot_readme(path: Path, gate_count: int) -> None:
 
 ## 포함 (P23 sync {stamp})
 
-- `data_pc/data_pc_origin/` — O0..O9 + P0..P22 ({gate_count} gates)
+- `data_pc/data_pc_origin/` — O0..O9 + P층 ({gate_count} gates)
 - `data_pc/data_pc_runtime/` — L0..L4 supervisor
 - `data_pc/data_pc_watch.py` · `data_pc_watchdog.py` · autostart bat/VBS
 - `data_pc/촉매 반응 계산.py` — origin pipeline 위임
@@ -246,8 +246,8 @@ def _write_snapshot_readme(path: Path, gate_count: int) -> None:
 
 ```bash
 cd data_pc
-python -m data_pc_origin.verify --p22
-python -m data_pc_origin.live_readiness
+python -m data_pc_origin.verify --p26
+python -m data_pc_origin.live_ops_rollup
 ```
 
 ## 운영 PC
