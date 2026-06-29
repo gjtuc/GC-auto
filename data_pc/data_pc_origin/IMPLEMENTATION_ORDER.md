@@ -119,17 +119,19 @@
 | # | 항목 | module | 상태 |
 |---|------|--------|------|
 | 153 | bridge 위임 (정적+실행) | `live_pipeline_bridge.py` | **PASS** |
-| 154 | SKIP_ORIGIN=0 실연동 | `live_run` / `live_workflow` | 대기 (G: · Origin) |
+| 154 | SKIP_ORIGIN=0 fixture 실행 | `live_phase8_origin.py` | **PASS** |
+| 155 | SKIP_ORIGIN=0 COM live | `live_run` / `live_workflow` | 대기 (G: · Origin) |
 
 ---
 
 ## 현재 작업 포인터
 
 ```
-DONE: P40 post-P41 merge PR PASS · Phase 8 #153 live_pipeline_bridge PASS
-NEXT: Phase 8 #154 — `DATA_PC_SKIP_ORIGIN=0` 실연동 (G: · Origin) · `gh auth login` 후 `--pr` (선택)
+DONE: Phase 8 #154 live_phase8_origin PASS (fixture 8 sheets · live_tier=fixture_only)
+NEXT: Phase 8 #155 — COM live (`DATA_PC_LIVE_OPJU` + G: · originpro) · `gh auth login` 후 `--pr` (선택)
 ```
 PIPELINE: python -m data_pc_origin.live_pipeline_bridge
+PHASE8: python -m data_pc_origin.live_phase8_origin [--try-live OPJU]
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
 RUNTIME: python -m data_pc_origin.live_runtime --dry
