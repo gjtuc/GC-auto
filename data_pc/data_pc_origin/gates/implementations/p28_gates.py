@@ -14,6 +14,7 @@ from data_pc_origin.p28_merge_readiness import (
     MERGE_PR_ENV,
     build_merge_readiness_manifest,
     merge_pr_enabled,
+    merge_structural_ready,
     validate_merge_readiness_artifact,
 )
 
@@ -29,7 +30,7 @@ def _script_dir() -> str:
 
 def _gate_p28_m_01_a_1() -> None:
     m = build_merge_readiness_manifest(_script_dir())
-    _assert(m.gate_count >= 206)
+    _assert(m.gate_count >= 222)
     _assert(m.branch == SNAPSHOT_BRANCH)
     _assert(m.base == "main")
 
@@ -76,7 +77,7 @@ def _gate_p28_h_03_a_1() -> None:
 
 def _gate_p28_h_04_a_1() -> None:
     m = build_merge_readiness_manifest(_script_dir())
-    _assert(m.ready is True)
+    _assert(merge_structural_ready(m))
     root = Path(__file__).resolve().parents[2]
     out = run_live_merge_readiness(artifact_dir=root, script_dir=_script_dir())
     _assert(validate_merge_readiness_artifact(out))

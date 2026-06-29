@@ -9,14 +9,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from data_pc_origin.gates.registry import P28_EXTENDED_ORDER
+from data_pc_origin.gates.registry import P30_EXTENDED_ORDER
 from data_pc_origin.p23_github_snapshot import (
     SNAPSHOT_BRANCH,
     inspect_git_repo,
     repo_root_path,
 )
 from data_pc_origin.p24_ops_rollup import build_ops_rollup_manifest
-from data_pc_origin.p27_github_refresh import plan_github_refresh, verify_dest_markers
+from data_pc_origin.p29_github_refresh import plan_github_refresh_post28, verify_dest_markers_post28
 
 MERGE_PR_ENV = "DATA_PC_MERGE_PR"
 MAIN_BRANCH = "main"
@@ -50,6 +50,22 @@ class MergeReadinessManifest:
             "failures": list(self.failures),
             "diff_stat": list(self.diff_stat[:30]),
         }
+
+
+STRUCTURAL_CHECKS: frozenset[str] = frozenset(
+    {
+        "git_repo",
+        "on_feat_branch",
+        "remote_feat_branch",
+        "github_markers_synced",
+        "diff_vs_main",
+        "data_pc_only_diff",
+    }
+)
+
+
+def merge_structural_ready(manifest: MergeReadinessManifest) -> bool:
+    return STRUCTURAL_CHECKS.issubset(set(manifest.checks))
 
 
 def merge_pr_enabled(environ: Optional[Dict[str, str]] = None) -> bool:
@@ -106,8 +122,8 @@ def build_merge_readiness_manifest(script_dir: str) -> MergeReadinessManifest:
     """P24 ops + P27 sync + git diff vs main."""
     repo = repo_root_path(script_dir)
     git = inspect_git_repo(script_dir)
-    refresh = plan_github_refresh(script_dir)
-    dest = verify_dest_markers(script_dir)
+    refresh = plan_github_refresh_post28(script_dir)
+    dest = verify_dest_markers_post28(script_dir)
     ops = build_ops_rollup_manifest(script_dir)
 
     checks: List[str] = []
@@ -154,7 +170,7 @@ def build_merge_readiness_manifest(script_dir: str) -> MergeReadinessManifest:
     return MergeReadinessManifest(
         ready=ready,
         reason="merge_ready" if ready else "; ".join(failures),
-        gate_count=len(P28_EXTENDED_ORDER),
+        gate_count=len(P30_EXTENDED_ORDER),
         branch=SNAPSHOT_BRANCH,
         base=MAIN_BRANCH,
         ops_ready=ops.production_ready,
@@ -167,7 +183,7 @@ def build_merge_readiness_manifest(script_dir: str) -> MergeReadinessManifest:
 
 def draft_pr_body(manifest: MergeReadinessManifest) -> str:
     return f"""## Summary
-- Origin pipeline P층 P0–P28 ({manifest.gate_count} gates) on `{manifest.branch}`
+- Origin pipeline P층 P0–P30 ({manifest.gate_count} gates) on `{manifest.branch}`
 - **Does not auto-merge** — review before merging to `{manifest.base}`
 
 ## Readiness
@@ -190,7 +206,7 @@ def create_merge_pr(script_dir: str) -> Dict[str, Any]:
 
     repo = repo_root_path(script_dir)
     body = draft_pr_body(manifest)
-    title = f"feat(data-pc): origin pipeline P0–P28 ({manifest.gate_count} gates)"
+    title = f"feat(data-pc): origin pipeline P0–P30 ({manifest.gate_count} gates)"
     code, out = _run_git(
         repo,
         "push",

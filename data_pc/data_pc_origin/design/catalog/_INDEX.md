@@ -83,12 +83,16 @@
 | P28-M,H | [P28.md](P28.md) | 8 | 구현 **PASS** |
 | P29-G,H | [P29.md](P29.md) | 8 | 구현 **PASS** |
 | P30-G,H | [P30.md](P30.md) | 8 | 구현 **PASS** |
+| P31-M,H | [P31.md](P31.md) | 8 | 구현 **PASS** |
+| P32-G,H | [P32.md](P32.md) | 8 | 구현 **PASS** |
 
 ## 구현 포인터
 
 ```
-DONE: P30 — GitHub push
-verify: python -m data_pc_origin.verify --p30   # 222 gates
+DONE: P32 — GitHub refresh P30–P31
+verify: python -m data_pc_origin.verify --p32   # 238 gates
+P32: python -m data_pc_origin.live_p32_github_refresh [--sync] [--push]
+P31: python -m data_pc_origin.live_p31_merge_pr [--pr]
 P30: python -m data_pc_origin.live_p30_github_push [--push]
 P29: python -m data_pc_origin.live_p29_github_refresh [--sync] [--push]
 MERGE: python -m data_pc_origin.live_merge_readiness [--pr]

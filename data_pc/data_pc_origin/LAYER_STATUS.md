@@ -115,6 +115,12 @@
 | P30-G push | **PASS** (4/4) | `verify --p30` | dest markers · branch |
 | P30-H harness | **PASS** (4/4) | `verify --p30` | live_p30_github_push |
 | **P30-EXT** | **PASS** (222/222) | `verify --p30` | P29-EXT + P30 |
+| P31-M merge PR | **PASS** (4/4) | `verify --p31` | structural · remote |
+| P31-H harness | **PASS** (4/4) | `verify --p31` | live_p31_merge_pr |
+| **P31-EXT** | **PASS** (230/230) | `verify --p31` | P30-EXT + P31 |
+| P32-G refresh | **PASS** (4/4) | `verify --p32` | P30–P31 markers |
+| P32-H harness | **PASS** (4/4) | `verify --p32` | live_p32_github_refresh |
+| **P32-EXT** | **PASS** (238/238) | `verify --p32` | P31-EXT + P32 |
 
 규칙: **L4 나노 PASS → L3 → L2 → L1 → L0** · 형제는 선행 형제 PASS 후 · **사용자 승인** 후 다음 구현.
 

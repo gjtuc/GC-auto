@@ -121,7 +121,7 @@
 ## 현재 작업 포인터
 
 ```
-DONE: O0..O9-EXT + P0..P30-EXT (222) — verify --p30 PASS
+DONE: O0..O9-EXT + P0..P32-EXT (238) — verify --p32 PASS
 IMAP: python -m data_pc_origin.live_imap --probe
       DATA_PC_SKIP_ORIGIN=0 python -m data_pc_origin.live_imap
 RUNTIME: python -m data_pc_origin.live_runtime --dry
@@ -157,6 +157,11 @@ P29: python -m data_pc_origin.live_p29_github_refresh
      DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p29_github_refresh --push
 P30: python -m data_pc_origin.live_p30_github_push
      DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p30_github_push --push
+P31: python -m data_pc_origin.live_p31_merge_pr
+     DATA_PC_MERGE_PR=1 python -m data_pc_origin.live_p31_merge_pr --pr
+P32: python -m data_pc_origin.live_p32_github_refresh
+     python -m data_pc_origin.live_p32_github_refresh --sync
+     DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p32_github_refresh --push
 MERGE: python -m data_pc_origin.live_merge_readiness [--pr]
 ```
 
@@ -249,8 +254,25 @@ MERGE: python -m data_pc_origin.live_merge_readiness [--pr]
 | 117 | P30-G | 4 | `p30_github_push.py` | **PASS** |
 | 118 | P30-H | 4 | `live_p30_github_push.py` | **PASS** |
 | 119 | **P30-EXT** | 222 | P29-EXT + P30 | **PASS** `--p30` |
+| 120 | P31-M | 4 | `p31_merge_pr.py` | **PASS** |
+| 121 | P31-H | 4 | `live_p31_merge_pr.py` | **PASS** |
+| 122 | **P31-EXT** | 230 | P30-EXT + P31 | **PASS** `--p31` |
+| 123 | P32-G | 4 | `p32_github_refresh.py` | **PASS** |
+| 124 | P32-H | 4 | `live_p32_github_refresh.py` | **PASS** |
+| 125 | **P32-EXT** | 238 | P31-EXT + P32 | **PASS** `--p32` |
 
 ```bash
+# P32 — GitHub refresh (P30–P31)
+python -m data_pc_origin.live_p32_github_refresh
+python -m data_pc_origin.live_p32_github_refresh --sync
+DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p32_github_refresh --push
+python -m data_pc_origin.verify --p32
+
+# P31 — merge PR
+python -m data_pc_origin.live_p31_merge_pr
+DATA_PC_MERGE_PR=1 python -m data_pc_origin.live_p31_merge_pr --pr
+python -m data_pc_origin.verify --p31
+
 # P30 — GitHub push
 python -m data_pc_origin.live_p30_github_push
 DATA_PC_GITHUB_PUSH=1 python -m data_pc_origin.live_p30_github_push --push
