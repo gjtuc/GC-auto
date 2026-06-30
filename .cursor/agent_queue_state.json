@@ -1,5 +1,6 @@
 {
-  "armed": false,
-  "status": "idle",
-  "updated": null
+  "armed": true,
+  "status": "running",
+  "request_quit_cursor": false,
+  "updated": "2026-06-29T12:00:00+09:00"
 }
