@@ -23,14 +23,12 @@ from gc_screen_read import (
     OcrToken,
     click_screen,
     find_text_tokens,
+    flash_focus_point,
     load_config,
     read_region_hierarchical,
+    read_track_zoom_on_box,
     resolve_region_box,
-    stage_scale,
     token_screen_center,
-    upscale_image,
-    capture_box,
-    ocr_image,
 )
 from gc1_runtime.layer3_eye import EyeActuator, default_eye_config, verify_read_task
 
@@ -42,7 +40,15 @@ def autochro_eye_enabled(*, dry_run: bool = False) -> bool:
     """live Autochro 에서 OCR 눈 사용 여부. dry_run 이면 항상 False."""
     if dry_run:
         return False
-    return os.getenv("GC1_AUTOCHRO_EYE", "1").strip().lower() in ("1", "true", "yes")
+    enabled = os.getenv("GC1_AUTOCHRO_EYE", "1").strip().lower() in ("1", "true", "yes")
+    if enabled and os.getenv("GC_SCREEN_SHOW_FOCUS", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+    ):
+        os.environ.setdefault("GC_SCREEN_SHOW_FOCUS", "1")
+    return enabled
 
 
 def _normalize_tok(text: str) -> str:
@@ -119,13 +125,20 @@ class AutochroStepEye:
         return text
 
     def ocr_region_tokens(self, region_id: str) -> Tuple[Box, float, List[OcrToken]]:
-        """영역 1회 캡처 OCR — 토큰·box·scale (클릭 좌표용)."""
+        """영역 추적 1.5× OCR — 토큰·view·effective_scale (클릭 좌표용)."""
         try:
             region_box, _ = resolve_region_box(self.config, region_id, self.window_box)
-            _, scale = stage_scale(self.config, region_id)
-            up = upscale_image(capture_box(region_box), scale)
-            _, tokens = ocr_image(up)
-            return region_box, scale, tokens
+            tracked = read_track_zoom_on_box(
+                region_box,
+                self.config,
+                region_id=region_id,
+                save_images=True,
+            )
+            if not tracked.stages:
+                return region_box, 1.0, []
+            last = tracked.stages[-1]
+            view = tracked.final_view_box or region_box
+            return view, last.effective_scale, last.tokens
         except RuntimeError as exc:
             raise RuntimeError(f"OCR 엔진 필요 (Tesseract): {exc}") from exc
 
@@ -252,6 +265,7 @@ class AutochroStepEye:
                 ctypes.windll.user32.SetCursorPos(screen_x, screen_y)
             except Exception as exc2:
                 self._log(f"SetCursorPos warn: {exc2}")
+        flash_focus_point(screen_x, screen_y, color="lime")
         time.sleep(0.35)
         self._log(f"cursor list rel=({rel_x},{rel_y}) screen=({screen_x},{screen_y})")
 

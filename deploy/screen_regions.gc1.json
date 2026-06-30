@@ -7,11 +7,12 @@
     "notes": "Autochro 창 최대화·배율 100% 기준. PC마다 calibrate 후 box 조정."
   },
   "window_title_contains": "Autochro",
-  "zoom_pipeline": {
-    "full": 1.0,
-    "panel": 2.5,
-    "fine": 3.5,
-    "_comment": "연쇄 4x×4x 금지. panel·fine 은 이전 단계 '크롭'에만 적용."
+    "zoom_pipeline": {
+    "step": 1.5,
+    "max_depth": 4,
+    "crop_frac": 0.55,
+    "min_confidence": 35,
+    "_comment": "1.5× 확대 → OCR 토큰 중심 crop → 1.5× 반복 (max_depth). full/panel/fine 레거시 키는 step fallback."
   },
   "regions": {
     "autochro_window": {

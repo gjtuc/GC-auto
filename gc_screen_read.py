@@ -4,8 +4,8 @@ gc_screen_read.py — GC1 Autochro 화면 읽기(눈) · 계층 OCR · 클릭
 
 gc_autochro 와 분리 — 검증·캘리브레이션 전용 (병합은 나중).
 
-계층 읽기:
-  full 1x → panel 2.5x 크롭 → fine 3.5x 크롭 (연쇄 4x×4x 전체화면 비추천)
+계층 읽기 (기본):
+  영역 캡처 → 1.5× 확대 → OCR → 토큰 중심 crop → 1.5× 반복 (max_depth)
 
 설치: pip install -r requirements-screen.txt + Tesseract(kor)
 """
@@ -59,16 +59,25 @@ class ReadStageResult:
     image_path: str
     tokens: List[OcrToken] = field(default_factory=list)
     plain_text: str = ""
+    effective_scale: float = 1.0
+    view_box: Optional[Box] = None
 
 
 @dataclass
 class HierarchicalReadResult:
     window_box: Optional[Box]
     stages: List[ReadStageResult] = field(default_factory=list)
+    final_view_box: Optional[Box] = None
 
     @property
     def final_text(self) -> str:
         return self.stages[-1].plain_text if self.stages else ""
+
+    @property
+    def final_effective_scale(self) -> float:
+        if not self.stages:
+            return 1.0
+        return self.stages[-1].effective_scale
 
 
 def _log(msg: str) -> None:
@@ -238,7 +247,148 @@ def stage_scale(config: dict, region_id: str) -> Tuple[str, float]:
     spec = config["regions"][region_id]
     stage = spec.get("stage", "panel")
     pipeline = config.get("zoom_pipeline", {})
-    return stage, float(pipeline.get(stage, 2.5))
+    step = float(pipeline.get("step", pipeline.get("panel", 1.5)))
+    return stage, step
+
+
+def zoom_pipeline_settings(config: dict) -> dict:
+    """1.5× 추적 확대 — ``zoom_pipeline`` 설정."""
+    z = config.get("zoom_pipeline") or {}
+    return {
+        "step": float(z.get("step", z.get("panel", 1.5))),
+        "max_depth": int(z.get("max_depth", 4)),
+        "crop_frac": float(z.get("crop_frac", 0.55)),
+        "min_confidence": float(z.get("min_confidence", 35)),
+    }
+
+
+def image_effective_scale(view: Box, image) -> float:
+    w, _h = image.size
+    return w / max(view.width, 1)
+
+
+def pick_track_center(
+    tokens: Sequence[OcrToken],
+    img_w: int,
+    img_h: int,
+    *,
+    min_confidence: float = 35.0,
+) -> Optional[Tuple[int, int]]:
+    """OCR 토큰 군집 중심 — 다음 1.5× crop 기준점."""
+    good = [t for t in tokens if t.confidence >= min_confidence]
+    pool = good if good else list(tokens)
+    if not pool:
+        return img_w // 2, img_h // 2
+    if len(pool) == 1:
+        t = pool[0]
+        return t.box.left + t.box.width // 2, t.box.top + t.box.height // 2
+    total_w = 0.0
+    cx = 0.0
+    cy = 0.0
+    for t in pool:
+        w = max(1.0, t.confidence)
+        tcx = t.box.left + t.box.width / 2.0
+        tcy = t.box.top + t.box.height / 2.0
+        cx += tcx * w
+        cy += tcy * w
+        total_w += w
+    return int(round(cx / total_w)), int(round(cy / total_w))
+
+
+def crop_image_around_center(image, cx: int, cy: int, frac: float):
+    """확대 이미지에서 중심 기준 frac 비율 crop → (crop, left, top)."""
+    w, h = image.size
+    cw = max(40, int(w * frac))
+    ch = max(40, int(h * frac))
+    left = max(0, min(int(cx) - cw // 2, w - cw))
+    top = max(0, min(int(cy) - ch // 2, h - ch))
+    return image.crop((left, top, left + cw, top + ch)), left, top
+
+
+def screen_view_from_image_crop(
+    parent_view: Box,
+    image,
+    crop_left: int,
+    crop_top: int,
+    crop_w: int,
+    crop_h: int,
+) -> Box:
+    """확대 이미지 crop → 화면 좌표 view."""
+    sx = image.size[0] / max(parent_view.width, 1)
+    sy = image.size[1] / max(parent_view.height, 1)
+    return Box(
+        parent_view.left + int(round(crop_left / sx)),
+        parent_view.top + int(round(crop_top / sy)),
+        max(1, int(round(crop_w / sx))),
+        max(1, int(round(crop_h / sy))),
+    )
+
+
+def read_track_zoom_on_box(
+    screen_box: Box,
+    config: dict,
+    *,
+    region_id: str = "",
+    save_images: bool = True,
+) -> HierarchicalReadResult:
+    """
+    1.5× 확대 → OCR → 토큰 중심 crop → 1.5× 반복.
+
+    각 단계 ``view_box`` 에 빨간 포커스 네모 표시.
+    """
+    opts = zoom_pipeline_settings(config)
+    step = opts["step"]
+    max_depth = opts["max_depth"]
+    crop_frac = opts["crop_frac"]
+    min_conf = opts["min_confidence"]
+
+    view = screen_box
+    img = capture_box(view)
+    stages: List[ReadStageResult] = []
+
+    try:
+        for depth in range(max_depth):
+
+            def _ocr_step() -> Tuple[str, List[OcrToken]]:
+                nonlocal img
+                img = upscale_image(img, step)
+                return ocr_image(img)
+
+            plain, tokens = focus_stage(view, _ocr_step)
+            eff = image_effective_scale(view, img)
+            tag = f"{region_id or 'region'}_zoom{depth + 1}"
+            stages.append(
+                ReadStageResult(
+                    stage=f"zoom_{depth + 1}",
+                    scale=step,
+                    region_id=region_id or "region",
+                    image_path=save_debug_image(img, tag) if save_images else "",
+                    tokens=tokens,
+                    plain_text=plain,
+                    effective_scale=eff,
+                    view_box=view,
+                )
+            )
+
+            if depth + 1 >= max_depth:
+                break
+
+            cx, cy = pick_track_center(
+                tokens, img.size[0], img.size[1], min_confidence=min_conf
+            )
+            cropped, cl, ct = crop_image_around_center(img, cx, cy, crop_frac)
+            view = screen_view_from_image_crop(
+                view, img, cl, ct, cropped.size[0], cropped.size[1]
+            )
+            img = cropped
+    finally:
+        focus_hide()
+
+    return HierarchicalReadResult(
+        window_box=None,
+        stages=stages,
+        final_view_box=view,
+    )
 
 
 def ensure_output_dir() -> str:
@@ -248,12 +398,9 @@ def ensure_output_dir() -> str:
 
 
 def focus_overlay_enabled() -> bool:
-    return os.getenv("GC_SCREEN_SHOW_FOCUS", "").strip().lower() in (
-        "1",
-        "true",
-        "yes",
-        "on",
-    )
+    """기본 ON — 끄려면 ``GC_SCREEN_SHOW_FOCUS=0``."""
+    raw = os.getenv("GC_SCREEN_SHOW_FOCUS", "1").strip().lower()
+    return raw not in ("0", "false", "no", "off")
 
 
 def focus_duration_ms() -> int:
@@ -261,10 +408,10 @@ def focus_duration_ms() -> int:
     raw = os.getenv("GC_SCREEN_FOCUS_MS", "").strip()
     if raw:
         try:
-            return max(150, min(400, int(raw)))
+            return max(200, min(2000, int(raw)))
         except ValueError:
             pass
-    return 280
+    return 800
 
 
 _T = TypeVar("_T")
@@ -380,6 +527,26 @@ def flash_focus_box(
     _FOCUS.hide()
 
 
+def flash_focus_point(
+    x: int,
+    y: int,
+    *,
+    size: int = 32,
+    duration_ms: Optional[int] = None,
+    color: str = "lime",
+) -> None:
+    """마우스 클릭·이동 지점 — 작은 네모 (OCR 영역 빨간 네모와 구분)."""
+    if not focus_overlay_enabled():
+        return
+    half = max(8, size // 2)
+    flash_focus_box(
+        Box(int(x) - half, int(y) - half, size, size),
+        duration_ms=duration_ms or min(500, focus_duration_ms()),
+        border=2,
+        color=color,
+    )
+
+
 def token_screen_box(token: OcrToken, region_box: Box, scale: float) -> Box:
     return Box(
         region_box.left + int(round(token.box.left / scale)),
@@ -412,84 +579,49 @@ def read_region_hierarchical(
         full = ImageGrab.grab()
         window_box = Box(0, 0, full.size[0], full.size[1])
 
-    result = HierarchicalReadResult(window_box=window_box)
     target_box, chain = resolve_region_box(config, region_id, window_box)
-    full_scale = float(config.get("zoom_pipeline", {}).get("full", 1.0))
-    stage_name, panel_scale = stage_scale(config, region_id)
-    fine_scale = float(config.get("zoom_pipeline", {}).get("fine", 3.5))
+    opts = zoom_pipeline_settings(config)
+    step = opts["step"]
 
-    try:
-        def _full_stage() -> None:
-            nonlocal full_img, full_text, full_tokens
-            full_img = capture_box(window_box)
-            full_up = upscale_image(full_img, full_scale)
-            full_text, full_tokens = ocr_image(full_up)
+    result = HierarchicalReadResult(window_box=window_box, final_view_box=target_box)
 
-        full_img = None
-        full_text, full_tokens = "", []
-        focus_stage(window_box, _full_stage)
-        result.stages.append(
-            ReadStageResult(
-                "full",
-                full_scale,
-                "autochro_window",
-                save_debug_image(full_img, "full_window") if save_images and full_img else "",
-                full_tokens,
-                full_text,
-            )
+    # 창 전체 1회 coarse (1.5×) — 맥락용
+    full_img = capture_box(window_box)
+
+    def _window_coarse() -> Tuple[str, List[OcrToken]]:
+        full_up = upscale_image(full_img, step)
+        return ocr_image(full_up)
+
+    full_text, full_tokens = focus_stage(window_box, _window_coarse)
+    full_up = upscale_image(full_img, step)
+    result.stages.append(
+        ReadStageResult(
+            "window_coarse",
+            step,
+            "autochro_window",
+            save_debug_image(full_up, "full_window") if save_images else "",
+            full_tokens,
+            full_text,
+            effective_scale=image_effective_scale(window_box, full_up),
+            view_box=window_box,
         )
+    )
 
-        panel_img = None
-        panel_text, panel_tokens = "", []
+    # 대상 영역 — 1.5× 추적 반복
+    tracked = read_track_zoom_on_box(
+        target_box,
+        config,
+        region_id=region_id,
+        save_images=save_images,
+    )
+    result.stages.extend(tracked.stages)
+    result.final_view_box = tracked.final_view_box
 
-        def _panel_stage() -> None:
-            nonlocal panel_img, panel_text, panel_tokens
-            panel_img = capture_box(target_box)
-            panel_up = upscale_image(panel_img, panel_scale)
-            panel_text, panel_tokens = ocr_image(panel_up)
-
-        focus_stage(target_box, _panel_stage)
-        panel_up = upscale_image(panel_img, panel_scale) if panel_img else None
-        result.stages.append(
-            ReadStageResult(
-                stage_name,
-                panel_scale,
-                region_id,
-                save_debug_image(panel_up, f"{region_id}_{stage_name}")
-                if save_images and panel_up
-                else "",
-                panel_tokens,
-                panel_text,
-            )
-        )
-
-        if fine_scale > 1.01 and stage_name in ("fine", "panel") and panel_up is not None:
-
-            def _fine_stage() -> None:
-                nonlocal fine_text, fine_tokens
-                fine_up = upscale_image(panel_up, fine_scale)
-                fine_text, fine_tokens = ocr_image(fine_up)
-
-            fine_text, fine_tokens = "", []
-            focus_stage(target_box, _fine_stage)
-            fine_up = upscale_image(panel_up, fine_scale)
-            result.stages.append(
-                ReadStageResult(
-                    "fine_extra",
-                    fine_scale,
-                    region_id,
-                    save_debug_image(fine_up, f"{region_id}_fine2") if save_images else "",
-                    fine_tokens,
-                    fine_text,
-                )
-            )
-    finally:
-        focus_hide()
-
-    _log(f"[눈] region={region_id} chain={' → '.join(chain)}")
+    _log(f"[눈] region={region_id} chain={' → '.join(chain)} track_zoom step={step}")
     for st in result.stages:
         preview = st.plain_text.replace("\n", " ")[:100]
-        _log(f"  · {st.stage} x{st.scale:g} | {preview!r}")
+        eff = st.effective_scale
+        _log(f"  · {st.stage} x{st.scale:g} eff={eff:.2f} | {preview!r}")
         if st.image_path:
             _log(f"    png: {st.image_path}")
     return result
@@ -521,6 +653,7 @@ def token_screen_center(token: OcrToken, region_box: Box, scale: float) -> Tuple
 
 
 def click_screen(x: int, y: int, *, button: str = "left") -> None:
+    flash_focus_point(x, y, color="lime")
     try:
         import pywinauto.mouse as mouse
 
@@ -552,22 +685,26 @@ def read_and_click_text(
     if window_box is None:
         raise RuntimeError("Autochro 창 없음")
     region_box, _ = resolve_region_box(config, region_id, window_box)
-    _, scale = stage_scale(config, region_id)
-    up = upscale_image(capture_box(region_box), scale)
-    _, tokens = ocr_image(up)
+    tracked = read_track_zoom_on_box(region_box, config, region_id=region_id, save_images=True)
+    if not tracked.stages:
+        raise RuntimeError(f"OCR 단계 없음: {region_id}")
+    last = tracked.stages[-1]
+    view = tracked.final_view_box or region_box
+    scale = last.effective_scale
+    tokens = last.tokens
     hits = find_text_tokens(tokens, text, partial=partial)
     if not hits:
-        path = save_debug_image(up, f"click_miss_{region_id}")
+        path = last.image_path or ""
         raise RuntimeError(f"텍스트 없음: {text!r} — {path}")
     best = max(hits, key=lambda t: t.confidence)
-    token_box = token_screen_box(best, region_box, scale)
+    token_box = token_screen_box(best, view, scale)
 
     def _click() -> None:
-        x, y = token_screen_center(best, region_box, scale)
+        x, y = token_screen_center(best, view, scale)
         click_screen(x, y, button=button)
 
     focus_stage(token_box, _click, min_ms=200)
-    x, y = token_screen_center(best, region_box, scale)
+    x, y = token_screen_center(best, view, scale)
     _log(f"[클릭] {text!r} → ({x},{y}) conf={best.confidence:.0f}")
     return x, y
 

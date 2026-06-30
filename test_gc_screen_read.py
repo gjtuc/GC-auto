@@ -41,6 +41,44 @@ class TestGcScreenRead(unittest.TestCase):
         up = upscale_image(img, 2.5)
         self.assertEqual(up.size, (250, 100))
 
+    def test_focus_overlay_default_on(self):
+        from gc_screen_read import focus_overlay_enabled
+
+        old = os.environ.pop("GC_SCREEN_SHOW_FOCUS", None)
+        try:
+            self.assertTrue(focus_overlay_enabled())
+            os.environ["GC_SCREEN_SHOW_FOCUS"] = "0"
+            self.assertFalse(focus_overlay_enabled())
+        finally:
+            if old is None:
+                os.environ.pop("GC_SCREEN_SHOW_FOCUS", None)
+            else:
+                os.environ["GC_SCREEN_SHOW_FOCUS"] = old
+
+    def test_track_zoom_crop_and_center(self):
+        from PIL import Image
+
+        from gc_screen_read import (
+            OcrToken,
+            crop_image_around_center,
+            pick_track_center,
+            screen_view_from_image_crop,
+            Box,
+        )
+
+        img = Image.new("RGB", (300, 200), (255, 255, 255))
+        tokens = [
+            OcrToken("1.raw", 90, Box(40, 30, 50, 14)),
+            OcrToken("2.raw", 85, Box(42, 55, 48, 12)),
+        ]
+        cx, cy = pick_track_center(tokens, 300, 200)
+        self.assertGreater(cx, 0)
+        cropped, cl, ct = crop_image_around_center(img, cx, cy, 0.5)
+        view = Box(100, 200, 300, 200)
+        sub = screen_view_from_image_crop(view, img, cl, ct, cropped.size[0], cropped.size[1])
+        self.assertLess(sub.width, view.width)
+        self.assertGreaterEqual(sub.left, view.left)
+
 
 if __name__ == "__main__":
     unittest.main()
