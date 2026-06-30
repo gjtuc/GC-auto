@@ -290,12 +290,15 @@ class WatchRunner:
                 try:
                     from gc1_runtime.layer0_hotspot_agent import (
                         hotspot_cursor_agent_enabled,
-                        is_hotspot_agent_in_flight,
+                        is_hotspot_session_in_flight,
                     )
-                    if hotspot_cursor_agent_enabled() and is_hotspot_agent_in_flight(
+                    if hotspot_cursor_agent_enabled() and is_hotspot_session_in_flight(
                         self.config.excel_output_dir
                     ):
-                        self._publish("processing", "Cursor 에이전트 작업 중 — 완료까지 대기")
+                        self._publish(
+                            "processing",
+                            "핫스팟 처리 실행 중 (Cursor 또는 OCR) — 완료까지 대기",
+                        )
                         return
                 except ImportError:
                     pass
@@ -454,39 +457,44 @@ class WatchRunner:
         if self.config.chemstation_mode == "gc1":
             try:
                 from gc1_runtime.layer0_hotspot_agent import (
-                    enqueue_hotspot_cursor_agent,
+                    dispatch_gc1_hotspot_session,
                     hotspot_cursor_agent_enabled,
-                    is_hotspot_agent_in_flight,
+                    is_hotspot_session_in_flight,
                 )
             except ImportError:
                 hotspot_cursor_agent_enabled = lambda: False  # type: ignore[assignment,misc]
-                enqueue_hotspot_cursor_agent = None  # type: ignore[assignment]
-                is_hotspot_agent_in_flight = lambda _d: False  # type: ignore[assignment,misc]
+                dispatch_gc1_hotspot_session = None  # type: ignore[assignment]
+                is_hotspot_session_in_flight = lambda _d: False  # type: ignore[assignment,misc]
 
-            if hotspot_cursor_agent_enabled() and enqueue_hotspot_cursor_agent:
-                if is_hotspot_agent_in_flight(self.config.excel_output_dir):
+            if hotspot_cursor_agent_enabled() and dispatch_gc1_hotspot_session:
+                if is_hotspot_session_in_flight(self.config.excel_output_dir):
                     self._publish(
                         "processing",
-                        "Cursor 에이전트 작업 중 — 완료까지 대기",
+                        "핫스팟 처리 실행 중 (Cursor 또는 OCR) — 완료까지 대기",
                     )
                     return
                 ssid = get_connected_wifi_ssid() or self.config.required_ssid
-                triggered, agent_msg = enqueue_hotspot_cursor_agent(
+                action, msg = dispatch_gc1_hotspot_session(
                     self.config.excel_output_dir,
                     self.script_dir,
                     ssid=ssid,
                     just_connected=just_connected,
                     chemstation_mode=self.config.chemstation_mode,
                 )
-                if triggered:
-                    self._publish("agent_requested", agent_msg, wifi_ssid=ssid)
-                    print(f"[Cursor] {agent_msg}")
+                if action == "cursor_enqueued":
+                    self._publish("agent_requested", msg, wifi_ssid=ssid)
+                    print(f"[Cursor] {msg}")
                     return
-                if agent_msg.startswith("SKIP:"):
-                    self._publish("wifi_ok", agent_msg, wifi_ssid=ssid)
-                    print(f"[안내] {agent_msg}")
+                if action == "ocr_started":
+                    self._publish("processing", msg, wifi_ssid=ssid)
+                    print(f"[OCR] {msg}")
                     return
-                print(f"[안내] Cursor 에이전트 미사용 — 직접 파이프라인: {agent_msg}")
+                if action in ("skip", "in_flight"):
+                    code = "processing" if action == "in_flight" else "wifi_ok"
+                    self._publish(code, msg, wifi_ssid=ssid)
+                    print(f"[안내] {msg}")
+                    return
+                # continue_legacy → 아래 기존 pipeline
 
             try:
                 from gc_autochro import ensure_gc1_pdf_exported, is_autochro_enabled
