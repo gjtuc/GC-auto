@@ -29,12 +29,28 @@
     },
     "bottom_tabs": {
       "parent": "autochro_window",
-      "box": [0, 0.92, 0.22, 0.08],
+      "box": [0, 0.90, 0.28, 0.10],
       "stage": "panel",
       "description": "왼쪽 아래 분석목록/제어목록 탭",
       "zoom_hints": {
         "profile": "tab",
-        "needles": ["분석목록", "제어목록"]
+        "step_min": 1.85,
+        "target_glyph_px": 24,
+        "needles": ["분석", "목록", "제어", "분석목록", "제어목록"]
+      }
+    },
+    "bottom_tab_labels": {
+      "parent": "bottom_tabs",
+      "box": [0.02, 0.1, 0.98, 0.88],
+      "stage": "fine",
+      "description": "탭 글자만 (제어목록/분석목록)",
+      "zoom_hints": {
+        "profile": "tab",
+        "step_min": 2.0,
+        "step_max": 2.5,
+        "max_depth": 4,
+        "crop_frac_min": 0.35,
+        "needles": ["분석", "목록", "제어"]
       }
     },
     "left_analysis_tree": {
@@ -104,8 +120,8 @@
   },
   "read_tasks": {
     "verify_active_tab_analysis": {
-      "region": "bottom_tabs",
-      "expect_contains": ["분석목록"],
+      "region": "bottom_tab_labels",
+      "expect_loose_tab": "analysis",
       "description": "분석목록 탭 활성(파란 선택) 근처 글자"
     },
     "verify_peak_table_has_data": {
@@ -121,12 +137,12 @@
     },
     "eye_before_control_sync": {
       "region": "control_sample_table",
-      "expect_contains": ["raw"],
-      "description": "제어목록 탭 전 하단 표 .raw 가시 여부"
+      "expect_contains_raw": true,
+      "description": "제어목록 탭 전 시료 표 .raw 가시 여부"
     },
     "eye_before_sync_dclick": {
       "region": "top_sample_table",
-      "expect_contains": ["raw"],
+      "expect_contains_raw": true,
       "description": "동기화 더블클릭 직전 제어목록 표"
     },
     "eye_after_sync_analysis_rows": {
@@ -162,13 +178,13 @@
       "description": "동기화 후 분석목록 트리에 제어목록 데이터명 (런타임 주입)"
     },
     "eye_active_tab_control": {
-      "region": "bottom_tabs",
-      "expect_contains": ["제어목록"],
+      "region": "bottom_tab_labels",
+      "expect_loose_tab": "control",
       "description": "제어목록 탭 활성"
     },
     "eye_active_tab_analysis": {
-      "region": "bottom_tabs",
-      "expect_contains": ["분석목록"],
+      "region": "bottom_tab_labels",
+      "expect_loose_tab": "analysis",
       "description": "분석목록 탭 활성"
     },
     "eye_after_menu_초기화": {

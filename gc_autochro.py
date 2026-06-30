@@ -87,7 +87,10 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   GC1_USE_RUNTIME                 — 1=``gc1_runtime.layer4_job`` 위임 (기본 0, 기존 UI 경로)
   GC1_AUTOCHRO_EYE               — 1=단계마다 OCR 눈 (live 기본 1, dry_run 제외)
   GC1_AUTOCHRO_EYE_ADAPT         — 1=OCR 우선·fallback 허용 (기본 1)
-  GC1_AUTOCHRO_EYE_STRICT        — 1=OCR 게이트 실패 시 중단 (기본 0, adapt=0 과 함께)
+  GC1_AUTOCHRO_EYE_STRICT        — 1=OCR 게이트 실패 시 중단 (기본 0)
+  GC1_OCR_CASE_STUDY            — 1=실패 시 단계 케이스 스터디 (기본 1)
+  GC1_OCR_EXPLORE               — 1=실패 시 확대/축소·커서 탐색 (기본 1)
+  GC1_OCR_LEARN                 — 1=런 종료 후 overlay 학습 반영 (기본 1)
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
@@ -1355,6 +1358,14 @@ def run_autochro_export(
     if not need and not force:
         return True, None, reason
     _log(f"시작 - {reason}")
+
+    from gc1_runtime.layer3_ocr_learn import begin_ocr_run_session, finalize_ocr_run_session
+    from gc1_runtime.layer3_workflow_gate import log_failure_disposition
+
+    begin_ocr_run_session()
+    ok = False
+    pdf_out: Optional[str] = None
+    msg_out = ""
     try:
         if cfg.dry_run:
             source = _fallback_data_name(cfg)
@@ -1371,48 +1382,59 @@ def run_autochro_export(
                 "7 PDF 저장",
             ):
                 _log(label)
-            return True, pdf_path, "dry-run"
-        stale_closed = close_all_hancom_pdf_windows()
-        if stale_closed:
-            _log(f"이전 한컴 PDF 완료 창 {stale_closed}개 닫음")
-        _, win = connect_main_window(cfg)
-        data_name = read_active_control_data_name(win, cfg)
-        pdf_path = build_export_pdf_path(cfg, data_name_raw=data_name)
-        _log(f"제어목록 데이터명: {data_name}")
-        _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
-        if not force and is_pdf_recently_exported(pdf_path):
-            return True, pdf_path, f"방금 PDF 내보냄 — Autochro 재실행 생략 ({pdf_fresh_skip_sec()}초 이내)"
-        step_sync_control_to_analysis(win, cfg, data_name)
-        if _prep_steps_enabled():
-            step_select_all_samples(win, cfg)
-            step_context_initialize_samples(win, cfg)
-            step_load_analysis_method(win, cfg, data_name)
-            step_select_all_samples(win, cfg)
-            step_context_initialize_samples(win, cfg)
-            step_select_all_samples(win, cfg)
+            ok, pdf_out, msg_out = True, pdf_path, "dry-run"
         else:
-            step_select_all_samples(win, cfg)
-        step_initialize_quantify(win, cfg)
-        step_print_pdf(win, cfg)
-        step_save_pdf(cfg, pdf_path)
-        if not os.path.isfile(pdf_path):
-            folder_pdfs = sorted(
-                glob.glob(os.path.join(cfg.pdf_output_dir, "*.pdf")),
-                key=os.path.getmtime,
-                reverse=True,
-            )
-            if folder_pdfs:
-                pdf_path = folder_pdfs[0]
-        from gc_gc1 import cleanup_superseded_gc1_files
+            stale_closed = close_all_hancom_pdf_windows()
+            if stale_closed:
+                _log(f"이전 한컴 PDF 완료 창 {stale_closed}개 닫음")
+            _, win = connect_main_window(cfg)
+            data_name = read_active_control_data_name(win, cfg)
+            pdf_path = build_export_pdf_path(cfg, data_name_raw=data_name)
+            _log(f"제어목록 데이터명: {data_name}")
+            _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
+            if not force and is_pdf_recently_exported(pdf_path):
+                ok, pdf_out, msg_out = (
+                    True,
+                    pdf_path,
+                    f"방금 PDF보냄 — Autochro 재실행 생략 ({pdf_fresh_skip_sec()}초 이내)",
+                )
+            else:
+                step_sync_control_to_analysis(win, cfg, data_name)
+                if _prep_steps_enabled():
+                    step_select_all_samples(win, cfg)
+                    step_context_initialize_samples(win, cfg)
+                    step_load_analysis_method(win, cfg, data_name)
+                    step_select_all_samples(win, cfg)
+                    step_context_initialize_samples(win, cfg)
+                    step_select_all_samples(win, cfg)
+                else:
+                    step_select_all_samples(win, cfg)
+                step_initialize_quantify(win, cfg)
+                step_print_pdf(win, cfg)
+                step_save_pdf(cfg, pdf_path)
+                if not os.path.isfile(pdf_path):
+                    folder_pdfs = sorted(
+                        glob.glob(os.path.join(cfg.pdf_output_dir, "*.pdf")),
+                        key=os.path.getmtime,
+                        reverse=True,
+                    )
+                    if folder_pdfs:
+                        pdf_path = folder_pdfs[0]
+                from gc_gc1 import cleanup_superseded_gc1_files
 
-        removed, pdf_path = cleanup_superseded_gc1_files(cfg.pdf_output_dir, pdf_path, log_fn=_log)
-        if removed:
-            _log(f"잘못된 출력 파일 {removed}개 정리")
-        record_autochro_export(state_path, cfg.crm_path, pdf_path)
-        return True, pdf_path, os.path.basename(pdf_path)
+                removed, pdf_path = cleanup_superseded_gc1_files(
+                    cfg.pdf_output_dir, pdf_path, log_fn=_log
+                )
+                if removed:
+                    _log(f"잘못된 출력 파일 {removed}개 정리")
+                record_autochro_export(state_path, cfg.crm_path, pdf_path)
+                ok, pdf_out, msg_out = True, pdf_path, os.path.basename(pdf_path)
     except Exception as exc:
-        return False, None, str(exc)
-
+        log_failure_disposition(str(exc), log_fn=_log)
+        ok, pdf_out, msg_out = False, None, str(exc)
+    finally:
+        finalize_ocr_run_session(success=ok, message=msg_out, log_fn=_log)
+    return ok, pdf_out, msg_out
 
 def ensure_gc1_pdf_exported(
     excel_output_dir: str,

@@ -90,7 +90,13 @@ def _log(msg: str) -> None:
 
 def load_config(path: str) -> dict:
     with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
+        base = json.load(fh)
+    try:
+        from gc1_runtime.layer3_ocr_learn import merge_config_with_learnings
+
+        return merge_config_with_learnings(base)
+    except Exception:
+        return base
 
 
 def _require_pillow():

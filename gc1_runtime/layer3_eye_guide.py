@@ -7,7 +7,8 @@ gc1_runtime.layer3_eye_guide — Autochro 단계마다 OCR 눈 (T98)
   · 토큰 위치로 마우스 이동·클릭 (제어목록 .raw 동기화 앵커 등)
   · read_tasks 로 단계 검증 (실패해도 ``GC1_AUTOCHRO_EYE_ADAPT=1`` 이면 fallback 후 계속)
 
-케이스 스터디: ``python scripts/probe_gc1_ocr_case_study.py``
+케이스 스터디: 실패 시 ``layer3_ocr_case_study`` (전체화면·탐색) → 런 후 ``layer3_ocr_learn`` overlay
+워크플로 불명: ``layer3_workflow_gate`` — 사용자에게만 질문 (OCR/조작은 자체 학습)
 
 pywinauto 좌표만 쓰면 제어목록 고정 위치에 커서가 안 가는 문제가 있어
 동기화 더블클릭은 OCR ``.raw`` 행을 우선 찾습니다.
@@ -34,6 +35,7 @@ from gc_screen_read import (
     token_screen_center,
 )
 from gc1_runtime.layer3_eye import EyeActuator, default_eye_config, verify_read_task
+from gc1_runtime.layer3_ocr_case_study import case_study_on_fail
 
 _LOG = print
 _RAW_TOKEN_RX = re.compile(r"(\d+)\s*[\.,]?\s*raw", re.IGNORECASE)
@@ -81,6 +83,36 @@ def autochro_eye_enabled(*, dry_run: bool = False) -> bool:
 
 def _normalize_tok(text: str) -> str:
     return re.sub(r"\s+", "", (text or "")).lower()
+
+
+def _score_tree_name_token(tok: OcrToken, data_name: str) -> float:
+    """트리 데이터명 앵커 — 한 글자·메뉴 잡음 제외."""
+    tok_c = _normalize_tok(tok.text)
+    name_c = _normalize_tok(data_name)
+    if len(tok_c) < 5:
+        return -1.0
+    score = float(tok.confidence)
+    date_m = re.match(r"(\d{8})", name_c)
+    if date_m and date_m.group(1) in tok_c:
+        score += 50.0
+    prefix = name_c[: min(14, len(name_c))]
+    if prefix in tok_c:
+        score += 40.0
+    elif tok_c in name_c:
+        score += 25.0
+    if "dre" in name_c and "dre" in tok_c:
+        score += 20.0
+    if len(tok_c) < 8 and not re.search(r"\d{6}", tok_c):
+        score -= 30.0
+    return score
+
+
+def _pick_tree_name_token(tokens: Sequence[OcrToken], data_name: str) -> Optional[OcrToken]:
+    scored = [(t, _score_tree_name_token(t, data_name)) for t in tokens]
+    scored = [(t, s) for t, s in scored if s >= 0]
+    if not scored:
+        return None
+    return max(scored, key=lambda x: x[1])[0]
 
 
 def token_looks_like_raw(tok: OcrToken) -> bool:
@@ -200,7 +232,38 @@ class AutochroStepEye:
             self._log(f"verify OK - {step_id} / {task_id}")
         else:
             self._log(f"verify FAIL - {step_id} / {task_id}: {verdict.detail}")
+            self._on_ocr_miss(
+                step_id,
+                kind="verify",
+                reason=verdict.detail,
+                task_id=task_id,
+            )
         return verdict.passed
+
+    def _on_ocr_miss(
+        self,
+        step_id: str,
+        *,
+        kind: str,
+        reason: str,
+        task_id: str = "",
+    ) -> None:
+        """인식 실패 시 막힌 단계에서 OCR 케이스 스터디."""
+        if not case_study_on_fail():
+            return
+        try:
+            from gc1_runtime.layer3_ocr_case_study import run_failure_case_study
+
+            run_failure_case_study(
+                self,
+                step_id=step_id,
+                reason=reason,
+                task_id=task_id,
+                kind=kind,
+                log_fn=self._log,
+            )
+        except Exception as exc:
+            self._log(f"case-study warn: {exc}")
 
     def require_task(self, step_id: str, task_id: str, *, phase: str = "after") -> None:
         """OCR 검증 — adaptive 이면 경고만, strict+비적응이면 중단."""
@@ -230,6 +293,12 @@ class AutochroStepEye:
                 self._log(f"tree name OK (line) - {line!r}")
                 return True
         self._log(f"tree name FAIL - want {data_name!r} in {text[:80]!r}")
+        self._on_ocr_miss(
+            step_id,
+            kind="verify",
+            reason=f"tree name {data_name!r}",
+            task_id="eye_sync_tree_name",
+        )
         if eye_gate_should_raise():
             raise RuntimeError(f"OCR tree name mismatch: {data_name!r}")
         return False
@@ -287,6 +356,12 @@ class AutochroStepEye:
                 raw_tokens.extend(find_text_tokens(tokens, q, partial=True))
         if not raw_tokens:
             self._log("sync anchor .raw not found - coord fallback")
+            self._on_ocr_miss(
+                "sync.raw_anchor",
+                kind="anchor",
+                reason="no .raw token",
+                task_id="eye_before_sync_dclick",
+            )
             return None
         # OCR 이미지에서 top 이 작을수록 표 상단(첫 가시 행)
         best = min(raw_tokens, key=lambda t: (t.box.top, -t.confidence))
@@ -309,24 +384,29 @@ class AutochroStepEye:
         except RuntimeError as exc:
             self._log(f"tree OCR skip: {exc}")
             return None
-        name_c = re.sub(r"\s+", "", data_name.lower())
-        hits: List[OcrToken] = []
-        for tok in tokens:
-            tok_c = re.sub(r"\s+", "", (tok.text or "").lower())
-            if not tok_c:
-                continue
-            if name_c[: min(len(name_c), 14)] in tok_c or tok_c in name_c:
-                hits.append(tok)
-        if not hits:
+        best = _pick_tree_name_token(tokens, data_name)
+        if best is None:
+            name_c = re.sub(r"\s+", "", data_name.lower())
             hits = find_text_tokens(tokens, data_name[:12], partial=True)
-        if not hits:
-            m = re.match(r"(\d{8})", name_c)
-            if m:
-                hits = find_text_tokens(tokens, m.group(1), partial=True)
-        if not hits:
+            hits = [t for t in hits if len(_normalize_tok(t.text)) >= 5]
+            if not hits:
+                m = re.match(r"(\d{8})", name_c)
+                if m:
+                    hits = [
+                        t
+                        for t in find_text_tokens(tokens, m.group(1), partial=True)
+                        if len(_normalize_tok(t.text)) >= 8
+                    ]
+            if hits:
+                best = max(hits, key=lambda t: t.confidence)
+        if best is None:
             self._log(f"tree anchor not found for {data_name!r}")
+            self._on_ocr_miss(
+                "tree.anchor",
+                kind="anchor",
+                reason=f"no token for {data_name!r}",
+            )
             return None
-        best = max(hits, key=lambda t: t.confidence)
         x, y = token_screen_center(best, view, scale)
         self._log(f"tree anchor '{best.text}' -> screen ({x},{y})")
         return x, y
@@ -502,6 +582,12 @@ class AutochroStepEye:
             return True
         except Exception as exc:
             self._log(f"menu OCR miss — fallback allowed: {exc}")
+            self._on_ocr_miss(
+                "P3.menu",
+                kind="menu",
+                reason=str(exc),
+                task_id=EYE_TASK_AFTER_MENU_INIT,
+            )
             return False
 
     def click_context_menu_ocr(

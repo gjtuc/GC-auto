@@ -9,6 +9,7 @@ L3 Eye 채널 (Ω.A.L3.E.*) — ``gc_screen_read`` L0-SCR 래핑.
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from typing import Callable, Iterable, Sequence
 
@@ -119,6 +120,26 @@ def parse_tesseract_token_dict(
 def verify_contains(text: str, needles: Sequence[str]) -> bool:
     """read_tasks expect_contains."""
     return all(needle in text for needle in needles)
+
+
+def verify_loose_tab(text: str, kind: str) -> bool:
+    """탭 OCR — '분석'+'목록' 분리 인식 허용."""
+    compact = re.sub(r"\s+", "", text or "")
+    if kind == "analysis":
+        return "분석목록" in compact or ("분석" in compact and "목록" in compact)
+    if kind == "control":
+        return "제어목록" in compact or ("제어" in compact and "목록" in compact)
+    return False
+
+
+_RAW_IN_TEXT_RX = re.compile(r"\d\s*[\.,]?\s*raw", re.IGNORECASE)
+
+
+def verify_raw_in_text(text: str) -> bool:
+    """시료 표 — ``2raw`` / ``1.raw`` 등 OCR 변형."""
+    if _RAW_IN_TEXT_RX.search(text or ""):
+        return True
+    return "raw" in (text or "").lower()
 
 
 def verify_numeric_min(text: str, minimum: int = 1) -> bool:
@@ -247,7 +268,13 @@ def verify_read_task(config: dict, task_id: str, plain_text: str) -> EyeTaskVerd
     if task_id not in tasks:
         return EyeTaskVerdict(task_id, False, f"unknown task: {task_id}")
     task = tasks[task_id]
-    if task.get("expect_contains"):
+    if task.get("expect_loose_tab"):
+        if not verify_loose_tab(plain_text, str(task["expect_loose_tab"])):
+            return EyeTaskVerdict(task_id, False, "expect_loose_tab failed")
+    elif task.get("expect_contains_raw"):
+        if not verify_raw_in_text(plain_text):
+            return EyeTaskVerdict(task_id, False, "expect_raw failed")
+    elif task.get("expect_contains"):
         if not verify_contains(plain_text, task["expect_contains"]):
             return EyeTaskVerdict(task_id, False, "expect_contains failed")
     if task.get("reject_if_mostly_zero"):
