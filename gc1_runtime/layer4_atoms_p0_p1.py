@@ -22,6 +22,7 @@ from gc1_runtime.layer0_ctl import (
     ListViewGeom,
     menu_texts_include_analysis,
     menu_texts_include_control,
+    pick_analysis_sample_table,
     pick_control_sync_list,
     tab_index_for_analysis,
     tab_index_for_control,
@@ -230,11 +231,7 @@ class PhaseOutcome:
 # ---------------------------------------------------------------------------
 
 
-def sync_double_click_coords(width: int, height: int) -> tuple[int, int]:
-    """P1.05 rel_x + P1.06 rel_y — ``step_sync_control_to_analysis`` 좌표."""
-    rel_y = max(12, height - 24)
-    rel_x = max(20, width // 4)
-    return rel_x, rel_y
+from gc1_runtime.layer0_sync import sync_double_click_coords
 
 
 def plan_pdf_path(pdf_output_dir: str, data_name: str) -> str:
@@ -787,12 +784,37 @@ def _run_p1_09(ctx: AtomContext) -> AtomOutcome:
     )
 
 
+def _sync_list_counts_from_ctx(ctx: AtomContext) -> tuple[int, int]:
+    """P1.10 — 제어·분석 ListView 행 수 (mock geometry 또는 0)."""
+    geoms = ctx.deps.listview_geoms or []
+    if not geoms:
+        return 0, 0
+    try:
+        ctrl = pick_control_sync_list(geoms, ctx.deps.win_rect)
+        anal = pick_analysis_sample_table(geoms, ctx.deps.win_rect)
+        return ctrl.item_count, anal.item_count
+    except RuntimeError:
+        return 0, 0
+
+
 def _run_p1_10(ctx: AtomContext) -> AtomOutcome:
+    from gc1_runtime.layer0_sync import evaluate_sync_post_check
+
     def act() -> dict[str, Any]:
-        return {"analysis_tab": menu_texts_include_analysis(_menu_texts(ctx))}
+        ctrl, anal = _sync_list_counts_from_ctx(ctx)
+        post = evaluate_sync_post_check(ctrl, anal)
+        return {
+            **post.to_dict(),
+            "analysis_tab": menu_texts_include_analysis(_menu_texts(ctx)),
+        }
 
     def post(snapshot: dict[str, Any]) -> tuple[bool, ...]:
-        return (snapshot.get("analysis_tab") is True,)
+        if snapshot.get("analysis_tab") is not True:
+            return (False, False)
+        # dry_run mock: control/analysis geoms 있으면 sync OK 검증
+        if ctx.deps.listview_geoms:
+            return (True, snapshot.get("ok") is True)
+        return (True, True)
 
     return run_atom_shell(
         ctx,

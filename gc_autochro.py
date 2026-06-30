@@ -18,7 +18,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 [UI 흐름]  (run_autochro_export)
 =============================================================================
 
-  1) 제어목록 탭 → 하단 시료 표 더블클릭 → 분석목록과 동기화
+  1) 제어목록 탭 → 하단 시료 표 **고정 위치** 더블클릭 → 분석목록과 동기화
+     (``1.raw`` 텍스트가 아님 — 주입이 쌓이면 라벨은 스크롤되어 사라짐)
   2) 분석목록 시료 표 Ctrl+A
   3) 시료 표 우클릭 → 초기화
   4) 왼쪽 트리(제어목록 데이터명과 동일) 우클릭 → 분석방법 불러오기 → {YYYYMMDD} 분석방법.MTD
@@ -811,22 +812,42 @@ def _menu_select_by_suffix(win, top_suffix: str, item_text: str) -> None:
     raise RuntimeError(f"메뉴 없음: {top_suffix} -> {item_text}")
 
 
+def _listview_item_count(ctrl) -> int:
+    try:
+        return max(0, int(ctrl.item_count()))
+    except Exception:
+        return 0
+
+
 def step_sync_control_to_analysis(win, cfg: AutochroConfig) -> None:
     _log("제어목록 탭 → 시료 더블클릭 → 분석목록")
     if cfg.dry_run:
         return
+    from gc1_runtime.layer0_sync import evaluate_sync_post_check, sync_double_click_coords
+
     _select_control_tab(win)
     sample_list = _control_sync_list(win)
+    control_count = _listview_item_count(sample_list)
     sample_list.set_focus()
     sample_list.click_input()
     rect = sample_list.rectangle()
-    rel_y = max(12, rect.height() - 24)
-    rel_x = max(20, rect.width() // 4)
+    rel_x, rel_y = sync_double_click_coords(rect.width(), rect.height())
     sample_list.double_click_input(coords=(rel_x, rel_y))
     time.sleep(1.5)
     _select_analysis_tab(win)
     if not _on_analysis_tab(win):
         raise RuntimeError("분석목록 탭 전환 실패 - Autochro 창 상태 확인")
+    analysis_count = _listview_item_count(_analysis_sample_table(win))
+    post = evaluate_sync_post_check(control_count, analysis_count)
+    if not post.ok:
+        raise RuntimeError(
+            f"{post.operator_hint} "
+            f"(제어목록 {post.control_item_count}행, 분석목록 {post.analysis_item_count}행)"
+        )
+    _log(
+        f"제어목록->분석목록 동기화 OK - "
+        f"제어 {post.control_item_count}행 / 분석 {post.analysis_item_count}행"
+    )
 
 
 def step_context_initialize_samples(win, cfg: AutochroConfig) -> None:
