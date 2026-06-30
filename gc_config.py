@@ -34,7 +34,7 @@ gc_config.py — 경로·상수·실행 설정(AppConfig)
   gc_automation CLI 인자 + gc_automation.env 가 합쳐진 **한 번의 실행** 설정.
 
   hotspot_reconnect_min_sec:
-    GC1 90s / GC2·3 45s — 순간 끊김 vs 재연결 구분 (gc_watch.py)
+    GC1 30분 / GC2·3 45s — 순간 끊김 vs 재연결 구분 (gc_watch.py)
 """
 
 from __future__ import annotations
@@ -86,7 +86,7 @@ AFTERNOON_START_HOUR = 12
 
 # watch: 순간 끊김(약한 신호) vs 사용자가 껐다 켠 재연결 구분(초)
 DEFAULT_HOTSPOT_RECONNECT_MIN_SEC = 45
-DEFAULT_GC1_HOTSPOT_RECONNECT_MIN_SEC = 90
+DEFAULT_GC1_HOTSPOT_RECONNECT_MIN_SEC = 1800  # 30분 — 순간 끊김·에이전트 재요청 쿨다운
 
 
 def hotspot_reconnect_min_sec(chemstation_mode: str = "auto") -> int:

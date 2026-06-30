@@ -33,8 +33,9 @@ gc_watch.py — --watch 핫스팟 감시 루프
 =============================================================================
 
   GC1:
-    · 핫스pot **세션당** PDF·엑셀·메일 1회 (쿨다운 없음)
-    · 순간 끊김 < 90초 → 동일 세션. 길게 껐다 켬 → 세션 1회 더
+    · 핫스pot **세션당** Cursor 에이전트 1회 (기본: 「동작해」→ OCR·학습 루프)
+    · 순간 끊김 < 30분 → 동일 세션. 길게 껐다 켬 → 세션 1회 더
+    · GC1_HOTSPOT_CURSOR_AGENT=0 이면 watch 가 직접 pipeline (레거시)
 
   GC2/GC3:
     · **핫스pot 재연결 불필요** — Wi-Fi 붙어 있는 동안 15초마다 poll
@@ -285,6 +286,19 @@ class WatchRunner:
             if self._pipeline_running:
                 self._publish("processing", "GC1 처리 진행 중 — 완료까지 대기")
                 return
+            if self.config.chemstation_mode == "gc1":
+                try:
+                    from gc1_runtime.layer0_hotspot_agent import (
+                        hotspot_cursor_agent_enabled,
+                        is_hotspot_agent_in_flight,
+                    )
+                    if hotspot_cursor_agent_enabled() and is_hotspot_agent_in_flight(
+                        self.config.excel_output_dir
+                    ):
+                        self._publish("processing", "Cursor 에이전트 작업 중 — 완료까지 대기")
+                        return
+                except ImportError:
+                    pass
             if gc1_unlimited_auto_send(self.config.chemstation_mode):
                 if self._gc1_has_pending_work():
                     print("\n[감지] GC1 새 CRM/PDF — 핫스팟 연결 유지 중 처리")
@@ -438,6 +452,42 @@ class WatchRunner:
             return
 
         if self.config.chemstation_mode == "gc1":
+            try:
+                from gc1_runtime.layer0_hotspot_agent import (
+                    enqueue_hotspot_cursor_agent,
+                    hotspot_cursor_agent_enabled,
+                    is_hotspot_agent_in_flight,
+                )
+            except ImportError:
+                hotspot_cursor_agent_enabled = lambda: False  # type: ignore[assignment,misc]
+                enqueue_hotspot_cursor_agent = None  # type: ignore[assignment]
+                is_hotspot_agent_in_flight = lambda _d: False  # type: ignore[assignment,misc]
+
+            if hotspot_cursor_agent_enabled() and enqueue_hotspot_cursor_agent:
+                if is_hotspot_agent_in_flight(self.config.excel_output_dir):
+                    self._publish(
+                        "processing",
+                        "Cursor 에이전트 작업 중 — 완료까지 대기",
+                    )
+                    return
+                ssid = get_connected_wifi_ssid() or self.config.required_ssid
+                triggered, agent_msg = enqueue_hotspot_cursor_agent(
+                    self.config.excel_output_dir,
+                    self.script_dir,
+                    ssid=ssid,
+                    just_connected=just_connected,
+                    chemstation_mode=self.config.chemstation_mode,
+                )
+                if triggered:
+                    self._publish("agent_requested", agent_msg, wifi_ssid=ssid)
+                    print(f"[Cursor] {agent_msg}")
+                    return
+                if agent_msg.startswith("SKIP:"):
+                    self._publish("wifi_ok", agent_msg, wifi_ssid=ssid)
+                    print(f"[안내] {agent_msg}")
+                    return
+                print(f"[안내] Cursor 에이전트 미사용 — 직접 파이프라인: {agent_msg}")
+
             try:
                 from gc_autochro import ensure_gc1_pdf_exported, is_autochro_enabled
             except ImportError:

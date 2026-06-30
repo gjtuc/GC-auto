@@ -318,8 +318,8 @@ def read_hotspot_reconnect_min_sec(env: EnvMap | None = None) -> int:
         _read_key(
             env,
             "GC1_HOTSPOT_RECONNECT_MIN_SEC",
-            default_str="90",
-            parser=lambda s: parse_int_nonneg(s, 90),
+            default_str="1800",
+            parser=lambda s: parse_int_nonneg(s, 1800),
         )
     )
 
