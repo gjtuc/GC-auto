@@ -294,9 +294,21 @@ def after_successful_run(config: AppConfig, result, count_email_toward_limit: bo
 
 def run_force_once(config: AppConfig, script_dir: str) -> None:
     """pipeline 1회 — force 규칙(핫스팟·한도 무시). 메일은 daily_send_count에 안 넣음."""
+    from gc1_runtime.layer3_run_closure import format_end_user_summary
+
     print("[안내] force 우선 실행 — 핫스팟·메일 쿨다운 규칙 적용 안 함")
     result = run_processing(config, script_dir)
     after_successful_run(config, result, count_email_toward_limit=False)
+    out_base = os.path.basename(result.output_path) if result.output_path else ""
+    print()
+    print(
+        format_end_user_summary(
+            ok=result.ok,
+            email_sent=bool(result.email_sent),
+            output_basename=out_base,
+            fail_reason=result.fail_reason or "",
+        )
+    )
 
 
 def submit_force_request(config: AppConfig, script_dir: str, trigger_text: str) -> None:

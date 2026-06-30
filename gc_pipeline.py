@@ -412,6 +412,31 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
     config.force True: CRM 변경 없어도 Autochro PDF 재생성 (개시 force·수동 --force).
     GC1_SKIP_AUTOCHRO_EXPORT: watch 가 export 직후 pipeline 만 돌릴 때 중복 방지.
     """
+    from gc1_runtime.layer3_run_closure import begin_gc1_run_session, close_gc1_run_session
+
+    begin_gc1_run_session(mode="gc1")
+    try:
+        result = _run_processing_gc1_body(config, script_dir)
+    except Exception as exc:
+        result = ProcessResult(ok=False, fail_reason=str(exc))
+    out_base = os.path.basename(result.output_path) if result.output_path else ""
+    close_gc1_run_session(
+        ok=result.ok,
+        fail_reason=result.fail_reason or "",
+        email_sent=bool(result.email_sent),
+        output_basename=out_base,
+        sample_name=result.sample_name or "",
+        pdf=os.path.basename(result.sequence_folder or "") if result.sequence_folder else "",
+    )
+    return result
+
+
+def _run_processing_gc1_body(config: AppConfig, script_dir: str) -> ProcessResult:
+    """
+    GC1 전체 pipeline body (closure wrapper 가 세션·저널 처리).
+    """
+    from gc1_runtime.layer3_run_closure import register_pipeline_phase
+
     try:
         from gc_autochro import ensure_gc1_pdf_exported, is_autochro_enabled
     except ImportError:
@@ -429,6 +454,7 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
                 config.send_state_file,
                 force=bool(config.force),
             )
+            register_pipeline_phase("autochro_export", ok=export_ok, detail=export_msg or "")
             if not export_ok:
                 return ProcessResult(ok=False, fail_reason=f"Autochro PDF 내보내기 실패 — {export_msg}")
             if export_msg and export_msg not in ("CRM 변경 없음", "Autochro 자동화 비활성"):
@@ -543,6 +569,11 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
         if surviving_pdf != pdf_path:
             print(f"[GC1] 반응 주입 더 많은 PDF 유지: {os.path.basename(surviving_pdf)}")
 
+        register_pipeline_phase(
+            "excel_email",
+            ok=True,
+            detail="mail" if email_sent else "excel_only",
+        )
         return ProcessResult(
             ok=True,
             email_sent=email_sent,

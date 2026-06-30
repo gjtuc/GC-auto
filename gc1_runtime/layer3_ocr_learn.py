@@ -85,6 +85,14 @@ def merge_config_with_learnings(config: dict) -> dict:
 
 def begin_ocr_run_session() -> str:
     """Autochro export 런 시작 — 케이스 스터디 세션 마커."""
+    path = _current_run_path()
+    if path.is_file():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if data.get("pipeline"):
+                return str(data.get("run_id") or "")
+        except Exception:
+            pass
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     payload = {
         "run_id": run_id,
@@ -194,19 +202,37 @@ def _apply_report_to_overlay(overlay: dict, report: dict) -> List[str]:
     return notes
 
 
+def _pipeline_run_active() -> bool:
+    return os.getenv("GC1_PIPELINE_RUN_ACTIVE", "").strip() in ("1", "true", "yes")
+
+
 def finalize_ocr_run_session(*, success: bool, message: str = "", log_fn=None) -> Dict[str, Any]:
     """
     런 종료 — 이번 세션 fail JSON 을 읽어 overlay 반영.
 
-    Returns 요약 dict (에이전트·로그용).
+    ``GC1_PIPELINE_RUN_ACTIVE`` 이면 overlay·저널은 파이프라인 ``close_gc1_run_session`` 에서 처리.
     """
-    _log = log_fn or print
+    _log = log_fn if log_fn is not None else (lambda _msg: None)
+
     summary: Dict[str, Any] = {
         "success": success,
         "message": message,
         "applied": [],
         "fail_count": 0,
+        "deferred": _pipeline_run_active(),
     }
+    if _pipeline_run_active():
+        path = _current_run_path()
+        if path.is_file():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                data["autochro_ok"] = success
+                data["autochro_message"] = message[:500]
+                path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+        return summary
+
     if not learnings_enabled():
         return summary
 
