@@ -21,9 +21,10 @@ def sync_double_click_coords(width: int, height: int) -> tuple[int, int]:
     """
     제어목록 SysListView32 내부 더블클릭 상대 좌표 (P1.05 + P1.06).
 
-    ``1.raw`` 라벨이 아니라 **표 안 고정 위치** — 스크롤로 라벨이 바뀌어도 동일 좌표.
+    **표 상단 첫 가시 행 슬롯** — ``1.raw`` 라벨이 스크롤로 없어져도 같은 높이.
+    (구버전 height-24 는 표 하단이라 커서가 .raw 위치에 안 감)
     """
-    rel_y = max(12, height - 24)
+    rel_y = max(18, min(40, height // 6))
     rel_x = max(20, width // 4)
     return rel_x, rel_y
 

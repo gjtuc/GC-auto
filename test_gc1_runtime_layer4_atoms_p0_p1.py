@@ -25,7 +25,7 @@ class TestSyncCoords(unittest.TestCase):
     def test_double_click_coords_match_autochro(self):
         rel_x, rel_y = sync_double_click_coords(400, 200)
         self.assertEqual(rel_x, 100)
-        self.assertEqual(rel_y, 176)
+        self.assertEqual(rel_y, 33)
 
 
 class TestPlanPdfPath(unittest.TestCase):

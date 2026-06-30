@@ -51,6 +51,10 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
     셀 편집 모드 → Ctrl+A 불가 → PDF 3페이지(1시료)만 저장됩니다.
     _focus_list_for_ctrl_a() 가 「수집 일시」열과 같은 가로 위치(~78%)에 클릭합니다.
 
+  · **GC1_AUTOCHRO_EYE** (기본 live=1): 단계마다 OCR 로 영역 읽기·클릭·검증.
+    제어목록 동기화는 ``.raw`` 토큰 위치로 더블클릭. 우클릭 메뉴는 OCR 클릭.
+    끄기: ``GC1_AUTOCHRO_EYE=0`` · Tesseract: requirements-screen.txt
+
   · **32-bit Autochro**: 64-bit Python 으로도 동작하지만 pywinauto 경고가 납니다.
     GC1 장비 PC 배포 시 32-bit Python 권장.
 
@@ -79,6 +83,7 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   AUTOCHRO_ANALYSIS_METHOD_DIR    — {YYYYMMDD} 분석방법.MTD 폴더 (기본 바탕화면)
   GC1_AUTOCHRO_PREP_STEPS         — 1=적분 준비(초기화·MTD) 포함 (기본), 0=생략
   GC1_USE_RUNTIME                 — 1=``gc1_runtime.layer4_job`` 위임 (기본 0, 기존 UI 경로)
+  GC1_AUTOCHRO_EYE               — 1=단계마다 OCR 눈 (live 기본 1, dry_run 제외)
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
@@ -276,7 +281,8 @@ def record_autochro_export(state_path: str, crm_path: str, pdf_path: str) -> Non
 
 
 def _log(msg: str) -> None:
-    print(f"[Autochro] {msg}")
+    safe = msg.replace("\u2014", "-").replace("\u2192", "->")
+    print(f"[Autochro] {safe}", flush=True)
 
 
 def _require_pywinauto():
@@ -819,21 +825,49 @@ def _listview_item_count(ctrl) -> int:
         return 0
 
 
+def _autochro_eye_enabled(cfg: AutochroConfig) -> bool:
+    from gc1_runtime.layer3_eye_guide import autochro_eye_enabled
+
+    return autochro_eye_enabled(dry_run=cfg.dry_run)
+
+
+def _make_step_eye(win, cfg: AutochroConfig):
+    if not _autochro_eye_enabled(cfg):
+        return None
+    from gc1_runtime.layer3_eye_guide import AutochroStepEye
+
+    return AutochroStepEye.from_window_rect(win.rectangle(), log_fn=_log)
+
+
 def step_sync_control_to_analysis(win, cfg: AutochroConfig) -> None:
-    _log("제어목록 탭 → 시료 더블클릭 → 분석목록")
+    _log("제어목록 탭 -> 시료 더블클릭 -> 분석목록")
     if cfg.dry_run:
         return
     from gc1_runtime.layer0_sync import evaluate_sync_post_check, sync_double_click_coords
 
+    eye = _make_step_eye(win, cfg)
+    if eye:
+        eye.scan_between("P1.start", "control_sample_table", task_id="eye_before_control_sync")
     _select_control_tab(win)
     sample_list = _control_sync_list(win)
     control_count = _listview_item_count(sample_list)
     sample_list.set_focus()
     sample_list.click_input()
     rect = sample_list.rectangle()
-    rel_x, rel_y = sync_double_click_coords(rect.width(), rect.height())
+    fallback = sync_double_click_coords(rect.width(), rect.height())
+    if eye:
+        rel_x, rel_y = eye.guided_sync_double_click(sample_list, fallback_rel=fallback)
+    else:
+        rel_x, rel_y = fallback
+        try:
+            sample_list.move_mouse_input(coords=(rel_x, rel_y))
+            time.sleep(0.25)
+        except Exception:
+            pass
     sample_list.double_click_input(coords=(rel_x, rel_y))
     time.sleep(1.5)
+    if eye:
+        eye.scan_between("P1.after_dclick", "top_sample_table")
     _select_analysis_tab(win)
     if not _on_analysis_tab(win):
         raise RuntimeError("분석목록 탭 전환 실패 - Autochro 창 상태 확인")
@@ -848,28 +882,48 @@ def step_sync_control_to_analysis(win, cfg: AutochroConfig) -> None:
         f"제어목록->분석목록 동기화 OK - "
         f"제어 {post.control_item_count}행 / 분석 {post.analysis_item_count}행"
     )
+    if eye:
+        eye.checkpoint("P1.after_sync", "eye_after_sync_analysis_rows")
 
 
 def step_context_initialize_samples(win, cfg: AutochroConfig) -> None:
-    """분석목록 시료 표 우클릭 → 초기화 (적분·초기화+정량 아님)."""
-    _log("시료 표 우클릭 → 초기화")
+    """분석목록 시료 표 우클릭 -> 초기화 (적분·초기화+정량 아님)."""
+    _log("시료 표 우클릭 -> 초기화")
     if cfg.dry_run:
         return
+    eye = _make_step_eye(win, cfg)
     _select_analysis_tab(win)
     sample_list = _analysis_sample_table(win)
-    _right_click_sample_table(sample_list)
-    _click_context_initialize()
+    if eye:
+        try:
+            eye.guided_right_click_then_menu(sample_list, "초기화", forbid=("정량", "검량"))
+        except Exception as ocr_exc:
+            _log(f"OCR menu fail - pywinauto fallback: {ocr_exc}")
+            rel_x, rel_y = _neutral_list_coords(sample_list)
+            eye.move_mouse_on_list(sample_list, rel_x, rel_y)
+            sample_list.click_input(button="right", coords=(rel_x, rel_y))
+            time.sleep(0.35)
+            _click_context_initialize()
+        eye.checkpoint("P3.after_init", "eye_after_context_init")
+    else:
+        _right_click_sample_table(sample_list)
+        _click_context_initialize()
     time.sleep(0.8)
 
 
 def step_load_analysis_method(win, cfg: AutochroConfig, data_name: str) -> None:
-    """왼쪽 트리 시료명 우클릭 → 분석방법 불러오기 → MTD."""
+    """왼쪽 트리 시료명 우클릭 -> 분석방법 불러오기 -> MTD."""
     mtd_path = resolve_analysis_method_mtd_path(data_name)
     _log(f"분석방법 MTD: {os.path.basename(mtd_path)}")
     if cfg.dry_run:
         return
+    eye = _make_step_eye(win, cfg)
+    if eye:
+        eye.scan_between("P4.before_tree", "left_analysis_tree")
     _select_analysis_tab(win)
     _right_click_tree_data_name(win, data_name)
+    if eye:
+        eye.scan_between("P4.after_tree_menu", "context_menu_popup")
     _click_context_load_analysis_method()
     _open_path_in_file_dialog(r"분석방법 불러오기", mtd_path, timeout=cfg.dialog_wait_sec)
     time.sleep(2.0)
@@ -879,19 +933,30 @@ def step_select_all_samples(win, cfg: AutochroConfig) -> None:
     _log("시료 전체 선택 (Ctrl+A)")
     if cfg.dry_run:
         return
+    eye = _make_step_eye(win, cfg)
     _select_analysis_tab(win)
     sample_list = _analysis_sample_table(win)
-    _focus_list_for_ctrl_a(sample_list)
     from pywinauto.keyboard import send_keys
 
+    if eye:
+        rel_x, rel_y = eye.guided_focus_for_ctrl_a(sample_list)
+        sample_list.click_input(coords=(rel_x, rel_y))
+        time.sleep(0.2)
+    else:
+        _focus_list_for_ctrl_a(sample_list)
     send_keys("^a")
     time.sleep(0.5)
+    if eye:
+        eye.guided_after_ctrl_a()
 
 
 def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
-    _log("시료목록 → 초기화+정량")
+    _log("시료목록 -> 초기화+정량")
     if cfg.dry_run:
         return
+    eye = _make_step_eye(win, cfg)
+    if eye:
+        eye.scan_between("P6.before_quantify", "bottom_peak_table_fine")
     _select_analysis_tab(win)
     try:
         _menu_select_by_suffix(win, "시료목록", "초기화+정량")
@@ -911,14 +976,20 @@ def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
 
 
 def step_print_pdf(win, cfg: AutochroConfig) -> None:
-    _log("분석목록 → 인쇄 (Ctrl+P)")
+    _log("분석목록 -> 인쇄 (Ctrl+P)")
     if cfg.dry_run:
         return
     from pywinauto.keyboard import send_keys
 
+    eye = _make_step_eye(win, cfg)
     _select_analysis_tab(win)
     sample_list = _analysis_sample_table(win)
-    _focus_list_for_ctrl_a(sample_list)
+    if eye:
+        rel_x, rel_y = eye.guided_focus_for_ctrl_a(sample_list)
+        sample_list.click_input(coords=(rel_x, rel_y))
+        time.sleep(0.2)
+    else:
+        _focus_list_for_ctrl_a(sample_list)
     win.set_focus()
     send_keys("^a")
     time.sleep(0.3)

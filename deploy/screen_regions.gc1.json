@@ -55,6 +55,18 @@
       "box": [0.22, 0.3, 0.45, 0.4],
       "stage": "panel",
       "description": "가운데 크로마(적분선 확인용, OCR 약함)"
+    },
+    "control_sample_table": {
+      "parent": "autochro_window",
+      "box": [0.22, 0.68, 0.78, 0.22],
+      "stage": "panel",
+      "description": "제어목록 하단 시료 표 — .raw 동기화 더블클릭 OCR"
+    },
+    "context_menu_popup": {
+      "parent": "autochro_window",
+      "box": [0.12, 0.1, 0.76, 0.75],
+      "stage": "panel",
+      "description": "우클릭 컨텍스트 메뉴 (초기화 등)"
     }
   },
   "read_tasks": {
@@ -73,6 +85,42 @@
       "region": "bottom_peak_table_fine",
       "expect_mostly_zero": true,
       "description": "초기화 후 0.0000 위주"
+    },
+    "eye_before_control_sync": {
+      "region": "control_sample_table",
+      "expect_contains": ["raw"],
+      "description": "제어목록 탭 전 하단 표 .raw 가시 여부"
+    },
+    "eye_before_sync_dclick": {
+      "region": "control_sample_table",
+      "expect_contains": ["raw"],
+      "description": "동기화 더블클릭 직전 제어목록 표"
+    },
+    "eye_after_sync_analysis_rows": {
+      "region": "top_sample_table",
+      "expect_numeric_min": 1,
+      "reject_if_mostly_zero": true,
+      "description": "동기화 후 분석목록 시료 표에 행/숫자"
+    },
+    "eye_before_sample_table": {
+      "region": "top_sample_table",
+      "expect_contains": ["시료"],
+      "description": "시료 표 헤더 보임 (클릭 전)"
+    },
+    "eye_after_ctrl_a": {
+      "region": "top_sample_table",
+      "expect_contains": ["시료"],
+      "description": "Ctrl+A 후 표 영역 유지"
+    },
+    "eye_after_context_init": {
+      "region": "bottom_peak_table_fine",
+      "expect_mostly_zero": true,
+      "description": "우클릭 초기화 후 피크 표 cleared"
+    },
+    "eye_after_menu_초기화": {
+      "region": "context_menu_popup",
+      "expect_contains": ["초기화"],
+      "description": "메뉴 OCR 클릭 직후 (메뉴 닫힘 전 스캔)"
     }
   }
 }
