@@ -62,9 +62,9 @@ def _log_path(script_dir: str) -> str:
     else:
         out = EXCEL_OUTPUT_DIR
         try:
-            from gc_profiles import resolve_excel_output_dir
+            from gc_profiles import gc_runtime_dir, resolve_excel_output_dir
 
-            out = resolve_excel_output_dir(script_dir)
+            out = gc_runtime_dir(resolve_excel_output_dir(script_dir))
         except Exception:
             pass
         path = os.path.join(out, "gc_wifi_autoconnect.log")

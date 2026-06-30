@@ -84,10 +84,12 @@ def save_send_state(state_path: str, state: dict) -> None:
 
 
 def log_gc_event(excel_output_dir: str, event_type: str, message: str, **extra) -> None:
-    """출력 폴더\\_system\\gc_events.jsonl — 오류·재시도 기록."""
+    """``_GC자동화\\_system\\gc_events.jsonl`` — 오류·재시도 기록 (GC1)."""
     if not excel_output_dir:
         return
-    system_dir = os.path.join(excel_output_dir, "_system")
+    from gc_profiles import gc_runtime_dir
+
+    system_dir = os.path.join(gc_runtime_dir(excel_output_dir), "_system")
     os.makedirs(system_dir, exist_ok=True)
     path = os.path.join(system_dir, "gc_events.jsonl")
     entry = {

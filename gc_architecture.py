@@ -13,13 +13,14 @@ gc_architecture.py — GC 자동화 코드베이스 개요 (실행 코드 없음
   GC1:     Autochro UI → PDF → gc_gc1 파싱/trim → 엑셀 → (iPhone 핫스pot 시) 메일
 
   공통 CLI: gc_automation.py
-  설정:     Desktop\\박은규\\gc_automation.env (GC1) / Desktop\\KCH\\... (GC2/GC3)
+  설정:     Desktop\\박은규\\_GC자동화\\gc_automation.env (GC1) / Desktop\\KCH\\... (GC2/GC3)
+  GC1 데이터: xlsx·pdf 는 Desktop\\박은규 루트 — 자동화·watch·로그는 _GC자동화 (2026-06, deploy/GC1_FEAT_2026-06.md)
 
 =============================================================================
 [PC / 프로필]  gc_profiles.py
 =============================================================================
 
-  GC1  박은규  Desktop\\박은규   REQUIRED_HOTSPOT=iPhone    CHEMSTATION_MODE=gc1
+  GC1  박은규  Desktop\\박은규 (+ _GC자동화)   REQUIRED_HOTSPOT=iPhone    CHEMSTATION_MODE=gc1
   GC2  kimcha  Desktop\\KCH      iptime / iptime 2 / iptime_5G  8860 (acam)
   GC3  kimcha  Desktop\\KCH      iptime / iptime 2 / iptime_5G  chem32 (Report)
 

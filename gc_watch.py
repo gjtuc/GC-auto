@@ -124,6 +124,11 @@ class WatchRunner:
             chemstation_mode=config.chemstation_mode,
         )
 
+    def _runtime_dir(self) -> str:
+        from gc_profiles import gc_runtime_dir
+
+        return gc_runtime_dir(self.config.excel_output_dir)
+
     def run_forever(self) -> None:
         """Ctrl+C 또는 프로세스 종료까지 루프."""
         interval = self.watch_opts.watch_interval
@@ -293,7 +298,7 @@ class WatchRunner:
                         is_hotspot_session_in_flight,
                     )
                     if hotspot_cursor_agent_enabled() and is_hotspot_session_in_flight(
-                        self.config.excel_output_dir
+                        self._runtime_dir()
                     ):
                         self._publish(
                             "processing",
@@ -467,7 +472,7 @@ class WatchRunner:
                 is_hotspot_session_in_flight = lambda _d: False  # type: ignore[assignment,misc]
 
             if hotspot_cursor_agent_enabled() and dispatch_gc1_hotspot_session:
-                if is_hotspot_session_in_flight(self.config.excel_output_dir):
+                if is_hotspot_session_in_flight(self._runtime_dir()):
                     self._publish(
                         "processing",
                         "핫스팟 처리 실행 중 (Cursor 또는 OCR) — 완료까지 대기",
@@ -475,7 +480,7 @@ class WatchRunner:
                     return
                 ssid = get_connected_wifi_ssid() or self.config.required_ssid
                 action, msg = dispatch_gc1_hotspot_session(
-                    self.config.excel_output_dir,
+                    self._runtime_dir(),
                     self.script_dir,
                     ssid=ssid,
                     just_connected=just_connected,

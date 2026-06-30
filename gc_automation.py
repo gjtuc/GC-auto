@@ -12,7 +12,7 @@ gc_automation.py — ChemStation / GC1 자동 정리 (CLI 진입점)
   은규 PC·차헌 PC에서는 data_pc/촉매 반응 계산.py 를 실행하세요.
 
   PC 명칭: docs/PC_NAMING.md
-    · GC1 장비 PC (은규)  → Desktop\\박은규\\gc_automation.env
+    · GC1 장비 PC (은규)  → Desktop\\박은규\\_GC자동화\\gc_automation.env (데이터 xlsx·pdf 는 박은규 루트)
     · GC2/GC3 장비 PC (차헌) → Desktop\\KCH\\gc_automation.env
     · 은규 PC / 차헌 PC → Desktop\\.cursor\\ (본 스크립트 실행 금지)
 
@@ -372,6 +372,15 @@ def handle_user_message(text: str, config: AppConfig) -> int:
 
 def main() -> None:
     args = build_parser().parse_args()
+
+    from gc_profiles import bootstrap_env, gc_runtime_dir, migrate_gc1_runtime_layout, resolve_gc_instance
+
+    data_root, _ = bootstrap_env(SCRIPT_DIR)
+    if resolve_gc_instance() == "gc1":
+        moved = migrate_gc1_runtime_layout(data_root)
+        if moved:
+            bootstrap_env(SCRIPT_DIR)
+            print(f"[안내] GC1 자동화 파일 {moved}개 → {gc_runtime_dir(data_root)} 로 정리됨")
 
     if args.show_profile:
         print_profile_summary(resolve_profile(SCRIPT_DIR))

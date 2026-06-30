@@ -537,10 +537,12 @@ def main() -> None:
     parser.add_argument("--output-dir", default="", help="Desktop\\박은규 등 excel 출력 폴더")
     args = parser.parse_args()
 
-    from gc_profiles import resolve_profile, script_dir
+    from gc_profiles import paths_for_output_dir, resolve_profile, script_dir
 
     base = script_dir()
-    output_dir = args.output_dir.strip() or resolve_profile(base).excel_output_dir
+    profile = resolve_profile(base)
+    paths = paths_for_output_dir(profile.excel_output_dir, gc_instance=profile.gc_instance)
+    output_dir = args.output_dir.strip() or paths["runtime_dir"]
 
     if args.status:
         print_hotspot_agent_status(output_dir)

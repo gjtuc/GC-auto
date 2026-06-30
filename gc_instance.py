@@ -22,7 +22,9 @@ if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW"):
 
 
 def _lock_path(excel_output_dir: str) -> str:
-    return os.path.join(excel_output_dir, ".gc_watch.pid")
+    from gc_profiles import gc_runtime_dir
+
+    return os.path.join(gc_runtime_dir(excel_output_dir), ".gc_watch.pid")
 
 
 def _pid_alive(pid: int) -> bool:

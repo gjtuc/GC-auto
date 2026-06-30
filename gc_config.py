@@ -11,7 +11,7 @@ gc_config.py — 경로·상수·실행 설정(AppConfig)
 
   | PC 종류              | env 위치              | 이 파일 기본값 덮어씀? |
   |----------------------|-----------------------|------------------------|
-  | GC1 장비 PC (은규)   | Desktop\\박은규\\...  | 예 (iPhone, gc1)       |
+  | GC1 장비 PC (은규)   | Desktop\\박은규\\_GC자동화\\...  | 예 (iPhone, gc1)       |
   | GC2/GC3 장비 (차헌)  | Desktop\\KCH\\...   | env 없으면 기본값 사용 |
   | 은규 PC / 차헌 PC    | Desktop\\.cursor\\... | (본 모듈 미사용)       |
 
@@ -19,7 +19,7 @@ gc_config.py — 경로·상수·실행 설정(AppConfig)
 [env vs 코드]
 =============================================================================
 
-  GC1 장비 PC는 Desktop\\박은규\\gc_automation.env 가 로드되면 덮어씁니다:
+  GC1 장비 PC는 Desktop\\박은규\\_GC자동화\\gc_automation.env (또는 루트 레거시) 가 로드되면 덮어씁니다:
 
     REQUIRED_HOTSPOT=iPhone
     CHEMSTATION_MODE=gc1
