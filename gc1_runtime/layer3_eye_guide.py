@@ -36,6 +36,16 @@ _LOG = print
 _RAW_TOKEN_RX = re.compile(r"(\d+)\s*[\.,]?\s*raw", re.IGNORECASE)
 
 
+def autochro_eye_strict() -> bool:
+    """OCR 검증 실패 시 단계 중단 (기본 ON)."""
+    return os.getenv("GC1_AUTOCHRO_EYE_STRICT", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+    )
+
+
 def autochro_eye_enabled(*, dry_run: bool = False) -> bool:
     """live Autochro 에서 OCR 눈 사용 여부. dry_run 이면 항상 False."""
     if dry_run:
@@ -164,6 +174,39 @@ class AutochroStepEye:
             self._log(f"verify FAIL - {step_id} / {task_id}: {verdict.detail}")
         return verdict.passed
 
+    def require_task(self, step_id: str, task_id: str, *, phase: str = "after") -> None:
+        """OCR 검증 필수 — 실패 시 RuntimeError (GC1_AUTOCHRO_EYE_STRICT)."""
+        ok = self.verify_task(task_id, step_id=step_id, phase=phase)
+        if not ok and autochro_eye_strict():
+            raise RuntimeError(f"OCR gate fail: {step_id} / {task_id}")
+
+    def verify_tree_data_name(self, data_name: str, *, step_id: str) -> bool:
+        """분석목록 왼쪽 트리 OCR — 제어목록 데이터명과 일치."""
+        from gc_autochro import tree_label_matches_data_name
+
+        try:
+            text = self.ocr_region("left_analysis_tree", label=f"{step_id}_tree")
+        except RuntimeError as exc:
+            self._log(f"tree OCR skip: {exc}")
+            return not autochro_eye_strict()
+        compact = re.sub(r"\s+", "", text.lower())
+        name_c = re.sub(r"\s+", "", data_name.lower())
+        if name_c and name_c[: min(len(name_c), 16)] in compact:
+            self._log(f"tree name OK - {data_name!r}")
+            return True
+        for line in text.splitlines():
+            line = line.strip()
+            if line and tree_label_matches_data_name(line, data_name):
+                self._log(f"tree name OK (line) - {line!r}")
+                return True
+        self._log(f"tree name FAIL - want {data_name!r} in {text[:80]!r}")
+        if autochro_eye_strict():
+            raise RuntimeError(f"OCR tree name mismatch: {data_name!r}")
+        return False
+
+    def require_tree_data_name(self, data_name: str, *, step_id: str) -> None:
+        self.verify_tree_data_name(data_name, step_id=step_id)
+
     def scan_between(
         self,
         step_id: str,
@@ -183,18 +226,20 @@ class AutochroStepEye:
             self._log(f"between-step warn: {exc}")
 
     def checkpoint(self, step_id: str, task_id: str) -> None:
-        """단계 사이 검증 — 실패해도 경고만 (다음 단계 시도)."""
+        """단계 검증 — strict 이면 실패 시 중단."""
         try:
-            self.verify_task(task_id, step_id=step_id, phase="between")
+            self.require_task(step_id, task_id, phase="between")
         except Exception as exc:
+            if autochro_eye_strict():
+                raise
             self._log(f"checkpoint warn - {step_id}: {exc}")
 
     def find_raw_anchor_screen_xy(
         self,
-        region_id: str = "control_sample_table",
+        region_id: str = "top_sample_table",
     ) -> Optional[Tuple[int, int]]:
         """
-        제어목록 표에서 ``.raw`` 행 OCR — **가장 위**에 보이는 토큰 중심 (동기화 앵커).
+        오른쪽 위 시료 표에서 ``.raw`` OCR (제어목록·분석목록 동일 화면 위치).
 
         1.raw 라벨이 스크롤로 사라져도 **고정 슬롯 첫 행**에 보이는 .raw 를 찾음.
         """
@@ -313,17 +358,17 @@ class AutochroStepEye:
         fallback_rel: Tuple[int, int],
     ) -> Tuple[int, int]:
         """제어목록 동기화 — 단계 사이 OCR + 마우스 이동 + 더블클릭 좌표 반환."""
-        self.scan_between("P1.before_sync", "control_sample_table", task_id=EYE_TASK_BEFORE_SYNC)
+        self.scan_between("P1.before_sync", "top_sample_table", task_id=EYE_TASK_BEFORE_SYNC)
         rel_x, rel_y = self.resolve_sync_double_click_rel(
             sample_list, fallback_rel=fallback_rel
         )
         self.move_mouse_on_list(sample_list, rel_x, rel_y)
-        self.scan_between("P1.mouse_on_sync", "control_sample_table")
+        self.scan_between("P1.mouse_on_sync", "top_sample_table")
         return rel_x, rel_y
 
     def guided_focus_for_ctrl_a(self, sample_list) -> Tuple[int, int]:
         """Ctrl+A 전 — OCR 로 클릭 위치 잡고 마우스 이동."""
-        self.checkpoint("P2.before_ctrl_a", EYE_TASK_BEFORE_TABLE)
+        self.require_task("P2.before_ctrl_a", EYE_TASK_BEFORE_TABLE)
         rel_x, rel_y = self.resolve_sample_table_rel(sample_list)
         self.move_mouse_on_list(sample_list, rel_x, rel_y)
         self.scan_between("P2.mouse_before_ctrl_a", "top_sample_table")
@@ -331,7 +376,7 @@ class AutochroStepEye:
 
     def guided_after_ctrl_a(self) -> None:
         """Ctrl+A 직후 검증."""
-        self.checkpoint("P2.after_ctrl_a", EYE_TASK_AFTER_CTRL_A)
+        self.require_task("P2.after_ctrl_a", EYE_TASK_AFTER_CTRL_A)
 
     def click_context_menu_ocr(
         self,
@@ -384,7 +429,7 @@ class AutochroStepEye:
         time.sleep(0.45)
         self.scan_between("P3.menu_open", "context_menu_popup")
         self.click_context_menu_ocr(menu_needle, forbid=forbid)
-        self.checkpoint("P3.after_menu_click", EYE_TASK_AFTER_MENU_INIT)
+        self.require_task("P3.after_menu_click", EYE_TASK_AFTER_MENU_INIT)
 
 
 def _neutral_list_rel(sample_list) -> Tuple[int, int]:
@@ -410,4 +455,5 @@ EYE_TASK_AFTER_SYNC = "eye_after_sync_analysis_rows"
 EYE_TASK_BEFORE_TABLE = "eye_before_sample_table"
 EYE_TASK_AFTER_CTRL_A = "eye_after_ctrl_a"
 EYE_TASK_AFTER_INIT = "eye_after_context_init"
+EYE_TASK_AFTER_MTD = "eye_after_mtd_peak"
 EYE_TASK_AFTER_MENU_INIT = "eye_after_menu_초기화"

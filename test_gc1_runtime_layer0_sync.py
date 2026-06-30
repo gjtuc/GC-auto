@@ -16,7 +16,7 @@ class TestSyncDoubleClickCoords(unittest.TestCase):
     def test_matches_legacy_autochro_formula(self):
         """gc_autochro / P1.05~06 과 동일 좌표."""
         rel_x, rel_y = sync_double_click_coords(400, 200)
-        self.assertEqual(rel_x, 100)
+        self.assertEqual(rel_x, 248)
         self.assertEqual(rel_y, 33)
 
     def test_small_list_clamps_y(self):

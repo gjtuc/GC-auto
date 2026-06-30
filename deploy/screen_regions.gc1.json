@@ -59,9 +59,15 @@
     },
     "control_sample_table": {
       "parent": "autochro_window",
-      "box": [0.22, 0.68, 0.78, 0.22],
+      "box": [0.22, 0.08, 0.78, 0.22],
       "stage": "panel",
-      "description": "제어목록 하단 시료 표 — .raw 동기화 더블클릭 OCR"
+      "description": "제어목록 탭 오른쪽 위 시료 표 전체"
+    },
+    "control_file_name_column": {
+      "parent": "autochro_window",
+      "box": [0.48, 0.10, 0.50, 0.20],
+      "stage": "panel",
+      "description": "제어목록 파일이름 열 (1.raw 더블클릭)"
     },
     "context_menu_popup": {
       "parent": "autochro_window",
@@ -93,7 +99,7 @@
       "description": "제어목록 탭 전 하단 표 .raw 가시 여부"
     },
     "eye_before_sync_dclick": {
-      "region": "control_sample_table",
+      "region": "top_sample_table",
       "expect_contains": ["raw"],
       "description": "동기화 더블클릭 직전 제어목록 표"
     },
@@ -117,6 +123,27 @@
       "region": "bottom_peak_table_fine",
       "expect_mostly_zero": true,
       "description": "우클릭 초기화 후 피크 표 cleared"
+    },
+    "eye_after_mtd_peak": {
+      "region": "bottom_peak_table_fine",
+      "expect_numeric_min": 1,
+      "reject_if_mostly_zero": true,
+      "description": "MTD 불러온 뒤 아래 피크 표 면적/RT 숫자"
+    },
+    "eye_sync_tree_name": {
+      "region": "left_analysis_tree",
+      "expect_contains": [],
+      "description": "동기화 후 분석목록 트리에 제어목록 데이터명 (런타임 주입)"
+    },
+    "eye_active_tab_control": {
+      "region": "bottom_tabs",
+      "expect_contains": ["제어목록"],
+      "description": "제어목록 탭 활성"
+    },
+    "eye_active_tab_analysis": {
+      "region": "bottom_tabs",
+      "expect_contains": ["분석목록"],
+      "description": "분석목록 탭 활성"
     },
     "eye_after_menu_초기화": {
       "region": "context_menu_popup",

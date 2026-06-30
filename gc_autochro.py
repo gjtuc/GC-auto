@@ -80,7 +80,9 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   AUTOCHRO_ENABLED, AUTOCHRO_WINDOW_TITLE_PATTERN, AUTOCHRO_DATA_NAME(CRM 경로용)
   AUTOCHRO_AUTO_POSITION, AUTOCHRO_WINDOW_X/Y
   AUTOCHRO_LIST_NEUTRAL_X_FRAC  — Ctrl+A 전 클릭 가로 위치 (기본 0.78)
-  AUTOCHRO_ANALYSIS_METHOD_DIR    — {YYYYMMDD} 분석방법.MTD 폴더 (기본 바탕화면)
+  AUTOCHRO_ANALYSIS_METHOD_DIR    — MTD 폴더 (기본 바탕화면)
+  AUTOCHRO_ANALYSIS_METHOD_FILENAME — MTD 파일명 (기본 20260629 분석방법.MTD)
+  AUTOCHRO_ANALYSIS_METHOD_MTD    — MTD 전체 경로 override
   GC1_AUTOCHRO_PREP_STEPS         — 1=적분 준비(초기화·MTD) 포함 (기본), 0=생략
   GC1_USE_RUNTIME                 — 1=``gc1_runtime.layer4_job`` 위임 (기본 0, 기존 UI 경로)
   GC1_AUTOCHRO_EYE               — 1=단계마다 OCR 눈 (live 기본 1, dry_run 제외)
@@ -566,7 +568,8 @@ def _pick_listview(win, *, prefer: str, purpose: str):
 
 
 def _control_sync_list(win):
-    return _pick_listview(win, prefer="lower", purpose="제어목록")
+    """제어목록 탭 오른쪽 위 시료 표 (파일이름 1.raw)."""
+    return _pick_listview(win, prefer="upper", purpose="제어목록")
 
 
 def _analysis_sample_table(win):
@@ -781,18 +784,22 @@ def tree_label_matches_data_name(tree_line: str, data_name: str) -> bool:
     return compact_line == compact_name or compact_line.startswith(compact_name)
 
 
-def resolve_analysis_method_mtd_path(data_name: str) -> str:
-    """바탕화면(또는 AUTOCHRO_ANALYSIS_METHOD_DIR) 의 {YYYYMMDD} 분석방법.MTD"""
-    compact = re.sub(r"\s+", "", (data_name or "").strip())
-    match8 = re.match(r"^(\d{8})", compact)
-    if match8:
-        date = match8.group(1)
-    else:
-        match6 = re.match(r"^(\d{6})", compact)
-        if not match6:
-            raise ValueError(f"데이터명에서 날짜 추출 실패: {data_name!r}")
-        date = f"20{match6.group(1)}"
-    filename = f"{date} 분석방법.MTD"
+def resolve_analysis_method_mtd_path(data_name: str = "") -> str:
+    """
+    GC1 적분 MTD — **고정 파일명** (실험 데이터명 날짜와 무관).
+
+    기본: ``20260629 분석방법.MTD`` (바탕화면 또는 AUTOCHRO_ANALYSIS_METHOD_DIR).
+  override: ``AUTOCHRO_ANALYSIS_METHOD_MTD`` 전체 경로.
+    """
+    explicit = os.getenv("AUTOCHRO_ANALYSIS_METHOD_MTD", "").strip()
+    if explicit:
+        path = os.path.normpath(os.path.expanduser(explicit))
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"분석방법 MTD 없음: {path}")
+        return path
+    filename = os.getenv(
+        "AUTOCHRO_ANALYSIS_METHOD_FILENAME", "20260629 분석방법.MTD"
+    ).strip()
     base = os.getenv("AUTOCHRO_ANALYSIS_METHOD_DIR", "").strip()
     if not base:
         base = os.path.join(os.path.expanduser("~"), "Desktop")
@@ -839,16 +846,19 @@ def _make_step_eye(win, cfg: AutochroConfig):
     return AutochroStepEye.from_window_rect(win.rectangle(), log_fn=_log)
 
 
-def step_sync_control_to_analysis(win, cfg: AutochroConfig) -> None:
+def step_sync_control_to_analysis(
+    win, cfg: AutochroConfig, data_name: str | None = None
+) -> None:
     _log("제어목록 탭 -> 시료 더블클릭 -> 분석목록")
     if cfg.dry_run:
         return
     from gc1_runtime.layer0_sync import evaluate_sync_post_check, sync_double_click_coords
 
     eye = _make_step_eye(win, cfg)
+    _select_control_tab(win)
     if eye:
         eye.scan_between("P1.start", "control_sample_table", task_id="eye_before_control_sync")
-    _select_control_tab(win)
+        eye.require_task("P1.tab_control", "eye_active_tab_control")
     sample_list = _control_sync_list(win)
     control_count = _listview_item_count(sample_list)
     sample_list.set_focus()
@@ -883,7 +893,9 @@ def step_sync_control_to_analysis(win, cfg: AutochroConfig) -> None:
         f"제어 {post.control_item_count}행 / 분석 {post.analysis_item_count}행"
     )
     if eye:
-        eye.checkpoint("P1.after_sync", "eye_after_sync_analysis_rows")
+        eye.require_task("P1.after_sync", "eye_after_sync_analysis_rows")
+        dn = (data_name or "").strip() or read_active_control_data_name(win, cfg)
+        eye.require_tree_data_name(dn, step_id="P1.tree")
 
 
 def step_context_initialize_samples(win, cfg: AutochroConfig) -> None:
@@ -904,7 +916,7 @@ def step_context_initialize_samples(win, cfg: AutochroConfig) -> None:
             sample_list.click_input(button="right", coords=(rel_x, rel_y))
             time.sleep(0.35)
             _click_context_initialize()
-        eye.checkpoint("P3.after_init", "eye_after_context_init")
+        eye.require_task("P3.after_init", "eye_after_context_init")
     else:
         _right_click_sample_table(sample_list)
         _click_context_initialize()
@@ -912,21 +924,28 @@ def step_context_initialize_samples(win, cfg: AutochroConfig) -> None:
 
 
 def step_load_analysis_method(win, cfg: AutochroConfig, data_name: str) -> None:
-    """왼쪽 트리 시료명 우클릭 -> 분석방법 불러오기 -> MTD."""
-    mtd_path = resolve_analysis_method_mtd_path(data_name)
+    """왼쪽 트리 시료명 우클릭 -> 분석방법 불러오기 -> 고정 MTD."""
+    mtd_path = resolve_analysis_method_mtd_path()
     _log(f"분석방법 MTD: {os.path.basename(mtd_path)}")
     if cfg.dry_run:
         return
     eye = _make_step_eye(win, cfg)
     if eye:
         eye.scan_between("P4.before_tree", "left_analysis_tree")
+        eye.require_tree_data_name(data_name, step_id="P4.before_mtd")
     _select_analysis_tab(win)
+    if eye:
+        eye.require_task("P4.tab_analysis", "eye_active_tab_analysis")
     _right_click_tree_data_name(win, data_name)
     if eye:
         eye.scan_between("P4.after_tree_menu", "context_menu_popup")
     _click_context_load_analysis_method()
     _open_path_in_file_dialog(r"분석방법 불러오기", mtd_path, timeout=cfg.dialog_wait_sec)
     time.sleep(2.0)
+    if eye:
+        from gc1_runtime.layer3_eye_guide import EYE_TASK_AFTER_MTD
+
+        eye.require_task("P4.after_mtd", EYE_TASK_AFTER_MTD)
 
 
 def step_select_all_samples(win, cfg: AutochroConfig) -> None:
@@ -1354,7 +1373,7 @@ def run_autochro_export(
         _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
         if not force and is_pdf_recently_exported(pdf_path):
             return True, pdf_path, f"방금 PDF 내보냄 — Autochro 재실행 생략 ({pdf_fresh_skip_sec()}초 이내)"
-        step_sync_control_to_analysis(win, cfg)
+        step_sync_control_to_analysis(win, cfg, data_name)
         if _prep_steps_enabled():
             step_select_all_samples(win, cfg)
             step_context_initialize_samples(win, cfg)

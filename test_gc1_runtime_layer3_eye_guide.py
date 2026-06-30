@@ -31,7 +31,7 @@ class TestRawToken(unittest.TestCase):
 class TestSyncCoordsTopRow(unittest.TestCase):
     def test_first_row_slot_not_bottom(self):
         rel_x, rel_y = sync_double_click_coords(400, 200)
-        self.assertEqual(rel_x, 100)
+        self.assertEqual(rel_x, 248)
         self.assertLess(rel_y, 80)
         self.assertGreaterEqual(rel_y, 18)
 

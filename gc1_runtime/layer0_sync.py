@@ -13,6 +13,8 @@ Autochro 운영 맥락 (실장비):
 """
 from __future__ import annotations
 
+import os
+
 from dataclasses import dataclass
 from enum import Enum
 
@@ -21,11 +23,16 @@ def sync_double_click_coords(width: int, height: int) -> tuple[int, int]:
     """
     제어목록 SysListView32 내부 더블클릭 상대 좌표 (P1.05 + P1.06).
 
-    **표 상단 첫 가시 행 슬롯** — ``1.raw`` 라벨이 스크롤로 없어져도 같은 높이.
-    (구버전 height-24 는 표 하단이라 커서가 .raw 위치에 안 감)
+    **파일이름 열(1.raw)** + **표 상단 첫 가시 행** — OCR fallback 용.
     """
+    raw_x = os.getenv("AUTOCHRO_SYNC_RAW_X_FRAC", "0.62").strip()
+    try:
+        x_frac = float(raw_x)
+    except ValueError:
+        x_frac = 0.62
+    x_frac = min(max(x_frac, 0.45), 0.82)
     rel_y = max(18, min(40, height // 6))
-    rel_x = max(20, width // 4)
+    rel_x = max(20, int(width * x_frac))
     return rel_x, rel_y
 
 
