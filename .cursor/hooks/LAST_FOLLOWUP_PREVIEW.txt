@@ -4,7 +4,7 @@
 # =============================================================================
 #
 # 치환 (1곳만):
-#   (placeholder TASK on line "현재 단계:" only)
+#   **T11** 동 문서 — Ω-L0 전 leaf(WIFI/WIN/LV/TR/TAB/DN/MTD/PDF/SCR/TASK/FOCUS)  →  AGENT_TASK_QUEUE.md 의 현재 `- [ ]` 줄 설명 전체
 #
 # 수정 시:
 #   · 에이전트에게 매 턴마다 반복하고 싶은 규칙을 여기에 적으면 됨
@@ -14,7 +14,7 @@
 
 .cursor/AGENT_TASK_QUEUE.md 작업 큐 — 아래 단계 하나만 진행하라.
 
-현재 단계: {{TASK}}
+현재 단계: **T11** 동 문서 — Ω-L0 전 leaf(WIFI/WIN/LV/TR/TAB/DN/MTD/PDF/SCR/TASK/FOCUS)
 
 - 이 단계만 코드 작업 (다른 단계 건드리지 말 것)
 - 정적 검증 후 반드시 직접 실행·테스트 (코드 검증과 실행 검증은 별개)

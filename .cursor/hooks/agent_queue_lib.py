@@ -105,7 +105,7 @@ def first_unchecked_task() -> str | None:
 def build_followup(task: str) -> str:
     """task_queue_followup_template.txt 의 {{TASK}} 를 현재 단계 설명으로 치환."""
     template = TEMPLATE_PATH.read_text(encoding="utf-8")
-    return template.replace("{{TASK}}", task)
+    return template.replace("{{TASK}}", task, 1)
 
 
 def evaluate_stop(payload: dict[str, Any]) -> dict[str, Any]:
