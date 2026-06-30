@@ -10,8 +10,8 @@
                         "windows_user":  "User"
                     },
     "sync":  {
-                 "last_push_at":  "2026-06-30T19:50:41+09:00",
-                 "last_push_commit":  "cebb638",
+                 "last_push_at":  "2026-06-30T19:55:21+09:00",
+                 "last_push_commit":  "c552d8a",
                  "last_push_by":  "DESKTOP-MBGSSME\\은규",
                  "last_pull_at":  "2026-06-22T20:40:27+09:00",
                  "last_pull_commit":  "564d5b3",
@@ -19,6 +19,14 @@
                  "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
              },
     "history":  [
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T19:55:21+09:00",
+                        "commit":  "c552d8a",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 19:55:17",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
                     {
                         "event":  "push",
                         "at":  "2026-06-30T19:50:41+09:00",
@@ -170,14 +178,6 @@
                         "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-22 18:41:15",
                         "by":  "DESKTOP-MBGSSME\\은규",
                         "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "pull",
-                        "at":  "2026-06-22T18:28:29+09:00",
-                        "commit":  "d8d61c8",
-                        "subject":  "sync: registry GC8860 push @ 2026-06-19 19:16:30",
-                        "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "cursor:sessionStart"
                     }
                 ]
 }
