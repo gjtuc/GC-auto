@@ -233,7 +233,18 @@ def stop_all_watch(excel_output_dir: str | None = None) -> int:
 
             out_dir = resolve_profile().excel_output_dir
         except Exception:
-            out_dir = os.path.join(os.path.expanduser("~"), "Desktop", "KCH")
+            try:
+                from gc_profiles import paths_for_output_dir, resolve_profile
+
+                profile = resolve_profile()
+                paths = paths_for_output_dir(
+                    profile.excel_output_dir, gc_instance=profile.gc_instance
+                )
+                out_dir = paths.get("runtime_dir") or profile.excel_output_dir
+            except Exception:
+                out_dir = os.path.join(
+                    os.path.expanduser("~"), "Desktop", "박은규", "_GC자동화"
+                )
     clear_stale_lock_file(out_dir)
     return len(pids)
 

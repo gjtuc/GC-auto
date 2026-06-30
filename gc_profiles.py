@@ -253,6 +253,8 @@ def migrate_gc1_runtime_layout(excel_output_dir: str) -> int:
         ".gc_hotspot_agent_state.json",
         ".gc_hotspot_agent_pending.json",
         ".gc_hotspot_agent_run.log",
+        ".gc_watch_activity.log",
+        "gc_wifi_autoconnect.log",
     ):
         src = os.path.join(data_root, name)
         dst = os.path.join(runtime, name)
@@ -326,6 +328,86 @@ def migrate_gc1_runtime_layout(excel_output_dir: str) -> int:
                     moved += 1
                 except OSError:
                     pass
+    moved += _migrate_gc1_stray_desktop_kch(runtime)
+    return moved
+
+
+def _desktop_kch_dir() -> str:
+    return os.path.normpath(os.path.join(os.path.expanduser("~"), "Desktop", "KCH"))
+
+
+def _merge_or_move_file(src: str, dst: str) -> bool:
+    """GC1: 바탕화면 KCH 잔여 로그 등을 ``_GC자동화`` 로 합침."""
+    import shutil
+
+    if not os.path.isfile(src):
+        return False
+    if os.path.normcase(os.path.abspath(src)) == os.path.normcase(os.path.abspath(dst)):
+        return False
+    if os.path.isfile(dst):
+        try:
+            with open(dst, "a", encoding="utf-8", errors="replace") as out_f:
+                out_f.write("\n")
+                with open(src, encoding="utf-8", errors="replace") as in_f:
+                    out_f.write(in_f.read())
+            os.remove(src)
+            return True
+        except OSError:
+            return False
+    try:
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.move(src, dst)
+        return True
+    except OSError:
+        return False
+
+
+def _migrate_gc1_stray_desktop_kch(runtime: str) -> int:
+    """
+  GC1 PC에만: ``Desktop\\KCH`` 는 GC2/GC3용이라 은규가 보면 혼란.
+  env 미로드 등으로 생긴 로그·잔여 파일을 ``_GC자동화`` 로 옮기고 빈 폴더 삭제.
+    """
+    import shutil
+
+    kch = _desktop_kch_dir()
+    if not os.path.isdir(kch):
+        return 0
+    moved = 0
+    try:
+        names = list(os.listdir(kch))
+    except OSError:
+        return 0
+    for name in names:
+        src = os.path.join(kch, name)
+        if name == "_system" and os.path.isdir(src):
+            dst = os.path.join(runtime, "_system")
+            if os.path.isdir(dst):
+                for sub in os.listdir(src):
+                    sub_src = os.path.join(src, sub)
+                    sub_dst = os.path.join(dst, sub)
+                    if os.path.isfile(sub_src) and _merge_or_move_file(sub_src, sub_dst):
+                        moved += 1
+                try:
+                    os.rmdir(src)
+                except OSError:
+                    pass
+            else:
+                try:
+                    shutil.move(src, dst)
+                    moved += 1
+                except OSError:
+                    pass
+            continue
+        if os.path.isfile(src):
+            dst = os.path.join(runtime, name)
+            if _merge_or_move_file(src, dst):
+                moved += 1
+    try:
+        if not os.listdir(kch):
+            os.rmdir(kch)
+            moved += 1
+    except OSError:
+        pass
     return moved
 
 

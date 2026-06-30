@@ -24,8 +24,8 @@ Desktop\박은규\
 
 - `EXCEL_OUTPUT_DIR` = 데이터 루트 (`박은규`) — xlsx·pdf·PDF glob
 - `gc_runtime_dir()` / `paths_for_output_dir()["runtime_dir"]` = `_GC자동화` — 상태·env·watch
-- `gc_automation.py` 시작 시 `migrate_gc1_runtime_layout()` — 루트에 남은 자동화 파일 자동 정리
-- GC2/GC3 (`Desktop\KCH`) — 레이아웃 변경 없음
+- `gc_automation.py` 시작 시 `migrate_gc1_runtime_layout()` — 루트·바탕화면 `KCH` 잔여 파일 자동 정리
+- GC1 PC에 `Desktop\KCH` 가 생기면 (env 미로드 등) 내용을 `_GC자동화`로 합친 뒤 빈 폴더 삭제 — **GC2/GC3 장비 PC의 KCH 폴더와 무관**
 
 ## OCR·학습 (PC 전역, 박은규 밖)
 
