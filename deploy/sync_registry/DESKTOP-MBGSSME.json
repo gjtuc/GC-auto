@@ -10,8 +10,8 @@
                         "windows_user":  "User"
                     },
     "sync":  {
-                 "last_push_at":  "2026-06-30T09:43:10+09:00",
-                 "last_push_commit":  "655b873",
+                 "last_push_at":  "2026-06-30T09:51:34+09:00",
+                 "last_push_commit":  "d587189",
                  "last_push_by":  "DESKTOP-MBGSSME\\은규",
                  "last_pull_at":  "2026-06-22T20:40:27+09:00",
                  "last_pull_commit":  "564d5b3",
@@ -19,6 +19,14 @@
                  "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
              },
     "history":  [
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T09:51:34+09:00",
+                        "commit":  "d587189",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 09:51:30",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
                     {
                         "event":  "push",
                         "at":  "2026-06-30T09:43:10+09:00",
@@ -170,14 +178,6 @@
                         "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-18 20:15:56",
                         "by":  "DESKTOP-MBGSSME\\은규",
                         "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "pull",
-                        "at":  "2026-06-18T20:15:51+09:00",
-                        "commit":  "15e186c",
-                        "subject":  "Merge branch \u0027main\u0027 of https://github.com/gjtuc/GC-auto",
-                        "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "agent_restart"
                     }
                 ]
 }
