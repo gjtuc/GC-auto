@@ -10,8 +10,8 @@
                         "windows_user":  "User"
                     },
     "sync":  {
-                 "last_push_at":  "2026-06-30T09:25:50+09:00",
-                 "last_push_commit":  "b0cdaf4",
+                 "last_push_at":  "2026-06-30T09:29:27+09:00",
+                 "last_push_commit":  "c4f4f6c",
                  "last_push_by":  "DESKTOP-MBGSSME\\은규",
                  "last_pull_at":  "2026-06-22T20:40:27+09:00",
                  "last_pull_commit":  "564d5b3",
@@ -19,6 +19,14 @@
                  "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
              },
     "history":  [
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T09:29:27+09:00",
+                        "commit":  "c4f4f6c",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 09:29:23",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
                     {
                         "event":  "push",
                         "at":  "2026-06-30T09:25:50+09:00",
@@ -170,14 +178,6 @@
                         "subject":  "feat: PC sync tracking ??who pushed/pulled and who is behind",
                         "by":  "DESKTOP-MBGSSME\\User",
                         "triggered_by":  "manual"
-                    },
-                    {
-                        "event":  "pull",
-                        "at":  "2026-06-18T14:46:21+09:00",
-                        "commit":  "dff49c2",
-                        "subject":  "docs: add cross-PC comments and CODEBASE_GUIDE",
-                        "by":  "DESKTOP-MBGSSME\\User",
-                        "triggered_by":  "setup"
                     }
                 ]
 }
