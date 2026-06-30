@@ -10,8 +10,8 @@
                         "windows_user":  "User"
                     },
     "sync":  {
-                 "last_push_at":  "2026-06-30T09:39:42+09:00",
-                 "last_push_commit":  "7bdc919",
+                 "last_push_at":  "2026-06-30T09:43:10+09:00",
+                 "last_push_commit":  "655b873",
                  "last_push_by":  "DESKTOP-MBGSSME\\은규",
                  "last_pull_at":  "2026-06-22T20:40:27+09:00",
                  "last_pull_commit":  "564d5b3",
@@ -19,6 +19,14 @@
                  "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
              },
     "history":  [
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T09:43:10+09:00",
+                        "commit":  "655b873",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 09:43:06",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
                     {
                         "event":  "push",
                         "at":  "2026-06-30T09:39:42+09:00",
@@ -170,14 +178,6 @@
                         "subject":  "Merge branch \u0027main\u0027 of https://github.com/gjtuc/GC-auto",
                         "by":  "DESKTOP-MBGSSME\\은규",
                         "triggered_by":  "agent_restart"
-                    },
-                    {
-                        "event":  "pull",
-                        "at":  "2026-06-18T20:02:33+09:00",
-                        "commit":  "ce04837",
-                        "subject":  "docs: 은규 PC는 G: 미사용, 연구노트 로컬 경로로 통일",
-                        "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "gc_git_pull.bat"
                     }
                 ]
 }
