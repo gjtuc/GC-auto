@@ -38,6 +38,7 @@ _COMPILE_TARGETS = (
     "gc1_runtime/layer4_atom_fallback.py",
     "gc1_runtime/layer0_sync.py",
     "gc1_runtime/layer0_blocked.py",
+    "gc1_runtime/layer0_live_e2e.py",
     "gc1_runtime/layer0_resume.py",
     "gc1_runtime/layer4_job.py",
     "scripts/validate_gc1_rt.py",
@@ -52,6 +53,7 @@ _COMPILE_TARGETS = (
     "scripts/run_gc1_mod_pipeline.py",
     "scripts/close_gc1_mod.py",
     "scripts/run_gc1_runtime_e2e.py",
+    "scripts/run_gc1_step8_live.py",
     "scripts/probe_gc1_ident.py",
     "scripts/probe_gc1_pipeline_status.py",
 )
@@ -63,6 +65,7 @@ _UNITTEST_PATTERNS_FULL = (
     "test_gc1_rt_validate.py",
     "test_gc1_resume_policy.py",
     "test_gc1_blocked_policy.py",
+    "test_gc1_live_e2e.py",
     "test_gc1_reaction_gate.py",
     "test_gc1_runtime_layer0_sync.py",
     "test_gc1_trim.py",
@@ -94,6 +97,11 @@ _CLI_SMOKE = (
     (
         [sys.executable, "scripts/probe_gc1_pipeline_status.py", "--skip-ready-wait"],
         "probe_gc1_pipeline_status",
+        (0, 2),
+    ),
+    (
+        [sys.executable, "scripts/run_gc1_step8_live.py", "--preflight", "--mode", "excel"],
+        "run_gc1_step8_live --preflight",
         (0, 2),
     ),
 )
