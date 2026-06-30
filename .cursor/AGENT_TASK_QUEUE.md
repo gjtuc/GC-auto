@@ -28,7 +28,7 @@
 ## B. 설계 고정 (코드 없음 — leaf 스펙 문서)
 
 - [x] **T10** `deploy/GC1_RUNTIME_DESIGN.md` — Ω-1~4(원자 종료·ID·7필드·R/C 경계) + Ω-B(B-IDENT~B-CLK leaf 표)
-- [ ] **T11** 동 문서 — Ω-L0 전 leaf(WIFI/WIN/LV/TR/TAB/DN/MTD/PDF/SCR/TASK/FOCUS)
+- [x] **T11** 동 문서 — Ω-L0 전 leaf(WIFI/WIN/LV/TR/TAB/DN/MTD/PDF/SCR/TASK/FOCUS)
 - [ ] **T12** 동 문서 — Ω-L2 게이트(G-EX, G-ATOM) + Ω-ERR 코드↔은규 한 줄 메시지表
 - [ ] **T13** 동 문서 — Ω-L4 **P0~P4** leaf 전개(번호·pre/post probe ID만, ~150 leaf)
 - [ ] **T14** 동 문서 — Ω-L4 **P5~P9** + Ω-L6-CLEAN/PARSE leaf + `.gc_autochro_job.json` 스키마 JSON 예시
