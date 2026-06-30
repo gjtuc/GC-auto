@@ -1,8 +1,19 @@
 # GC1 Runtime — 최하층(지하)부터 재귀 분해 설계서
 
-> **목적:** 규칙(R)은 **동결**. 체질(C)만 **0·지하층부터** leaf까지 쪼갠 **설계 명세** (코드·구현·Hook 큐 **없음**).  
-> **상태:** 2026-06-29 — 사용자 수정사항(MOD) 슬롯은 §MOD 에 끼워 넣을 자리만 표시.  
+> **목적:** 규칙(R)은 **동결**. 체질(C)만 **0·지하층부터** leaf까지 **재귀 분해 끝** (코드·Hook 큐 **없음**).  
+> **상태:** 2026-06-29 — **절대 최대 분해** (PART 1~6). MOD 슬롯 §MOD.  
 > **leaf ID:** `Ω.<타워>.<층>.<블록>.<순번>.<기호>`
+
+### 문서 분할 (전체 설계)
+
+| 파일 | 내용 |
+|------|------|
+| **본 문서** | §0 헌법, §B, §L0~L3, 요약 |
+| [PART2_L4](GC1_RUNTIME_DESIGN_PART2_L4.md) | P0~P9 **72 atom**, ~225 action leaf, 7필드 |
+| [PART3_L6](GC1_RUNTIME_DESIGN_PART3_L6.md) | parse·trim(**6×N**), clean, mail, pdf-wait |
+| [PART4_L7_L8](GC1_RUNTIME_DESIGN_PART4_L7_L8.md) | watch·force·표면·error_handler |
+| [PART5_TOWER_B](GC1_RUNTIME_DESIGN_PART5_TOWER_B.md) | 은규 PC IMAP→계산→G:→Origin |
+| [PART6_RETRY](GC1_RUNTIME_DESIGN_PART6_RETRY.md) | 전 atom on_fail·resume·blocked |
 
 ---
 
@@ -317,13 +328,21 @@ target_frac: upper=0.35, lower=0.75, any=0.5
 | Ω.A.L0.SCR.O.04d.CMP.conf25 | conf<25 skip |
 | Ω.A.L0.SCR.O.04e.PURE.token | append OcrToken |
 
-**TASK (read_tasks)**
+**HIERARCHICAL READ (region × stage — 각 조합 독립 leaf 체인)**
 
-| task | post leaf |
-|------|-----------|
-| verify_active_tab_analysis | CMP "분석목록" in text |
-| verify_peak_table_has_data | RX numeric count>=1, not mostly zero |
-| verify_peak_table_cleared | CMP zero ratio high |
+regions: `bottom_tabs`, `left_analysis_tree`, `top_sample_table`, `bottom_peak_table`, `bottom_peak_table_fine`, `chromatogram_center`, `autochro_window`  
+stages: `full`(1.0×) → `panel`(2.5×) → `fine`(3.5×)
+
+per (region, stage): GEO.01→04, CAP.01→03, Z.01→03, P.01→02, O.01→04e  
+= **7 regions × 3 stages × 14 leaf = 294 leaf** (Ω.A.L0.SCR.H.*)
+
+**TASK (read_tasks)** — each TASK = full hierarchical read + verify
+
+| task | verify leaf |
+|------|-------------|
+| verify_active_tab_analysis | CMP "분석목록" in plain_text |
+| verify_peak_table_has_data | RX numeric≥1, reject mostly_zero |
+| verify_peak_table_cleared | CMP zero ratio ≥ 0.85 |
 
 **FOCUS overlay**
 
@@ -372,29 +391,65 @@ G-FB   = channel H fail → retry E same matcher (if configured)
 
 ---
 
-## §L3 — 액추에이터 채널
+## §L3 — 액추에이터 채널 (각 호출 = 1 leaf)
 
-### H (Hand) — W32 leaf 목록
+### H (Hand) — 16 leaf types
 
-`set_focus`, `restore`, `move_window`, `select_tab`, `tabs.select`, `click_input`, `double_click_input`, `right_click`, `send_keys`, `menu_select`, `menu_item.click`, `set_edit_text`, `type_keys`, `child_window.click`
+| H-ID | W32 op |
+|------|--------|
+| H.01 | restore |
+| H.02 | set_focus(win) |
+| H.03 | move_window |
+| H.04 | tabs.select(i) |
+| H.05 | click_input left coords |
+| H.06 | click_input right coords |
+| H.07 | double_click_input |
+| H.08 | send_keys |
+| H.09 | menu_select path |
+| H.10 | menu_item.click |
+| H.11 | set_edit_text |
+| H.12 | type_keys |
+| H.13 | child_window(Button).click |
+| H.14 | dlg.set_focus |
+| H.15 | tree.select |
+| H.16 | wrapper_object |
 
-### E (Eye) — L0-SCR + find text click
+### E (Eye) — 5 leaf types
 
-`hierarchical_read`, `find_token`, `click_token_center`
+| E-ID | op |
+|----|-----|
+| E.01 | hierarchical_read(region) |
+| E.02 | find_token(text) |
+| E.03 | PURE token center xy |
+| E.04 | H.05 click at token |
+| E.05 | focus_overlay show/destroy |
 
-### F (File) — dialog + FS
+### F (File) — 8 leaf types
 
-`open_path_in_dialog`, `confirm_overwrite`, `save_button`, `glob_newest_pdf`
+| F-ID | op |
+|----|-----|
+| F.01 | FS.makedirs |
+| F.02 | FS.unlink |
+| F.03 | FS.glob |
+| F.04 | find dialog by title_re |
+| F.05 | pick filename Edit |
+| F.06 | click Open/Save |
+| F.07 | confirm overwrite Yes |
+| F.08 | record_export state |
 
-### W (Wait) — WAIT leaf only
+### W (Wait) — 3 leaf types
 
-고정 sleep / poll until probe / deadline loop
+| W-ID | op |
+|----|-----|
+| W.01 | sleep(fixed_ms) |
+| W.02 | poll_until(probe, interval, deadline) |
+| W.03 | retry_delay from on_fail |
 
 ---
 
-## §L4 — 페이즈·원자 (전 leaf)
+## §L4 — 페이즈·원자 (요약 — **전량은 PART2**)
 
-> 각 원자 = §0-4 의 7필드. 아래는 **action[]** 안의 leaf 순서.
+> 72 atom × 7필드. action leaf ~225. P5/P6는 P2/P3 재사용이나 **atom ID·STW 독립**.
 
 ### P0 JOB_PRELUDE
 
@@ -598,36 +653,9 @@ P2+P3 재실행, `attempt=2` STW only.
 
 ---
 
-# 타워 B — 은규 PC (동일 깊이·미러)
+# 타워 B — 은규 PC
 
-## §B-B IDENT (data_pc)
-
-| ID | leaf |
-|----|------|
-| Ω.B.B.IDENT.01 | FS.isdir gc-data-pc |
-| Ω.B.B.IDENT.02 | profile role=data_pc |
-| Ω.B.B.IDENT.03 | CMP operator 은규 |
-| Ω.B.B.IDENT.04 | HARD_STOP if gc_automation on this PC |
-
-## §B-L0 (data_pc_runtime mirrors)
-
-| 블록 | leaf 수(설계) |
-|------|----------------|
-| L0-WIFI | 9 (동일) |
-| L0-G | G1 isdir EXPERIMENT_ROOT |
-| L0-IMAP | TCP connect host:993 |
-| L0-PID | supervisor alive |
-
-## §B-L6 phases (촉매 반응 계산.py)
-
-| Phase | atoms |
-|-------|-------|
-| B-P1 IMAP | fetch → save inbox |
-| B-P2 CALC | xlsx → processed |
-| B-P3 ARCHIVE | copy G: experiment folder |
-| B-P4 ORIGIN | opju update (lock) |
-
-각 Phase는 타워 A와 동일하게 **§0-4 7필드**로 하위 leaf 전개 (별표: MOD 후 상세화).
+**전량:** [PART5_TOWER_B](GC1_RUNTIME_DESIGN_PART5_TOWER_B.md) — B-P1 IMAP ~55 leaf, B-P2~P4, JobRunner, Supervisor.
 
 ---
 
@@ -659,26 +687,34 @@ P2+P3 재실행, `attempt=2` STW only.
 
 ---
 
-## §STATS — leaf 카운트 (본 문서)
+## §STATS — leaf 카운트 (**절대 최대**, PART 1~6 합)
 
-| 블록 | leaf 수 |
-|------|---------|
-| Ω.A.B (IDENT+HOST+CFG+STATE+CLK) | ~110 |
-| Ω.A.L0 | ~95 |
-| Ω.A.L1-L2 | ~15 |
-| Ω.A.L4 P0-P9 + P9-HANCOM | ~145 |
-| Ω.A.L6 CLEAN+PARSE+MAIL | ~35 |
-| Ω.A.L7 | ~12 |
-| Ω.B (mirror skeleton) | ~40 |
-| **합계** | **~450+** (타워 B Phase leaf 전개·MOD 반영 시 **700+**) |
+| 블록 | 고정 leaf | 가변 leaf |
+|------|-----------|-----------|
+| Ω.A.B | 110 | — |
+| Ω.A.L0 (기본) | 95 | — |
+| Ω.A.L0.SCR hierarchical | 294 | — |
+| Ω.A.L1–L3 | 47 | — |
+| Ω.A.L4 (PART2) | 225 | hancom loop × iterations |
+| Ω.A.L6 (PART3) | 53 | **6×N** trim + **7×files** clean + **2×pages** parse |
+| Ω.A.L7–L8 (PART4) | 45 | — |
+| Ω.A.RETRY (PART6) | 32 | — |
+| Ω.B (PART5) | 160 | **×mail items × attachments** |
+| **합계 (典型)** | **~1060** | N=50 주입 → **+300** → **~1360** |
+
+**가변 공식:**  
+`TOTAL = 1060 + 6×N + 2×P + 7×F + 8×M×A + hancom_iters×8`  
+(N=주입 수, P=PDF 페이지, F=clean 후보 파일, M=메일, A=첨부)
+
+**leaf 종료:** §0-3 기준 더 쪼개면 W32 단일 API 호출 이하만 남음 → **설계 종료**.
 
 ---
 
-## §NEXT — 아직 재귀 쪼개기 남은 곳 (수정사항 전)
+## §DONE
 
-1. 타워 B B-P1~P4 각 Phase → P3 수준 atom 표  
-2. PAR.08a noise: 주입별 H2 area CMP leaf N개  
-3. 각 `on_fail.retry` 정책 leaf (attempt 1..3 delay 표)  
-4. MOD-* 반영 후 영향 subtree만 재전개  
+- 타워 A Autochro + parse + mail + watch: **leaf 전개 완료**  
+- 타워 B IMAP→Origin: **leaf 전개 완료** (PART5)  
+- retry/resume/blocked: **완료** (PART6)  
+- **MOD-* 입력 시:** §MOD subtree만 추가 leaf (R 불변)
 
-**구현·Hook 큐·코드 파일 생성은 본 설계 승인·MOD 입력 후.**
+**구현·Hook 큐·코드:** MOD 반영 후.
