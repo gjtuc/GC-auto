@@ -1,0 +1,28 @@
+{
+  "_comment": "GC3 Chem32 — 창 내부 상대 좌표 (0~1). GC3 PC 앞에서 1회 캘리브레이션. deploy/GC3_SCREEN_REGION_READ.md",
+  "display_profile": {
+    "width": 1920,
+    "height": 1080,
+    "scale_percent": 100,
+    "notes": "Chem32 메인 창 최대화·배율 100% 기준. Win7 GC3 장비 PC에서 조정."
+  },
+  "window_title_contains": "ChemStation",
+  "regions": {
+    "chem32_main_window": {
+      "parent": null,
+      "box": [0, 0, 1, 1],
+      "scale": 1.0,
+      "method": "ocr",
+      "description": "Chem32 메인 창 전체",
+      "dry_run_text": "ChemStation Analysis"
+    },
+    "chem32_status_bar": {
+      "parent": "chem32_main_window",
+      "box": [0, 0.85, 1, 0.15],
+      "scale": 2.0,
+      "method": "ocr",
+      "description": "하단 상태·진행 표시줄 (Report.TXT 보조)",
+      "dry_run_text": "Status: Idle | Sequence complete"
+    }
+  }
+}

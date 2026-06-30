@@ -1,6 +1,7 @@
-# GC1 Runtime 설계 — PART 2: L4 원자 (7필드 전개)
+# GC1 Runtime 설계 — PART 2: L4 원자 (action leaf 요약)
 
 > 상위: [GC1_RUNTIME_DESIGN.md](GC1_RUNTIME_DESIGN.md)  
+> **7필드 registry:** [PART2_L4_P0_P4](GC1_RUNTIME_DESIGN_PART2_L4_P0_P4.md) (T13), [PART2_L4_P5_P9](GC1_RUNTIME_DESIGN_PART2_L4_P5_P9.md) (T14)  
 > **leaf 종료:** §0-3. 각 **atom** = 독립 7필드. action[] 안 leaf는 순서 고정.
 
 ---

@@ -77,6 +77,7 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   AUTOCHRO_LIST_NEUTRAL_X_FRAC  — Ctrl+A 전 클릭 가로 위치 (기본 0.78)
   AUTOCHRO_ANALYSIS_METHOD_DIR    — {YYYYMMDD} 분석방법.MTD 폴더 (기본 바탕화면)
   GC1_AUTOCHRO_PREP_STEPS         — 1=적분 준비(초기화·MTD) 포함 (기본), 0=생략
+  GC1_USE_RUNTIME                 — 1=``gc1_runtime.layer4_job`` 위임 (기본 0, 기존 UI 경로)
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
@@ -1194,6 +1195,11 @@ def step_save_pdf(cfg: AutochroConfig, pdf_path: str) -> None:
     )
 
 
+def _gc1_use_runtime() -> bool:
+    """Ω.A.B.CFG.15 — 기본 0: 기존 step_* 경로. 1: ``gc1_runtime.layer4_job`` (T61)."""
+    return os.getenv("GC1_USE_RUNTIME", "0").strip().lower() in ("1", "true", "yes")
+
+
 def run_autochro_export(
     excel_output_dir: str,
     state_path: str,
@@ -1205,6 +1211,21 @@ def run_autochro_export(
     Returns:
         (ok, pdf_path, message)
     """
+    if _gc1_use_runtime():
+        from gc1_runtime.layer4_job import ExportJobContext, run_autochro_export as _runtime_export
+
+        return _runtime_export(
+            excel_output_dir,
+            state_path,
+            force=force,
+            job_ctx=ExportJobContext(
+                excel_output_dir=excel_output_dir,
+                send_state_path=state_path,
+                force=force,
+                log_fn=_log,
+            ),
+        )
+
     cfg = load_autochro_config(excel_output_dir)
     if not cfg.enabled and not force:
         return False, None, "AUTOCHRO_ENABLED=0"

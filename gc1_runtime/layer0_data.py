@@ -1,0 +1,161 @@
+# -*- coding: utf-8 -*-
+"""
+L0 데이터 프로브 — DN (데이터명) · MTD (분석방법) (Ω.A.L0.DN.*, MTD.*).
+
+``gc_autochro`` 의 ``tree_label_matches_data_name``, ``resolve_analysis_method_mtd_path``,
+제목·트리 데이터명 읽기 **순수 함수** 이전 (T32). UI 탭 전환(W32) 은 L3.
+"""
+
+from __future__ import annotations
+
+import os
+import re
+from typing import Mapping, Sequence
+
+from gc1_runtime.layer0_config import read_analysis_method_dir
+
+# Ω.A.L0.DN-T.05a / MTD date6
+_DATE6_PREFIX = re.compile(r"^\d{6}")
+# Ω.A.L0.DN-T.05b / MTD.01b
+_DATE8_PREFIX = re.compile(r"^(\d{8})")
+_TITLE_AUTOCHRO_RX = re.compile(r"\s[-–]\s+.*[Aa]utochro")
+_DEFAULT_INSTRUMENT_MARKERS = ("YL6500 GC", "YL6500GC")
+
+
+def normalize_tree_label(text: str) -> str:
+    """L1.03 보조 — 트리·데이터명 비교용 공백 정규화."""
+    return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def tree_label_matches_data_name(tree_line: str, data_name: str) -> bool:
+    """
+    Ω.A.L1.03 / L0-DN — 분석목록 트리 시료명 ↔ 제어목록 데이터명.
+
+    접미사 `` - 상온-1`` 등 허용 (``gc_autochro`` 와 동일).
+    """
+    line = normalize_tree_label(tree_line)
+    name = normalize_tree_label(data_name)
+    if not line or not name:
+        return False
+    if line == name:
+        return True
+    if line.startswith(name + " ") or line.startswith(name + "-"):
+        return True
+    compact_line = re.sub(r"\s+", "", line)
+    compact_name = re.sub(r"\s+", "", name)
+    return compact_line == compact_name or compact_line.startswith(compact_name)
+
+
+def is_valid_data_name(name: str) -> bool:
+    """Ω.A.L0.DN.99 — 비어 있지 않고 날짜 접두(6자리+) 있음."""
+    stem = (name or "").strip().split(".")[0].strip()
+    return bool(stem and _DATE6_PREFIX.match(stem))
+
+
+def parse_data_name_from_window_title(title: str) -> str:
+    """
+    Ω.A.L0.DN-T.01~05 — 창 제목에서 데이터명.
+
+    ``20260629 dre(3) - Autochro-3000`` → ``20260629 dre(3)``
+    """
+    text = (title or "").strip()
+    match = _TITLE_AUTOCHRO_RX.search(text)
+    if not match:
+        return ""
+    name = text[: match.start()].strip().split(".")[0].strip()
+    return name if is_valid_data_name(name) else ""
+
+
+def parse_data_name_from_tree_lines(
+    lines: Sequence[str],
+    *,
+    selected: Sequence[str] | None = None,
+    instrument_markers: Sequence[str] = _DEFAULT_INSTRUMENT_MARKERS,
+) -> str:
+    """
+    Ω.A.L0.DN-R.01~04 — 제어목록 트리 텍스트에서 파란 선택 데이터명.
+
+    YL6500 GC 마커 **바로 위** 줄, 없으면 ``get_selected`` fallback.
+    """
+    items = [(line or "").strip() for line in lines if (line or "").strip()]
+    for idx, line in enumerate(items):
+        if any(marker in line for marker in instrument_markers) and idx > 0:
+            candidate = items[idx - 1].split(".")[0].strip()
+            if is_valid_data_name(candidate):
+                return candidate
+    if selected:
+        candidate = str(selected[0]).strip().split(".")[0].strip()
+        if is_valid_data_name(candidate):
+            return candidate
+    return ""
+
+
+def resolve_data_name(
+    *,
+    window_title: str = "",
+    tree_lines: Sequence[str] | None = None,
+    tree_selected: Sequence[str] | None = None,
+    env_fallback: str = "",
+) -> str:
+    """
+    Ω.A.L0.DN chain — title → tree → env fallback.
+
+    모두 실패 시 ``ValueError`` (E_DATA_NAME).
+    """
+    for reader in (
+        lambda: parse_data_name_from_window_title(window_title),
+        lambda: parse_data_name_from_tree_lines(
+            tree_lines or (),
+            selected=tree_selected,
+        ),
+    ):
+        name = reader()
+        if name:
+            return name
+    fallback = (env_fallback or "").strip()
+    if fallback:
+        return fallback
+    raise ValueError("제어목록 데이터명을 찾지 못함")
+
+
+def extract_mtd_date_prefix(data_name: str) -> str:
+    """Ω.A.L0.MTD.01 / 01b — 8자리 우선, 6자리면 20 접두."""
+    compact = re.sub(r"\s+", "", (data_name or "").strip())
+    match8 = _DATE8_PREFIX.match(compact)
+    if match8:
+        return match8.group(1)
+    match6 = re.match(r"^(\d{6})", compact)
+    if match6:
+        return f"20{match6.group(1)}"
+    raise ValueError(f"데이터명에서 날짜 추출 실패: {data_name!r}")
+
+
+def build_analysis_method_mtd_path(data_name: str, mtd_dir: str) -> str:
+    """Ω.A.L0.MTD.02 — ``{dir}/{YYYYMMDD} 분석방법.MTD`` (존재 검사 없음)."""
+    date = extract_mtd_date_prefix(data_name)
+    filename = f"{date} 분석방법.MTD"
+    base = os.path.normpath(os.path.expanduser(mtd_dir))
+    return os.path.join(base, filename)
+
+
+def mtd_file_exists(path: str) -> bool:
+    """Ω.A.L0.MTD.03.FS.isfile"""
+    return os.path.isfile(path)
+
+
+def resolve_analysis_method_mtd_path(
+    data_name: str,
+    *,
+    mtd_dir: str | None = None,
+    env: Mapping[str, str] | None = None,
+) -> str:
+    """
+    MTD full chain — dir from ``mtd_dir`` or B-CFG ``AUTOCHRO_ANALYSIS_METHOD_DIR``.
+
+    없으면 ``FileNotFoundError`` (E_MTD_MISSING).
+    """
+    directory = mtd_dir if mtd_dir is not None else read_analysis_method_dir(env)
+    path = build_analysis_method_mtd_path(data_name, directory)
+    if not mtd_file_exists(path):
+        raise FileNotFoundError(f"분석방법 MTD 없음: {path}")
+    return path

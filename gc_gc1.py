@@ -790,7 +790,12 @@ def _related_xlsx_paths(pdf_path: str, report: Gc1PdfReport, output_dir: str) ->
 
 
 def _experiment_group_key(stem: str) -> str:
-    """날짜 + 반응@(농도) 까지 — 시료명·대소문자 차이 무시."""
+    """
+    날짜 + 반응@(농도) 까지 — 시료명·대소문자 차이 무시.
+
+    YYYYMMDD verbatim stem(R-03) 은 **8자리** 날짜로 구분 — 6자리만 쓰면
+    ``20260629 …`` 와 ``202606 24dre…`` 가 같은 그룹으로 오판됨 (CL.05 버그).
+    """
     normalized = re.sub(r"\s+", " ", stem.strip().lower())
     match = re.match(r"^(\d{6})\s+([a-z0-9.]+@\([^)]+\))", normalized)
     if match:
@@ -798,9 +803,22 @@ def _experiment_group_key(stem: str) -> str:
     match = re.match(r"^(\d{6})([a-z0-9.]+@\([^)]+\))", normalized.replace(" ", ""))
     if match:
         return f"{match.group(1)} {match.group(2)}"
+    compact = re.sub(r"\s+", "", normalized)
+    match8 = re.match(r"^(\d{8})", compact)
+    if match8:
+        return match8.group(1)
     if len(normalized) >= 6 and normalized[:6].isdigit():
         return normalized[:6]
     return normalized
+
+
+def _verbatim_kept_parse_ok(path: str, report: Optional[Gc1PdfReport]) -> bool:
+    """
+    CL.j.05.5 — Autochro 가 방금 저장한 verbatim PDF 가 파싱되면 정리 대상 아님.
+
+    ``cleanup_superseded_gc1_files`` 의 ``kept_pdf_path`` 인자 = export 직후 경로.
+    """
+    return report is not None and os.path.isfile(path)
 
 
 def _is_obsolete_gc1_stem(stem: str) -> bool:
@@ -829,9 +847,11 @@ def cleanup_superseded_gc1_files(
     잘못된/중복 PDF·엑셀 정리.
 
     - placeholder·잘린 파일명
-    - 반응 주입 area 가 같고 사이클 수가 더 적은 PDF (이름·날짜 달라도)
+    - 반응 주입 area 가 같고 사이클 수가 더 적은 PDF (fingerprint 일치 시만)
+    - **CL.j.05.5:** ``kept_pdf_path`` verbatim PDF 가 파싱되면 삭제·교체하지 않음
     """
-    surviving = os.path.normpath(os.path.abspath(kept_pdf_path))
+    initial_kept = os.path.normpath(os.path.abspath(kept_pdf_path))
+    surviving = initial_kept
     surviving_stem = os.path.splitext(os.path.basename(surviving))[0]
     removed = 0
     reports: Dict[str, Gc1PdfReport] = {}
@@ -875,7 +895,6 @@ def cleanup_superseded_gc1_files(
 
     seed_report = _report_for(surviving)
     seed_cycles = _reaction_cycle_pairs(seed_report) if seed_report else []
-    seed_key = _experiment_group_key(surviving_stem)
 
     group = {surviving}
     for path in pdf_paths:
@@ -885,32 +904,40 @@ def cleanup_superseded_gc1_files(
         if not other_report:
             continue
         other_cycles = _reaction_cycle_pairs(other_report)
+        # CL.j.05.3 — fingerprint prefix 일치할 때만 동일 실험 그룹 (group_key 단독 비교 금지)
         if seed_cycles and other_cycles and _same_experiment_reaction_data(seed_cycles, other_cycles):
-            group.add(path)
-            continue
-        other_stem = os.path.splitext(os.path.basename(path))[0]
-        if _experiment_group_key(other_stem) == seed_key and (seed_cycles or other_cycles):
             group.add(path)
 
     if len(group) > 1:
         best_path = surviving
         best_count = len(seed_cycles)
-        for path in group:
-            report = _report_for(path)
-            if not report:
-                continue
-            count = len(_reaction_cycle_pairs(report))
-            if count > best_count:
-                best_path = path
-                best_count = count
+        initial_report = _report_for(initial_kept)
+        if _verbatim_kept_parse_ok(initial_kept, initial_report):
+            # export 직후 verbatim PDF 우선 — 주입 수 많은 옛 파일로 교체하지 않음
+            best_path = initial_kept
+            best_count = len(_reaction_cycle_pairs(initial_report))
+        else:
+            for path in group:
+                report = _report_for(path)
+                if not report:
+                    continue
+                count = len(_reaction_cycle_pairs(report))
+                if count > best_count:
+                    best_path = path
+                    best_count = count
 
         for path in group:
-            if path != best_path:
-                delete_pdfs.add(path)
+            if path == best_path:
+                continue
+            if path == initial_kept and _verbatim_kept_parse_ok(initial_kept, _report_for(path)):
+                continue
+            delete_pdfs.add(path)
         surviving = best_path
         surviving_stem = os.path.splitext(os.path.basename(surviving))[0]
 
     for path in sorted(delete_pdfs):
+        if path == initial_kept and _verbatim_kept_parse_ok(initial_kept, _report_for(path)):
+            continue
         report = _report_for(path)
         _remove_path(path, "중복/구버전 PDF 삭제")
         if report:

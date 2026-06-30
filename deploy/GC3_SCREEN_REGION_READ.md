@@ -1,6 +1,7 @@
 # GC3 — 화면 영역 캡처·확대·글자 읽기 (미구현 아이디어)
 
-> **상태:** 기록만 (2026-06-27). GC3 장비 PC를 당장 쓸 수 없어 **구현 보류**.  
+> **상태:** **스켈레톤** (T83) — `gc3_screen_read.py` + `deploy/screen_regions.gc3.json` + `--dry-run`.  
+> live OCR·GC3 PC 캘리브레이션은 GC3 앞에서 이어서.
 > **목적:** 나중에 GC3 PC 앞에 앉았을 때 / Cursor로 다시 작업할 때 이 문서만 보면 방향을 잡을 수 있게.
 
 ---
@@ -67,8 +68,9 @@ GC3는 **Chem32 `Report.TXT` 파일 파싱**이 주 경로 (`gc_chem32.py` → `
 
 ```
 chemstation-gc-automation/
-  gc_screen_read.py          # 또는 gc_screen_regions.json + gc_screen_read.bat
-  deploy/screen_regions.gc3.json   # 창 제목 + 상대 좌표 (고정 픽셀만 쓰지 말 것)
+  gc3_screen_read.py              # T83 스켈레톤 (--dry-run list/read/probe)
+  gc_screen_read.py               # GC1 Autochro (별도)
+  deploy/screen_regions.gc3.json  # 창 제목 + 상대 좌표
 ```
 
 GC3 zip에 포함 → `gc_automation.py` watch 루프에서 호출하거나,  

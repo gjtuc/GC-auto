@@ -1,0 +1,192 @@
+{
+  "_comment_for_llm": "PART6 RETRY-Policy — tower A L4 Autochro atoms. validate: scripts/validate_gc1_retry_policy.py",
+  "schema_version": 1,
+  "design_ref": "deploy/GC1_RUNTIME_DESIGN_PART6_RETRY.md",
+  "policies": [
+    {
+      "atom_id": "Ω.A.L4.P0.02",
+      "max_attempt": 2,
+      "retry_delay_ms": 1000,
+      "fallback_channel": null,
+      "fail_code": "E_WIN_NONE"
+    },
+    {
+      "atom_id": "Ω.A.L4.P1.01",
+      "max_attempt": 2,
+      "retry_delay_ms": 800,
+      "fallback_channel": null,
+      "fail_code": "E_P1_TAB"
+    },
+    {
+      "atom_id": "Ω.A.L4.P1.09",
+      "max_attempt": 2,
+      "retry_delay_ms": 800,
+      "fallback_channel": null,
+      "fail_code": "E_P1_TAB",
+      "notes": "G-POST verify_active_tab_analysis — same on_fail as P1.01"
+    },
+    {
+      "atom_id": "Ω.A.L4.P2.03",
+      "max_attempt": 3,
+      "retry_delay_ms": 500,
+      "fallback_channel": "H re-click neutral",
+      "fail_code": "E_P2_FOCUS"
+    },
+    {
+      "atom_id": "Ω.A.L4.P2.04",
+      "max_attempt": 2,
+      "retry_delay_ms": 300,
+      "fallback_channel": "H resend ^a",
+      "fail_code": "E_P2_SELECT"
+    },
+    {
+      "atom_id": "Ω.A.L4.P3.04",
+      "max_attempt": 3,
+      "retry_delay_ms": 120,
+      "fallback_channel": "E eye click 초기화",
+      "fail_code": "E_P3_MENU"
+    },
+    {
+      "atom_id": "Ω.A.L4.P5.03",
+      "max_attempt": 3,
+      "retry_delay_ms": 500,
+      "fallback_channel": "H re-click neutral",
+      "fail_code": "E_P2_FOCUS",
+      "notes": "P2.03 mirror — quantify prep sample focus"
+    },
+    {
+      "atom_id": "Ω.A.L4.P5.04",
+      "max_attempt": 2,
+      "retry_delay_ms": 300,
+      "fallback_channel": "H resend ^a",
+      "fail_code": "E_P2_SELECT",
+      "notes": "P2.04 mirror — quantify prep sample select"
+    },
+    {
+      "atom_id": "Ω.A.L4.P6.04",
+      "max_attempt": 3,
+      "retry_delay_ms": 120,
+      "fallback_channel": "E eye click 초기화",
+      "fail_code": "E_P3_MENU",
+      "notes": "P3.04 mirror — quantify menu"
+    },
+    {
+      "atom_id": "Ω.A.L4.P4.03",
+      "max_attempt": 3,
+      "retry_delay_ms": 250,
+      "fallback_channel": null,
+      "fail_code": "E_P4_TREE"
+    },
+    {
+      "atom_id": "Ω.A.L4.P4.06",
+      "max_attempt": 2,
+      "retry_delay_ms": 400,
+      "fallback_channel": "F send_keys path",
+      "fail_code": "E_P4_MTD_DLG"
+    },
+    {
+      "atom_id": "Ω.A.L4.P7.02",
+      "max_attempt": 2,
+      "retry_delay_ms": 500,
+      "fallback_channel": null,
+      "fail_code": "E_P7_MENU"
+    },
+    {
+      "atom_id": "Ω.A.L4.P7.04",
+      "max_attempt": 1,
+      "retry_delay_ms": null,
+      "fallback_channel": null,
+      "fail_code": null,
+      "notes": "timeout ok — progress poll only"
+    },
+    {
+      "atom_id": "Ω.A.L4.P8.05",
+      "max_attempt": 2,
+      "retry_delay_ms": 500,
+      "fallback_channel": "send_keys ENTER",
+      "fail_code": "E_P8_PRINT"
+    },
+    {
+      "atom_id": "Ω.A.L4.P9.02",
+      "max_attempt": 3,
+      "retry_delay_ms": 2000,
+      "fallback_channel": null,
+      "fail_code": "E_P9_DLG"
+    },
+    {
+      "atom_id": "Ω.A.L4.P9.08",
+      "max_attempt": 2,
+      "retry_delay_ms": 300,
+      "fallback_channel": "%s",
+      "fail_code": "E_P9_SAVE_BTN"
+    },
+    {
+      "atom_id": "Ω.A.L4.P9.11",
+      "max_attempt": 1,
+      "retry_delay_ms": 500,
+      "delay_kind": "poll",
+      "fallback_channel": null,
+      "fail_code": "E_P9_READY",
+      "notes": "poll loop in atom action — retry_delay_ms not used by run_atom_shell"
+    }
+  ],
+  "g_post_retry": [
+    {
+      "task": "verify_peak_table_cleared",
+      "retry_atom_id": "Ω.A.L4.P3.04",
+      "fail_code": "E_VERIFY_PEAK",
+      "action": "retry P3.04 once, then E_VERIFY_PEAK"
+    },
+    {
+      "task": "verify_peak_table_has_data",
+      "retry_atom_id": "Ω.A.L4.P4.07",
+      "extra_wait_sec": 2.0,
+      "fail_code": "E_VERIFY_PEAK",
+      "action": "retry P4.07 wait +2s, then E_VERIFY_PEAK"
+    },
+    {
+      "task": "verify_active_tab_analysis",
+      "retry_atom_id": "Ω.A.L4.P1.09",
+      "fail_code": "E_VERIFY_TAB",
+      "action": "retry P1.09 once"
+    }
+  ],
+  "externals": [
+    {
+      "atom_id": "Ω.A.L0.WIFI.01",
+      "max_attempt": 3,
+      "retry_delay_ms": 1500,
+      "fail_code": "E_WIFI"
+    },
+    {
+      "atom_id": "ML.06-11",
+      "max_attempt": "SMTP_SEND_RETRIES",
+      "retry_delay_ms": "SMTP_SEND_RETRY_DELAY",
+      "fail_code": "E_SMTP"
+    },
+    {
+      "atom_id": "PAR.00",
+      "max_attempt": "ceil(max_wait/0.5)",
+      "retry_delay_ms": 500,
+      "fail_code": "E_PDF_READY"
+    },
+    {
+      "atom_id": "B-P1.02",
+      "max_attempt": 2,
+      "retry_delay_ms": 2000,
+      "fail_code": "E_B_IMAP_AUTH"
+    },
+    {
+      "atom_id": "B-P3.01",
+      "max_attempt": "gdrive_retry",
+      "retry_delay_ms": 900000,
+      "fail_code": "E_B_GDRIVE"
+    },
+    {
+      "atom_id": "B-P4.01",
+      "max_attempt": 1,
+      "retry_delay_ms": 900000,
+      "fail_code": "E_B_ORIGIN_LOCK"
+    }
+  ]
+}

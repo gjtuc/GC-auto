@@ -42,6 +42,12 @@ git pull
 
 # GC1이 만든 KCH 원본 xlsx 1개 (Desktop\박은규 또는 메일 첨부)
 python scripts/extract_gc1_rt_from_xlsx.py "C:\path\to\YYYYMMDD ... DRE@600.xlsx"
+
+# PASS/FAIL 검증 (±0.1분, T82)
+python scripts/validate_gc1_rt.py "C:\path\to\YYYYMMDD ... DRE@600.xlsx"
+
+# repo TIME 구간만 (xlsx 불필요 — GC8860·CI)
+python scripts/validate_gc1_rt.py --sync-check
 ```
 
 출력 RT가 위 표와 **0.1분 이상** 어긋나면 `data_pc/촉매 반응 계산.py` 의 `GC1_TIME_TCD` / `GC1_TIME_FID` 수정.
@@ -90,7 +96,9 @@ GC1_DRM_INITIAL_CO2 = 50000
 | 파일 | 내용 |
 |------|------|
 | `data_pc/촉매 반응 계산.py` | `GC1_TIME_*`, `GC1_CALIB`, `process_excel` GC1 분기 |
-| `scripts/extract_gc1_rt_from_xlsx.py` | RT 실측 도우미 |
+| `scripts/extract_gc1_rt_from_xlsx.py` | RT 실측 요약 |
+| `scripts/validate_gc1_rt.py` | RT PASS/FAIL 검증 + `--sync-check` (T82) |
+| `gc1_rt_validate.py` | 검증 라이브러리 (`test_gc1_rt_validate.py`) |
 | `scripts/suggest_gc1_calib.py` | CALIB 산출 도우미 |
 
 반영 후:
