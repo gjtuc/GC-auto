@@ -30,6 +30,7 @@ _COMPILE_TARGETS = (
     "gc1_runtime/mod_lifecycle.py",
     "gc1_runtime/mod_intake.py",
     "gc1_runtime/mod_pipeline.py",
+    "gc1_reaction_gate.py",
     "gc1_runtime/layer0_ident.py",
     "gc1_runtime/layer0_retry.py",
     "gc1_runtime/layer0_gpost.py",
@@ -48,6 +49,7 @@ _COMPILE_TARGETS = (
     "scripts/close_gc1_mod.py",
     "scripts/run_gc1_runtime_e2e.py",
     "scripts/probe_gc1_ident.py",
+    "scripts/probe_gc1_pipeline_status.py",
 )
 
 # 실행 검증 — unittest discover 패턴
@@ -56,6 +58,8 @@ _UNITTEST_PATTERNS_FULL = (
     "test_gc1_mod_*.py",
     "test_gc1_rt_validate.py",
     "test_gc1_resume_policy.py",
+    "test_gc1_reaction_gate.py",
+    "test_gc1_trim.py",
     "test_gc1_runtime_layer0_gpost.py",
     "test_gc1_runtime_layer4_atom_fallback.py",
     "test_data_pc_cli.py",
@@ -69,6 +73,7 @@ _UNITTEST_PATTERNS_QUICK = (
 )
 
 # 실행 검증 — CLI smoke (실장비·메일 불필요)
+# 항목: (argv, label) 또는 (argv, label, acceptable_exit_codes)
 _CLI_SMOKE = (
     ([sys.executable, "scripts/validate_gc1_rt.py", "--sync-check"], "validate_gc1_rt --sync-check"),
     ([sys.executable, "scripts/validate_gc1_mod_slots.py"], "validate_gc1_mod_slots"),
@@ -77,6 +82,12 @@ _CLI_SMOKE = (
     ([sys.executable, "scripts/status_gc1_mod.py"], "status_gc1_mod"),
     ([sys.executable, "scripts/apply_gc1_mod.py", "--dry-run"], "apply_gc1_mod --dry-run"),
     ([sys.executable, "scripts/run_gc1_mod_pipeline.py"], "run_gc1_mod_pipeline"),
+    ([sys.executable, "scripts/probe_gc1_ident.py"], "probe_gc1_ident", (0, 2)),
+    (
+        [sys.executable, "scripts/probe_gc1_pipeline_status.py", "--skip-ready-wait"],
+        "probe_gc1_pipeline_status",
+        (0, 2),
+    ),
 )
 
 
@@ -130,9 +141,11 @@ def _run_unittest(patterns: tuple[str, ...], *, verbose: bool) -> bool:
 def _run_cli_smoke() -> bool:
     print("=== [3/3] CLI smoke (execution) ===\n")
     ok = True
-    for cmd, label in _CLI_SMOKE:
+    for entry in _CLI_SMOKE:
+        cmd, label = entry[0], entry[1]
+        acceptable = entry[2] if len(entry) > 2 else (0,)
         result = subprocess.run(cmd, cwd=_REPO, capture_output=True, text=True, encoding="utf-8", errors="replace")
-        if result.returncode == 0:
+        if result.returncode in acceptable:
             print(f"[OK] {label}")
         else:
             print(f"[FAIL] {label} exit={result.returncode}")

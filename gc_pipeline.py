@@ -79,6 +79,7 @@ from gc_gc1 import (
     summarize_assigned_compounds,
     write_gc1_excel,
 )
+from gc1_reaction_gate import classify_gc1_report
 from gc_kch import (
     build_output_filename,
     build_stacked_dataframe,
@@ -448,21 +449,14 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
     except Exception as exc:
         return ProcessResult(ok=False, fail_reason=f"PDF 파싱 실패 — {exc}")
 
-    if not report.fid_cycles and not report.tcd_cycles:
-        if report.total_injections == 0:
-            fail_reason = "PDF 에서 FID/TCD 피크를 찾지 못함"
-        else:
-            fail_reason = (
-                "사전노이즈·환원·전환·첫 반응 제외 후 남은 데이터 없음 "
-                f"(제외: 사전노이즈 {report.skipped_pre_reduction_count}, "
-                f"환원 {report.skipped_reduction_count}, "
-                f"전환 {report.skipped_transition_count}, "
-                f"첫 반응 {report.skipped_first_reaction_count})"
-            )
+    gate = classify_gc1_report(report)
+    if not gate.can_write_excel:
+        if gate.availability.value == "reduction_stage":
+            print(f"\n[GC1] {gate.operator_hint}")
         return ProcessResult(
             ok=False,
             sequence_folder=pdf_path,
-            fail_reason=fail_reason,
+            fail_reason=gate.fail_reason,
         )
 
     default_name = report.default_sample_name or infer_sample_name_from_pdf(pdf_path, report.analysis_date)
