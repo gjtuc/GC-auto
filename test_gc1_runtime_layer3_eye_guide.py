@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import unittest
 
+import re
+
 from gc_screen_read import Box, OcrToken
 from gc1_runtime.layer0_sync import sync_double_click_coords
 from gc1_runtime.layer3_eye_guide import (
@@ -87,6 +89,30 @@ class TestNeutralFallback(unittest.TestCase):
 
         rel = eye.resolve_sample_table_rel(_List(), fallback_rel=(300, 24))
         self.assertEqual(rel, (300, 24))
+
+
+class TestTreeNameMatch(unittest.TestCase):
+    def test_name_compact_match(self):
+        from gc1_runtime.layer3_eye_guide import AutochroStepEye
+        from gc_screen_read import OcrToken, Box
+
+        eye = AutochroStepEye(
+            config={},
+            window_box=Box(0, 0, 800, 600),
+            eye=None,  # type: ignore[arg-type]
+        )
+        tokens = [
+            OcrToken("20260630dre(5)ni", 88, Box(10, 40, 120, 14)),
+            OcrToken("YL6500", 70, Box(10, 80, 60, 12)),
+        ]
+        name_c = "20260630dre(5)ni(성형)-ce".replace(" ", "").lower()
+        hits = [
+            t
+            for t in tokens
+            if name_c[:14] in re.sub(r"\s+", "", t.text.lower())
+        ]
+        self.assertEqual(len(hits), 1)
+        self.assertIn("20260630", hits[0].text)
 
 
 if __name__ == "__main__":

@@ -866,7 +866,7 @@ def step_sync_control_to_analysis(
     rect = sample_list.rectangle()
     fallback = sync_double_click_coords(rect.width(), rect.height())
     if eye:
-        rel_x, rel_y = eye.guided_sync_double_click(sample_list, fallback_rel=fallback)
+        eye.guided_sync_execute_double_click(sample_list, fallback_rel=fallback)
     else:
         rel_x, rel_y = fallback
         try:
@@ -874,7 +874,7 @@ def step_sync_control_to_analysis(
             time.sleep(0.25)
         except Exception:
             pass
-    sample_list.double_click_input(coords=(rel_x, rel_y))
+        sample_list.double_click_input(coords=(rel_x, rel_y))
     time.sleep(1.5)
     if eye:
         eye.scan_between("P1.after_dclick", "top_sample_table")
@@ -907,15 +907,7 @@ def step_context_initialize_samples(win, cfg: AutochroConfig) -> None:
     _select_analysis_tab(win)
     sample_list = _analysis_sample_table(win)
     if eye:
-        try:
-            eye.guided_right_click_then_menu(sample_list, "초기화", forbid=("정량", "검량"))
-        except Exception as ocr_exc:
-            _log(f"OCR menu fail - pywinauto fallback: {ocr_exc}")
-            rel_x, rel_y = _neutral_list_coords(sample_list)
-            eye.move_mouse_on_list(sample_list, rel_x, rel_y)
-            sample_list.click_input(button="right", coords=(rel_x, rel_y))
-            time.sleep(0.35)
-            _click_context_initialize()
+        eye.guided_right_click_then_menu(sample_list, "초기화", forbid=("정량", "검량"))
         eye.require_task("P3.after_init", "eye_after_context_init")
     else:
         _right_click_sample_table(sample_list)
@@ -936,10 +928,17 @@ def step_load_analysis_method(win, cfg: AutochroConfig, data_name: str) -> None:
     _select_analysis_tab(win)
     if eye:
         eye.require_task("P4.tab_analysis", "eye_active_tab_analysis")
-    _right_click_tree_data_name(win, data_name)
     if eye:
+        eye.guided_tree_right_click_data_name(data_name)
         eye.scan_between("P4.after_tree_menu", "context_menu_popup")
-    _click_context_load_analysis_method()
+        eye.click_context_menu_ocr(
+            "불러오기",
+            forbid=(),
+            region_id="context_menu_popup",
+        )
+    else:
+        _right_click_tree_data_name(win, data_name)
+        _click_context_load_analysis_method()
     _open_path_in_file_dialog(r"분석방법 불러오기", mtd_path, timeout=cfg.dialog_wait_sec)
     time.sleep(2.0)
     if eye:

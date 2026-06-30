@@ -673,6 +673,20 @@ def click_screen(x: int, y: int, *, button: str = "left") -> None:
     time.sleep(0.15)
 
 
+def double_click_screen(x: int, y: int) -> None:
+    """화면 좌표 더블클릭 — OCR 앵커 동기화용."""
+    flash_focus_point(x, y, color="lime")
+    try:
+        import pywinauto.mouse as mouse
+
+        mouse.double_click(coords=(x, y))
+    except Exception:
+        click_screen(x, y, button="left")
+        time.sleep(0.08)
+        click_screen(x, y, button="left")
+    time.sleep(0.2)
+
+
 def read_and_click_text(
     config: dict,
     region_id: str,

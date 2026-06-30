@@ -22,6 +22,7 @@ from gc_screen_read import (
     Box,
     OcrToken,
     click_screen,
+    double_click_screen,
     find_text_tokens,
     flash_focus_point,
     load_config,
@@ -261,6 +262,70 @@ class AutochroStepEye:
         x, y = token_screen_center(best, region_box, scale)
         self._log(f"sync anchor '{best.text}' -> screen ({x},{y}) conf={best.confidence:.0f}")
         return x, y
+
+    def find_tree_name_screen_xy(
+        self,
+        data_name: str,
+        *,
+        region_id: str = "left_analysis_tree",
+    ) -> Optional[Tuple[int, int]]:
+        """분석목록 트리 — 데이터명 OCR 토큰 중심 (우클릭 위치)."""
+        try:
+            view, scale, tokens = self.ocr_region_tokens(region_id)
+        except RuntimeError as exc:
+            self._log(f"tree OCR skip: {exc}")
+            return None
+        name_c = re.sub(r"\s+", "", data_name.lower())
+        hits: List[OcrToken] = []
+        for tok in tokens:
+            tok_c = re.sub(r"\s+", "", (tok.text or "").lower())
+            if not tok_c:
+                continue
+            if name_c[: min(len(name_c), 14)] in tok_c or tok_c in name_c:
+                hits.append(tok)
+        if not hits:
+            hits = find_text_tokens(tokens, data_name[:12], partial=True)
+        if not hits:
+            m = re.match(r"(\d{8})", name_c)
+            if m:
+                hits = find_text_tokens(tokens, m.group(1), partial=True)
+        if not hits:
+            self._log(f"tree anchor not found for {data_name!r}")
+            return None
+        best = max(hits, key=lambda t: t.confidence)
+        x, y = token_screen_center(best, view, scale)
+        self._log(f"tree anchor '{best.text}' -> screen ({x},{y})")
+        return x, y
+
+    def guided_tree_right_click_data_name(self, data_name: str) -> None:
+        """OCR 로 트리 데이터명 찾아 우클릭."""
+        self.scan_between("P4.locate_tree", "left_analysis_tree")
+        anchor = self.find_tree_name_screen_xy(data_name)
+        if anchor is None:
+            if autochro_eye_strict():
+                raise RuntimeError(f"OCR tree anchor missing: {data_name!r}")
+            return
+        x, y = anchor
+        flash_focus_point(x, y, color="lime")
+        click_screen(x, y, button="right")
+        time.sleep(0.45)
+        self._log(f"tree OCR right-click ({x},{y})")
+
+    def guided_sync_execute_double_click(
+        self,
+        sample_list,
+        *,
+        fallback_rel: Tuple[int, int],
+    ) -> None:
+        """OCR .raw 앵커 또는 fallback 좌표로 더블클릭."""
+        rel_x, rel_y = self.guided_sync_double_click(sample_list, fallback_rel=fallback_rel)
+        anchor = self.find_raw_anchor_screen_xy()
+        if anchor is not None:
+            self._log(f"sync OCR double-click screen {anchor}")
+            double_click_screen(anchor[0], anchor[1])
+        else:
+            self.move_mouse_on_list(sample_list, rel_x, rel_y)
+            sample_list.double_click_input(coords=(rel_x, rel_y))
 
     def list_rel_coords_from_screen(
         self,
