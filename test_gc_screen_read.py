@@ -42,18 +42,23 @@ class TestGcScreenRead(unittest.TestCase):
         self.assertEqual(up.size, (250, 100))
 
     def test_focus_overlay_default_on(self):
-        from gc_screen_read import focus_overlay_enabled
+        from gc_screen_read import ensure_ocr_focus_visible, focus_overlay_enabled
 
         old = os.environ.pop("GC_SCREEN_SHOW_FOCUS", None)
         try:
             self.assertTrue(focus_overlay_enabled())
             os.environ["GC_SCREEN_SHOW_FOCUS"] = "0"
             self.assertFalse(focus_overlay_enabled())
+            os.environ.pop("GC_SCREEN_SHOW_FOCUS", None)
+            ensure_ocr_focus_visible(case_study=True)
+            self.assertTrue(focus_overlay_enabled())
+            self.assertEqual(os.environ.get("GC_SCREEN_FOCUS_MS"), "1000")
         finally:
             if old is None:
                 os.environ.pop("GC_SCREEN_SHOW_FOCUS", None)
             else:
                 os.environ["GC_SCREEN_SHOW_FOCUS"] = old
+            os.environ.pop("GC_SCREEN_FOCUS_MS", None)
 
     def test_adaptive_crop_tightens_on_needle(self):
         from gc_screen_read import OcrToken, adaptive_crop_frac, zoom_pipeline_settings, load_config

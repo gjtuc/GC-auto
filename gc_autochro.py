@@ -91,6 +91,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   GC1_OCR_CASE_STUDY            — 1=실패 시 단계 케이스 스터디 (기본 1)
   GC1_OCR_EXPLORE               — 1=실패 시 확대/축소·커서 탐색 (기본 1)
   GC1_OCR_LEARN                 — 1=런 종료 후 overlay 학습 반영 (기본 1)
+  GC_SCREEN_SHOW_FOCUS          — 1=OCR·케이스 스터디 빨간 네모 (기본 1, 0=끔)
+  GC_SCREEN_FOCUS_MS            — 네모 최소 표시 ms (기본 800, 케이스 스터디 1000)
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 

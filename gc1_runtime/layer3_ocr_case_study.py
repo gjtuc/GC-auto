@@ -3,9 +3,11 @@
 OCR 인식 실패 시 막힌 단계에서 케이스 스터디 — 전체화면·탐색·학습 누적.
 
 실패 구간:
-  1) Autochro **전체화면** OCR
-  2) 단계별 영역 + **확대/축소 스윕** + 마우스를 토큰 위치로 이동(탐색, 클릭 없음)
-  3) JSON 저장 → 런 종료 시 ``layer3_ocr_learn`` 이 overlay 반영
+  1) Autochro **전체화면** OCR (빨간 네모)
+  2) 단계별 영역 + **확대/축소 스윕** (빨간 네모) + 라임 네모 커서 탐색
+  3) JSON 저장 → 런 종료 시 overlay 반영
+
+``ensure_ocr_focus_visible(case_study=True)`` — 사용자가 OCR 영역을 볼 수 있게 기본 ON.
 
 워크플로 불명 시: ``layer3_workflow_gate`` — 사용자에게만 질문.
 """
@@ -21,7 +23,10 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from gc_screen_read import (
     capture_box,
+    ensure_ocr_focus_visible,
+    flash_focus_box,
     flash_focus_point,
+    focus_stage,
     ocr_image,
     read_region_hierarchical,
     read_track_zoom_on_box,
@@ -132,17 +137,16 @@ def _stage_row(st) -> Dict[str, Any]:
 
 
 def _probe_move_cursor(x: int, y: int, *, log_fn) -> None:
-    """탐색용 커서 이동 — 클릭 없음."""
+    """탐색용 커서 이동 — 작은 라임 네모 (영역 빨간 네모와 구분)."""
     try:
         import ctypes
 
         ctypes.windll.user32.SetCursorPos(int(x), int(y))
     except Exception:
         pass
-    if os.getenv("GC_SCREEN_SHOW_FOCUS", "0").strip().lower() in ("1", "true", "yes"):
-        flash_focus_point(x, y, color="cyan", duration_ms=350)
+    flash_focus_point(x, y, color="lime", duration_ms=450)
     log_fn(f"[탐색] cursor -> ({x},{y})")
-    time.sleep(0.12)
+    time.sleep(0.15)
 
 
 def _zoom_sweep_region(
@@ -152,7 +156,7 @@ def _zoom_sweep_region(
     *,
     log_fn,
 ) -> Dict[str, Any]:
-    """고정 배율 스윕 + needle 토큰 위치로 마우스 탐색."""
+    """고정 배율 스윕 + 빨간 네모 OCR + needle 위치 마우스 탐색."""
     row: Dict[str, Any] = {"region": region_id, "zoom_sweep": [], "probe_points": []}
     try:
         rb, _ = resolve_region_box(eye.config, region_id, eye.window_box)
@@ -160,12 +164,17 @@ def _zoom_sweep_region(
         min_conf = float(opts.get("min_confidence", 35))
         img = capture_box(rb)
         for step in _EXPLORE_STEPS:
-            scaled = upscale_image(img, step)
-            plain, tokens = ocr_image(scaled)
+            step_val = step
+
+            def _ocr_at_step(s: float = step_val) -> tuple:
+                scaled = upscale_image(img, s)
+                return ocr_image(scaled)
+
+            plain, tokens = focus_stage(rb, _ocr_at_step)
             hits = tokens_matching_needles(tokens, needles, min_confidence=min_conf)
             row["zoom_sweep"].append(
                 {
-                    "step": step,
+                    "step": step_val,
                     "token_count": len(tokens),
                     "needle_hits": len(hits),
                     "preview": plain[:120],
@@ -177,11 +186,15 @@ def _zoom_sweep_region(
             )
             if explore_on_fail() and hits:
                 for tok in sorted(hits, key=lambda t: -t.confidence)[:3]:
-                    x, y = token_screen_center(tok, rb, step)
-                    row["probe_points"].append({"text": tok.text, "screen": [x, y], "step": step})
+                    x, y = token_screen_center(tok, rb, step_val)
+                    row["probe_points"].append({"text": tok.text, "screen": [x, y], "step": step_val})
                     _probe_move_cursor(x, y, log_fn=log_fn)
     except Exception as exc:
         row["error"] = str(exc)
+    finally:
+        from gc_screen_read import focus_hide
+
+        focus_hide()
     return row
 
 
@@ -223,6 +236,7 @@ def _probe_region(eye, region_id: str, needles: Sequence[str]) -> Dict[str, Any]
         rb, chain = resolve_region_box(eye.config, region_id, eye.window_box)
         row["box"] = [rb.left, rb.top, rb.width, rb.height]
         row["chain"] = chain
+        flash_focus_box(rb, color="red")
         tracked = read_track_zoom_on_box(
             rb,
             eye.config,
@@ -287,6 +301,7 @@ def run_failure_case_study(
     log_fn=None,
 ) -> Dict[str, Any]:
     _log = log_fn or print
+    ensure_ocr_focus_visible(case_study=True)
     profile = resolve_profile(step_id, task_id)
     regions_ids: List[str] = list(profile.get("regions") or [])
     needles_map: Dict[str, List[str]] = dict(profile.get("needles") or {})

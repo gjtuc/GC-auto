@@ -593,6 +593,21 @@ def focus_overlay_enabled() -> bool:
     return raw not in ("0", "false", "no", "off")
 
 
+def ensure_ocr_focus_visible(*, case_study: bool = False) -> None:
+    """
+    Live·케이스 스터디 OCR — 속이 빈 빨간 네모로 영역 표시 (기본 ON).
+
+    사용자가 ``GC_SCREEN_SHOW_FOCUS=0`` 으로 명시한 경우만 끔.
+    케이스 스터디는 단계가 많아 ``GC_SCREEN_FOCUS_MS`` 기본 1000ms.
+    """
+    explicit = os.getenv("GC_SCREEN_SHOW_FOCUS", "").strip().lower()
+    if explicit in ("0", "false", "no", "off"):
+        return
+    os.environ["GC_SCREEN_SHOW_FOCUS"] = "1"
+    if case_study and not os.getenv("GC_SCREEN_FOCUS_MS", "").strip():
+        os.environ["GC_SCREEN_FOCUS_MS"] = "1000"
+
+
 def focus_duration_ms() -> int:
     """단계당 네모 최소 표시 시간 (OCR이 더 길면 그동안 유지)."""
     raw = os.getenv("GC_SCREEN_FOCUS_MS", "").strip()

@@ -25,6 +25,7 @@ if str(_REPO) not in sys.path:
 
 from gc_screen_read import (  # noqa: E402
     DEFAULT_CONFIG,
+    ensure_ocr_focus_visible,
     find_autochro_window_box,
     load_config,
     read_region_hierarchical,
@@ -142,7 +143,8 @@ def run_case_study(*, with_menu: bool = False) -> Dict[str, Any]:
         _select_control_tab,
     )
 
-    os.environ.setdefault("GC_SCREEN_SHOW_FOCUS", "0")
+    os.environ.setdefault("GC_SCREEN_SHOW_FOCUS", "1")
+    ensure_ocr_focus_visible(case_study=True)
     cfg = load_autochro_config(str(_REPO))
     conf = load_config(DEFAULT_CONFIG)
     report: Dict[str, Any] = {

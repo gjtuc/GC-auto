@@ -171,6 +171,9 @@ class AutochroStepEye:
 
     def ocr_region(self, region_id: str, *, label: str = "") -> str:
         """영역 OCR plain text (계층 read 마지막 단계)."""
+        from gc_screen_read import ensure_ocr_focus_visible
+
+        ensure_ocr_focus_visible()
         tag = label or region_id
         self._log(f"OCR start - {tag} ({region_id})")
         read = read_region_hierarchical(
@@ -252,8 +255,10 @@ class AutochroStepEye:
         if not case_study_on_fail():
             return
         try:
+            from gc_screen_read import ensure_ocr_focus_visible
             from gc1_runtime.layer3_ocr_case_study import run_failure_case_study
 
+            ensure_ocr_focus_visible(case_study=True)
             run_failure_case_study(
                 self,
                 step_id=step_id,
