@@ -73,14 +73,17 @@ def _env_int(name: str, default: int) -> int:
 
 
 def _paths(output_dir: str) -> dict[str, str]:
+    from gc_profiles import gc_runtime_dir
+
+    runtime = gc_runtime_dir(output_dir)
     base = paths_for_output_dir(output_dir)
     return {
         **base,
-        "error_log": os.path.join(output_dir, ERROR_LOG_JSONL),
-        "error_latest": os.path.join(output_dir, ERROR_LATEST_TXT),
-        "error_pending": os.path.join(output_dir, ERROR_PENDING_JSON),
-        "handler_state": os.path.join(output_dir, ERROR_HANDLER_STATE),
-        "handler_run_log": os.path.join(output_dir, ERROR_HANDLER_RUN_LOG),
+        "error_log": os.path.join(runtime, ERROR_LOG_JSONL),
+        "error_latest": os.path.join(runtime, ERROR_LATEST_TXT),
+        "error_pending": os.path.join(runtime, ERROR_PENDING_JSON),
+        "handler_state": os.path.join(runtime, ERROR_HANDLER_STATE),
+        "handler_run_log": os.path.join(runtime, ERROR_HANDLER_RUN_LOG),
     }
 
 
@@ -242,9 +245,10 @@ def restart_watch(base_script_dir: str) -> bool:
 
 
 def build_cursor_prompt(entry: dict, output_dir: str, base_script_dir: str) -> str:
-    latest_txt = os.path.join(output_dir, ERROR_LATEST_TXT)
+    paths = _paths(output_dir)
+    latest_txt = paths["error_latest"]
+    log_path = paths["error_log"]
     log_tail = ""
-    log_path = os.path.join(output_dir, ERROR_LOG_JSONL)
     if os.path.isfile(log_path):
         try:
             with open(log_path, encoding="utf-8") as handle:
@@ -257,7 +261,8 @@ def build_cursor_prompt(entry: dict, output_dir: str, base_script_dir: str) -> s
         "GC chemstation-gc-automation 오류가 발생했습니다. 아래 로그를 보고 원인을 수정한 뒤 "
         "watch를 재시작하고 파이프라인이 정상 동작하는지 확인해 주세요.\n\n"
         f"repo: {base_script_dir}\n"
-        f"출력 폴더: {output_dir}\n"
+        f"데이터 폴더: {output_dir}\n"
+        f"자동화 폴더: {paths['runtime_dir']}\n"
         f"오류 시각: {entry.get('recorded_at')}\n"
         f"status_code: {entry.get('status_code', entry.get('issue_type'))}\n"
         f"message: {entry.get('message')}\n"

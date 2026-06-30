@@ -53,9 +53,14 @@ GC1 Autochro→PDF→엑셀→메일 **핵심 로직(`gc_autochro`, `gc_gc1`)은
 - **엑셀**: FID/TCD 2시트, 「분석된 원소」 열
 - **메일**: 네이버 SMTP
 
+### GC1 watch (2026-06 업데이트)
+- 핫스팟 **iPhone** 연결 edge → **Cursor 에이전트「동작해」** 또는 **OCR force 폴백**
+- **30분** reconnect / 에이전트 쿨다운 (`GC1_HOTSPOT_RECONNECT_MIN_SEC=1800`)
+- 자동화 파일: `Desktop\박은규\_GC자동화\` — 데이터(xlsx·pdf)는 `박은규` 루트만
+- 상세: **`deploy/GC1_FEAT_2026-06.md`**, `deploy/GC1_DATA_FOLDER_LAYOUT.md`
+
 ### GC1 watch (기존)
 - 핫스팟 **iPhone** 연결 edge → 세션당 1회 처리
-- **90초** reconnect debounce (`GC1_HOTSPOT_RECONNECT_MIN_SEC`)
 - 메일 쿨다운·오전/오후 슬롯 **없음** (GC1 전용)
 
 ### GC1 env (운영)
@@ -64,10 +69,8 @@ GC_INSTANCE=gc1
 EXCEL_OUTPUT_DIR=C:\Users\User\Desktop\박은규
 CHEMSTATION_MODE=gc1
 REQUIRED_HOTSPOT=iPhone
-NAVER_EMAIL=john3556@naver.com
-MAIL_TO=john3556@naver.com
-AUTOCHRO_ENABLED=1
 ```
+(env 파일 실제 위치: `Desktop\박은규\_GC자동화\gc_automation.env`)
 
 ---
 
