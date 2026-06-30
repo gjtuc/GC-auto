@@ -55,6 +55,38 @@ class TestGcScreenRead(unittest.TestCase):
             else:
                 os.environ["GC_SCREEN_SHOW_FOCUS"] = old
 
+    def test_adaptive_crop_tightens_on_needle(self):
+        from gc_screen_read import OcrToken, adaptive_crop_frac, zoom_pipeline_settings, load_config
+
+        cfg_path = os.path.join(os.path.dirname(__file__), "deploy", "screen_regions.gc1.json")
+        cfg = load_config(cfg_path)
+        opts = zoom_pipeline_settings(cfg, "top_sample_table")
+        tokens = [OcrToken("1.raw", 90, Box(200, 40, 48, 14))]
+        frac = adaptive_crop_frac(tokens, 800, 300, opts=opts, needles=["raw"])
+        self.assertLess(frac, 0.5)
+
+    def test_adaptive_stop_on_high_conf_needle(self):
+        from gc_screen_read import OcrToken, should_stop_adaptive_zoom, zoom_pipeline_settings, load_config
+
+        cfg = load_config(
+            os.path.join(os.path.dirname(__file__), "deploy", "screen_regions.gc1.json")
+        )
+        opts = zoom_pipeline_settings(cfg, "top_sample_table")
+        tokens = [OcrToken("1.raw", 65, Box(10, 10, 40, 12))]
+        self.assertFalse(
+            should_stop_adaptive_zoom(
+                tokens, opts=opts, needles=["raw"], depth=0, max_depth=5
+            )
+        )
+        tokens = [OcrToken("1.raw", 95, Box(10, 10, 40, 12))]
+        opts2 = dict(opts)
+        opts2["stop_confidence"] = 70
+        self.assertTrue(
+            should_stop_adaptive_zoom(
+                tokens, opts=opts2, needles=["raw"], depth=0, max_depth=5
+            )
+        )
+
     def test_track_zoom_crop_and_center(self):
         from PIL import Image
 
@@ -63,7 +95,6 @@ class TestGcScreenRead(unittest.TestCase):
             crop_image_around_center,
             pick_track_center,
             screen_view_from_image_crop,
-            Box,
         )
 
         img = Image.new("RGB", (300, 200), (255, 255, 255))
@@ -71,7 +102,7 @@ class TestGcScreenRead(unittest.TestCase):
             OcrToken("1.raw", 90, Box(40, 30, 50, 14)),
             OcrToken("2.raw", 85, Box(42, 55, 48, 12)),
         ]
-        cx, cy = pick_track_center(tokens, 300, 200)
+        cx, cy = pick_track_center(tokens, 300, 200, needles=["raw"])
         self.assertGreater(cx, 0)
         cropped, cl, ct = crop_image_around_center(img, cx, cy, 0.5)
         view = Box(100, 200, 300, 200)

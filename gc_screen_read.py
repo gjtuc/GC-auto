@@ -4,8 +4,9 @@ gc_screen_read.py — GC1 Autochro 화면 읽기(눈) · 계층 OCR · 클릭
 
 gc_autochro 와 분리 — 검증·캘리브레이션 전용 (병합은 나중).
 
-계층 읽기 (기본):
-  영역 캡처 → 1.5× 확대 → OCR → 토큰 중심 crop → 1.5× 반복 (max_depth)
+계층 읽기 (적응 확대):
+  영역 크기·프로필 → 첫 배율 결정 → OCR → needles/토큰 중심 crop
+  → 글자 높이·신뢰도로 다음 배율·crop 조절 → 목표 인식 시 조기 종료
 
 설치: pip install -r requirements-screen.txt + Tesseract(kor)
 """
@@ -61,6 +62,9 @@ class ReadStageResult:
     plain_text: str = ""
     effective_scale: float = 1.0
     view_box: Optional[Box] = None
+    adaptive_step: float = 1.0
+    crop_frac: float = 0.0
+    stopped_early: bool = False
 
 
 @dataclass
@@ -251,20 +255,163 @@ def stage_scale(config: dict, region_id: str) -> Tuple[str, float]:
     return stage, step
 
 
-def zoom_pipeline_settings(config: dict) -> dict:
-    """1.5× 추적 확대 — ``zoom_pipeline`` 설정."""
+def zoom_pipeline_settings(config: dict, region_id: str = "") -> dict:
+    """영역별 적응 확대 — ``zoom_pipeline`` + ``regions.*.zoom_hints``."""
     z = config.get("zoom_pipeline") or {}
+    hints = {}
+    if region_id:
+        spec = (config.get("regions") or {}).get(region_id) or {}
+        hints = dict(spec.get("zoom_hints") or {})
+    step_default = float(z.get("step", 1.5))
     return {
-        "step": float(z.get("step", z.get("panel", 1.5))),
-        "max_depth": int(z.get("max_depth", 4)),
-        "crop_frac": float(z.get("crop_frac", 0.55)),
-        "min_confidence": float(z.get("min_confidence", 35)),
+        "step": float(hints.get("step", step_default)),
+        "step_min": float(hints.get("step_min", z.get("step_min", 1.25))),
+        "step_max": float(hints.get("step_max", z.get("step_max", 2.25))),
+        "max_depth": int(hints.get("max_depth", z.get("max_depth", 5))),
+        "crop_frac": float(hints.get("crop_frac", z.get("crop_frac", 0.55))),
+        "crop_frac_min": float(hints.get("crop_frac_min", z.get("crop_frac_min", 0.22))),
+        "crop_frac_max": float(hints.get("crop_frac_max", z.get("crop_frac_max", 0.75))),
+        "min_confidence": float(hints.get("min_confidence", z.get("min_confidence", 35))),
+        "stop_confidence": float(hints.get("stop_confidence", z.get("stop_confidence", 72))),
+        "target_glyph_px": float(hints.get("target_glyph_px", z.get("target_glyph_px", 20))),
+        "profile": str(hints.get("profile", z.get("profile", "table"))),
+        "needles": list(hints.get("needles") or []),
     }
 
 
-def image_effective_scale(view: Box, image) -> float:
-    w, _h = image.size
-    return w / max(view.width, 1)
+_PROFILE_STEP_RANGE: Dict[str, Tuple[float, float]] = {
+    "table": (1.35, 1.85),
+    "numeric": (1.45, 2.1),
+    "menu": (1.55, 2.3),
+    "tree": (1.3, 1.75),
+    "tab": (1.7, 2.4),
+}
+
+
+def _median_token_height(tokens: Sequence[OcrToken]) -> float:
+    if not tokens:
+        return 0.0
+    heights = [float(t.box.height) for t in tokens if t.box.height > 0]
+    if not heights:
+        return 0.0
+    heights.sort()
+    mid = len(heights) // 2
+    return heights[mid] if len(heights) % 2 else (heights[mid - 1] + heights[mid]) / 2.0
+
+
+def adaptive_initial_step(view: Box, opts: dict) -> float:
+    """영역 크기·프로필에 따른 첫 확대 배율."""
+    profile = opts.get("profile", "table")
+    lo, hi = _PROFILE_STEP_RANGE.get(profile, (opts["step_min"], opts["step_max"]))
+    area = max(view.width, 1) * max(view.height, 1)
+    if area < 60_000:
+        step = hi
+    elif area > 350_000:
+        step = lo
+    else:
+        step = (lo + hi) / 2.0
+    return min(max(step, opts["step_min"]), opts["step_max"])
+
+
+def adaptive_next_step(
+    prev_step: float,
+    tokens: Sequence[OcrToken],
+    *,
+    opts: dict,
+) -> float:
+    """글자 높이·신뢰도로 다음 확대 배율 조절."""
+    med_h = _median_token_height(tokens)
+    target = float(opts.get("target_glyph_px", 20))
+    step = prev_step
+    if med_h > 0:
+        if med_h < target * 0.55:
+            step = min(prev_step + 0.25, opts["step_max"])
+        elif med_h > target * 1.9:
+            step = max(prev_step - 0.2, opts["step_min"])
+    confs = [t.confidence for t in tokens if t.confidence >= opts["min_confidence"]]
+    if confs and sum(confs) / len(confs) < 45:
+        step = min(step + 0.15, opts["step_max"])
+    return min(max(step, opts["step_min"]), opts["step_max"])
+
+
+def tokens_matching_needles(
+    tokens: Sequence[OcrToken],
+    needles: Sequence[str],
+    *,
+    min_confidence: float,
+) -> List[OcrToken]:
+    if not needles:
+        return []
+    hits: List[OcrToken] = []
+    for tok in tokens:
+        if tok.confidence < min_confidence:
+            continue
+        text = (tok.text or "").lower()
+        for needle in needles:
+            if needle.lower() in text:
+                hits.append(tok)
+                break
+    return hits
+
+
+def union_token_box(tokens: Sequence[OcrToken]) -> Optional[Box]:
+    if not tokens:
+        return None
+    left = min(t.box.left for t in tokens)
+    top = min(t.box.top for t in tokens)
+    right = max(t.box.left + t.box.width for t in tokens)
+    bottom = max(t.box.top + t.box.height for t in tokens)
+    return Box(left, top, max(1, right - left), max(1, bottom - top))
+
+
+def adaptive_crop_frac(
+    tokens: Sequence[OcrToken],
+    img_w: int,
+    img_h: int,
+    *,
+    opts: dict,
+    needles: Sequence[str],
+) -> float:
+    """추적 대상 토큰 군집 크기에 맞춰 crop 비율."""
+    lo = float(opts["crop_frac_min"])
+    hi = float(opts["crop_frac_max"])
+    default = float(opts["crop_frac"])
+    pool = tokens_matching_needles(tokens, needles, min_confidence=opts["min_confidence"])
+    if not pool:
+        pool = [t for t in tokens if t.confidence >= opts["min_confidence"]]
+    if not pool:
+        pool = list(tokens)
+    union = union_token_box(pool)
+    if union is None:
+        return default
+    frac_w = (union.width * 1.45) / max(img_w, 1)
+    frac_h = (union.height * 1.55) / max(img_h, 1)
+    frac = max(frac_w, frac_h, lo)
+    if len(pool) == 1 and needles:
+        frac = min(frac, 0.42)
+    return min(max(frac, lo), hi)
+
+
+def should_stop_adaptive_zoom(
+    tokens: Sequence[OcrToken],
+    *,
+    opts: dict,
+    needles: Sequence[str],
+    depth: int,
+    max_depth: int,
+) -> bool:
+    """목표 토큰 고신뢰도 인식 시 조기 종료."""
+    if depth + 1 >= max_depth:
+        return True
+    hits = tokens_matching_needles(tokens, needles, min_confidence=opts["min_confidence"])
+    if hits and needles:
+        best = max(hits, key=lambda t: t.confidence)
+        if best.confidence >= opts["stop_confidence"]:
+            return True
+        med_h = _median_token_height(hits)
+        if med_h >= opts["target_glyph_px"] * 0.85 and best.confidence >= 55:
+            return True
+    return False
 
 
 def pick_track_center(
@@ -273,12 +420,18 @@ def pick_track_center(
     img_h: int,
     *,
     min_confidence: float = 35.0,
-) -> Optional[Tuple[int, int]]:
-    """OCR 토큰 군집 중심 — 다음 1.5× crop 기준점."""
-    good = [t for t in tokens if t.confidence >= min_confidence]
-    pool = good if good else list(tokens)
+    needles: Sequence[str] = (),
+) -> Tuple[int, int]:
+    """OCR 토큰 군집 중심 — needles 우선."""
+    needle_hits = tokens_matching_needles(tokens, needles, min_confidence=min_confidence)
+    pool = needle_hits if needle_hits else [t for t in tokens if t.confidence >= min_confidence]
+    if not pool:
+        pool = list(tokens)
     if not pool:
         return img_w // 2, img_h // 2
+    union = union_token_box(pool)
+    if union is not None:
+        return union.left + union.width // 2, union.top + union.height // 2
     if len(pool) == 1:
         t = pool[0]
         return t.box.left + t.box.width // 2, t.box.top + t.box.height // 2
@@ -293,6 +446,11 @@ def pick_track_center(
         cy += tcy * w
         total_w += w
     return int(round(cx / total_w)), int(round(cy / total_w))
+
+
+def image_effective_scale(view: Box, image) -> float:
+    w, _h = image.size
+    return w / max(view.width, 1)
 
 
 def crop_image_around_center(image, cx: int, cy: int, frac: float):
@@ -330,57 +488,83 @@ def read_track_zoom_on_box(
     *,
     region_id: str = "",
     save_images: bool = True,
+    needles: Optional[Sequence[str]] = None,
 ) -> HierarchicalReadResult:
     """
-    1.5× 확대 → OCR → 토큰 중심 crop → 1.5× 반복.
+    적응 확대 → OCR → needles/토큰 중심 crop → 반복.
 
-    각 단계 ``view_box`` 에 빨간 포커스 네모 표시.
+    배율·crop 영역은 글자 크기·신뢰도·``zoom_hints.needles`` 로 매 단계 조절.
     """
-    opts = zoom_pipeline_settings(config)
-    step = opts["step"]
-    max_depth = opts["max_depth"]
-    crop_frac = opts["crop_frac"]
-    min_conf = opts["min_confidence"]
+    opts = zoom_pipeline_settings(config, region_id)
+    track_needles = list(needles if needles is not None else opts.get("needles") or [])
+    max_depth = int(opts["max_depth"])
+    min_conf = float(opts["min_confidence"])
 
     view = screen_box
     img = capture_box(view)
     stages: List[ReadStageResult] = []
+    step = adaptive_initial_step(view, opts)
 
     try:
         for depth in range(max_depth):
+            applied_step = step
 
-            def _ocr_step() -> Tuple[str, List[OcrToken]]:
+            def _ocr_step(local_step: float = applied_step) -> Tuple[str, List[OcrToken]]:
                 nonlocal img
-                img = upscale_image(img, step)
+                img = upscale_image(img, local_step)
                 return ocr_image(img)
 
             plain, tokens = focus_stage(view, _ocr_step)
             eff = image_effective_scale(view, img)
             tag = f"{region_id or 'region'}_zoom{depth + 1}"
+            early = should_stop_adaptive_zoom(
+                tokens,
+                opts=opts,
+                needles=track_needles,
+                depth=depth,
+                max_depth=max_depth,
+            )
             stages.append(
                 ReadStageResult(
                     stage=f"zoom_{depth + 1}",
-                    scale=step,
+                    scale=applied_step,
                     region_id=region_id or "region",
                     image_path=save_debug_image(img, tag) if save_images else "",
                     tokens=tokens,
                     plain_text=plain,
                     effective_scale=eff,
                     view_box=view,
+                    adaptive_step=applied_step,
+                    crop_frac=0.0,
+                    stopped_early=early,
                 )
             )
 
-            if depth + 1 >= max_depth:
+            if early:
                 break
 
+            crop_frac = adaptive_crop_frac(
+                tokens,
+                img.size[0],
+                img.size[1],
+                opts=opts,
+                needles=track_needles,
+            )
+            stages[-1].crop_frac = crop_frac
+
             cx, cy = pick_track_center(
-                tokens, img.size[0], img.size[1], min_confidence=min_conf
+                tokens,
+                img.size[0],
+                img.size[1],
+                min_confidence=min_conf,
+                needles=track_needles,
             )
             cropped, cl, ct = crop_image_around_center(img, cx, cy, crop_frac)
             view = screen_view_from_image_crop(
                 view, img, cl, ct, cropped.size[0], cropped.size[1]
             )
             img = cropped
+            step = adaptive_next_step(applied_step, tokens, opts=opts)
     finally:
         focus_hide()
 
@@ -580,34 +764,33 @@ def read_region_hierarchical(
         window_box = Box(0, 0, full.size[0], full.size[1])
 
     target_box, chain = resolve_region_box(config, region_id, window_box)
-    opts = zoom_pipeline_settings(config)
-    step = opts["step"]
+    win_opts = zoom_pipeline_settings(config, "autochro_window")
+    coarse_step = adaptive_initial_step(window_box, win_opts)
 
     result = HierarchicalReadResult(window_box=window_box, final_view_box=target_box)
 
-    # 창 전체 1회 coarse (1.5×) — 맥락용
     full_img = capture_box(window_box)
 
     def _window_coarse() -> Tuple[str, List[OcrToken]]:
-        full_up = upscale_image(full_img, step)
+        full_up = upscale_image(full_img, coarse_step)
         return ocr_image(full_up)
 
     full_text, full_tokens = focus_stage(window_box, _window_coarse)
-    full_up = upscale_image(full_img, step)
+    full_up = upscale_image(full_img, coarse_step)
     result.stages.append(
         ReadStageResult(
             "window_coarse",
-            step,
+            coarse_step,
             "autochro_window",
             save_debug_image(full_up, "full_window") if save_images else "",
             full_tokens,
             full_text,
             effective_scale=image_effective_scale(window_box, full_up),
             view_box=window_box,
+            adaptive_step=coarse_step,
         )
     )
 
-    # 대상 영역 — 1.5× 추적 반복
     tracked = read_track_zoom_on_box(
         target_box,
         config,
@@ -617,11 +800,13 @@ def read_region_hierarchical(
     result.stages.extend(tracked.stages)
     result.final_view_box = tracked.final_view_box
 
-    _log(f"[눈] region={region_id} chain={' → '.join(chain)} track_zoom step={step}")
+    _log(f"[눈] region={region_id} chain={' → '.join(chain)} adaptive_zoom")
     for st in result.stages:
         preview = st.plain_text.replace("\n", " ")[:100]
-        eff = st.effective_scale
-        _log(f"  · {st.stage} x{st.scale:g} eff={eff:.2f} | {preview!r}")
+        _log(
+            f"  · {st.stage} step={st.adaptive_step:.2f} crop={st.crop_frac:.2f} "
+            f"eff={st.effective_scale:.2f} early={st.stopped_early} | {preview!r}"
+        )
         if st.image_path:
             _log(f"    png: {st.image_path}")
     return result

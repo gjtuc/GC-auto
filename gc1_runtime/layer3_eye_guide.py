@@ -3,9 +3,11 @@
 gc1_runtime.layer3_eye_guide — Autochro 단계마다 OCR 눈 (T98)
 
 ``GC1_AUTOCHRO_EYE=1`` (live 기본) 일 때 각 UI 단계 전후로:
-  · 영역 캡처 + 계층 OCR
+  · 영역 캡처 + 적응 확대 OCR
   · 토큰 위치로 마우스 이동·클릭 (제어목록 .raw 동기화 앵커 등)
-  · read_tasks 로 단계 검증
+  · read_tasks 로 단계 검증 (실패해도 ``GC1_AUTOCHRO_EYE_ADAPT=1`` 이면 fallback 후 계속)
+
+케이스 스터디: ``python scripts/probe_gc1_ocr_case_study.py``
 
 pywinauto 좌표만 쓰면 제어목록 고정 위치에 커서가 안 가는 문제가 있어
 동기화 더블클릭은 OCR ``.raw`` 행을 우선 찾습니다.
@@ -38,13 +40,28 @@ _RAW_TOKEN_RX = re.compile(r"(\d+)\s*[\.,]?\s*raw", re.IGNORECASE)
 
 
 def autochro_eye_strict() -> bool:
-    """OCR 검증 실패 시 단계 중단 (기본 ON)."""
-    return os.getenv("GC1_AUTOCHRO_EYE_STRICT", "1").strip().lower() not in (
+    """OCR 검증 실패 시 단계 중단 (기본 OFF — 적응 학습)."""
+    return os.getenv("GC1_AUTOCHRO_EYE_STRICT", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def autochro_eye_adaptive() -> bool:
+    """OCR 우선 + pywinauto·좌표 fallback 허용 (기본 ON)."""
+    return os.getenv("GC1_AUTOCHRO_EYE_ADAPT", "1").strip().lower() not in (
         "0",
         "false",
         "no",
         "off",
     )
+
+
+def eye_gate_should_raise() -> bool:
+    """OCR 게이트 실패 시 RuntimeError — strict 이고 adaptive 가 아닐 때만."""
+    return autochro_eye_strict() and not autochro_eye_adaptive()
 
 
 def autochro_eye_enabled(*, dry_run: bool = False) -> bool:
@@ -135,8 +152,13 @@ class AutochroStepEye:
         self._log(f"OCR done - {tag}: {preview!r}")
         return text
 
-    def ocr_region_tokens(self, region_id: str) -> Tuple[Box, float, List[OcrToken]]:
-        """영역 추적 1.5× OCR — 토큰·view·effective_scale (클릭 좌표용)."""
+    def ocr_region_tokens(
+        self,
+        region_id: str,
+        *,
+        needles: Optional[Sequence[str]] = None,
+    ) -> Tuple[Box, float, List[OcrToken]]:
+        """영역 적응 확대 OCR — 토큰·view·effective_scale (클릭 좌표용)."""
         try:
             region_box, _ = resolve_region_box(self.config, region_id, self.window_box)
             tracked = read_track_zoom_on_box(
@@ -144,11 +166,16 @@ class AutochroStepEye:
                 self.config,
                 region_id=region_id,
                 save_images=True,
+                needles=needles,
             )
             if not tracked.stages:
                 return region_box, 1.0, []
             last = tracked.stages[-1]
             view = tracked.final_view_box or region_box
+            self._log(
+                f"OCR zoom done {region_id} steps={len(tracked.stages)} "
+                f"step={last.adaptive_step:.2f} crop={last.crop_frac:.2f}"
+            )
             return view, last.effective_scale, last.tokens
         except RuntimeError as exc:
             raise RuntimeError(f"OCR 엔진 필요 (Tesseract): {exc}") from exc
@@ -176,10 +203,12 @@ class AutochroStepEye:
         return verdict.passed
 
     def require_task(self, step_id: str, task_id: str, *, phase: str = "after") -> None:
-        """OCR 검증 필수 — 실패 시 RuntimeError (GC1_AUTOCHRO_EYE_STRICT)."""
+        """OCR 검증 — adaptive 이면 경고만, strict+비적응이면 중단."""
         ok = self.verify_task(task_id, step_id=step_id, phase=phase)
-        if not ok and autochro_eye_strict():
+        if not ok and eye_gate_should_raise():
             raise RuntimeError(f"OCR gate fail: {step_id} / {task_id}")
+        if not ok and autochro_eye_adaptive():
+            self._log(f"gate warn (adaptive continue) - {step_id} / {task_id}")
 
     def verify_tree_data_name(self, data_name: str, *, step_id: str) -> bool:
         """분석목록 왼쪽 트리 OCR — 제어목록 데이터명과 일치."""
@@ -189,7 +218,7 @@ class AutochroStepEye:
             text = self.ocr_region("left_analysis_tree", label=f"{step_id}_tree")
         except RuntimeError as exc:
             self._log(f"tree OCR skip: {exc}")
-            return not autochro_eye_strict()
+            return not eye_gate_should_raise()
         compact = re.sub(r"\s+", "", text.lower())
         name_c = re.sub(r"\s+", "", data_name.lower())
         if name_c and name_c[: min(len(name_c), 16)] in compact:
@@ -201,7 +230,7 @@ class AutochroStepEye:
                 self._log(f"tree name OK (line) - {line!r}")
                 return True
         self._log(f"tree name FAIL - want {data_name!r} in {text[:80]!r}")
-        if autochro_eye_strict():
+        if eye_gate_should_raise():
             raise RuntimeError(f"OCR tree name mismatch: {data_name!r}")
         return False
 
@@ -231,7 +260,7 @@ class AutochroStepEye:
         try:
             self.require_task(step_id, task_id, phase="between")
         except Exception as exc:
-            if autochro_eye_strict():
+            if eye_gate_should_raise():
                 raise
             self._log(f"checkpoint warn - {step_id}: {exc}")
 
@@ -245,7 +274,9 @@ class AutochroStepEye:
         1.raw 라벨이 스크롤로 사라져도 **고정 슬롯 첫 행**에 보이는 .raw 를 찾음.
         """
         try:
-            region_box, scale, tokens = self.ocr_region_tokens(region_id)
+            region_box, scale, tokens = self.ocr_region_tokens(
+                region_id, needles=["raw", ".raw", "1.raw"]
+            )
         except RuntimeError as exc:
             self._log(str(exc))
             return None
@@ -271,7 +302,10 @@ class AutochroStepEye:
     ) -> Optional[Tuple[int, int]]:
         """분석목록 트리 — 데이터명 OCR 토큰 중심 (우클릭 위치)."""
         try:
-            view, scale, tokens = self.ocr_region_tokens(region_id)
+            view, scale, tokens = self.ocr_region_tokens(
+                region_id,
+                needles=[data_name[:12], "2026", "dre"],
+            )
         except RuntimeError as exc:
             self._log(f"tree OCR skip: {exc}")
             return None
@@ -297,19 +331,21 @@ class AutochroStepEye:
         self._log(f"tree anchor '{best.text}' -> screen ({x},{y})")
         return x, y
 
-    def guided_tree_right_click_data_name(self, data_name: str) -> None:
-        """OCR 로 트리 데이터명 찾아 우클릭."""
+    def guided_tree_right_click_data_name(self, data_name: str) -> bool:
+        """OCR 로 트리 데이터명 찾아 우클릭. 성공 여부 반환."""
         self.scan_between("P4.locate_tree", "left_analysis_tree")
         anchor = self.find_tree_name_screen_xy(data_name)
         if anchor is None:
-            if autochro_eye_strict():
+            if eye_gate_should_raise():
                 raise RuntimeError(f"OCR tree anchor missing: {data_name!r}")
-            return
+            self._log(f"tree OCR miss — caller may fallback: {data_name!r}")
+            return False
         x, y = anchor
         flash_focus_point(x, y, color="lime")
         click_screen(x, y, button="right")
         time.sleep(0.45)
         self._log(f"tree OCR right-click ({x},{y})")
+        return True
 
     def guided_sync_execute_double_click(
         self,
@@ -394,7 +430,9 @@ class AutochroStepEye:
         if fallback_rel is None:
             fallback_rel = _neutral_list_rel(sample_list)
         try:
-            region_box, scale, tokens = self.ocr_region_tokens(region_id)
+            region_box, scale, tokens = self.ocr_region_tokens(
+                region_id, needles=["raw", "시료", "수집", "일시"]
+            )
         except Exception as exc:
             self._log(f"sample table OCR skip: {exc}")
             return fallback_rel
@@ -433,7 +471,10 @@ class AutochroStepEye:
 
     def guided_focus_for_ctrl_a(self, sample_list) -> Tuple[int, int]:
         """Ctrl+A 전 — OCR 로 클릭 위치 잡고 마우스 이동."""
-        self.require_task("P2.before_ctrl_a", EYE_TASK_BEFORE_TABLE)
+        if eye_gate_should_raise():
+            self.require_task("P2.before_ctrl_a", EYE_TASK_BEFORE_TABLE)
+        else:
+            self.verify_task("P2.before_ctrl_a", step_id="P2.before_ctrl_a", phase="before")
         rel_x, rel_y = self.resolve_sample_table_rel(sample_list)
         self.move_mouse_on_list(sample_list, rel_x, rel_y)
         self.scan_between("P2.mouse_before_ctrl_a", "top_sample_table")
@@ -441,7 +482,27 @@ class AutochroStepEye:
 
     def guided_after_ctrl_a(self) -> None:
         """Ctrl+A 직후 검증."""
-        self.require_task("P2.after_ctrl_a", EYE_TASK_AFTER_CTRL_A)
+        if eye_gate_should_raise():
+            self.require_task("P2.after_ctrl_a", EYE_TASK_AFTER_CTRL_A)
+        else:
+            self.verify_task("P2.after_ctrl_a", step_id="P2.after_ctrl_a", phase="after")
+
+    def try_click_context_menu_ocr(
+        self,
+        needle: str,
+        *,
+        forbid: Sequence[str] = (),
+        region_id: str = "context_menu_popup",
+    ) -> bool:
+        """우클릭 메뉴 OCR 클릭 — 실패 시 False (adaptive fallback 용)."""
+        try:
+            self.click_context_menu_ocr(
+                needle, forbid=forbid, region_id=region_id
+            )
+            return True
+        except Exception as exc:
+            self._log(f"menu OCR miss — fallback allowed: {exc}")
+            return False
 
     def click_context_menu_ocr(
         self,
@@ -451,7 +512,9 @@ class AutochroStepEye:
         region_id: str = "context_menu_popup",
     ) -> None:
         """우클릭 후 뜬 메뉴를 OCR 로 읽고 항목 클릭."""
-        region_box, scale, tokens = self.ocr_region_tokens(region_id)
+        region_box, scale, tokens = self.ocr_region_tokens(
+            region_id, needles=[needle, "초기화", "불러"]
+        )
         hits: List[OcrToken] = []
         for tok in tokens:
             text = tok.text or ""
@@ -480,8 +543,8 @@ class AutochroStepEye:
         *,
         forbid: Sequence[str] = ("정량", "검량"),
         neutral_rel: Tuple[int, int] | None = None,
-    ) -> None:
-        """마우스 위치 OCR 조정 -> 우클릭 -> OCR 로 메뉴 클릭."""
+    ) -> bool:
+        """마우스 위치 OCR 조정 -> 우클릭 -> OCR 로 메뉴 클릭. 메뉴 클릭 성공 여부."""
         if neutral_rel is None:
             neutral_rel = _neutral_list_rel(sample_list)
         rel_x, rel_y = self.resolve_sample_table_rel(
@@ -493,8 +556,12 @@ class AutochroStepEye:
         sample_list.click_input(button="right", coords=(rel_x, rel_y))
         time.sleep(0.45)
         self.scan_between("P3.menu_open", "context_menu_popup")
-        self.click_context_menu_ocr(menu_needle, forbid=forbid)
-        self.require_task("P3.after_menu_click", EYE_TASK_AFTER_MENU_INIT)
+        clicked = self.try_click_context_menu_ocr(menu_needle, forbid=forbid)
+        if eye_gate_should_raise():
+            self.require_task("P3.after_menu_click", EYE_TASK_AFTER_MENU_INIT)
+        elif clicked:
+            self.verify_task("P3.after_menu_click", step_id="P3.after_menu", phase="after")
+        return clicked
 
 
 def _neutral_list_rel(sample_list) -> Tuple[int, int]:

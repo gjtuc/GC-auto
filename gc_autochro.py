@@ -86,6 +86,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   GC1_AUTOCHRO_PREP_STEPS         — 1=적분 준비(초기화·MTD) 포함 (기본), 0=생략
   GC1_USE_RUNTIME                 — 1=``gc1_runtime.layer4_job`` 위임 (기본 0, 기존 UI 경로)
   GC1_AUTOCHRO_EYE               — 1=단계마다 OCR 눈 (live 기본 1, dry_run 제외)
+  GC1_AUTOCHRO_EYE_ADAPT         — 1=OCR 우선·fallback 허용 (기본 1)
+  GC1_AUTOCHRO_EYE_STRICT        — 1=OCR 게이트 실패 시 중단 (기본 0, adapt=0 과 함께)
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
@@ -907,7 +909,10 @@ def step_context_initialize_samples(win, cfg: AutochroConfig) -> None:
     _select_analysis_tab(win)
     sample_list = _analysis_sample_table(win)
     if eye:
-        eye.guided_right_click_then_menu(sample_list, "초기화", forbid=("정량", "검량"))
+        menu_ok = eye.guided_right_click_then_menu(sample_list, "초기화", forbid=("정량", "검량"))
+        if not menu_ok:
+            _log("[적응] 메뉴 OCR 실패 — pywinauto 초기화")
+            _click_context_initialize()
         eye.require_task("P3.after_init", "eye_after_context_init")
     else:
         _right_click_sample_table(sample_list)
@@ -929,13 +934,18 @@ def step_load_analysis_method(win, cfg: AutochroConfig, data_name: str) -> None:
     if eye:
         eye.require_task("P4.tab_analysis", "eye_active_tab_analysis")
     if eye:
-        eye.guided_tree_right_click_data_name(data_name)
+        tree_ok = eye.guided_tree_right_click_data_name(data_name)
+        if not tree_ok:
+            _log("[적응] 트리 OCR 실패 — pywinauto 우클릭")
+            _right_click_tree_data_name(win, data_name)
         eye.scan_between("P4.after_tree_menu", "context_menu_popup")
-        eye.click_context_menu_ocr(
+        if not eye.try_click_context_menu_ocr(
             "불러오기",
             forbid=(),
             region_id="context_menu_popup",
-        )
+        ):
+            _log("[적응] 메뉴 OCR 실패 — pywinauto 분석방법 불러오기")
+            _click_context_load_analysis_method()
     else:
         _right_click_tree_data_name(win, data_name)
         _click_context_load_analysis_method()

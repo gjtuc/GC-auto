@@ -2,6 +2,7 @@
 """T98 — layer3_eye_guide OCR 토큰·좌표 (실행 검증은 mock)."""
 from __future__ import annotations
 
+import os
 import unittest
 
 import re
@@ -10,7 +11,10 @@ from gc_screen_read import Box, OcrToken
 from gc1_runtime.layer0_sync import sync_double_click_coords
 from gc1_runtime.layer3_eye_guide import (
     AutochroStepEye,
+    autochro_eye_adaptive,
     autochro_eye_enabled,
+    autochro_eye_strict,
+    eye_gate_should_raise,
     token_looks_like_raw,
 )
 
@@ -21,6 +25,19 @@ class TestAutochroEyeEnabled(unittest.TestCase):
 
     def test_on_by_default_live(self):
         self.assertTrue(autochro_eye_enabled(dry_run=False))
+
+    def test_adaptive_default_on(self):
+        os.environ.pop("GC1_AUTOCHRO_EYE_ADAPT", None)
+        self.assertTrue(autochro_eye_adaptive())
+
+    def test_gate_raises_only_strict_non_adaptive(self):
+        os.environ["GC1_AUTOCHRO_EYE_STRICT"] = "1"
+        os.environ["GC1_AUTOCHRO_EYE_ADAPT"] = "0"
+        self.assertTrue(eye_gate_should_raise())
+        os.environ["GC1_AUTOCHRO_EYE_ADAPT"] = "1"
+        self.assertFalse(eye_gate_should_raise())
+        os.environ.pop("GC1_AUTOCHRO_EYE_STRICT", None)
+        os.environ.pop("GC1_AUTOCHRO_EYE_ADAPT", None)
 
 
 class TestRawToken(unittest.TestCase):
