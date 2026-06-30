@@ -1,7 +1,7 @@
 {
     "pc_id":  "DESKTOP-MBGSSME",
-    "label":  "은규 — GC1 PC (DESKTOP-MBGSSME)",
-    "role":  "gc1_pc",
+    "label":  "은규 — 데이터 PC (DESKTOP-MBGSSME)",
+    "role":  "data_pc",
     "operator":  "은규",
     "identifiers":  {
                         "smbios_uuid":  "2729BF60-374D-11E1-91AC-E8039A622559",
@@ -10,8 +10,8 @@
                         "windows_user":  "User"
                     },
     "sync":  {
-                 "last_push_at":  "2026-06-30T22:41:35+09:00",
-                 "last_push_commit":  "ad98682",
+                 "last_push_at":  "2026-06-30T23:52:46+09:00",
+                 "last_push_commit":  "bf0833f",
                  "last_push_by":  "DESKTOP-MBGSSME\\은규",
                  "last_pull_at":  "2026-06-22T20:40:27+09:00",
                  "last_pull_commit":  "564d5b3",
@@ -19,6 +19,14 @@
                  "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
              },
     "history":  [
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T23:52:46+09:00",
+                        "commit":  "bf0833f",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 23:52:39",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
                     {
                         "event":  "push",
                         "at":  "2026-06-30T22:41:35+09:00",
@@ -168,14 +176,6 @@
                         "at":  "2026-06-30T09:43:10+09:00",
                         "commit":  "655b873",
                         "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 09:43:06",
-                        "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-06-30T09:39:42+09:00",
-                        "commit":  "7bdc919",
-                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 09:39:38",
                         "by":  "DESKTOP-MBGSSME\\은규",
                         "triggered_by":  "auto_git_sync"
                     }
