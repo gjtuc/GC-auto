@@ -10,6 +10,7 @@
 |------|------|
 | **본 문서** | §0 헌법, §B, §L0~L3, 요약 |
 | [PART1_L0](GC1_RUNTIME_DESIGN_PART1_L0.md) | **Ω-L0 전 leaf** (T11: 502+) |
+| [PART1_L2](GC1_RUNTIME_DESIGN_PART1_L2.md) | **Ω-L2 게이트 + Ω-ERR** (T12) |
 | [PART2_L4](GC1_RUNTIME_DESIGN_PART2_L4.md) | P0~P9 **72 atom**, ~225 action leaf, 7필드 |
 | [PART3_L6](GC1_RUNTIME_DESIGN_PART3_L6.md) | parse·trim(**6×N**), clean, mail, pdf-wait |
 | [PART4_L7_L8](GC1_RUNTIME_DESIGN_PART4_L7_L8.md) | watch·force·표면·error_handler |
@@ -465,6 +466,8 @@ per (region, stage): GEO.01→04, CAP.01→03, Z.01→03, P.01→02, O.01→04e
 
 ## §L2 — 게이트
 
+> **T12 전량:** [GC1_RUNTIME_DESIGN_PART1_L2.md](GC1_RUNTIME_DESIGN_PART1_L2.md)
+
 ### G-EX (export 잡)
 
 ```
@@ -757,6 +760,8 @@ P2+P3 재실행, `attempt=2` STW only.
 ---
 
 ## §ERR — 실패 코드 → 은규 한 줄
+
+> **T12 전량:** [GC1_RUNTIME_DESIGN_PART1_L2.md](GC1_RUNTIME_DESIGN_PART1_L2.md) §ERR
 
 | code | 메시지 |
 |------|--------|
