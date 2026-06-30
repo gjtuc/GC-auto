@@ -6,7 +6,9 @@ import unittest
 
 from gc_screen_read import (
     Box,
+    OcrToken,
     box_from_fraction,
+    find_menu_needle_tokens,
     load_config,
     resolve_region_box,
     upscale_image,
@@ -114,6 +116,17 @@ class TestGcScreenRead(unittest.TestCase):
         sub = screen_view_from_image_crop(view, img, cl, ct, cropped.size[0], cropped.size[1])
         self.assertLess(sub.width, view.width)
         self.assertGreaterEqual(sub.left, view.left)
+
+
+class TestMenuNeedleTokens(unittest.TestCase):
+    def test_split_initialize_token(self):
+        tokens = [
+            OcrToken("초기", 97.0, Box(10, 40, 30, 12)),
+            OcrToken("지우기", 96.0, Box(10, 20, 40, 12)),
+        ]
+        hits = find_menu_needle_tokens(tokens, "초기화", forbid=("정량",))
+        self.assertEqual(len(hits), 1)
+        self.assertEqual(hits[0].text, "초기")
 
 
 if __name__ == "__main__":

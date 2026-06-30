@@ -849,6 +849,72 @@ def find_text_tokens(tokens: Iterable[OcrToken], query: str, *, partial: bool = 
     return hits
 
 
+def box_around_screen_point(
+    x: int,
+    y: int,
+    *,
+    width: int = 260,
+    height: int = 420,
+    bias_dx: int = -20,
+    bias_dy: int = -24,
+    clip: Optional[Box] = None,
+) -> Box:
+    """우클릭 직후 컨텍스트 메뉴 — 클릭점 근처만 OCR (고정 큰 영역 대신)."""
+    left = x + bias_dx
+    top = y + bias_dy
+    box = Box(left, top, width, height)
+    if clip is None:
+        return box
+    left = max(clip.left, min(box.left, clip.right - width))
+    top = max(clip.top, min(box.top, clip.bottom - height))
+    return Box(left, top, width, height)
+
+
+def find_menu_needle_tokens(
+    tokens: Sequence[OcrToken],
+    needle: str,
+    *,
+    forbid: Sequence[str] = (),
+) -> List[OcrToken]:
+    """
+    메뉴 항목 OCR — ``초기화`` 가 ``초기`` / ``화`` 로 쪼개져도 매칭.
+
+    우선 전체 부분 문자열, 다음 2글자 prefix, 마지막 인접 토큰 합성.
+    """
+    def allowed(tok: OcrToken) -> bool:
+        text = tok.text or ""
+        return not any(f in text for f in forbid)
+
+    hits = [t for t in find_text_tokens(tokens, needle, partial=True) if allowed(t)]
+    if hits:
+        return hits
+
+    norm_n = _normalize_token(needle)
+    if len(norm_n) < 2:
+        return []
+
+    prefix = norm_n[:2]
+    hits = [t for t in tokens if prefix in _normalize_token(t.text) and allowed(t)]
+    if hits:
+        return hits
+
+    ordered = sorted(tokens, key=lambda t: (t.box.top, t.box.left))
+    for i, t1 in enumerate(ordered):
+        if not allowed(t1):
+            continue
+        combined = _normalize_token(t1.text)
+        row_h = max(t1.box.height, 10)
+        for t2 in ordered[i + 1 : i + 5]:
+            if abs(t2.box.top - t1.box.top) > row_h * 2:
+                break
+            if not allowed(t2):
+                continue
+            combined += _normalize_token(t2.text)
+            if norm_n in combined or (len(combined) >= 2 and combined in norm_n):
+                return [t1]
+    return []
+
+
 def token_screen_center(token: OcrToken, region_box: Box, scale: float) -> Tuple[int, int]:
     cx = token.box.left + token.box.width // 2
     cy = token.box.top + token.box.height // 2

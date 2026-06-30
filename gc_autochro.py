@@ -634,10 +634,21 @@ def _click_popup_menu_item(
 
 
 def _click_context_initialize() -> None:
-    _click_popup_menu_item(
-        lambda t: "초기화" in t and "정량" not in t and "검량" not in t,
-    )
-    _log("  → 초기화 클릭")
+    matcher = lambda t: "초기화" in t and "정량" not in t and "검량" not in t
+    try:
+        _click_popup_menu_item(matcher, timeout=8.0)
+        _log("  → 초기화 클릭 (win32)")
+        return
+    except RuntimeError as exc:
+        _log(f"  [적응] win32 메뉴 실패 — 단축키 N: {exc}")
+    try:
+        from pywinauto.keyboard import send_keys
+
+        send_keys("n")
+        time.sleep(0.35)
+        _log("  → 초기화 클릭 (단축키 N)")
+    except Exception as exc2:
+        raise RuntimeError(f"초기화 메뉴 클릭 실패: {exc2}") from exc2
 
 
 def _click_context_load_analysis_method() -> None:
@@ -949,8 +960,9 @@ def step_load_analysis_method(win, cfg: AutochroConfig, data_name: str) -> None:
             forbid=(),
             region_id="context_menu_popup",
         ):
-            _log("[적응] 메뉴 OCR 실패 — pywinauto 분석방법 불러오기")
-            _click_context_load_analysis_method()
+            if not eye._try_click_popup_menu_win32("불러오기", forbid=()):
+                _log("[적응] 메뉴 OCR 실패 — pywinauto 분석방법 불러오기")
+                _click_context_load_analysis_method()
     else:
         _right_click_tree_data_name(win, data_name)
         _click_context_load_analysis_method()

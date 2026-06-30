@@ -24,8 +24,10 @@ from typing import Callable, Iterable, List, Optional, Sequence, Tuple
 from gc_screen_read import (
     Box,
     OcrToken,
+    box_around_screen_point,
     click_screen,
     double_click_screen,
+    find_menu_needle_tokens,
     find_text_tokens,
     flash_focus_point,
     load_config,
@@ -71,13 +73,9 @@ def autochro_eye_enabled(*, dry_run: bool = False) -> bool:
     if dry_run:
         return False
     enabled = os.getenv("GC1_AUTOCHRO_EYE", "1").strip().lower() in ("1", "true", "yes")
-    if enabled and os.getenv("GC_SCREEN_SHOW_FOCUS", "1").strip().lower() not in (
-        "0",
-        "false",
-        "no",
-        "off",
-    ):
-        os.environ.setdefault("GC_SCREEN_SHOW_FOCUS", "1")
+    # tkinter 빨간 박스는 Tcl 스레드 충돌 — 명시하지 않으면 자동화 중 OFF
+    if enabled and not os.getenv("GC_SCREEN_SHOW_FOCUS", "").strip():
+        os.environ["GC_SCREEN_SHOW_FOCUS"] = "0"
     return enabled
 
 
@@ -147,6 +145,7 @@ class AutochroStepEye:
     eye: EyeActuator
     log_fn: Callable[[str], None] = _LOG
     records: List[EyeStepRecord] = field(default_factory=list)
+    _menu_anchor_screen: Optional[Tuple[int, int]] = field(default=None, repr=False)
 
     @classmethod
     def from_window_rect(
@@ -194,8 +193,20 @@ class AutochroStepEye:
         needles: Optional[Sequence[str]] = None,
     ) -> Tuple[Box, float, List[OcrToken]]:
         """영역 적응 확대 OCR — 토큰·view·effective_scale (클릭 좌표용)."""
+        region_box, _ = resolve_region_box(self.config, region_id, self.window_box)
+        return self._ocr_tokens_on_box(
+            region_box, region_id=region_id, needles=needles, log_tag=region_id
+        )
+
+    def _ocr_tokens_on_box(
+        self,
+        region_box: Box,
+        *,
+        region_id: str,
+        needles: Optional[Sequence[str]] = None,
+        log_tag: str = "",
+    ) -> Tuple[Box, float, List[OcrToken]]:
         try:
-            region_box, _ = resolve_region_box(self.config, region_id, self.window_box)
             tracked = read_track_zoom_on_box(
                 region_box,
                 self.config,
@@ -207,8 +218,9 @@ class AutochroStepEye:
                 return region_box, 1.0, []
             last = tracked.stages[-1]
             view = tracked.final_view_box or region_box
+            tag = log_tag or region_id
             self._log(
-                f"OCR zoom done {region_id} steps={len(tracked.stages)} "
+                f"OCR zoom done {tag} steps={len(tracked.stages)} "
                 f"step={last.adaptive_step:.2f} crop={last.crop_frac:.2f}"
             )
             return view, last.effective_scale, last.tokens
@@ -428,7 +440,8 @@ class AutochroStepEye:
         x, y = anchor
         flash_focus_point(x, y, color="lime")
         click_screen(x, y, button="right")
-        time.sleep(0.45)
+        self._menu_anchor_screen = (x, y)
+        time.sleep(0.55)
         self._log(f"tree OCR right-click ({x},{y})")
         return True
 
@@ -595,6 +608,23 @@ class AutochroStepEye:
             )
             return False
 
+    def _try_click_popup_menu_win32(self, needle: str, *, forbid: Sequence[str]) -> bool:
+        """#32768 팝업 메뉴 — OCR 전/후 보조."""
+        from gc1_runtime.layer3_hand import menu_popup_pick
+
+        def matcher(text: str) -> bool:
+            if needle not in text:
+                return False
+            return not any(f in text for f in forbid)
+
+        try:
+            result = menu_popup_pick(matcher, timeout=8.0)
+            self._log(f"menu win32 click {result.matched_text!r}")
+            return True
+        except Exception as exc:
+            self._log(f"menu win32 miss: {exc}")
+            return False
+
     def click_context_menu_ocr(
         self,
         needle: str,
@@ -602,29 +632,41 @@ class AutochroStepEye:
         forbid: Sequence[str] = (),
         region_id: str = "context_menu_popup",
     ) -> None:
-        """우클릭 후 뜬 메뉴를 OCR 로 읽고 항목 클릭."""
-        region_box, scale, tokens = self.ocr_region_tokens(
-            region_id, needles=[needle, "초기화", "불러"]
-        )
+        """우클릭 후 뜬 메뉴를 OCR 로 읽고 항목 클릭 (클릭점 근처 박스 우선)."""
+        boxes: List[Tuple[str, Box]] = []
+        if self._menu_anchor_screen is not None:
+            ax, ay = self._menu_anchor_screen
+            menu_box = box_around_screen_point(ax, ay, clip=self.window_box)
+            boxes.append(("menu@click", menu_box))
+        region_box, _ = resolve_region_box(self.config, region_id, self.window_box)
+        boxes.append((region_id, region_box))
+
         hits: List[OcrToken] = []
-        for tok in tokens:
-            text = tok.text or ""
-            if needle not in text:
-                continue
-            if any(f in text for f in forbid):
-                continue
-            hits.append(tok)
+        region_box_used = region_box
+        scale = 1.0
+        for tag, box in boxes:
+            region_box_used, scale, tokens = self._ocr_tokens_on_box(
+                box,
+                region_id=region_id,
+                needles=[needle, "초기화", "불러", "초기", "불러오기"],
+                log_tag=tag,
+            )
+            hits = find_menu_needle_tokens(tokens, needle, forbid=forbid)
+            if hits:
+                break
+
         if not hits:
-            hits = find_text_tokens(tokens, needle, partial=True)
-            hits = [t for t in hits if not any(f in t.text for f in forbid)]
-        if not hits:
-            plain = self.ocr_region(region_id, label="menu_miss")
+            plain = ""
+            try:
+                plain = self.ocr_region(region_id, label="menu_miss")
+            except RuntimeError:
+                pass
             raise RuntimeError(
                 f"OCR menu missing {needle!r} - preview={plain[:80]!r}"
             )
         best = max(hits, key=lambda t: t.confidence)
-        x, y = token_screen_center(best, region_box, scale)
-        self._log(f"menu OCR click {needle!r} -> ({x},{y})")
+        x, y = token_screen_center(best, region_box_used, scale)
+        self._log(f"menu OCR click {needle!r} -> ({x},{y}) token={best.text!r}")
         click_screen(x, y, button="left")
 
     def guided_right_click_then_menu(
@@ -645,9 +687,13 @@ class AutochroStepEye:
         self.move_mouse_on_list(sample_list, rel_x, rel_y)
         self._log(f"우클릭 rel=({rel_x},{rel_y})")
         sample_list.click_input(button="right", coords=(rel_x, rel_y))
-        time.sleep(0.45)
+        rect = sample_list.rectangle()
+        self._menu_anchor_screen = (rect.left + rel_x, rect.top + rel_y)
+        time.sleep(0.55)
         self.scan_between("P3.menu_open", "context_menu_popup")
         clicked = self.try_click_context_menu_ocr(menu_needle, forbid=forbid)
+        if not clicked:
+            clicked = self._try_click_popup_menu_win32(menu_needle, forbid=forbid)
         if eye_gate_should_raise():
             self.require_task("P3.after_menu_click", EYE_TASK_AFTER_MENU_INIT)
         elif clicked:
