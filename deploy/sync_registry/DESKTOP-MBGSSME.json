@@ -10,8 +10,8 @@
                         "windows_user":  "User"
                     },
     "sync":  {
-                 "last_push_at":  "2026-07-01T09:31:16+09:00",
-                 "last_push_commit":  "6999be9",
+                 "last_push_at":  "2026-07-01T10:46:05+09:00",
+                 "last_push_commit":  "763920f",
                  "last_push_by":  "DESKTOP-MBGSSME\\은규",
                  "last_pull_at":  "2026-06-22T20:40:27+09:00",
                  "last_pull_commit":  "564d5b3",
@@ -19,6 +19,14 @@
                  "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
              },
     "history":  [
+                    {
+                        "event":  "push",
+                        "at":  "2026-07-01T10:46:05+09:00",
+                        "commit":  "763920f",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-07-01 10:45:51",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
                     {
                         "event":  "push",
                         "at":  "2026-07-01T09:31:16+09:00",
@@ -168,14 +176,6 @@
                         "at":  "2026-06-30T20:15:52+09:00",
                         "commit":  "ac2f528",
                         "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 20:15:33",
-                        "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-06-30T19:55:21+09:00",
-                        "commit":  "c552d8a",
-                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 19:55:17",
                         "by":  "DESKTOP-MBGSSME\\은규",
                         "triggered_by":  "auto_git_sync"
                     }
