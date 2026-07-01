@@ -45,7 +45,7 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   · **Ctrl+A**: 시료 표 **처리형태·적분 열**(우측, 편집 모드 없음) **한 번** 클릭 후 전체 선택.
     시료이름 열 재클릭 시 이름 수정 모드 → Ctrl+A 불가 → PDF 1시료만 저장됨.
     **인쇄 직전에도 반드시 전체 선택 재실행** (적분 후 단일행 선택 복귀 방지).
-    Win32 ``LVM_GETSELECTEDCOUNT`` 로 선택 행 수 검증 → 툴바 프린터 클릭 (``win.set_focus`` 금지).
+    인쇄는 **원시 경로**: 표 1클릭 → Ctrl+A → 툴바 프린터 (그 사이 ListView·검증 호출 없음).
 
   · **32-bit Autochro**: 64-bit Python 으로도 동작하지만 pywinauto 경고가 납니다.
     GC1 장비 PC 배포 시 32-bit Python 권장.
@@ -73,7 +73,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   AUTOCHRO_AUTO_POSITION, AUTOCHRO_WINDOW_X/Y
   AUTOCHRO_LIST_STATUS_X_FRAC   — Ctrl+A 전 클릭 (처리형태·적분 열, 기본 0.88;
                                   쉼표 구분 후보 0.88,0.82,0.92 — 열 너비 변경 허용)
-  AUTOCHRO_LIST_NEUTRAL_X_FRAC — Ctrl+A 보조 클릭 (기본 0.78, Win32 실패 시)
+  AUTOCHRO_PRINT_CTRL_A_X_FRAC   — 인쇄 직전 Ctrl+A 클릭 열 (기본 0.78)
+  AUTOCHRO_LIST_NEUTRAL_X_FRAC — (동일) 수집일시 열
   AUTOCHRO_TOOLBAR_PRINT_ICON     — 툴바 왼쪽 N번째 아이콘 (기본 4 = 프린터)
   AUTOCHRO_TOOLBAR_ICON_WIDTH_PX  — 아이콘 간격 px (기본 26)
   AUTOCHRO_TOOLBAR_PRINT_X_FRAC   — (선택) 툴바/창 상대 X override
@@ -1115,10 +1116,6 @@ def _list_status_column_coords(
 
 
 def _listview_item_count(ctrl) -> int:
-    hwnd = _listview_hwnd(ctrl)
-    total, _ = _listview_counts_hwnd(hwnd)
-    if total > 0:
-        return total
     try:
         return max(0, int(ctrl.item_count()))
     except Exception:
@@ -1126,150 +1123,42 @@ def _listview_item_count(ctrl) -> int:
 
 
 def _listview_selected_count(ctrl) -> int:
-    hwnd = _listview_hwnd(ctrl)
-    _, sel = _listview_counts_hwnd(hwnd)
-    if sel > 0:
-        return sel
     try:
-        selected = ctrl.get_selected()
-        return len(selected) if selected else 0
+        sel = ctrl.get_selected()
+        return len(sel) if sel else 0
     except Exception:
         return 0
 
 
-# Win32 ListView — LVM_GETSELECTEDCOUNT 가 pywinauto get_selected 보다 정확
-_LVM_GETITEMCOUNT = 0x1004
-_LVM_GETSELECTEDCOUNT = 0x1032
-_LVM_SETITEMSTATE = 0x102B
-_LVIS_SELECTED = 0x0002
-_LVIS_FOCUSED = 0x0001
-
-
-def _listview_hwnd(ctrl) -> int:
-    try:
-        return int(ctrl.handle)
-    except Exception:
-        return 0
-
-
-def _makelong(low: int, high: int) -> int:
-    return ((high & 0xFFFF) << 16) | (low & 0xFFFF)
-
-
-def _listview_counts_hwnd(hwnd: int) -> tuple[int, int]:
-    if not hwnd:
-        return 0, 0
-    try:
-        import ctypes
-
-        user32 = ctypes.windll.user32
-        total = int(user32.SendMessageW(hwnd, _LVM_GETITEMCOUNT, 0, 0))
-        selected = int(user32.SendMessageW(hwnd, _LVM_GETSELECTEDCOUNT, 0, 0))
-        return max(0, total), max(0, selected)
-    except Exception:
-        return 0, 0
-
-
-def _listview_selection_ok(total: int, selected: int) -> bool:
-    if total <= 0:
-        return False
-    if total == 1:
-        return selected >= 1
-    return selected >= total or selected > 1
-
-
-def _listview_select_all_hwnd(hwnd: int) -> tuple[int, int]:
-    """Win32 API로 ListView 전 행 선택 (클릭 없음)."""
-    total, _ = _listview_counts_hwnd(hwnd)
-    if not hwnd or total <= 0:
-        return total, 0
-    try:
-        import ctypes
-
-        user32 = ctypes.windll.user32
-        for i in range(total):
-            if i == 0:
-                state = _LVIS_SELECTED | _LVIS_FOCUSED
-                mask = _LVIS_SELECTED | _LVIS_FOCUSED
-            else:
-                state = _LVIS_SELECTED
-                mask = _LVIS_SELECTED
-            user32.SendMessageW(
-                hwnd, _LVM_SETITEMSTATE, i, _makelong(state, mask)
-            )
-        return _listview_counts_hwnd(hwnd)
-    except Exception:
-        return total, 0
-
-
-def _ctrl_a_click_fracs() -> list[float]:
-    """전체선택 Ctrl+A 전 클릭 후보 (우측 열 우선, 구버전 0.78 포함)."""
-    seen: set[float] = set()
-    out: list[float] = []
-    for x in list(_parse_status_x_fracs()) + [0.78, 0.72]:
-        x = _clamp_status_x_frac(x)
-        if x not in seen:
-            seen.add(x)
-            out.append(x)
-    return out
-
-
-def _select_all_analysis_rows(
-    sample_list, *, context: str = ""
-) -> tuple[int, int]:
+def _raw_ctrl_a_click_coords(sample_list) -> tuple[int, int]:
     """
-    분석목록 시료 표 전체 선택 — Win32 우선, 실패 시 열 클릭+Ctrl+A 재시도.
+    원시 Ctrl+A 전 1회 클릭 — 수집일시·처리형태 열 (기본 x=0.78).
 
-    Returns:
-        (total_rows, selected_rows) — LVM_GETSELECTEDCOUNT 기준
+    ``AUTOCHRO_PRINT_CTRL_A_X_FRAC`` 또는 ``AUTOCHRO_LIST_NEUTRAL_X_FRAC``.
     """
+    raw = os.getenv("AUTOCHRO_PRINT_CTRL_A_X_FRAC", "").strip()
+    if not raw:
+        raw = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "0.78").strip() or "0.78"
+    try:
+        x_frac = float(raw)
+    except ValueError:
+        x_frac = 0.78
+    x_frac = min(max(x_frac, 0.55), 0.92)
+    rect = sample_list.rectangle()
+    width = max(rect.width(), 400)
+    height = max(rect.height(), 80)
+    rel_x = int(width * x_frac)
+    rel_y = max(16, min(32, height // 10))
+    return rel_x, rel_y
+
+
+def _raw_select_all_keyboard(sample_list) -> None:
+    """원시 전체선택: 표 1클릭 → Ctrl+A (ESC·set_focus·검증 없음)."""
     from pywinauto.keyboard import send_keys
 
-    hwnd = _listview_hwnd(sample_list)
-    prefix = f"{context} " if context else ""
-
-    total, selected = _listview_counts_hwnd(hwnd)
-    if total <= 0:
-        total = _listview_item_count(sample_list)
-
-    if hwnd and total > 0:
-        total, selected = _listview_select_all_hwnd(hwnd)
-        if _listview_selection_ok(total, selected):
-            _log(f"  {prefix}Win32 전체선택 {selected}/{total}행")
-            return total, selected
-
-    try:
-        send_keys("{ESC}")
-        time.sleep(0.15)
-    except Exception:
-        pass
-    sample_list.set_focus()
-    time.sleep(0.1)
-
-    for x_frac in _ctrl_a_click_fracs():
-        rel_x, rel_y = _list_status_column_coords(sample_list, x_frac=x_frac)
-        sample_list.click_input(coords=(rel_x, rel_y))
-        time.sleep(0.15)
-        send_keys("^a")
-        time.sleep(0.3)
-        total, selected = _listview_counts_hwnd(hwnd)
-        if total <= 0:
-            total = _listview_item_count(sample_list)
-        if _listview_selection_ok(total, selected):
-            _log(f"  {prefix}Ctrl+A x_frac={x_frac:.2f} → {selected}/{total}행")
-            return total, selected
-        try:
-            send_keys("{ESC}")
-            time.sleep(0.1)
-        except Exception:
-            pass
-
-    total, selected = _listview_counts_hwnd(hwnd)
-    if total <= 0:
-        total = _listview_item_count(sample_list)
-        selected = _listview_selected_count(sample_list)
-    _log(f"  {prefix}전체선택 미달 — {selected}/{total}행")
-    return total, selected
+    rel_x, rel_y = _raw_ctrl_a_click_coords(sample_list)
+    sample_list.click_input(coords=(rel_x, rel_y))
+    send_keys("^a")
 
 
 def _find_main_toolbar(win):
@@ -1296,7 +1185,7 @@ def _find_main_toolbar(win):
 
 
 def _toolbar_print_screen_coords(win) -> tuple[int, int]:
-    """툴바 프린터 아이콘 화면 좌표 (기본: 왼쪽 4번째)."""
+    """툴바 프린터 아이콘 화면 좌표 (기본: 왼쪽 4번째). ^a **전에** 미리 계산."""
     x_frac_raw = os.getenv("AUTOCHRO_TOOLBAR_PRINT_X_FRAC", "").strip()
     y_frac_raw = os.getenv("AUTOCHRO_TOOLBAR_PRINT_Y_FRAC", "").strip()
     tb = _find_main_toolbar(win)
@@ -1321,53 +1210,12 @@ def _toolbar_print_screen_coords(win) -> tuple[int, int]:
     )
 
 
-def _trigger_print_dialog(win) -> None:
-    """
-    인쇄 대화상자 — 툴바 프린터 우선.
-
-  ``win.set_focus``·시료 표 재클릭 금지 (전체선택 해제 방지).
-    """
-    from gc_screen_read import click_screen
-    from pywinauto.keyboard import send_keys
-
-    _ensure_autochro_foreground(win)
-    sx, sy = _toolbar_print_screen_coords(win)
-    _log(f"  툴바 프린터 @ ({sx}, {sy})")
-    click_screen(sx, sy, button="left")
-    time.sleep(0.8)
-    if _find_window_title_re(r"인쇄|Print", timeout=1.5) is not None:
-        return
-    _log("  툴바 미감지 → Ctrl+P (창 포커스만)")
-    try:
-        import ctypes
-
-        ctypes.windll.user32.SetForegroundWindow(win.handle)
-        time.sleep(0.15)
-    except Exception:
-        pass
-    send_keys("^p")
-
-
-def _select_all_for_print(win) -> tuple[int, int]:
-    """인쇄 직전: 분석목록 탭 → 전체선택 검증 → 인쇄 트리거."""
-    _select_analysis_tab(win)
-    sample_list = _analysis_sample_table(win)
-    total, selected = _select_all_analysis_rows(sample_list, context="인쇄")
-    if not _listview_selection_ok(total, selected):
-        raise RuntimeError(
-            f"인쇄 전 전체선택 실패 — {selected}/{total}행 "
-            f"(AUTOCHRO_LIST_STATUS_X_FRAC·TOOLBAR_PRINT_* 확인)"
-        )
-    _trigger_print_dialog(win)
-    return total, selected
-
-
 def _select_all_in_sample_table(win) -> None:
-    """분석목록 상단 시료 표 전체 선택 — step 3."""
-    _ensure_autochro_foreground(win)
+    """3/6 원시 전체선택."""
     _select_analysis_tab(win)
     sample_list = _analysis_sample_table(win)
-    _select_all_analysis_rows(sample_list, context="3/6")
+    _raw_select_all_keyboard(sample_list)
+    time.sleep(0.3)
 
 
 def _list_row_index_coords(sample_list) -> tuple[int, int]:
@@ -1378,20 +1226,8 @@ def _list_row_index_coords(sample_list) -> tuple[int, int]:
 
 
 def _neutral_list_coords(sample_list) -> tuple[int, int]:
-    """하위 호환 — 처리형태·적분 열."""
-    return _list_status_column_coords(sample_list)
-
-
-def _focus_list_for_ctrl_a(sample_list, *, x_frac: float | None = None) -> float:
-    """분석목록 시료 표 — 처리형태·적분 열 **한 번** 클릭 (편집 모드 회피)."""
-    if x_frac is None:
-        x_frac = _parse_status_x_fracs()[0]
-    rel_x, rel_y = _list_status_column_coords(sample_list, x_frac=x_frac)
-    sample_list.set_focus()
-    time.sleep(0.1)
-    sample_list.click_input(coords=(rel_x, rel_y))
-    time.sleep(0.3)
-    return x_frac
+    """하위 호환 — ``_raw_ctrl_a_click_coords`` 와 동일."""
+    return _raw_ctrl_a_click_coords(sample_list)
 
 
 def _largest_sample_list(win):
@@ -1463,19 +1299,25 @@ def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
 
 
 def step_print_pdf(win, cfg: AutochroConfig) -> None:
-    """5/6 — 구버전: 수집일시 열 클릭 → Ctrl+A → Ctrl+P."""
-    _log("5/6 분석목록 → 인쇄 (Ctrl+P, 구버전)")
+    """
+    5/6 원시 인쇄 — 클릭 → Ctrl+A → 툴바 프린터.
+
+    ^a 와 인쇄 사이 ListView·win.set_focus·검증 호출 **없음**.
+    """
+    _log("5/6 인쇄 (원시: 클릭→^a→툴바)")
     if cfg.dry_run:
         return
+    from gc_screen_read import click_screen
     from pywinauto.keyboard import send_keys
 
     _select_analysis_tab(win)
     sample_list = _analysis_sample_table(win)
-    _legacy_focus_list_for_ctrl_a(sample_list)
-    win.set_focus()
+    print_x, print_y = _toolbar_print_screen_coords(win)
+    rel_x, rel_y = _raw_ctrl_a_click_coords(sample_list)
+    _log(f"  ({rel_x},{rel_y}) → ^a → 프린터 ({print_x},{print_y})")
+    sample_list.click_input(coords=(rel_x, rel_y))
     send_keys("^a")
-    time.sleep(0.3)
-    send_keys("^p")
+    click_screen(print_x, print_y, button="left")
     time.sleep(1.0)
     _confirm_print_dialog(cfg)
     _wait_for_printing(cfg)
