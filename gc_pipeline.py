@@ -463,24 +463,30 @@ def _run_processing_gc1_body(config: AppConfig, script_dir: str) -> ProcessResul
         is_autochro_enabled = lambda: False  # type: ignore
         ensure_gc1_pdf_exported = None  # type: ignore
 
+    exported_pdf: Optional[str] = None
     if is_autochro_enabled() and ensure_gc1_pdf_exported:
         skip_export = os.getenv("GC1_SKIP_AUTOCHRO_EXPORT", "").strip().lower() in ("1", "true", "yes")
         if skip_export and not config.force:
             print("[Autochro] PDF 내보내기 건너뜀 (watch에서 이미 실행됨)")
         else:
             # config.force → watch/개시 요청 시 Autochro PDF 항상 재내보내기
-            export_ok, _, export_msg = ensure_gc1_pdf_exported(
+            export_ok, export_pdf, export_msg = ensure_gc1_pdf_exported(
                 config.excel_output_dir,
                 config.send_state_file,
                 force=bool(config.force),
             )
+            exported_pdf = export_pdf
             register_pipeline_phase("autochro_export", ok=export_ok, detail=export_msg or "")
             if not export_ok:
                 return ProcessResult(ok=False, fail_reason=f"Autochro PDF 내보내기 실패 — {export_msg}")
             if export_msg and export_msg not in ("CRM 변경 없음", "Autochro 자동화 비활성"):
                 print(f"[Autochro] {export_msg}")
 
-    pdf_path = find_active_pdf(config)
+    if exported_pdf and os.path.isfile(exported_pdf):
+        pdf_path = os.path.normpath(exported_pdf)
+        print(f"[안내] Autochro 방금보낸 PDF 사용: {os.path.basename(pdf_path)}")
+    else:
+        pdf_path = find_active_pdf(config)
     if not pdf_path:
         pdf_dir = config.excel_output_dir
         return ProcessResult(
