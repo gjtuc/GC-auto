@@ -10,8 +10,8 @@
                         "windows_user":  "User"
                     },
     "sync":  {
-                 "last_push_at":  "2026-07-02T00:43:53+09:00",
-                 "last_push_commit":  "871ad53",
+                 "last_push_at":  "2026-07-02T00:51:43+09:00",
+                 "last_push_commit":  "e0ff140",
                  "last_push_by":  "GC8860\\차헌",
                  "last_pull_at":  "2026-07-02T00:40:19+09:00",
                  "last_pull_commit":  "cbdd162",
@@ -19,6 +19,14 @@
                  "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
              },
     "history":  [
+                    {
+                        "event":  "push",
+                        "at":  "2026-07-02T00:51:43+09:00",
+                        "commit":  "e0ff140",
+                        "subject":  "auto: sync GC8860 @ 2026-07-02 00:51:39",
+                        "by":  "GC8860\\차헌",
+                        "triggered_by":  "auto_git_sync"
+                    },
                     {
                         "event":  "push",
                         "at":  "2026-07-02T00:43:53+09:00",
@@ -168,14 +176,6 @@
                         "at":  "2026-06-23T23:38:30+09:00",
                         "commit":  "e6405bc",
                         "subject":  "auto: sync GC8860 @ 2026-06-23 23:38:25",
-                        "by":  "GC8860\\차헌",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-06-23T23:29:05+09:00",
-                        "commit":  "eddcdb8",
-                        "subject":  "auto: sync GC8860 @ 2026-06-23 23:26:31",
                         "by":  "GC8860\\차헌",
                         "triggered_by":  "auto_git_sync"
                     }
