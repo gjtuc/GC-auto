@@ -144,6 +144,13 @@ def is_learning_paused_by_user() -> bool:
     return _GUARD.paused
 
 
+def get_learning_pause_reason() -> str:
+    """일시 중단 사유 — ``single_swipe`` / ``window_swipe`` / 빈 문자열."""
+    if _GUARD is None or not _GUARD.paused:
+        return ""
+    return _GUARD.pause_reason or "unknown"
+
+
 def learning_collection_allowed() -> bool:
     """케이스 스터디·overlay patch·관측 기록 허용 여부."""
     from gc1_runtime.layer3_ocr_learn import learnings_enabled

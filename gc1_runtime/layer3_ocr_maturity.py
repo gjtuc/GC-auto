@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-OCR 스킬 성숙도 — 99.99% 이상이면 해당 스킬 학습 중단, 실패 시 재학습.
+OCR 스킬 성숙도 — 97% 이상이면 해당 스킬 학습 중단, 실패 시 재학습.
 
 ``maturity.json`` + ``policy.json`` (다음 런에서 유리한 방법 선택 확률).
 """
@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 
 from gc1_runtime.layer3_ocr_learn import learnings_dir
 
-MATURITY_RATE = float(os.getenv("GC1_OCR_MATURITY_RATE", "0.9999"))
+MATURITY_RATE = float(os.getenv("GC1_OCR_MATURITY_RATE", "0.97"))
 MIN_ATTEMPTS = int(os.getenv("GC1_OCR_MATURITY_MIN_ATTEMPTS", "20"))
 _MATURITY_NAME = "maturity.json"
 _POLICY_NAME = "policy.json"

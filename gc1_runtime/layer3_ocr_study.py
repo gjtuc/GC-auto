@@ -26,6 +26,7 @@ from gc1_runtime.layer3_ocr_maturity import (
     skill_key,
 )
 from gc1_runtime.layer3_user_mouse_guard import (
+    get_learning_pause_reason,
     is_learning_paused_by_user,
     learning_collection_allowed,
 )
@@ -82,7 +83,7 @@ def review_prior_learning(*, log_fn: Optional[Callable[[str], None]] = None) -> 
     _log(f"[스터디] 런 전 복습 — 성숙 {len(mature)} · 학습 중 {len(learning)}")
     for k in mature[:5]:
         st = skills[k]
-        _log(f"[스터디]   성숙(99.99%+) {k} rate={st.get('rate')}")
+        _log(f"[스터디]   성숙(97%+) {k} rate={st.get('rate')}")
     for k in learning[:5]:
         st = skills[k]
         _log(f"[스터디]   학습 중 {k} rate={st.get('rate')} n={st.get('attempts')}")
@@ -118,14 +119,17 @@ def run_post_run_study(
         "applied_patches": [],
         "skipped_mature": [],
         "user_paused_learning": is_learning_paused_by_user(),
+        "user_pause_reason": get_learning_pause_reason(),
         "pipeline_ok": pipeline_ok,
     }
 
     if not learning_collection_allowed() and result["user_paused_learning"]:
-        _log("[스터디] 사용자 마우스 — overlay patch·추가 학습 생략 (관측·성숙도는 저장됨)")
+        reason = result["user_pause_reason"] or "unknown"
+        _log(f"[스터디] 사용자 마우스({reason}) — overlay patch·추가 학습 생략")
         _write_study_journal(run_id, result, observations, reports)
         _append_study_log(
-            f"POST-RUN {run_id} paused_by_user obs={len(observations)} fails={len(reports)}"
+            f"POST-RUN {run_id} paused_by_user reason={reason} "
+            f"obs={len(observations)} fails={len(reports)}"
         )
         return result
 
