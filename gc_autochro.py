@@ -75,6 +75,7 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   AUTOCHRO_PRINT_CTRL_A_X_FRAC   — 3단계 Ctrl+A 전 클릭 열 (기본 0.78)
   AUTOCHRO_LIST_NEUTRAL_X_FRAC — (동일)
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
+  AUTOCHRO_HANCOM_FOREGROUND_SEC — 변환 중 한컴 창 앞으로 올리기 주기(초, 기본 3)
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
 테스트: Desktop\\박은규\\GC1_데이터갱신.bat  또는  python gc_autochro.py --export --force
@@ -443,17 +444,28 @@ def _popup_menu_item_text(item) -> str:
     return str(item).strip()
 
 
-def _ensure_autochro_foreground(win) -> None:
+def _bring_window_foreground(win) -> None:
+    """창을 복원·최상단으로 — 가려진 한컴 PDF 등에서 닫기 버튼 클릭 가능하게."""
     try:
         import ctypes
 
-        ctypes.windll.user32.SetForegroundWindow(win.handle)
-        time.sleep(0.2)
+        hwnd = int(win.handle)
+        user32 = ctypes.windll.user32
+        if user32.IsIconic(hwnd):
+            user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+        user32.BringWindowToTop(hwnd)
+        user32.SetForegroundWindow(hwnd)
+        time.sleep(0.15)
     except Exception:
         try:
             win.set_focus()
+            time.sleep(0.1)
         except Exception:
             pass
+
+
+def _ensure_autochro_foreground(win) -> None:
+    _bring_window_foreground(win)
 
 
 def _open_tree_context_menu(win, tree, rel_x: int, rel_y: int) -> str:
@@ -1367,6 +1379,7 @@ def _hancom_close_button_enabled(win) -> bool:
 
 def _close_hancom_window(win) -> bool:
     """닫기(&C)만 클릭 — 열기(O)는 절대 클릭하지 않음."""
+    _bring_window_foreground(win)
     for btn_title in ("닫기(&C)", "닫기(C)", "닫기", "Close", "&Close"):
         try:
             btn = win.child_window(title=btn_title, class_name="Button")
@@ -1395,6 +1408,8 @@ def _wait_and_close_all_hancom_pdf(cfg: AutochroConfig) -> None:
     deadline = time.time() + cfg.hancom_wait_sec
     seen = False
     last_progress = ""
+    last_foreground = 0.0
+    fg_interval = float(os.getenv("AUTOCHRO_HANCOM_FOREGROUND_SEC", "3") or "3")
     while time.time() < deadline:
         windows = _find_all_hancom_pdf_windows()
         if not windows:
@@ -1405,6 +1420,12 @@ def _wait_and_close_all_hancom_pdf(cfg: AutochroConfig) -> None:
             continue
 
         seen = True
+        now = time.time()
+        if now - last_foreground >= fg_interval:
+            for win in windows:
+                _bring_window_foreground(win)
+            last_foreground = now
+
         converting = False
         for win in windows:
             if _hancom_is_complete(win):
@@ -1432,6 +1453,7 @@ def _wait_and_close_all_hancom_pdf(cfg: AutochroConfig) -> None:
     if remaining:
         _log(f"한컴 PDF 대기 시간 초과 — 남은 창 {len(remaining)}개 닫기 시도")
         for win in remaining:
+            _bring_window_foreground(win)
             if _hancom_is_complete(win) or _hancom_close_button_enabled(win):
                 _close_hancom_window(win)
     else:
