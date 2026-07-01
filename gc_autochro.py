@@ -15,14 +15,17 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 본 모듈은 **PDF 파일을 Autochro 화면 조작으로 생성**하는 단계만 담당합니다.
 
 =============================================================================
-[5단계 UI 흐름]  (run_autochro_export)
+[6단계 UI 흐름]  (run_autochro_export)
 =============================================================================
 
   1) 제어목록 탭 → 하단 시료 표 더블클릭 → 분석목록과 동기화
-  2) 분석목록 시료 표 Ctrl+A (전체 선택)
-  3) 메뉴 「시료목록 → 초기화+정량」 — 적분 대기(AUTOCHRO_QUANTIFY_WAIT_SEC)
-  4) Ctrl+P 인쇄 → Hancom PDF 변환 대화상자
-  5) 저장 경로에 PDF 기록 → 한컴 창 닫힘 대기 → gc_gc1.wait_for_pdf_file_ready
+  2) 분석목록 왼쪽 트리 — CRM 시료 우클릭 → 분석방법 불러오기 (고정 MTD)
+  3) 분석목록 시료 표 Ctrl+A (전체 선택)
+  4) 메뉴 「시료목록 → 초기화+정량」 — 적분 대기(AUTOCHRO_QUANTIFY_WAIT_SEC)
+  5) Ctrl+P 인쇄 → Hancom PDF 변환 대화상자
+  6) CRM 데이터명으로 PDF 저장 → 한컴 창 닫힘 대기 → gc_gc1.wait_for_pdf_file_ready
+
+  CRM 정보 대화상자 읽기는 **2단계(MTD)·6단계(PDF) 직전**에만 수행합니다.
 
 =============================================================================
 [PDF 파일명 — 하드코딩 금지]
@@ -739,16 +742,25 @@ def _read_data_name_from_control_tree(win) -> str:
     return ""
 
 
-def read_active_control_data_name(win, cfg: AutochroConfig) -> str:
-    _select_control_tab(win)
-    time.sleep(0.3)
-    if os.getenv("GC1_CONTROL_DATA_NAME_CRM_INFO", "1").strip().lower() not in (
+def read_crm_data_name(win) -> str:
+    """제어목록 정보 대화상자 — CRM 분석목록 경로 basename (PDF/MTD 직전 호출)."""
+    if os.getenv("GC1_CONTROL_DATA_NAME_CRM_INFO", "1").strip().lower() in (
         "0",
         "false",
         "no",
         "off",
     ):
-        name = _read_data_name_from_crm_info_dialog(win)
+        return ""
+    return _read_data_name_from_crm_info_dialog(win)
+
+
+def read_active_control_data_name(
+    win, cfg: AutochroConfig, *, use_crm: bool = True
+) -> str:
+    _select_control_tab(win)
+    time.sleep(0.3)
+    if use_crm:
+        name = read_crm_data_name(win)
         if name:
             return name
     for reader in (_read_data_name_from_window_title, _read_data_name_from_control_tree):
@@ -878,6 +890,171 @@ def _analysis_sample_table(win):
     return _pick_listview(win, prefer="upper", purpose="분석목록")
 
 
+_ANALYSIS_TREE_SUB = ("적분", "검량", "보고", "지연", "비교", "통계")
+
+
+def _analysis_tree_view(win):
+    """분석목록 왼쪽 트리 — ``texts()`` 에 「분석목록」 포함 (제어목록 트리와 구분)."""
+    for ctrl in win.descendants(class_name="SysTreeView32"):
+        try:
+            if "분석목록" in " ".join(ctrl.texts() or []):
+                return ctrl
+        except Exception:
+            continue
+    raise RuntimeError("분석목록 왼쪽 트리 없음")
+
+
+def _is_analysis_tree_sub_line(label: str) -> bool:
+    s = (label or "").strip()
+    return not s or any(k in s for k in _ANALYSIS_TREE_SUB) or "목록" in s
+
+
+def _find_analysis_folder_node(tree, data_name: str):
+    """분석목록 루트 아래 CRM과 일치하는 시료 폴더 노드."""
+    from gc1_runtime.layer0_data import rank_tree_line_for_data_name
+
+    best = None
+    best_score = -1.0
+    for root in tree.roots():
+        for child in root.children():
+            label = (child.text() or "").strip()
+            if _is_analysis_tree_sub_line(label):
+                continue
+            score = rank_tree_line_for_data_name(label, data_name)
+            if score > best_score:
+                best_score = score
+                best = child
+    if best is None or best_score < 0:
+        raise RuntimeError(f"분석목록 트리에 데이터명 없음: {data_name!r}")
+    return best
+
+
+def _right_click_tree_node(win, node) -> None:
+    """TreeView 시료 폴더 노드 우클릭 — ``click_input`` 우선, 실패 시 Apps 키."""
+    from pywinauto.keyboard import send_keys
+
+    _ensure_autochro_foreground(win)
+    try:
+        node.select()
+        time.sleep(0.2)
+    except Exception:
+        pass
+    try:
+        node.click_input(button="right")
+        time.sleep(0.45)
+        return
+    except Exception:
+        pass
+    try:
+        node.click_input(button="left")
+        time.sleep(0.15)
+        send_keys("+{F10}")
+        time.sleep(0.45)
+    except Exception as exc:
+        raise RuntimeError(f"트리 노드 우클릭 실패: {exc}") from exc
+
+
+def _click_context_load_analysis_method() -> None:
+    _click_popup_menu_item(lambda t: "분석방법" in t and "불러" in t)
+    _log("  → 분석방법 불러오기 클릭")
+
+
+def resolve_analysis_method_mtd_path() -> str:
+    """
+    GC1 적분 MTD — 기본 ``20260629 분석방법.MTD`` (바탕화면).
+
+    override: ``AUTOCHRO_ANALYSIS_METHOD_MTD`` 전체 경로.
+    """
+    explicit = os.getenv("AUTOCHRO_ANALYSIS_METHOD_MTD", "").strip()
+    if explicit:
+        path = os.path.normpath(os.path.expanduser(explicit))
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"분석방법 MTD 없음: {path}")
+        return path
+    filename = os.getenv(
+        "AUTOCHRO_ANALYSIS_METHOD_FILENAME", "20260629 분석방법.MTD"
+    ).strip()
+    base = os.getenv("AUTOCHRO_ANALYSIS_METHOD_DIR", "").strip()
+    if not base:
+        base = os.path.join(os.path.expanduser("~"), "Desktop")
+    path = os.path.join(os.path.normpath(os.path.expanduser(base)), filename)
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"분석방법 MTD 없음: {path}")
+    return path
+
+
+def _open_path_in_file_dialog(
+    dialog_title_re: str,
+    file_path: str,
+    *,
+    timeout: float = 30.0,
+) -> None:
+    dlg = _find_window_title_re(dialog_title_re, timeout=timeout)
+    if dlg is None:
+        raise RuntimeError(f"파일 대화상자 없음 — {dialog_title_re}")
+    dlg.set_focus()
+    norm_path = os.path.normpath(os.path.abspath(file_path))
+    edit = _find_filename_edit(dlg)
+    if edit is not None:
+        edit.set_focus()
+        try:
+            edit.set_edit_text(norm_path)
+        except Exception:
+            from pywinauto.keyboard import send_keys
+
+            send_keys("^a")
+            send_keys(norm_path, with_spaces=True)
+    else:
+        from pywinauto.keyboard import send_keys
+
+        send_keys("^a")
+        send_keys(norm_path, with_spaces=True)
+    time.sleep(0.4)
+    for btn_title in ("열기(&O)", "열기(O)", "열기", "Open", "&Open"):
+        try:
+            btn = dlg.child_window(title=btn_title, class_name="Button")
+            if btn.exists(timeout=0.3):
+                btn.click_input()
+                return
+        except Exception:
+            continue
+    from pywinauto.keyboard import send_keys
+
+    send_keys("%o")
+    time.sleep(0.3)
+
+
+def step_load_analysis_method(win, cfg: AutochroConfig) -> str:
+    """
+    분석목록 왼쪽 트리 — CRM 시료 폴더 우클릭 → 분석방법 불러오기 → 고정 MTD.
+
+    Returns:
+        CRM에서 읽은 데이터명 (PDF 파일명에 재사용).
+    """
+    _log("2/6 분석목록 트리 → 분석방법 불러오기")
+    if cfg.dry_run:
+        return _fallback_data_name(cfg)
+    data_name = read_crm_data_name(win)
+    if not data_name:
+        data_name = read_active_control_data_name(win, cfg, use_crm=False)
+        _log(f"  CRM 읽기 실패 — UI fallback: {data_name}")
+    mtd_path = resolve_analysis_method_mtd_path()
+    _log(f"  데이터명: {data_name}")
+    _log(f"  MTD: {os.path.basename(mtd_path)}")
+    _select_analysis_tab(win)
+    time.sleep(0.35)
+    tree = _analysis_tree_view(win)
+    node = _find_analysis_folder_node(tree, data_name)
+    _log(f"  트리 노드: {(node.text() or '').strip()}")
+    _right_click_tree_node(win, node)
+    _click_context_load_analysis_method()
+    _open_path_in_file_dialog(
+        r"분석방법 불러오기", mtd_path, timeout=cfg.dialog_wait_sec
+    )
+    time.sleep(1.5)
+    return data_name
+
+
 def _neutral_list_coords(sample_list) -> tuple[int, int]:
     """
     분석목록 시료 표에서 Ctrl+A 전 클릭 좌표.
@@ -933,7 +1110,7 @@ def _menu_select_by_suffix(win, top_suffix: str, item_text: str) -> None:
 
 
 def step_sync_control_to_analysis(win, cfg: AutochroConfig) -> None:
-    _log("1/5 제어목록 탭 → 시료 더블클릭 → 분석목록")
+    _log("1/6 제어목록 탭 → 시료 더블클릭 → 분석목록")
     if cfg.dry_run:
         return
     _select_control_tab(win)
@@ -951,7 +1128,7 @@ def step_sync_control_to_analysis(win, cfg: AutochroConfig) -> None:
 
 
 def step_select_all_samples(win, cfg: AutochroConfig) -> None:
-    _log("2/5 시료 전체 선택 (Ctrl+A)")
+    _log("3/6 시료 전체 선택 (Ctrl+A)")
     if cfg.dry_run:
         return
     _select_analysis_tab(win)
@@ -964,7 +1141,7 @@ def step_select_all_samples(win, cfg: AutochroConfig) -> None:
 
 
 def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
-    _log("3/5 시료목록 → 초기화+정량")
+    _log("4/6 시료목록 → 초기화+정량")
     if cfg.dry_run:
         return
     _select_analysis_tab(win)
@@ -986,7 +1163,7 @@ def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
 
 
 def step_print_pdf(win, cfg: AutochroConfig) -> None:
-    _log("4/5 분석목록 → 인쇄 (Ctrl+P)")
+    _log("5/6 분석목록 → 인쇄 (Ctrl+P)")
     if cfg.dry_run:
         return
     from pywinauto.keyboard import send_keys
@@ -1215,7 +1392,7 @@ def _confirm_overwrite_if_present(timeout: float = 5.0) -> bool:
 
 
 def step_save_pdf(cfg: AutochroConfig, pdf_path: str) -> None:
-    _log(f"5/5 PDF 저장: {pdf_path}")
+    _log(f"6/6 PDF 저장: {pdf_path}")
     if cfg.dry_run:
         return
     os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
@@ -1318,11 +1495,12 @@ def run_autochro_export(
             _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
             _log("[DRY RUN] UI 단계만 로그")
             for label in (
-                "1/5 제어목록 → 더블클릭",
-                "2/5 Ctrl+A",
-                "3/5 초기화+정량",
-                "4/5 인쇄",
-                "5/5 PDF 저장",
+                "1/6 제어목록 → 더블클릭",
+                "2/6 분석방법 MTD",
+                "3/6 Ctrl+A",
+                "4/6 초기화+정량",
+                "5/6 인쇄",
+                "6/6 PDF 저장",
             ):
                 _log(label)
             return True, pdf_path, "dry-run"
@@ -1330,16 +1508,25 @@ def run_autochro_export(
         if stale_closed:
             _log(f"이전 한컴 PDF 완료 창 {stale_closed}개 닫음")
         _, win = connect_main_window(cfg)
-        data_name = read_active_control_data_name(win, cfg)
-        pdf_path = build_export_pdf_path(cfg, data_name_raw=data_name)
-        _log(f"제어목록 데이터명: {data_name}")
-        _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
-        if not force and is_pdf_recently_exported(pdf_path):
-            return True, pdf_path, f"방금 PDF 내보냄 — Autochro 재실행 생략 ({pdf_fresh_skip_sec()}초 이내)"
+        probe_name = _fallback_data_name(cfg)
+        if probe_name:
+            pdf_probe = build_export_pdf_path(cfg, data_name_raw=probe_name)
+            if not force and is_pdf_recently_exported(pdf_probe):
+                return True, pdf_probe, (
+                    f"방금 PDF보냄 — Autochro 재실행 생략 ({pdf_fresh_skip_sec()}초 이내)"
+                )
         step_sync_control_to_analysis(win, cfg)
+        data_name = step_load_analysis_method(win, cfg)
         step_select_all_samples(win, cfg)
         step_initialize_quantify(win, cfg)
         step_print_pdf(win, cfg)
+        if not (data_name or "").strip():
+            data_name = read_crm_data_name(win) or read_active_control_data_name(
+                win, cfg, use_crm=False
+            )
+        pdf_path = build_export_pdf_path(cfg, data_name_raw=data_name)
+        _log(f"제어목록 데이터명: {data_name}")
+        _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
         step_save_pdf(cfg, pdf_path)
         if not os.path.isfile(pdf_path):
             folder_pdfs = sorted(
