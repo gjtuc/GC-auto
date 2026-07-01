@@ -22,7 +22,7 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   2) 분석목록 왼쪽 트리 — CRM 시료 우클릭 → 분석방법 불러오기 (고정 MTD)
   3) 분석목록 시료 표 Ctrl+A (전체 선택)
   4) 메뉴 「시료목록 → 초기화+정량」 — 적분 대기(AUTOCHRO_QUANTIFY_WAIT_SEC)
-  5) 시료 표 전체 선택 → Ctrl+P 인쇄 → Hancom PDF 변환 대화상자
+  5) 시료 표 전체 선택(검증) → 툴바 프린터 아이콘 → Hancom PDF 변환 대화상자
   6) CRM 데이터명으로 PDF 저장 → 한컴 창 닫힘 대기 → gc_gc1.wait_for_pdf_file_ready
 
   CRM 정보 대화상자 읽기는 **2단계(MTD)·6단계(PDF) 직전**에만 수행합니다.
@@ -45,7 +45,7 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   · **Ctrl+A**: 시료 표 **처리형태·적분 열**(우측, 편집 모드 없음) **한 번** 클릭 후 전체 선택.
     시료이름 열 재클릭 시 이름 수정 모드 → Ctrl+A 불가 → PDF 1시료만 저장됨.
     **인쇄 직전에도 반드시 전체 선택 재실행** (적분 후 단일행 선택 복귀 방지).
-    4~5단계(초기화+정량·인쇄)는 대규모 업데이트 **이전 구버전** 경로 유지.
+    Win32 ``LVM_GETSELECTEDCOUNT`` 로 선택 행 수 검증 → 툴바 프린터 클릭 (``win.set_focus`` 금지).
 
   · **32-bit Autochro**: 64-bit Python 으로도 동작하지만 pywinauto 경고가 납니다.
     GC1 장비 PC 배포 시 32-bit Python 권장.
@@ -73,7 +73,11 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   AUTOCHRO_AUTO_POSITION, AUTOCHRO_WINDOW_X/Y
   AUTOCHRO_LIST_STATUS_X_FRAC   — Ctrl+A 전 클릭 (처리형태·적분 열, 기본 0.88;
                                   쉼표 구분 후보 0.88,0.82,0.92 — 열 너비 변경 허용)
-  AUTOCHRO_LIST_NEUTRAL_X_FRAC — (구) step 4~5 Ctrl+A 클릭 (기본 0.78, 수집일시 열)
+  AUTOCHRO_LIST_NEUTRAL_X_FRAC — Ctrl+A 보조 클릭 (기본 0.78, Win32 실패 시)
+  AUTOCHRO_TOOLBAR_PRINT_ICON     — 툴바 왼쪽 N번째 아이콘 (기본 4 = 프린터)
+  AUTOCHRO_TOOLBAR_ICON_WIDTH_PX  — 아이콘 간격 px (기본 26)
+  AUTOCHRO_TOOLBAR_PRINT_X_FRAC   — (선택) 툴바/창 상대 X override
+  AUTOCHRO_TOOLBAR_PRINT_Y_FRAC   — (선택) 툴바/창 상대 Y override
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
@@ -1111,6 +1115,10 @@ def _list_status_column_coords(
 
 
 def _listview_item_count(ctrl) -> int:
+    hwnd = _listview_hwnd(ctrl)
+    total, _ = _listview_counts_hwnd(hwnd)
+    if total > 0:
+        return total
     try:
         return max(0, int(ctrl.item_count()))
     except Exception:
@@ -1118,11 +1126,248 @@ def _listview_item_count(ctrl) -> int:
 
 
 def _listview_selected_count(ctrl) -> int:
+    hwnd = _listview_hwnd(ctrl)
+    _, sel = _listview_counts_hwnd(hwnd)
+    if sel > 0:
+        return sel
     try:
-        sel = ctrl.get_selected()
-        return len(sel) if sel else 0
+        selected = ctrl.get_selected()
+        return len(selected) if selected else 0
     except Exception:
         return 0
+
+
+# Win32 ListView — LVM_GETSELECTEDCOUNT 가 pywinauto get_selected 보다 정확
+_LVM_GETITEMCOUNT = 0x1004
+_LVM_GETSELECTEDCOUNT = 0x1032
+_LVM_SETITEMSTATE = 0x102B
+_LVIS_SELECTED = 0x0002
+_LVIS_FOCUSED = 0x0001
+
+
+def _listview_hwnd(ctrl) -> int:
+    try:
+        return int(ctrl.handle)
+    except Exception:
+        return 0
+
+
+def _makelong(low: int, high: int) -> int:
+    return ((high & 0xFFFF) << 16) | (low & 0xFFFF)
+
+
+def _listview_counts_hwnd(hwnd: int) -> tuple[int, int]:
+    if not hwnd:
+        return 0, 0
+    try:
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        total = int(user32.SendMessageW(hwnd, _LVM_GETITEMCOUNT, 0, 0))
+        selected = int(user32.SendMessageW(hwnd, _LVM_GETSELECTEDCOUNT, 0, 0))
+        return max(0, total), max(0, selected)
+    except Exception:
+        return 0, 0
+
+
+def _listview_selection_ok(total: int, selected: int) -> bool:
+    if total <= 0:
+        return False
+    if total == 1:
+        return selected >= 1
+    return selected >= total or selected > 1
+
+
+def _listview_select_all_hwnd(hwnd: int) -> tuple[int, int]:
+    """Win32 API로 ListView 전 행 선택 (클릭 없음)."""
+    total, _ = _listview_counts_hwnd(hwnd)
+    if not hwnd or total <= 0:
+        return total, 0
+    try:
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        for i in range(total):
+            if i == 0:
+                state = _LVIS_SELECTED | _LVIS_FOCUSED
+                mask = _LVIS_SELECTED | _LVIS_FOCUSED
+            else:
+                state = _LVIS_SELECTED
+                mask = _LVIS_SELECTED
+            user32.SendMessageW(
+                hwnd, _LVM_SETITEMSTATE, i, _makelong(state, mask)
+            )
+        return _listview_counts_hwnd(hwnd)
+    except Exception:
+        return total, 0
+
+
+def _ctrl_a_click_fracs() -> list[float]:
+    """전체선택 Ctrl+A 전 클릭 후보 (우측 열 우선, 구버전 0.78 포함)."""
+    seen: set[float] = set()
+    out: list[float] = []
+    for x in list(_parse_status_x_fracs()) + [0.78, 0.72]:
+        x = _clamp_status_x_frac(x)
+        if x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out
+
+
+def _select_all_analysis_rows(
+    sample_list, *, context: str = ""
+) -> tuple[int, int]:
+    """
+    분석목록 시료 표 전체 선택 — Win32 우선, 실패 시 열 클릭+Ctrl+A 재시도.
+
+    Returns:
+        (total_rows, selected_rows) — LVM_GETSELECTEDCOUNT 기준
+    """
+    from pywinauto.keyboard import send_keys
+
+    hwnd = _listview_hwnd(sample_list)
+    prefix = f"{context} " if context else ""
+
+    total, selected = _listview_counts_hwnd(hwnd)
+    if total <= 0:
+        total = _listview_item_count(sample_list)
+
+    if hwnd and total > 0:
+        total, selected = _listview_select_all_hwnd(hwnd)
+        if _listview_selection_ok(total, selected):
+            _log(f"  {prefix}Win32 전체선택 {selected}/{total}행")
+            return total, selected
+
+    try:
+        send_keys("{ESC}")
+        time.sleep(0.15)
+    except Exception:
+        pass
+    sample_list.set_focus()
+    time.sleep(0.1)
+
+    for x_frac in _ctrl_a_click_fracs():
+        rel_x, rel_y = _list_status_column_coords(sample_list, x_frac=x_frac)
+        sample_list.click_input(coords=(rel_x, rel_y))
+        time.sleep(0.15)
+        send_keys("^a")
+        time.sleep(0.3)
+        total, selected = _listview_counts_hwnd(hwnd)
+        if total <= 0:
+            total = _listview_item_count(sample_list)
+        if _listview_selection_ok(total, selected):
+            _log(f"  {prefix}Ctrl+A x_frac={x_frac:.2f} → {selected}/{total}행")
+            return total, selected
+        try:
+            send_keys("{ESC}")
+            time.sleep(0.1)
+        except Exception:
+            pass
+
+    total, selected = _listview_counts_hwnd(hwnd)
+    if total <= 0:
+        total = _listview_item_count(sample_list)
+        selected = _listview_selected_count(sample_list)
+    _log(f"  {prefix}전체선택 미달 — {selected}/{total}행")
+    return total, selected
+
+
+def _find_main_toolbar(win):
+    """Autochro 상단 아이콘 툴바 (메뉴 아래)."""
+    win_rect = _window_rect(win)
+    if win_rect is None:
+        return None
+    best = None
+    best_top = 10**9
+    for tb in win.descendants(class_name="ToolbarWindow32"):
+        try:
+            rect = tb.rectangle()
+        except Exception:
+            continue
+        rel_top = rect.top - win_rect.top
+        if rel_top < 0 or rel_top > 140:
+            continue
+        if rect.width() < 80:
+            continue
+        if rect.top < best_top:
+            best_top = rect.top
+            best = tb
+    return best
+
+
+def _toolbar_print_screen_coords(win) -> tuple[int, int]:
+    """툴바 프린터 아이콘 화면 좌표 (기본: 왼쪽 4번째)."""
+    x_frac_raw = os.getenv("AUTOCHRO_TOOLBAR_PRINT_X_FRAC", "").strip()
+    y_frac_raw = os.getenv("AUTOCHRO_TOOLBAR_PRINT_Y_FRAC", "").strip()
+    tb = _find_main_toolbar(win)
+    if tb is not None:
+        rect = tb.rectangle()
+        if x_frac_raw and y_frac_raw:
+            rel_x = int(rect.width() * float(x_frac_raw))
+            rel_y = int(rect.height() * float(y_frac_raw))
+        else:
+            icon_index = _env_int("AUTOCHRO_TOOLBAR_PRINT_ICON", 4)
+            icon_w = _env_int("AUTOCHRO_TOOLBAR_ICON_WIDTH_PX", 26)
+            left_pad = _env_int("AUTOCHRO_TOOLBAR_ICON_LEFT_PAD_PX", 8)
+            rel_x = int(left_pad + (icon_index - 0.5) * icon_w)
+            rel_y = max(8, rect.height() // 2)
+        return int(rect.left) + rel_x, int(rect.top) + rel_y
+    win_rect = win.rectangle()
+    x_frac = float(x_frac_raw or "0.13")
+    y_frac = float(y_frac_raw or "0.072")
+    return (
+        int(win_rect.left) + int(win_rect.width() * x_frac),
+        int(win_rect.top) + int(win_rect.height() * y_frac),
+    )
+
+
+def _trigger_print_dialog(win) -> None:
+    """
+    인쇄 대화상자 — 툴바 프린터 우선.
+
+  ``win.set_focus``·시료 표 재클릭 금지 (전체선택 해제 방지).
+    """
+    from gc_screen_read import click_screen
+    from pywinauto.keyboard import send_keys
+
+    _ensure_autochro_foreground(win)
+    sx, sy = _toolbar_print_screen_coords(win)
+    _log(f"  툴바 프린터 @ ({sx}, {sy})")
+    click_screen(sx, sy, button="left")
+    time.sleep(0.8)
+    if _find_window_title_re(r"인쇄|Print", timeout=1.5) is not None:
+        return
+    _log("  툴바 미감지 → Ctrl+P (창 포커스만)")
+    try:
+        import ctypes
+
+        ctypes.windll.user32.SetForegroundWindow(win.handle)
+        time.sleep(0.15)
+    except Exception:
+        pass
+    send_keys("^p")
+
+
+def _select_all_for_print(win) -> tuple[int, int]:
+    """인쇄 직전: 분석목록 탭 → 전체선택 검증 → 인쇄 트리거."""
+    _select_analysis_tab(win)
+    sample_list = _analysis_sample_table(win)
+    total, selected = _select_all_analysis_rows(sample_list, context="인쇄")
+    if not _listview_selection_ok(total, selected):
+        raise RuntimeError(
+            f"인쇄 전 전체선택 실패 — {selected}/{total}행 "
+            f"(AUTOCHRO_LIST_STATUS_X_FRAC·TOOLBAR_PRINT_* 확인)"
+        )
+    _trigger_print_dialog(win)
+    return total, selected
+
+
+def _select_all_in_sample_table(win) -> None:
+    """분석목록 상단 시료 표 전체 선택 — step 3."""
+    _ensure_autochro_foreground(win)
+    _select_analysis_tab(win)
+    sample_list = _analysis_sample_table(win)
+    _select_all_analysis_rows(sample_list, context="3/6")
 
 
 def _list_row_index_coords(sample_list) -> tuple[int, int]:
@@ -1147,80 +1392,6 @@ def _focus_list_for_ctrl_a(sample_list, *, x_frac: float | None = None) -> float
     sample_list.click_input(coords=(rel_x, rel_y))
     time.sleep(0.3)
     return x_frac
-
-
-def _legacy_neutral_list_coords(sample_list) -> tuple[int, int]:
-    """
-    구버전(step 4~5) Ctrl+A 전 클릭 — 수집 일시 열 (~0.78).
-
-    대규모 업데이트 이전에 동작하던 경로. step 3 은 ``_list_status_column_coords`` 사용.
-    """
-    raw_frac = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "0.78").strip()
-    try:
-        x_frac = float(raw_frac)
-    except ValueError:
-        x_frac = 0.78
-    x_frac = min(max(x_frac, 0.55), 0.92)
-    rect = sample_list.rectangle()
-    width = max(rect.width(), 400)
-    height = max(rect.height(), 80)
-    rel_x = int(width * x_frac)
-    rel_y = max(16, min(32, height // 10))
-    return rel_x, rel_y
-
-
-def _legacy_focus_list_for_ctrl_a(sample_list) -> None:
-    """구버전 — set_focus + 수집일시 열 클릭 (초기화+정량·인쇄 단계)."""
-    rel_x, rel_y = _legacy_neutral_list_coords(sample_list)
-    sample_list.set_focus()
-    try:
-        sample_list.move_mouse_input(coords=(rel_x, rel_y))
-        time.sleep(0.12)
-    except Exception:
-        pass
-    sample_list.click_input(coords=(rel_x, rel_y))
-    time.sleep(0.25)
-
-
-def _select_all_in_sample_table(win) -> None:
-    """분석목록 상단 시료 표 전체 선택 — step 3 (인쇄는 ``step_print_pdf`` 구버전 경로)."""
-    from pywinauto.keyboard import send_keys
-
-    _ensure_autochro_foreground(win)
-    _select_analysis_tab(win)
-    sample_list = _analysis_sample_table(win)
-    sample_list.set_focus()
-    try:
-        send_keys("{ESC}")
-        time.sleep(0.2)
-    except Exception:
-        pass
-    fracs = _parse_status_x_fracs()
-    total = _listview_item_count(sample_list)
-    used_frac = fracs[0]
-    for idx, x_frac in enumerate(fracs):
-        _focus_list_for_ctrl_a(sample_list, x_frac=x_frac)
-        send_keys("^a")
-        time.sleep(0.35)
-        if total <= 1 or len(fracs) == 1:
-            used_frac = x_frac
-            break
-        sel = _listview_selected_count(sample_list)
-        if sel >= total or sel > 1:
-            used_frac = x_frac
-            _log(f"  Ctrl+A x_frac={x_frac:.2f} (선택 {sel}/{total}행)")
-            break
-        if idx < len(fracs) - 1:
-            try:
-                send_keys("{ESC}")
-                time.sleep(0.15)
-            except Exception:
-                pass
-    else:
-        time.sleep(0.15)
-    if total <= 1 or len(fracs) == 1:
-        _log(f"  Ctrl+A x_frac={used_frac:.2f}")
-    time.sleep(0.15)
 
 
 def _largest_sample_list(win):
