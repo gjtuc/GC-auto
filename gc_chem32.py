@@ -16,9 +16,9 @@ GC3 폴더 구조:
 출력·메일 흐름은 GC2와 동일 (Desktop\\KCH).
 
 [병합 규칙 — gc_chem32.build_merged_injection_cycles]
-  · 1주입 = TCD 필수 (sliding·차헌 TCD). FID 는 Report/CSV 있으면 1쌍, 없으면 TCD만
+  · 1주입 = TCD 필수. FID 는 Report/CSV 있으면 1쌍, 없으면 TCD만
   · 진행 중 주입: 폴더만 있고 Report 없음 → 제외 (다음 watch 에 포함)
-  · TCD sliding match: 직전 주입 대비 RT·Area (DRM 장주기 drift 대응)
+  · startup(첫 주입) 노이즈만 제외 — 인접 주입 RT·Area sliding 비교 없음
   · Area% 과학적 표기(1.000e2) 파싱 지원
 
 [시료 폴더 선택 — find_active_sample_folder]
@@ -39,7 +39,7 @@ GC3 폴더 구조:
   · `#`=중단, Time=약 N사이클 미수집, Symmetry=GC_GAP:N=N → data_pc/gc_gap_contract.py
   · 일반 주입 피크 Symmetry = Report Injection Date (YYYY-MM-DD HH:MM:SS, 주입 시각)
   · Area=공백 기간·폴더명(002F0209→001F0101)은 사람용; 차헌 PC 파서는 Time/Symmetry 만 사용
-  · 갭 인덱스는 collect_reported_injections(전체 Report) 기준 — 엑셀은 sliding 통과분만
+  · 갭 인덱스는 collect_reported_injections(전체 Report) 기준 — 엑셀은 startup 제외분
     있으므로 _gap_marker_excel_position 으로 “마지막 실측 주입” 뒤에 삽입 (002F FID 미완료 등)
   · 검증: scripts/verify_cheon_pc_gap.py (촉매 반응 계산.parse_gc_sheet E2E)
 """
@@ -437,7 +437,7 @@ def get_latest_report_mtime(sample_folder: str) -> Optional[float]:
 
 
 def injection_report_complete(reports: Dict[str, List[dict]]) -> bool:
-    """엑셀 포함 최소 조건 — TCD 피크 필수 (sliding·차헌 TCD 시트). FID 는 있으면 함께 적재."""
+    """엑셀 포함 최소 조건 — TCD 피크 필수. FID 는 있으면 함께 적재."""
     return bool(reports.get("TCD"))
 
 
@@ -775,7 +775,7 @@ def _gap_marker_excel_position(
     갭 행을 넣을 엑셀 주입 목록 인덱스.
 
   gap.after_injection_index 는 collect_reported_injections 기준이고,
-  엑셀에는 sliding·미완료 필터를 통과한 주입만 있으므로, 갭 직전까지
+  엑셀에는 startup·미완료 필터를 제외한 주입만 있으므로, 갭 직전까지
   실측에 포함된 마지막 주입 뒤에 삽입한다.
     """
     path_to_all_index = {path: index for index, (path, _) in enumerate(all_injections)}
@@ -970,8 +970,7 @@ def _build_detector_cycles_chunk(
     """
     단일 REACTION 시퀀스 안에서 detector 사이클 수집.
 
-    startup 제외 후 **직전 주입(sliding)** 과 RT·Area 비교 — DRM 장시간 반응에서
-    초기 주입 대비 누적 Area drift 로 중간부터 잘리는 문제 방지.
+    startup(첫 주입)만 제외하고 Report 피크가 있는 주입은 모두 엑셀에 포함.
     """
     collected: List[Tuple[str, List[dict], str]] = []
     for injection_path, _sequence_path in injections:
@@ -991,7 +990,6 @@ def _build_detector_cycles_chunk(
     cycles: List[List[dict]] = []
     matched_paths: List[str] = []
     skipped = 0
-    chain_ref: Optional[List[dict]] = None
 
     for index, (injection_path, peaks, label) in enumerate(collected):
         if index < ref_index:
@@ -1001,34 +999,12 @@ def _build_detector_cycles_chunk(
                 f"({len(peaks)}피크)"
             )
             continue
-        if index == ref_index:
-            cycles.append(peaks)
-            matched_paths.append(injection_path)
-            chain_ref = peaks
-            print(f"[진행] {label} {detector_key}: 피크 {len(peaks)}개 (기준)")
-            continue
-        assert chain_ref is not None
-        if len(peaks) != len(chain_ref):
-            print(
-                f"[재기준] {label} {detector_key}: 피크 수 {len(peaks)} "
-                f"(직전 {len(chain_ref)}) — 반응 진행·적분 변경, sliding 기준 갱신"
-            )
-            cycles.append(peaks)
-            matched_paths.append(injection_path)
-            chain_ref = peaks
-            continue
-        if cycles_match(chain_ref, peaks):
-            cycles.append(peaks)
-            matched_paths.append(injection_path)
-            chain_ref = peaks
-            print(f"[진행] {label} {detector_key}: 피크 {len(peaks)}개")
-        else:
-            skipped += 1
-            reason = describe_cycle_mismatch(chain_ref, peaks)
-            print(f"[건너뜀] {label} {detector_key}: {reason}")
+        cycles.append(peaks)
+        matched_paths.append(injection_path)
+        print(f"[진행] {label} {detector_key}: 피크 {len(peaks)}개")
 
     if skipped:
-        print(f"[안내] {detector_key} — startup·패턴 불일치로 {skipped}주입 제외")
+        print(f"[안내] {detector_key} — startup 제외 {skipped}주입")
 
     if len(cycles) >= 2:
         first_label = os.path.basename(matched_paths[0]) if matched_paths else None
@@ -1048,7 +1024,7 @@ def build_detector_cycles(
     detector_key: str,
 ) -> Tuple[List[List[dict]], List[str], int]:
     """
-    TCD/FID Report 에서 같은 실험 주입만 모음 (시퀀스별 sliding RT+Area).
+    TCD/FID Report 에서 피크가 있는 주입을 시퀀스별로 모음 (startup 제외).
 
     Returns:
         (cycles, matched_injection_paths, skipped_mismatch_count)
@@ -1075,7 +1051,7 @@ def build_merged_injection_cycles(
     """
     시료 폴더 아래 모든 시퀀스·주입에서 FID/TCD 사이클 수집.
 
-    완료된 주입(FID+TCD 모두 Report 에 있음)만 TCD sliding 으로 선별하고,
+    완료된 주입(FID+TCD 모두 Report 에 있음)을 TCD 기준으로 모으고,
     동일 주입에서 FID/TCD 를 1:1 쌍으로 엑셀에 적재.
     """
     _log_in_progress_injections(sample_folder)

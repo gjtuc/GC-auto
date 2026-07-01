@@ -322,7 +322,7 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
     if analysis_gaps:
         stats_lines.append(f"  분석 중단(갭) 행: {len(analysis_gaps)}개")
     if skipped:
-        stats_lines.append(f"  sliding/RT 필터 제외: {skipped}개")
+        stats_lines.append(f"  startup·미완료 제외: {skipped}개")
     report_not_in_excel = report_folder_count - data_row_count
     if report_not_in_excel > 0:
         stats_lines.append(
