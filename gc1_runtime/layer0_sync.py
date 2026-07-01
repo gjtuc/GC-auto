@@ -23,17 +23,11 @@ def sync_double_click_coords(width: int, height: int) -> tuple[int, int]:
     """
     제어목록 SysListView32 내부 더블클릭 상대 좌표 (P1.05 + P1.06).
 
-    **파일이름 열(1.raw)** + **표 상단 첫 가시 행** — OCR fallback 용.
+    **파일이름 열(1.raw)** + **표 상단 첫 가시 행** — 학습·OCR fallback.
     """
-    raw_x = os.getenv("AUTOCHRO_SYNC_RAW_X_FRAC", "0.62").strip()
-    try:
-        x_frac = float(raw_x)
-    except ValueError:
-        x_frac = 0.62
-    x_frac = min(max(x_frac, 0.45), 0.82)
-    rel_y = max(18, min(40, height // 6))
-    rel_x = max(20, int(width * x_frac))
-    return rel_x, rel_y
+    from gc1_runtime.layer3_coord_learn import sync_double_click_rel
+
+    return sync_double_click_rel(width, height)
 
 
 def verify_analysis_list_populated(item_count: int, *, minimum: int = 1) -> bool:

@@ -38,6 +38,12 @@ from gc_screen_read import (
 )
 from gc1_runtime.layer3_eye import EyeActuator, default_eye_config, verify_read_task
 from gc1_runtime.layer3_ocr_case_study import case_study_on_fail
+from gc1_runtime.layer3_coord_learn import (
+    get_learned_x_frac,
+    list_rel_from_purpose,
+    ocr_rel_is_safe,
+    record_coord_click,
+)
 from gc1_runtime.layer3_ocr_maturity import skill_key
 
 _LOG = print
@@ -657,16 +663,19 @@ class AutochroStepEye:
             best = min(raw_tokens, key=lambda t: (t.box.top, -t.confidence))
             x, y = token_screen_center(best, region_box, scale)
             rel = self.list_rel_coords_from_screen(sample_list, (x, y))
-            self._log(f"sample row OCR '{best.text}' -> rel={rel}")
-            return rel
-        for needle in ("수집", "시료", "일시"):
+            if ocr_rel_is_safe(sample_list, rel[0], rel[1], best.text):
+                self._log(f"sample row OCR '{best.text}' -> rel={rel}")
+                return rel
+            self._log(f"sample row OCR unsafe (미지시료·열) — row fallback")
+        for needle in ("수집", "일시"):
             hits = find_text_tokens(tokens, needle, partial=True)
             if hits:
                 best = max(hits, key=lambda t: t.confidence)
                 x, y = token_screen_center(best, region_box, scale)
                 rel = self.list_rel_coords_from_screen(sample_list, (x, y))
-                self._log(f"sample header OCR '{best.text}' -> rel={rel}")
-                return rel
+                if ocr_rel_is_safe(sample_list, rel[0], rel[1], best.text):
+                    self._log(f"sample header OCR '{best.text}' -> rel={rel}")
+                    return rel
         self._log(f"sample table OCR miss - neutral rel={fallback_rel}")
         return fallback_rel
 
@@ -680,7 +689,10 @@ class AutochroStepEye:
         if autochro_eye_coord_only():
             rel_x, rel_y = fallback_rel
             self.move_mouse_on_list(sample_list, rel_x, rel_y)
-            self._log(f"sync coord-only rel=({rel_x},{rel_y})")
+            self._log(
+                f"sync coord-only x_frac={get_learned_x_frac('sync_raw'):.3f} "
+                f"rel=({rel_x},{rel_y})"
+            )
             return rel_x, rel_y
         self.scan_between("P1.before_sync", "top_sample_table", task_id=EYE_TASK_BEFORE_SYNC)
         rel_x, rel_y = self.resolve_sync_double_click_rel(
@@ -693,8 +705,11 @@ class AutochroStepEye:
     def guided_focus_for_ctrl_a(self, sample_list) -> Tuple[int, int]:
         """Ctrl+A 전 — 행 번호 열(시료종류·미지시료 드롭다운 회피)."""
         if autochro_eye_coord_only():
-            rel_x, rel_y = _list_row_index_rel(sample_list)
+            rel_x, rel_y = list_rel_from_purpose(sample_list, "row")
             self.move_mouse_on_list(sample_list, rel_x, rel_y)
+            self._log(
+                f"Ctrl+A focus row x_frac={get_learned_x_frac('row'):.3f} rel=({rel_x},{rel_y})"
+            )
             return rel_x, rel_y
         if eye_gate_should_raise():
             self.require_task("P2.before_ctrl_a", EYE_TASK_BEFORE_TABLE)
@@ -706,8 +721,14 @@ class AutochroStepEye:
         return rel_x, rel_y
 
     def guided_after_ctrl_a(self) -> None:
-        """Ctrl+A 직후 검증."""
+        """Ctrl+A 직후 — coord-only 에서도 좌표 성숙도 기록."""
         if autochro_eye_coord_only():
+            record_coord_click(
+                "row",
+                get_learned_x_frac("row"),
+                success=True,
+                step_id="P2.after_ctrl_a",
+            )
             return
         if eye_gate_should_raise():
             self.require_task("P2.after_ctrl_a", EYE_TASK_AFTER_CTRL_A)
@@ -843,14 +864,17 @@ class AutochroStepEye:
     ) -> bool:
         """우클릭 → 메뉴. coord-only: 시료이름 열 좌표 + win32/단축키 (OCR 메뉴 생략)."""
         if neutral_rel is None:
-            neutral_rel = _list_rightclick_rel(sample_list)
+            neutral_rel = list_rel_from_purpose(sample_list, "name")
         if autochro_eye_coord_only():
             rel_x, rel_y = neutral_rel
             self.move_mouse_on_list(sample_list, rel_x, rel_y)
             rect = sample_list.rectangle()
             screen_x = int(rect.left) + int(rel_x)
             screen_y = int(rect.top) + int(rel_y)
-            self._log(f"우클릭 coord-only screen=({screen_x},{screen_y})")
+            self._log(
+                f"우클릭 name x_frac={get_learned_x_frac('name'):.3f} "
+                f"screen=({screen_x},{screen_y})"
+            )
             click_screen(screen_x, screen_y, button="right")
             self._menu_anchor_screen = (screen_x, screen_y)
             time.sleep(0.55)
@@ -866,6 +890,20 @@ class AutochroStepEye:
                     self._log("menu shortcut N (coord-only)")
                 except Exception:
                     pass
+            if clicked:
+                record_coord_click(
+                    "name",
+                    get_learned_x_frac("name"),
+                    success=True,
+                    step_id="P3.after_menu_click",
+                )
+            else:
+                record_coord_click(
+                    "name",
+                    get_learned_x_frac("name"),
+                    success=False,
+                    step_id="P3.after_menu_click",
+                )
             return clicked
         rel_x, rel_y = self.resolve_sample_table_rel(
             sample_list, fallback_rel=neutral_rel
@@ -921,25 +959,13 @@ def _list_frac_rel(sample_list, x_frac: float) -> Tuple[int, int]:
 
 
 def _list_row_index_rel(sample_list) -> Tuple[int, int]:
-    """행 번호 열 — Ctrl+A 전 포커스 (시료종류 드롭다운 회피)."""
-    raw = os.getenv("AUTOCHRO_LIST_ROW_X_FRAC", "0.06").strip()
-    try:
-        x_frac = float(raw)
-    except ValueError:
-        x_frac = 0.06
-    x_frac = min(max(x_frac, 0.03), 0.14)
-    return _list_frac_rel(sample_list, x_frac)
+    """행 번호 열 — Ctrl+A 전 포커스 (시료종류·미지시료 드롭다운 회피)."""
+    return list_rel_from_purpose(sample_list, "row")
 
 
 def _list_rightclick_rel(sample_list) -> Tuple[int, int]:
     """시료이름 열 — 우클릭 (미지시료·시료종류 열 회피)."""
-    raw = os.getenv("AUTOCHRO_LIST_NAME_X_FRAC", "0.26").strip()
-    try:
-        x_frac = float(raw)
-    except ValueError:
-        x_frac = 0.26
-    x_frac = min(max(x_frac, 0.12), 0.38)
-    return _list_frac_rel(sample_list, x_frac)
+    return list_rel_from_purpose(sample_list, "name")
 
 
 def _neutral_list_rel(sample_list) -> Tuple[int, int]:

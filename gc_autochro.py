@@ -84,8 +84,11 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 
   AUTOCHRO_ENABLED, AUTOCHRO_WINDOW_TITLE_PATTERN, AUTOCHRO_DATA_NAME(CRM 경로용)
   AUTOCHRO_AUTO_POSITION, AUTOCHRO_WINDOW_X/Y
-  AUTOCHRO_LIST_ROW_X_FRAC      — Ctrl+A 전 행번호 열 (기본 0.06, 시료종류 회피)
-  AUTOCHRO_LIST_NAME_X_FRAC     — 우클릭 시료이름 열 (기본 0.26)
+  AUTOCHRO_LIST_ROW_X_FRAC      — Ctrl+A 전 행번호 열 (기본 0.06, 미지시료·시료종류 회피)
+  AUTOCHRO_LIST_NAME_X_FRAC     — 우클릭 시료이름 열 (기본 0.26, 0.18 미만 금지)
+  AUTOCHRO_SYNC_RAW_X_FRAC      — 제어목록 동기화 .raw 열 (기본 0.62, 학습 가능)
+  GC1_OCR_LEARN                 — 1=좌표·OCR overlay 학습 (기본 1)
+  GC1_OCR_MATURITY_RATE         — 성숙 임계 (기본 0.99) — 좌표 클릭 포함
   AUTOCHRO_LIST_NEUTRAL_X_FRAC  — (구) — ROW_X_FRAC 와 동일 권장
   GC1_AUTOCHRO_EYE_COORD_ONLY   — 1=OCR은 제어 데이터명·트리 매칭만 (기본 1)
   GC1_AUTOCHRO_MOUSE_ONLY       — 1=표·트리·탭은 화면좌표 클릭만 (기본 1, pywinauto click 금지)
@@ -1108,37 +1111,21 @@ def _list_frac_coords(sample_list, x_frac: float) -> tuple[int, int]:
 
 
 def _list_row_index_coords(sample_list) -> tuple[int, int]:
-    """행 번호 열 — Ctrl+A·포커스 (시료종류·미지시료 드롭다운 회피)."""
-    raw = os.getenv("AUTOCHRO_LIST_ROW_X_FRAC", "0.06").strip()
-    try:
-        x_frac = float(raw)
-    except ValueError:
-        x_frac = 0.06
-    x_frac = min(max(x_frac, 0.03), 0.14)
-    return _list_frac_coords(sample_list, x_frac)
+    """행 번호 열 — Ctrl+A·포커스 (미지시료·시료종류 드롭다운 회피)."""
+    from gc1_runtime.layer3_coord_learn import list_rel_from_purpose
+
+    return list_rel_from_purpose(sample_list, "row")
 
 
 def _rightclick_list_coords(sample_list) -> tuple[int, int]:
-    """시료이름 열 — 우클릭 (시료종류 열 회피)."""
-    raw = os.getenv("AUTOCHRO_LIST_NAME_X_FRAC", "0.26").strip()
-    try:
-        x_frac = float(raw)
-    except ValueError:
-        x_frac = 0.26
-    x_frac = min(max(x_frac, 0.12), 0.38)
-    return _list_frac_coords(sample_list, x_frac)
+    """시료이름 열 — 우클릭 (미지시료·시료종류 열 회피)."""
+    from gc1_runtime.layer3_coord_learn import list_rel_from_purpose
+
+    return list_rel_from_purpose(sample_list, "name")
 
 
 def _neutral_list_coords(sample_list) -> tuple[int, int]:
-    """분석목록 시료 표 — 행 번호 열 (구 0.78 수집일시 대신)."""
-    legacy = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "").strip()
-    if legacy:
-        try:
-            x_frac = float(legacy)
-            x_frac = min(max(x_frac, 0.03), 0.92)
-            return _list_frac_coords(sample_list, x_frac)
-        except ValueError:
-            pass
+    """분석목록 시료 표 — 항상 행 번호 열 (구 0.78 수집일시·미지시료 열 사용 금지)."""
     return _list_row_index_coords(sample_list)
 
 
@@ -1287,6 +1274,17 @@ def step_sync_control_to_analysis(
         f"제어목록->분석목록 동기화 OK - "
         f"제어 {post.control_item_count}행 / 분석 {post.analysis_item_count}행"
     )
+    try:
+        from gc1_runtime.layer3_coord_learn import get_learned_x_frac, record_coord_click
+
+        record_coord_click(
+            "sync_raw",
+            get_learned_x_frac("sync_raw"),
+            success=True,
+            step_id="P1.after_sync",
+        )
+    except Exception:
+        pass
     dn = session_data_name((data_name or "").strip()) or read_active_control_data_name(win, cfg)
     remember_session_data_name(dn)
     if eye:
