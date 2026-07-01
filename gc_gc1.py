@@ -781,12 +781,28 @@ def _try_parse_gc1_pdf_quiet(pdf_path: str) -> Optional[Gc1PdfReport]:
         return None
 
 
+def build_gc1_excel_path_from_pdf(excel_output_dir: str, pdf_path: str) -> str:
+    """GC1 — PDF 파일명 stem 과 동일한 ``{stem}.xlsx`` (CRM 경로명 그대로)."""
+    from gc_sanitize import ensure_path_under_dir
+
+    stem = os.path.splitext(os.path.basename(pdf_path))[0].strip()
+    if not stem:
+        raise ValueError("PDF 파일명 stem 이 비어 있음")
+    path = os.path.join(excel_output_dir, f"{stem}.xlsx")
+    return ensure_path_under_dir(excel_output_dir, path)
+
+
 def _related_xlsx_paths(pdf_path: str, report: Gc1PdfReport, output_dir: str) -> List[str]:
+    stem = os.path.splitext(os.path.basename(pdf_path))[0].strip()
+    paths: List[str] = []
+    verbatim = os.path.join(output_dir, f"{stem}.xlsx")
+    if os.path.isfile(verbatim):
+        paths.append(verbatim)
     sample = infer_sample_name_from_pdf(pdf_path, report.analysis_date)
-    exact = os.path.join(output_dir, f"{report.analysis_date} {sample}.xlsx")
-    if os.path.isfile(exact):
-        return [exact]
-    return []
+    legacy = os.path.join(output_dir, f"{report.analysis_date} {sample}.xlsx")
+    if os.path.isfile(legacy) and legacy not in paths:
+        paths.append(legacy)
+    return paths
 
 
 def _experiment_group_key(stem: str) -> str:

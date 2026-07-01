@@ -71,6 +71,7 @@ from gc_chem32 import (
     resolve_chemstation_mode,
 )
 from gc_gc1 import (
+    build_gc1_excel_path_from_pdf,
     cleanup_superseded_gc1_files,
     find_active_pdf,
     get_latest_pdf_mtime,
@@ -533,7 +534,7 @@ def _run_processing_gc1_body(config: AppConfig, script_dir: str) -> ProcessResul
         )
     summarize_assigned_compounds(report)
 
-    output_path = build_output_filename(config.excel_output_dir, sample_name, analysis_date)
+    output_path = build_gc1_excel_path_from_pdf(config.excel_output_dir, pdf_path)
     latest_mtime = get_latest_pdf_mtime(pdf_path)
     total_peaks = sum(len(c) for c in report.fid_cycles) + sum(len(c) for c in report.tcd_cycles)
 

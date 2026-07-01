@@ -28,10 +28,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 [PDF 파일명 — 하드코딩 금지]
 =============================================================================
 
-  저장 stem 은 gc_automation.env 의 AUTOCHRO_DATA_NAME 이 아니라,
-  **제어목록 왼쪽 트리에서 파란 선택된 실험 데이터명** + 창 제목에서 읽습니다.
-  format_data_name_for_pdf_filename() 이 260616dre(3)ni-ce →
-  「260616 dre@(3) ni-ce.pdf」 형식으로 변환합니다.
+  저장 stem 은 **CRM 분석목록 경로의 파일명**(``.CRM`` 제외)을 그대로 씁니다.
+  제어목록 정보 대화상자에서 읽으며, 공백 삽입·이름 재조합은 하지 않습니다.
 
 =============================================================================
 [UI 자동화 함정 — pywinauto win32]
@@ -88,7 +86,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Tuple
 
-from gc_sanitize import sanitize_sample_name
 from gc_state import load_send_state, save_send_state
 
 
@@ -109,66 +106,28 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-# 제어목록(파란 선택) 데이터명 → PDF 파일명 stem
+# 제어목록 데이터명·CRM 경로 basename → PDF/엑셀 stem (가공 없음)
 _DATA_NAME_DATE_RE = re.compile(r"^\d{6}")
 
 
 def format_data_name_for_pdf_filename(raw: str) -> str:
     """
-    Autochro 데이터명 → PDF 저장 stem.
+    CRM 분석목록 경로·데이터명 → PDF/엑셀 파일 stem.
 
-    260616dre(3)ni-ce  → 260616 dre@(3) ni-ce
-    (날짜 뒤 공백, 반응@농도, 농도 뒤 공백)
+    **변환·공백 삽입 없음** — CRM basename(``.CRM`` 제외) 그대로.
     """
-    text = raw.strip().split(".")[0].strip()
+    if "\\" in raw or "/" in raw:
+        stem = parse_data_name_from_crm_path(raw)
+        if stem:
+            return stem
+    text = (raw or "").strip().strip('"').strip("'")
     if not text:
         raise ValueError("Autochro 데이터명이 비어 있음")
-
-    spaced = re.sub(r"\s+", " ", text)
-    match = re.match(
-        r"^(\d{6})\s+([a-zA-Z0-9.]+)@\(([^)]+)\)\s+(.+)$",
-        spaced,
-        re.I,
-    )
-    if match:
-        return (
-            f"{match.group(1)} {match.group(2)}@({match.group(3)}) {match.group(4).strip()}"
-        )
-
-    match = re.match(
-        r"^(\d{6})([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]*\(([^)]+)\)[\s\-_]*(.*)$",
-        text,
-        re.I,
-    )
-    if match and match.group(4).strip():
-        date, reaction, concentration, sample = match.groups()
-        return f"{date} {reaction}@({concentration}) {sample.strip()}"
-
-    match = re.match(
-        r"^(\d{6})([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]+(.+?)[\s\-_]*\(([^)]+)\)$",
-        text,
-        re.I,
-    )
-    if match:
-        date, reaction, sample, concentration = match.groups()
-        return f"{date} {reaction}@({concentration}) {sample.strip()}"
-
-    match = re.match(
-        r"^(\d{6})[\s\-_]+([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]*\(([^)]+)\)[\s\-_]*(.*)$",
-        text,
-        re.I,
-    )
-    if match:
-        date, reaction, concentration, sample = match.groups()
-        sample = sample.strip()
-        if sample:
-            return f"{date} {reaction}@({concentration}) {sample}"
-
-    match = re.match(r"^(\d{6})(.+)$", text)
-    if match:
-        return f"{match.group(1)} {match.group(2).strip()}"
-
-    return sanitize_sample_name(text)
+    for ext in (".CRM", ".crm", ".pdf", ".xlsx"):
+        if text.lower().endswith(ext.lower()):
+            text = text[: -len(ext)]
+            break
+    return text.strip()
 
 
 @dataclass(frozen=True)
@@ -431,7 +390,7 @@ def parse_data_name_from_crm_path(path: str) -> str:
     정보 대화상자 「분석목록」 CRM 경로 → 시료 데이터명.
 
     ``C:\\Users\\User\\Documents\\20260630dre(5)ni(환원)-ce.CRM``
-    → ``20260630dre(5)ni(환원)-ce`` (경로·확장자 제거, OCR 아님)
+    → ``20260630dre(5)ni(환원)-ce`` (경로·``.CRM`` 만 제거, 대소문자·공백 유지)
     """
     text = (path or "").strip().strip('"').strip("'")
     if not text:
@@ -442,13 +401,7 @@ def parse_data_name_from_crm_path(path: str) -> str:
         if base.lower().endswith(ext.lower()):
             base = base[: -len(ext)]
             break
-    stem = base.split(".")[0].strip()
-    if _DATA_NAME_DATE_RE.match(stem) or _DATA_NAME_DATE_RE.match(
-        re.sub(r"\s+", "", stem)
-    ):
-        return stem
-    compact = re.sub(r"\s+", "", stem)
-    return compact if _DATA_NAME_DATE_RE.match(compact) else stem
+    return base.strip()
 
 
 def _tree_screen_coords(tree, rel_x: int, rel_y: int) -> tuple[int, int]:

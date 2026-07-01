@@ -34,7 +34,16 @@ class TestParseDataNameFromCrmPath(unittest.TestCase):
 
 
 class TestGcAutochroPdfFilename(unittest.TestCase):
-    def test_pdf_filename_keeps_ui_title_verbatim(self):
+    def test_pdf_filename_crm_path_verbatim(self):
+        raw = r"C:\Users\User\Documents\20260630DRE(5)ni(환원)-Ce.CRM"
+        self.assertEqual(
+            format_data_name_for_pdf_filename(raw),
+            "20260630DRE(5)ni(환원)-Ce",
+        )
+
+    def test_pdf_filename_no_space_insertion(self):
+        raw = "20260630DRE(5)ni(환원)-Ce"
+        self.assertEqual(format_data_name_for_pdf_filename(raw), raw)
         raw = "20260629 dre(3) ni-ce-la"
         self.assertEqual(format_data_name_for_pdf_filename(raw), raw)
 
