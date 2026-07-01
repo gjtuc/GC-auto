@@ -212,10 +212,18 @@ def _print_compare_xlsx(
         print(f"  [불일치] TCD pipeline {tcd_cycles} vs xlsx {tcd_x} (차이 {tcd_cycles - tcd_x:+d})")
     elif tcd_x:
         print("  [OK] TCD 사이클 수 일치")
-    if fid_cycles < raw_injections - 2:
+    report_gap = raw_injections - fid_cycles
+    if report_gap > 2:
         print(
-            f"\n  [힌트] {raw_injections - fid_cycles}주입 미반영 — "
-            "startup·피크 수 변경·인접 Area/RT 초과 시 제외. --audit 로 주입별 사유 확인."
+            f"\n  [힌트] Report {raw_injections}개 중 pipeline {fid_cycles}사이클 "
+            f"(차이 {report_gap}) — startup·미완료 주입 제외. "
+            "xlsx 가 구버전이면 [불일치] 행의 차이와 혼동하지 마세요."
+        )
+    if fid_x and abs(fid_cycles - fid_x) >= 5:
+        print(
+            f"\n  [힌트] xlsx FID {fid_x} vs pipeline {fid_cycles} — "
+            "구 sliding 코드로 만든 엑셀이면 차이가 큽니다. "
+            "최신 코드로 pipeline 재실행 후 Desktop\\KCH xlsx 와 비교하세요."
         )
 
 
@@ -297,11 +305,10 @@ def run_validate(args: argparse.Namespace) -> int:
 
     if skipped >= 5:
         print(
-            "\n[힌트] 다수 제외 시:\n"
-            "  · startup(첫 주입) — 정상 제외\n"
-            "  · 피크 **개수** 변경 — 다른 실험/조건 전환 가능\n"
-            "  · Area/RT — **직전 주입** 대비 ±12% 초과 (--audit 로 피크# 확인)\n"
-            "  · 예전 REACTION 시퀀스가 같은 시료 폴더에 남아 있으면 시퀀스별로 따로 집계됨"
+            "\n[힌트] 건너뜀 다수 — GC3 코드가 구버전(sliding)일 수 있습니다.\n"
+            "  · 최신: startup·미완료만 제외 (보통 1~2개)\n"
+            "  · gc3_make_deploy_zip.bat 후 GC3 PC에 zip 재배포\n"
+            "  · --audit 는 구 sliding 진단용(현재 pipeline 과 무관)"
         )
 
     if args.run_pipeline:
