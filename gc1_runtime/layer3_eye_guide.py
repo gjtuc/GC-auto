@@ -131,6 +131,8 @@ def _score_tree_name_token(tok: OcrToken, data_name: str) -> float:
         return -1.0
     if any(lbl in tok_c for lbl in _TREE_CHILD_LABELS):
         return -1.0
+    if re.fullmatch(r"20\d{6}", tok_c):
+        return -1.0
     if "분석목록" in tok_c or "제어목록" in tok_c:
         return -1.0
     from gc1_runtime.layer0_data import extract_date8_from_data_name
@@ -422,6 +424,11 @@ class AutochroStepEye:
         name_c = re.sub(r"\s+", "", data_name.lower())
         if name_c and name_c[: min(len(name_c), 16)] in compact:
             self._log(f"tree name OK - {data_name!r}")
+            return True
+        from gc1_runtime.layer0_data import tree_fuzzy_matches_data_name
+
+        if tree_fuzzy_matches_data_name(text, data_name):
+            self._log(f"tree name OK (fuzzy) - {data_name!r}")
             return True
         for line in text.splitlines():
             line = line.strip()

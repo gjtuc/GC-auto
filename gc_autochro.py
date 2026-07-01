@@ -1032,10 +1032,19 @@ def _dismiss_context_menu() -> None:
         pass
 
 
-def _rank_tree_line_indices(win, data_name: str) -> list[tuple[float, str, int]]:
+def _rank_tree_line_indices(win, data_name: str, *, eye=None) -> list[tuple[float, str, int]]:
     from gc1_runtime.layer0_data import rank_tree_line_for_data_name
 
     candidates = _analysis_tree_lines(win)
+    if eye is not None and len(candidates) < 6:
+        try:
+            ocr_text = eye.ocr_region("left_analysis_tree", label="tree.rank")
+            for line in ocr_text.splitlines():
+                line = line.strip()
+                if line and line not in candidates:
+                    candidates.append(line)
+        except Exception:
+            pass
     ranked: list[tuple[float, str, int]] = []
     for i, line in enumerate(candidates):
         score = rank_tree_line_for_data_name(line, data_name)
@@ -1153,7 +1162,7 @@ def _right_click_tree_data_name(
                 _log(f"  [적응] OCR 메뉴 불명 labels={labels[:6]!r}")
             _dismiss_context_menu()
 
-    ranked = _rank_tree_line_indices(win, data_name)
+    ranked = _rank_tree_line_indices(win, data_name, eye=eye)
     if not ranked:
         raise RuntimeError(
             f"분석목록 트리에 제어목록 데이터명 없음: {data_name!r}"

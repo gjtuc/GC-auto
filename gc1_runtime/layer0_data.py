@@ -43,7 +43,26 @@ def tree_label_matches_data_name(tree_line: str, data_name: str) -> bool:
         return True
     compact_line = re.sub(r"\s+", "", line)
     compact_name = re.sub(r"\s+", "", name)
-    return compact_line == compact_name or compact_line.startswith(compact_name)
+    if compact_line == compact_name or compact_line.startswith(compact_name):
+        return True
+    return tree_fuzzy_matches_data_name(tree_line, data_name)
+
+
+def tree_fuzzy_matches_data_name(text: str, data_name: str) -> bool:
+    """OCR·트리 잡음 — 동일 날짜 + dre/ni 등 특징 공유."""
+    line_c = re.sub(r"\s+", "", (text or "").lower())
+    name_c = re.sub(r"\s+", "", (data_name or "").lower())
+    target_date = extract_date8_from_data_name(data_name)
+    if not target_date or target_date not in line_c:
+        return False
+    if len(line_c) < len(target_date) + 3:
+        return False
+    markers = ("dre", "ni", "ce", "la", "환원", "수열")
+    for part in markers:
+        if part in name_c and part in line_c:
+            return True
+    prefix = name_c[: min(14, len(name_c))]
+    return prefix in line_c or line_c[:14] in name_c
 
 
 def extract_date8_from_data_name(data_name: str) -> str:
