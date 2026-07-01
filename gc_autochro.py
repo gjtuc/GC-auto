@@ -22,7 +22,7 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   2) 분석목록 왼쪽 트리 — CRM 시료 우클릭 → 분석방법 불러오기 (고정 MTD)
   3) 분석목록 시료 표 Ctrl+A (전체 선택)
   4) 메뉴 「시료목록 → 초기화+정량」 — 적분 대기(AUTOCHRO_QUANTIFY_WAIT_SEC)
-  5) Ctrl+P 인쇄 → Hancom PDF 변환 대화상자
+  5) 시료 표 전체 선택 → **툴바 프린터 아이콘** 클릭 (Ctrl+P 와 동일 인쇄 대화상자)
   6) CRM 데이터명으로 PDF 저장 → 한컴 창 닫힘 대기 → gc_gc1.wait_for_pdf_file_ready
 
   CRM 정보 대화상자 읽기는 **2단계(MTD)·6단계(PDF) 직전**에만 수행합니다.
@@ -44,7 +44,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 
   · **Ctrl+A**: 시료 표 **처리형태·적분 열**(우측, 편집 모드 없음) **한 번** 클릭 후 전체 선택.
     시료이름 열 재클릭 시 이름 수정 모드 → Ctrl+A 불가 → PDF 1시료만 저장됨.
-    **인쇄(Ctrl+P) 직전에도 반드시 전체 선택 재실행** (적분 후 단일행 선택 복귀 방지).
+    **인쇄 직전에도 반드시 전체 선택 재실행** (적분 후 단일행 선택 복귀 방지).
+    인쇄는 **Ctrl+P 대신 툴바 프린터 아이콘** 클릭 (^a 와 인쇄 사이 표 클릭 금지).
 
   · **32-bit Autochro**: 64-bit Python 으로도 동작하지만 pywinauto 경고가 납니다.
     GC1 장비 PC 배포 시 32-bit Python 권장.
@@ -73,6 +74,10 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   AUTOCHRO_LIST_STATUS_X_FRAC   — Ctrl+A 전 클릭 (처리형태·적분 열, 기본 0.88;
                                   쉼표 구분 후보 0.88,0.82,0.92 — 열 너비 변경 허용)
   AUTOCHRO_LIST_NEUTRAL_X_FRAC — (구) STATUS_X_FRAC 와 동일
+  AUTOCHRO_TOOLBAR_PRINT_ICON     — 툴바 왼쪽 N번째 아이콘 (기본 4 = 프린터)
+  AUTOCHRO_TOOLBAR_ICON_WIDTH_PX  — 아이콘 간격 px (기본 26)
+  AUTOCHRO_TOOLBAR_PRINT_X_FRAC   — (선택) 툴바/창 상대 X override
+  AUTOCHRO_TOOLBAR_PRINT_Y_FRAC   — (선택) 툴바/창 상대 Y override
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
@@ -1148,8 +1153,102 @@ def _focus_list_for_ctrl_a(sample_list, *, x_frac: float | None = None) -> float
     return x_frac
 
 
+def _click_status_column_once(sample_list, *, x_frac: float | None = None) -> float:
+    """처리형태·적분 열 1회 클릭 — set_focus 없음 (인쇄 직전 최소 경로)."""
+    if x_frac is None:
+        x_frac = _parse_status_x_fracs()[0]
+    rel_x, rel_y = _list_status_column_coords(sample_list, x_frac=x_frac)
+    sample_list.click_input(coords=(rel_x, rel_y))
+    return x_frac
+
+
+def _find_main_toolbar(win):
+    """Autochro 상단 아이콘 툴바 (메뉴 아래)."""
+    win_rect = _window_rect(win)
+    if win_rect is None:
+        return None
+    best = None
+    best_top = 10**9
+    for tb in win.descendants(class_name="ToolbarWindow32"):
+        try:
+            rect = tb.rectangle()
+        except Exception:
+            continue
+        rel_top = rect.top - win_rect.top
+        if rel_top < 0 or rel_top > 140:
+            continue
+        if rect.width() < 80:
+            continue
+        if rect.top < best_top:
+            best_top = rect.top
+            best = tb
+    return best
+
+
+def _toolbar_print_screen_coords(win) -> tuple[int, int]:
+    """
+    툴바 프린터 아이콘 화면 좌표.
+
+    기본: ToolbarWindow32 내 왼쪽 4번째 아이콘. 열 너비·창 크기 바뀌면 env 로 보정.
+    """
+    x_frac_raw = os.getenv("AUTOCHRO_TOOLBAR_PRINT_X_FRAC", "").strip()
+    y_frac_raw = os.getenv("AUTOCHRO_TOOLBAR_PRINT_Y_FRAC", "").strip()
+    tb = _find_main_toolbar(win)
+    if tb is not None:
+        rect = tb.rectangle()
+        if x_frac_raw and y_frac_raw:
+            rel_x = int(rect.width() * float(x_frac_raw))
+            rel_y = int(rect.height() * float(y_frac_raw))
+        else:
+            icon_index = _env_int("AUTOCHRO_TOOLBAR_PRINT_ICON", 4)
+            icon_w = _env_int("AUTOCHRO_TOOLBAR_ICON_WIDTH_PX", 26)
+            left_pad = _env_int("AUTOCHRO_TOOLBAR_ICON_LEFT_PAD_PX", 8)
+            rel_x = int(left_pad + (icon_index - 0.5) * icon_w)
+            rel_y = max(8, rect.height() // 2)
+        return int(rect.left) + rel_x, int(rect.top) + rel_y
+    win_rect = win.rectangle()
+    x_frac = float(x_frac_raw or "0.13")
+    y_frac = float(y_frac_raw or "0.072")
+    return (
+        int(win_rect.left) + int(win_rect.width() * x_frac),
+        int(win_rect.top) + int(win_rect.height() * y_frac),
+    )
+
+
+def _click_toolbar_print(win) -> None:
+    """툴바 프린터 아이콘 — Ctrl+P 와 동일한 인쇄 대화상자 (표 포커스 이탈 최소)."""
+    from gc_screen_read import click_screen
+
+    _ensure_autochro_foreground(win)
+    sx, sy = _toolbar_print_screen_coords(win)
+    _log(f"  툴바 프린터 아이콘 클릭 @ ({sx}, {sy})")
+    click_screen(sx, sy, button="left")
+
+
+def _select_all_for_print(win) -> None:
+    """
+    인쇄 직전 (step 5): ESC → 적분 열 1클릭 → Ctrl+A → 툴바 프린터 클릭.
+
+    Ctrl+P 는 포커스 이동으로 전체선택이 풀리는 경우가 있어 툴바 아이콘 사용.
+    ^a 와 인쇄 사이 **시료 표 추가 클릭 금지**.
+    """
+    from pywinauto.keyboard import send_keys
+
+    sample_list = _analysis_sample_table(win)
+    try:
+        send_keys("{ESC}")
+        time.sleep(0.2)
+    except Exception:
+        pass
+    x_frac = _click_status_column_once(sample_list)
+    _log(f"  인쇄: Ctrl+A x_frac={x_frac:.2f} → 툴바 프린터")
+    send_keys("^a")
+    time.sleep(0.12)
+    _click_toolbar_print(win)
+
+
 def _select_all_in_sample_table(win) -> None:
-    """분석목록 상단 시료 표 전체 선택 — 인쇄 직전·초기화 전 공통."""
+    """분석목록 상단 시료 표 전체 선택 — step 3·초기화 전 (인쇄는 ``_select_all_for_print``)."""
     from pywinauto.keyboard import send_keys
 
     _ensure_autochro_foreground(win)
@@ -1258,15 +1357,11 @@ def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
 
 
 def step_print_pdf(win, cfg: AutochroConfig) -> None:
-    _log("5/6 인쇄 전 전체 선택 → PDF (Ctrl+P)")
+    _log("5/6 인쇄 전 전체 선택 → 툴바 프린터")
     if cfg.dry_run:
         return
-    from pywinauto.keyboard import send_keys
-
-    _log("  인쇄 직전 시료 표 전체 선택 (Ctrl+A)")
-    _select_all_in_sample_table(win)
-    _ensure_autochro_foreground(win)
-    send_keys("^p")
+    # ESC → 상태열 1클릭 → ^a → 툴바 프린터 (^a 와 인쇄 사이 표 클릭·set_focus 금지)
+    _select_all_for_print(win)
     time.sleep(1.0)
     _confirm_print_dialog(cfg)
     _wait_for_printing(cfg)
