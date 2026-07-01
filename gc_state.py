@@ -121,6 +121,29 @@ def get_watch_need_sample_name(state: dict) -> Optional[dict]:
     return pending if isinstance(pending, dict) else None
 
 
+def get_seq_sample_name(state_path: str, seq_date: str) -> Optional[str]:
+    """사용자가 force/CLI로 지정해 둔 날짜별 시료명 — watch 가 Cursor 대화 내용 대신 참조."""
+    state = load_send_state(state_path)
+    names = state.get("seq_sample_names")
+    if not isinstance(names, dict):
+        return None
+    raw = names.get(seq_date)
+    return str(raw).strip() if raw else None
+
+
+def set_seq_sample_name(state_path: str, seq_date: str, sample_name: str) -> None:
+    """처리 성공 시 날짜별 시료명 저장 (watch 자동 재사용)."""
+    if not seq_date or not sample_name:
+        return
+    state = load_send_state(state_path)
+    names = state.setdefault("seq_sample_names", {})
+    if not isinstance(names, dict):
+        names = {}
+        state["seq_sample_names"] = names
+    names[seq_date] = sample_name
+    save_send_state(state_path, state)
+
+
 def log_gc_event(excel_output_dir: str, event_type: str, message: str, **extra) -> None:
     """``_GC자동화\\_system\\gc_events.jsonl`` — 오류·재시도 기록 (GC1)."""
     if not excel_output_dir:
@@ -550,6 +573,8 @@ def record_processing_result(
         chemstation_mode=chemstation_mode,
         prepare_done=prepare_done,
     )
+    if sample_name and seq_date:
+        set_seq_sample_name(state_path, seq_date, sample_name)
     clear_watch_need_sample_name(state_path)
 
 

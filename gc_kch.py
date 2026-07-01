@@ -159,6 +159,12 @@ def resolve_watch_sample_name_alert(
         clear_watch_need_sample_name(state_path)
         return None
 
+    from gc_state import get_seq_sample_name
+
+    if get_seq_sample_name(state_path, seq_date):
+        clear_watch_need_sample_name(state_path)
+        return None
+
     state = load_send_state(state_path)
     pending = get_watch_need_sample_name(state)
     new_date = is_new_sequence_date(config.excel_output_dir, seq_date)
@@ -260,6 +266,20 @@ def fingerprints_match(fp_a: tuple, fp_b: tuple, rt_tolerance: float = RT_TOLERA
     return True
 
 
+def fingerprints_prefix_match(fp_a: tuple, fp_b: tuple, rt_tolerance: float = RT_TOLERANCE) -> bool:
+    """
+    주입 추가 중 — 기존 엑셀 사이클 수 < 현재 acam 사이클 수일 때 앞쪽만 비교.
+
+    force 1회(1주입) 후 watch 가 2·3주입을 붙일 때 len 불일치로 rt_mismatch 나던 문제 방지.
+    """
+    if not fp_a or not fp_b:
+        return False
+    n = min(len(fp_a), len(fp_b))
+    if n == 0:
+        return False
+    return fingerprints_match(fp_a[:n], fp_b[:n], rt_tolerance)
+
+
 def find_matching_sample_name(
     cycle_peaks_list: List[List[dict]],
     seq_date: str,
@@ -276,8 +296,11 @@ def find_matching_sample_name(
         except Exception as exc:
             print(f"[경고] 기존 엑셀 비교 실패 ({os.path.basename(excel_path)}): {exc}")
             continue
-        if fingerprints_match(current_fp, existing_fp):
-            print(f"\n[안내] 앞 {len(current_fp)}개 주입 RT가 기존 파일과 일치 → 동일 시료")
+        if fingerprints_match(current_fp, existing_fp) or fingerprints_prefix_match(
+            current_fp, existing_fp
+        ):
+            matched_cycles = min(len(current_fp), len(existing_fp))
+            print(f"\n[안내] 앞 {matched_cycles}개 주입 RT가 기존 파일과 일치 → 동일 시료")
             print(f"       시료: '{sample_name}' / 파일: {os.path.basename(excel_path)}")
             return sample_name
     return None
@@ -330,6 +353,13 @@ def determine_sample_name(
         else:
             print(f"\n[안내] 새 시료 '{safe_name}' 으로 저장")
         return safe_name, seq_date
+
+    from gc_state import get_seq_sample_name
+
+    persisted = get_seq_sample_name(config.send_state_file, seq_date)
+    if persisted:
+        print(f"\n[안내] 이전에 지정한 시료명 재사용 → '{persisted}'")
+        return persisted, seq_date
 
     if config.allow_prompt:
         return prompt_sample_name(seq_date, bool(existing_files)), seq_date
