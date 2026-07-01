@@ -70,7 +70,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 
   AUTOCHRO_ENABLED, AUTOCHRO_WINDOW_TITLE_PATTERN, AUTOCHRO_DATA_NAME(CRM 경로용)
   AUTOCHRO_AUTO_POSITION, AUTOCHRO_WINDOW_X/Y
-  AUTOCHRO_LIST_STATUS_X_FRAC   — Ctrl+A 전 클릭 (처리형태·적분 열, 기본 0.78)
+  AUTOCHRO_LIST_STATUS_X_FRAC   — Ctrl+A 전 클릭 (처리형태·적분 열, 기본 0.88;
+                                  쉼표 구분 후보 0.88,0.82,0.92 — 열 너비 변경 허용)
   AUTOCHRO_LIST_NEUTRAL_X_FRAC — (구) STATUS_X_FRAC 와 동일
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
@@ -1056,26 +1057,71 @@ def step_load_analysis_method(win, cfg: AutochroConfig) -> str:
     return data_name
 
 
-def _list_status_column_coords(sample_list) -> tuple[int, int]:
+_STATUS_X_FRAC_MIN = 0.45  # 미지시료·시료종류(~0.18–0.38) 회피
+_STATUS_X_FRAC_MAX = 0.92
+_STATUS_X_FRAC_DEFAULT = 0.88
+_STATUS_X_FRAC_FALLBACKS = (0.88, 0.82, 0.92)
+
+
+def _clamp_status_x_frac(x_frac: float) -> float:
+    return min(max(float(x_frac), _STATUS_X_FRAC_MIN), _STATUS_X_FRAC_MAX)
+
+
+def _parse_status_x_fracs() -> list[float]:
+    """
+    AUTOCHRO_LIST_STATUS_X_FRAC — 단일 또는 쉼표 구분.
+    미지시료 열(<0.45) 회피, 높은(우측) 값 우선.
+    """
+    raw = os.getenv("AUTOCHRO_LIST_STATUS_X_FRAC", "").strip()
+    if not raw:
+        raw = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "").strip()
+    if raw:
+        parsed: list[float] = []
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                parsed.append(_clamp_status_x_frac(float(part)))
+            except ValueError:
+                continue
+        if parsed:
+            return sorted(set(parsed), reverse=True)
+    return list(_STATUS_X_FRAC_FALLBACKS)
+
+
+def _list_status_column_coords(
+    sample_list, *, x_frac: float | None = None
+) -> tuple[int, int]:
     """
     처리형태·적분 열 — Ctrl+A 전 포커스 (시료이름 편집 모드 진입 없음).
 
     시료이름·시료종류 열은 더블클릭/재클릭 시 수정 모드 → 전체 선택 불가.
     """
-    raw = os.getenv("AUTOCHRO_LIST_STATUS_X_FRAC", "").strip()
-    if not raw:
-        raw = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "0.78").strip()
-    try:
-        x_frac = float(raw)
-    except ValueError:
-        x_frac = 0.78
-    x_frac = min(max(x_frac, 0.55), 0.92)
+    if x_frac is None:
+        x_frac = _parse_status_x_fracs()[0]
+    x_frac = _clamp_status_x_frac(x_frac)
     rect = sample_list.rectangle()
     width = max(rect.width(), 400)
     height = max(rect.height(), 80)
     rel_x = int(width * x_frac)
     rel_y = max(16, min(32, height // 10))
     return rel_x, rel_y
+
+
+def _listview_item_count(ctrl) -> int:
+    try:
+        return max(0, int(ctrl.item_count()))
+    except Exception:
+        return 0
+
+
+def _listview_selected_count(ctrl) -> int:
+    try:
+        sel = ctrl.get_selected()
+        return len(sel) if sel else 0
+    except Exception:
+        return 0
 
 
 def _list_row_index_coords(sample_list) -> tuple[int, int]:
@@ -1090,13 +1136,16 @@ def _neutral_list_coords(sample_list) -> tuple[int, int]:
     return _list_status_column_coords(sample_list)
 
 
-def _focus_list_for_ctrl_a(sample_list) -> None:
+def _focus_list_for_ctrl_a(sample_list, *, x_frac: float | None = None) -> float:
     """분석목록 시료 표 — 처리형태·적분 열 **한 번** 클릭 (편집 모드 회피)."""
-    rel_x, rel_y = _list_status_column_coords(sample_list)
+    if x_frac is None:
+        x_frac = _parse_status_x_fracs()[0]
+    rel_x, rel_y = _list_status_column_coords(sample_list, x_frac=x_frac)
     sample_list.set_focus()
     time.sleep(0.1)
     sample_list.click_input(coords=(rel_x, rel_y))
     time.sleep(0.3)
+    return x_frac
 
 
 def _select_all_in_sample_table(win) -> None:
@@ -1112,9 +1161,32 @@ def _select_all_in_sample_table(win) -> None:
         time.sleep(0.2)
     except Exception:
         pass
-    _focus_list_for_ctrl_a(sample_list)
-    send_keys("^a")
-    time.sleep(0.5)
+    fracs = _parse_status_x_fracs()
+    total = _listview_item_count(sample_list)
+    used_frac = fracs[0]
+    for idx, x_frac in enumerate(fracs):
+        _focus_list_for_ctrl_a(sample_list, x_frac=x_frac)
+        send_keys("^a")
+        time.sleep(0.35)
+        if total <= 1 or len(fracs) == 1:
+            used_frac = x_frac
+            break
+        sel = _listview_selected_count(sample_list)
+        if sel >= total or sel > 1:
+            used_frac = x_frac
+            _log(f"  Ctrl+A x_frac={x_frac:.2f} (선택 {sel}/{total}행)")
+            break
+        if idx < len(fracs) - 1:
+            try:
+                send_keys("{ESC}")
+                time.sleep(0.15)
+            except Exception:
+                pass
+    else:
+        time.sleep(0.15)
+    if total <= 1 or len(fracs) == 1:
+        _log(f"  Ctrl+A x_frac={used_frac:.2f}")
+    time.sleep(0.15)
 
 
 def _largest_sample_list(win):

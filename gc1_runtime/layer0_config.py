@@ -198,8 +198,8 @@ def read_list_neutral_x_frac(env: EnvMap | None = None) -> float:
         _read_key(
             env,
             "AUTOCHRO_LIST_NEUTRAL_X_FRAC",
-            default_str="0.78",
-            parser=lambda s: parse_frac(s, 0.78),
+            default_str="0.88",
+            parser=lambda s: parse_frac(s, 0.88),
         )
     )
 

@@ -36,8 +36,8 @@ class TestCfgParsers(unittest.TestCase):
 
     def test_parse_frac_bounds(self):
         self.assertAlmostEqual(parse_frac("0.78", 0.5), 0.78)
-        self.assertAlmostEqual(parse_frac("1.5", 0.78), 0.78)
-        self.assertAlmostEqual(parse_frac("0", 0.78), 0.78)
+        self.assertAlmostEqual(parse_frac("1.5", 0.88), 0.88)
+        self.assertAlmostEqual(parse_frac("0", 0.88), 0.88)
 
     def test_parse_hotspot_csv(self):
         self.assertEqual(parse_hotspot_csv("iPhone, iPad", "x"), ("iPhone", "iPad"))
@@ -51,7 +51,7 @@ class TestCfgReadLeaves(unittest.TestCase):
         self.assertEqual(read_window_title_pattern(env), "Autochro")
         self.assertFalse(read_gc1_use_runtime(env))
         self.assertEqual(read_hancom_wait_sec(env), 120)
-        self.assertAlmostEqual(read_list_neutral_x_frac(env), 0.78)
+        self.assertAlmostEqual(read_list_neutral_x_frac(env), 0.88)
         self.assertEqual(read_required_hotspot(env), ("iPhone",))
 
     def test_trim_and_bool_true(self):
@@ -68,7 +68,7 @@ class TestCfgReadLeaves(unittest.TestCase):
 
     def test_invalid_frac_fallback(self):
         env = {"AUTOCHRO_LIST_NEUTRAL_X_FRAC": "2.0"}
-        self.assertAlmostEqual(read_list_neutral_x_frac(env), 0.78)
+        self.assertAlmostEqual(read_list_neutral_x_frac(env), 0.88)
 
     def test_analysis_method_dir_existing(self):
         with tempfile.TemporaryDirectory() as tmp:

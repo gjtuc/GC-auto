@@ -92,7 +92,7 @@ class P2P3Deps(P0P1Deps):
     ``menu_popup_items`` — P3.04 컨텍스트 메뉴 mock.
     """
 
-    list_neutral_x_frac: float = 0.78
+    list_neutral_x_frac: float = 0.88
     peak_table_text: str = "0 0 0 0 0"
     menu_popup_items: list[str] = field(default_factory=lambda: ["초기화", "초기화+정량"])
     sample_list_focused: bool = False
@@ -109,10 +109,10 @@ def neutral_list_coords(
     width: int,
     height: int,
     *,
-    x_frac: float = 0.78,
+    x_frac: float = 0.88,
 ) -> tuple[int, int]:
     """P2.03~04 — 소유자 ID 드롭다운 회피용 rel_x/rel_y."""
-    frac = min(max(x_frac, 0.55), 0.92)
+    frac = min(max(x_frac, 0.45), 0.92)
     w = max(width, 400)
     h = max(height, 80)
     rel_x = int(w * frac)

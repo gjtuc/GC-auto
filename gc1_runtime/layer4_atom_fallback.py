@@ -42,7 +42,7 @@ def apply_atom_fallback(
 
     if kind == "h_reclick_neutral":
         geom = _sample_geom(ctx)
-        x_frac = getattr(ctx.deps, "list_neutral_x_frac", 0.78)
+        x_frac = getattr(ctx.deps, "list_neutral_x_frac", 0.88)
         rel_x, rel_y = neutral_list_coords(geom.width, geom.height, x_frac=x_frac)
         hand._record("set_focus", "analysis_sample")
         hand._record("click", f"{rel_x},{rel_y}")
