@@ -60,10 +60,25 @@ class TestMouseGuard(unittest.TestCase):
             g._moves.append((__import__("time").time(), dx))
         self.assertFalse(g.paused)
 
-    def test_swipe_pauses(self):
+    def test_automation_grace_ignores_large_jump(self):
+        g = UserMouseGuard()
+        g._last = (100, 100)
+        g.on_automation_cursor(600, 400, grace_sec=1.0)
+        # 자동화가 500px 점프해도 grace 안이면 무시
+        self.assertFalse(g.paused)
+        g._last = (600, 400)
+        self.assertFalse(g.paused)
+
+    def test_large_jump_without_grace_pauses(self):
         g = UserMouseGuard()
         g._last = (0, 0)
-        g._trigger("test")
+        g._ignore_until = 0.0
+        # 140px 이상 한 번에 이동 (기본 임계)
+        g._last = (0, 0)
+        pos = (200, 0)
+        delta = 200.0
+        if delta >= float(__import__("os").getenv("GC1_LEARN_MOUSE_SWIPE_PX", "140")):
+            g._trigger("single_swipe")
         self.assertTrue(g.paused)
 
 

@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 
 from gc1_runtime.layer3_ocr_learn import learnings_dir
 
-MATURITY_RATE = float(os.getenv("GC1_OCR_MATURITY_RATE", "0.97"))
+MATURITY_RATE = float(os.getenv("GC1_OCR_MATURITY_RATE", "0.99"))
 MIN_ATTEMPTS = int(os.getenv("GC1_OCR_MATURITY_MIN_ATTEMPTS", "20"))
 _MATURITY_NAME = "maturity.json"
 _POLICY_NAME = "policy.json"

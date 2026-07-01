@@ -7,6 +7,10 @@ import tempfile
 import unittest
 
 from gc1_runtime.layer0_data import (
+    analysis_tree_has_control_overlap,
+    analysis_tree_line_has_control_ghost,
+    analysis_tree_matching_lines,
+    analysis_tree_needs_paint_refresh,
     build_analysis_method_mtd_path,
     extract_date8_from_data_name,
     extract_mtd_date_prefix,
@@ -45,6 +49,55 @@ class TestTreeLabelMatches(unittest.TestCase):
             extract_date8_from_data_name("20260630dre(5)ni(환원)-ce"),
             "20260630",
         )
+
+    def test_tree_overlap_detection(self):
+        target = "20260630dre(5)ni(환원)-ce"
+        lines = [
+            "20260630dre(5)ni(환원)-ce",
+            "20260630dre(5)ni(환원)-ce",
+            "YL6500 GC 0",
+        ]
+        self.assertTrue(analysis_tree_has_control_overlap(lines, target))
+        self.assertEqual(len(analysis_tree_matching_lines(lines, target)), 2)
+        ok_lines = ["20260630dre(5)ni(환원)-ce", "YL6500 GC 0"]
+        self.assertFalse(analysis_tree_has_control_overlap(ok_lines, target))
+
+    def test_control_ghost_one_line(self):
+        target = "20260630dre(5)ni(환원)-ce"
+        ghost = "| 제어목록 | @ 20260630016(5)01(환원)-6"
+        self.assertTrue(analysis_tree_line_has_control_ghost(ghost))
+        self.assertTrue(
+            analysis_tree_needs_paint_refresh([ghost], target, ocr_text=ghost)
+        )
+        self.assertFalse(
+            analysis_tree_needs_paint_refresh(
+                ["20260630dre(5)ni(환원)-ce"], target
+            )
+        )
+
+    def test_multi_folder_ocr_not_ghost(self):
+        """20260629·20260630 폴더가 같이 보여도 잔상 아님 (이전 날짜 substring 오탐 방지)."""
+        target = "20260630dre(5)ni(환원)-ce"
+        ocr = (
+            "~ 분석목록 & 20260629 dre(3) ni-ce-la "
+            "20260630dre(5)ni(환원)-ce 적분정보"
+        )
+        self.assertFalse(
+            analysis_tree_needs_paint_refresh([], target, ocr_text=ocr)
+        )
+        ocr_dup_substr = "20260630016(5)01 20260630dre(5)ni"
+        self.assertFalse(
+            analysis_tree_needs_paint_refresh([], target, ocr_text=ocr_dup_substr)
+        )
+
+    def test_tab_label_bleed_not_ghost(self):
+        """W32 탭 라벨만 섞인 '제어목록' — 잔상 아님."""
+        target = "20260630dre(5)ni(환원)-ce"
+        w32_lines = ["제어목록", "20260630dre(5)ni(환원)-ce", "YL6500 GC 0"]
+        self.assertFalse(analysis_tree_needs_paint_refresh(w32_lines, target))
+        self.assertFalse(analysis_tree_line_has_control_ghost("제어목록"))
+        real = "| 제어목록 | @ 20260630016(5)01(환원)-6"
+        self.assertTrue(analysis_tree_line_has_control_ghost(real))
 
 
 class TestMtdPath(unittest.TestCase):

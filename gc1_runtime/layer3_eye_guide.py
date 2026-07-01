@@ -69,14 +69,23 @@ def eye_gate_should_raise() -> bool:
     return autochro_eye_strict() and not autochro_eye_adaptive()
 
 
+def autochro_eye_coord_only() -> bool:
+    """
+    OCR은 제어목록 데이터명·분석목록 트리 시료명 매칭만.
+    나머지(표 클릭·메뉴·탭)는 고정 좌표 + win32/단축키 (기본 ON).
+    """
+    raw = os.getenv("GC1_AUTOCHRO_EYE_COORD_ONLY", "1").strip().lower()
+    return raw not in ("0", "false", "no", "off")
+
+
 def autochro_eye_enabled(*, dry_run: bool = False) -> bool:
     """live Autochro 에서 OCR 눈 사용 여부. dry_run 이면 항상 False."""
     if dry_run:
         return False
     enabled = os.getenv("GC1_AUTOCHRO_EYE", "1").strip().lower() in ("1", "true", "yes")
-    # Win32 테두리 오버레이 — Tcl 없음, live 에서도 빨간 박스 기본 ON
     if enabled:
-        os.environ.setdefault("GC_SCREEN_SHOW_FOCUS", "1")
+        os.environ.setdefault("GC_SCREEN_SHOW_FOCUS", "0")
+        os.environ.setdefault("GC_SCREEN_SHOW_CURSOR", "1")
     return enabled
 
 
@@ -104,10 +113,17 @@ def _score_tree_name_token(tok: OcrToken, data_name: str) -> float:
         score += 40.0
     elif tok_c in name_c:
         score += 25.0
+    if "dre" in name_c and "dre" not in tok_c:
+        return -1.0
+    if name_c[:10] not in tok_c and tok_c not in name_c:
+        if not (target_date and target_date in tok_c and len(tok_c) >= 12):
+            return -1.0
+    if re.search(r"\d\($", tok_c) or tok_c.endswith("("):
+        return -1.0
+    if len(tok_c) < max(12, len(name_c) // 2):
+        return -1.0
     if "dre" in name_c and "dre" in tok_c and target_date and target_date in tok_c:
         score += 10.0
-    if len(tok_c) < 8 and not re.search(r"\d{6}", tok_c):
-        score -= 30.0
     return score
 
 
@@ -279,6 +295,8 @@ class AutochroStepEye:
 
     def verify_task(self, task_id: str, *, step_id: str, phase: str = "after") -> bool:
         """screen_regions read_tasks 검증."""
+        if autochro_eye_coord_only():
+            return True
         tasks = self.config.get("read_tasks") or {}
         if task_id not in tasks:
             self._log(f"skip unknown task {task_id}")
@@ -346,6 +364,8 @@ class AutochroStepEye:
 
     def require_task(self, step_id: str, task_id: str, *, phase: str = "after") -> None:
         """OCR 검증 — adaptive 이면 경고만, strict+비적응이면 중단."""
+        if autochro_eye_coord_only():
+            return
         ok = self.verify_task(task_id, step_id=step_id, phase=phase)
         if not ok and eye_gate_should_raise():
             raise RuntimeError(f"OCR gate fail: {step_id} / {task_id}")
@@ -392,7 +412,10 @@ class AutochroStepEye:
         *,
         task_id: str | None = None,
     ) -> None:
-        """단계 사이 눈 스캔 — OCR 읽기 + (선택) read_tasks 검증."""
+        """단계 사이 눈 스캔 — coord-only 모드에서는 생략."""
+        if autochro_eye_coord_only():
+            self._log(f"between-step skip (coord-only): {step_id}")
+            return
         self._log(f"between-step: {step_id} ({region_id})")
         try:
             self.ocr_region(region_id, label=step_id)
@@ -517,8 +540,12 @@ class AutochroStepEye:
         *,
         fallback_rel: Tuple[int, int],
     ) -> None:
-        """OCR .raw 앵커 또는 fallback 좌표로 더블클릭."""
+        """coord-only: 고정 좌표 더블클릭. 그 외 OCR .raw 앵커 시도."""
         rel_x, rel_y = self.guided_sync_double_click(sample_list, fallback_rel=fallback_rel)
+        if autochro_eye_coord_only():
+            self.move_mouse_on_list(sample_list, rel_x, rel_y)
+            sample_list.double_click_input(coords=(rel_x, rel_y))
+            return
         anchor = self.find_raw_anchor_screen_xy()
         if anchor is not None:
             self._log(f"sync OCR double-click screen {anchor}")
@@ -559,6 +586,12 @@ class AutochroStepEye:
         rect = sample_list.rectangle()
         screen_x = int(rect.left) + int(rel_x)
         screen_y = int(rect.top) + int(rel_y)
+        try:
+            from gc1_runtime.layer3_user_mouse_guard import notify_automation_cursor_at
+
+            notify_automation_cursor_at(screen_x, screen_y)
+        except Exception:
+            pass
         try:
             sample_list.set_focus()
             sample_list.move_mouse_input(coords=(rel_x, rel_y))
@@ -624,7 +657,12 @@ class AutochroStepEye:
         *,
         fallback_rel: Tuple[int, int],
     ) -> Tuple[int, int]:
-        """제어목록 동기화 — 단계 사이 OCR + 마우스 이동 + 더블클릭 좌표 반환."""
+        """제어목록 동기화 — coord-only: 고정 좌표만."""
+        if autochro_eye_coord_only():
+            rel_x, rel_y = fallback_rel
+            self.move_mouse_on_list(sample_list, rel_x, rel_y)
+            self._log(f"sync coord-only rel=({rel_x},{rel_y})")
+            return rel_x, rel_y
         self.scan_between("P1.before_sync", "top_sample_table", task_id=EYE_TASK_BEFORE_SYNC)
         rel_x, rel_y = self.resolve_sync_double_click_rel(
             sample_list, fallback_rel=fallback_rel
@@ -634,7 +672,11 @@ class AutochroStepEye:
         return rel_x, rel_y
 
     def guided_focus_for_ctrl_a(self, sample_list) -> Tuple[int, int]:
-        """Ctrl+A 전 — OCR 로 클릭 위치 잡고 마우스 이동."""
+        """Ctrl+A 전 — 행 번호 열(시료종류·미지시료 드롭다운 회피)."""
+        if autochro_eye_coord_only():
+            rel_x, rel_y = _list_row_index_rel(sample_list)
+            self.move_mouse_on_list(sample_list, rel_x, rel_y)
+            return rel_x, rel_y
         if eye_gate_should_raise():
             self.require_task("P2.before_ctrl_a", EYE_TASK_BEFORE_TABLE)
         else:
@@ -646,6 +688,8 @@ class AutochroStepEye:
 
     def guided_after_ctrl_a(self) -> None:
         """Ctrl+A 직후 검증."""
+        if autochro_eye_coord_only():
+            return
         if eye_gate_should_raise():
             self.require_task("P2.after_ctrl_a", EYE_TASK_AFTER_CTRL_A)
         else:
@@ -778,9 +822,30 @@ class AutochroStepEye:
         forbid: Sequence[str] = ("정량", "검량"),
         neutral_rel: Tuple[int, int] | None = None,
     ) -> bool:
-        """마우스 위치 OCR 조정 -> 우클릭 -> OCR 로 메뉴 클릭. 메뉴 클릭 성공 여부."""
+        """우클릭 → 메뉴. coord-only: 시료이름 열 좌표 + win32/단축키 (OCR 메뉴 생략)."""
         if neutral_rel is None:
-            neutral_rel = _neutral_list_rel(sample_list)
+            neutral_rel = _list_rightclick_rel(sample_list)
+        if autochro_eye_coord_only():
+            rel_x, rel_y = neutral_rel
+            self.move_mouse_on_list(sample_list, rel_x, rel_y)
+            self._log(f"우클릭 coord-only rel=({rel_x},{rel_y})")
+            sample_list.click_input(button="right", coords=(rel_x, rel_y))
+            rect = sample_list.rectangle()
+            self._menu_anchor_screen = (rect.left + rel_x, rect.top + rel_y)
+            time.sleep(0.55)
+            clicked = self._try_click_popup_menu_win32(
+                menu_needle, forbid=forbid, step_id="P3.menu"
+            )
+            if not clicked and menu_needle.startswith("초기"):
+                try:
+                    from pywinauto.keyboard import send_keys
+
+                    send_keys("n")
+                    clicked = True
+                    self._log("menu shortcut N (coord-only)")
+                except Exception:
+                    pass
+            return clicked
         rel_x, rel_y = self.resolve_sample_table_rel(
             sample_list, fallback_rel=neutral_rel
         )
@@ -820,20 +885,40 @@ class AutochroStepEye:
         return clicked
 
 
-def _neutral_list_rel(sample_list) -> Tuple[int, int]:
-    """gc_autochro._neutral_list_coords 와 동일 (순환 import 방지)."""
-    raw_frac = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "0.78").strip()
-    try:
-        x_frac = float(raw_frac)
-    except ValueError:
-        x_frac = 0.78
-    x_frac = min(max(x_frac, 0.55), 0.92)
+def _list_frac_rel(sample_list, x_frac: float) -> Tuple[int, int]:
     rect = sample_list.rectangle()
     width = max(rect.width(), 400)
     height = max(rect.height(), 80)
-    rel_x = int(width * x_frac)
+    rel_x = max(8, int(width * x_frac))
     rel_y = max(16, min(32, height // 10))
     return rel_x, rel_y
+
+
+def _list_row_index_rel(sample_list) -> Tuple[int, int]:
+    """행 번호 열 — Ctrl+A 전 포커스 (시료종류 드롭다운 회피)."""
+    raw = os.getenv("AUTOCHRO_LIST_ROW_X_FRAC", "0.06").strip()
+    try:
+        x_frac = float(raw)
+    except ValueError:
+        x_frac = 0.06
+    x_frac = min(max(x_frac, 0.03), 0.14)
+    return _list_frac_rel(sample_list, x_frac)
+
+
+def _list_rightclick_rel(sample_list) -> Tuple[int, int]:
+    """시료이름 열 — 우클릭 (미지시료·시료종류 열 회피)."""
+    raw = os.getenv("AUTOCHRO_LIST_NAME_X_FRAC", "0.26").strip()
+    try:
+        x_frac = float(raw)
+    except ValueError:
+        x_frac = 0.26
+    x_frac = min(max(x_frac, 0.12), 0.38)
+    return _list_frac_rel(sample_list, x_frac)
+
+
+def _neutral_list_rel(sample_list) -> Tuple[int, int]:
+    """gc_autochro._list_row_index_coords 와 동일."""
+    return _list_row_index_rel(sample_list)
 
 
 # read_tasks 키 — screen_regions.gc1.json 과 동기화

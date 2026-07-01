@@ -23,6 +23,7 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   2) 분석목록 시료 표 Ctrl+A
   3) 시료 표 우클릭 → 초기화
   4) 왼쪽 트리(제어목록 데이터명과 동일) 우클릭 → 분석방법 불러오기 → {YYYYMMDD} 분석방법.MTD
+     (제어목록 잔상으로 트리에 같은 시료가 2줄이면 제어목록↔분석목록 탭 전환으로 제거)
   5) Ctrl+A → 우클릭 초기화 (아래 피크 표 0)
   6) Ctrl+A → 메뉴 「시료목록 → 초기화+정량」 — 적분 대기
   7) Ctrl+P 인쇄 → Hancom PDF
@@ -79,11 +80,17 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 
   AUTOCHRO_ENABLED, AUTOCHRO_WINDOW_TITLE_PATTERN, AUTOCHRO_DATA_NAME(CRM 경로용)
   AUTOCHRO_AUTO_POSITION, AUTOCHRO_WINDOW_X/Y
-  AUTOCHRO_LIST_NEUTRAL_X_FRAC  — Ctrl+A 전 클릭 가로 위치 (기본 0.78)
+  AUTOCHRO_LIST_ROW_X_FRAC      — Ctrl+A 전 행번호 열 (기본 0.06, 시료종류 회피)
+  AUTOCHRO_LIST_NAME_X_FRAC     — 우클릭 시료이름 열 (기본 0.26)
+  AUTOCHRO_LIST_NEUTRAL_X_FRAC  — (구) — ROW_X_FRAC 와 동일 권장
+  GC1_AUTOCHRO_EYE_COORD_ONLY   — 1=OCR은 제어 데이터명·트리 매칭만 (기본 1)
+  GC_SCREEN_FOCUS_BACKEND       — tk(기본,A) | win32(C)
   AUTOCHRO_ANALYSIS_METHOD_DIR    — MTD 폴더 (기본 바탕화면)
   AUTOCHRO_ANALYSIS_METHOD_FILENAME — MTD 파일명 (기본 20260629 분석방법.MTD)
   AUTOCHRO_ANALYSIS_METHOD_MTD    — MTD 전체 경로 override
   GC1_AUTOCHRO_PREP_STEPS         — 1=적분 준비(초기화·MTD) 포함 (기본), 0=생략
+  GC1_AUTOCHRO_TREE_TAB_REFRESH   — 1=P4 전 항상 제어목록↔분석목록 (기본 0, Ctrl+A 후 잔상 유발)
+  GC1_AUTOCHRO_TREE_TAB_REFRESH   — 1=P4 전 항상 제어목록↔분석목록 (기본 0, Ctrl+A 후 잔상 유발)
   GC1_USE_RUNTIME                 — 1=``gc1_runtime.layer4_job`` 위임 (기본 0, 기존 UI 경로)
   GC1_AUTOCHRO_EYE               — 1=단계마다 OCR 눈 (live 기본 1, dry_run 제외)
   GC1_AUTOCHRO_EYE_ADAPT         — 1=OCR 우선·fallback 허용 (기본 1)
@@ -91,8 +98,9 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   GC1_OCR_CASE_STUDY            — 1=실패 시 단계 케이스 스터디 (기본 1)
   GC1_OCR_EXPLORE               — 1=실패 시 확대/축소·커서 탐색 (기본 1)
   GC1_OCR_LEARN                 — 1=런 종료 후 overlay 학습 반영 (기본 1)
-  GC_SCREEN_SHOW_FOCUS          — 1=OCR·케이스 스터디 빨간 네모 (기본 1, 0=끔)
-  GC_SCREEN_FOCUS_MS            — 네모 최소 표시 ms (기본 800, 케이스 스터디 1000)
+  GC_SCREEN_SHOW_FOCUS          — 1=OCR 빨간/라임 네모 (기본 0=끔)
+  GC_SCREEN_SHOW_CURSOR         — 1=커서 이동 표시 (기본 1)
+  GC_SCREEN_FOCUS_MS            — 네모 최소 표시 ms (기본 1200, 케이스 스터디 1000)
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
@@ -132,7 +140,17 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-# 제어목록(파란 선택) 데이터명 → PDF 파일명 stem
+# 제어목록 활성 데이터명 — 런 내내 동일 (트리·PDF·엑셀)
+_SESSION_DATA_NAME: str = ""
+
+
+def remember_session_data_name(name: str) -> None:
+    global _SESSION_DATA_NAME
+    _SESSION_DATA_NAME = (name or "").strip()
+
+
+def session_data_name(fallback: str = "") -> str:
+    return _SESSION_DATA_NAME or (fallback or "").strip()
 _DATA_NAME_DATE_RE = re.compile(r"^\d{6}")
 
 
@@ -503,6 +521,21 @@ def _on_control_tab(win) -> bool:
 
 def _select_tab_index(win, index: int) -> None:
     tabs = _bottom_tabs(win)
+    try:
+        rect = tabs.rectangle()
+        from gc_screen_read import Box, flash_focus_box, show_automation_cursor
+
+        tab_x = int(rect.left) + int(rect.width() * (0.25 if index == 0 else 0.75))
+        tab_y = int(rect.top) + max(12, rect.height() // 2)
+        show_automation_cursor(tab_x, tab_y, color="lime", dwell_ms=700)
+        flash_focus_box(
+            Box(rect.left, rect.top, rect.width(), max(36, rect.height())),
+            color="lime",
+            duration_ms=600,
+            border=4,
+        )
+    except Exception:
+        pass
     tabs.select(index)
     time.sleep(0.8)
 
@@ -515,6 +548,151 @@ def _select_control_tab(win) -> None:
 def _select_analysis_tab(win) -> None:
     if not _on_analysis_tab(win):
         _select_tab_index(win, 0)
+
+
+def _analysis_tree_lines(win) -> List[str]:
+    tree = _analysis_tree_view(win)
+    lines: List[str] = []
+    try:
+        for text in tree.texts():
+            line = (text or "").strip()
+            if line:
+                lines.append(line)
+    except Exception:
+        pass
+    return lines
+
+
+def _refresh_analysis_tree_paint(win) -> None:
+    """
+    제어목록 탭 → 분석목록 탭 — 왼쪽 트리 UI 잔상(오버랩) 제거.
+
+    제어목록 아이콘·시료명이 분석목록 트리에 남아 같은 시료가 2개처럼
+    보이는 Autochro 버그. 운영자 확인: 제어목록 갔다가 분석목록 복귀 시 해소.
+    """
+    _log("분석목록 트리 잔상 제거 — 제어목록 탭 후 분석목록 복귀")
+    _select_tab_index(win, 1)
+    time.sleep(0.55)
+    _select_tab_index(win, 0)
+    time.sleep(0.65)
+
+
+def _tree_tab_refresh_enabled() -> bool:
+    """P4 직전 무조건 탭 전환. Ctrl+A 전체선택 직후에는 오히려 잔상을 만든다 — 기본 끔."""
+    return os.getenv("GC1_AUTOCHRO_TREE_TAB_REFRESH", "0").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+    )
+
+
+def _release_table_selection_to_tree(win, data_name: str) -> None:
+    """
+    Ctrl+A 직후 시료 표 전량 선택 상태에서 트리 작업 전 — 포커스를 트리로 옮김.
+
+    이 상태에서 제어목록 탭을 열면 Autochro가 왼쪽 트리에 제어목록 UI가 겹쳐 보이는
+    버그가 자주 난다. ESC로 표 편집·선택을 끊은 뒤 트리 단일선택으로 포커스를 옮긴다.
+    """
+    _log("시료 표 전체선택 해제 — 트리 포커스 전환 (잔상 방지)")
+    _select_analysis_tab(win)
+    try:
+        from pywinauto.keyboard import send_keys
+
+        send_keys("{ESC}")
+        time.sleep(0.12)
+        send_keys("{ESC}")
+        time.sleep(0.2)
+    except Exception:
+        pass
+    try:
+        chosen, _chosen_line, line_idx = _select_tree_data_name(win, data_name)
+        tree = _analysis_tree_view(win)
+        tree.set_focus()
+        time.sleep(0.15)
+        rect = tree.rectangle()
+        candidates: List[str] = []
+        try:
+            candidates = [(t or "").strip() for t in tree.texts() if (t or "").strip()]
+        except Exception:
+            pass
+        row_h = max(16, min(22, rect.height() // max(len(candidates), 8)))
+        rel_x = max(24, min(rect.width() // 3, 80))
+        rel_y = max(16, min(12 + line_idx * row_h, max(20, rect.height() - 12)))
+        _notify_auto_cursor_rel(tree, rel_x, rel_y)
+        tree.click_input(button="left", coords=(rel_x, rel_y))
+        time.sleep(0.4)
+        _log(f"  트리 단일선택: {chosen}")
+    except Exception as exc:
+        _log(f"  트리 포커스 전환 스킵: {exc}")
+
+
+def _ocr_left_analysis_tree(eye) -> str:
+    if eye is None:
+        return ""
+    try:
+        return (eye.ocr_region("left_analysis_tree", label="tree.overlap") or "").strip()
+    except Exception:
+        return ""
+
+
+def _ensure_analysis_tree_clean(
+    win, data_name: str, *, cfg: AutochroConfig | None = None, force_refresh: bool = False
+) -> bool:
+    """
+    제어목록 잔상 제거 — 탭 전환.
+
+    ``force_refresh``: GC1_AUTOCHRO_TREE_TAB_REFRESH=1 일 때만 P4 전 항상 전환.
+    기본은 OCR/트리 텍스트로 잔상이 **실제로 보일 때만** 전환.
+    """
+    from gc1_runtime.layer0_data import analysis_tree_needs_paint_refresh
+
+    eye = _make_step_eye(win, cfg) if cfg else None
+    lines = _analysis_tree_lines(win)
+    ocr_text = _ocr_left_analysis_tree(eye)
+    needs = analysis_tree_needs_paint_refresh(lines, data_name, ocr_text=ocr_text)
+    if not needs and not force_refresh:
+        return False
+    if needs:
+        reason = "제어목록 잔상"
+        if "제어목록" in ocr_text:
+            reason += " (OCR 트리에 '제어목록')"
+        elif any("제어목록" in ln for ln in lines):
+            reason += " (W32 트리에 '제어목록')"
+        _log(f"[주의] 분석목록 트리 {reason} — 탭 새로고침")
+    elif force_refresh:
+        _log("P4 전 트리 탭 새로고침 (제어목록→분석목록, 우클릭 전)")
+    _refresh_analysis_tree_paint(win)
+    lines2 = _analysis_tree_lines(win)
+    ocr2 = _ocr_left_analysis_tree(eye)
+    if analysis_tree_needs_paint_refresh(lines2, data_name, ocr_text=ocr2):
+        _log("[경고] 탭 새로고침 후에도 트리 잔상 — 수동 제어목록↔분석목록 확인")
+        return True
+    _log("분석목록 트리 잔상 해소됨")
+    return True
+
+
+def _require_analysis_tree_ready_for_mtd(
+    win, data_name: str, cfg: AutochroConfig
+) -> None:
+    """P4 — 표 전량선택 해제·(필요 시) 잔상 제거 후 트리 우클릭."""
+    from gc1_runtime.layer0_data import analysis_tree_needs_paint_refresh
+
+    _select_analysis_tab(win)
+    _release_table_selection_to_tree(win, data_name)
+    _ensure_analysis_tree_clean(
+        win, data_name, cfg=cfg, force_refresh=_tree_tab_refresh_enabled()
+    )
+    eye = _make_step_eye(win, cfg)
+    lines = _analysis_tree_lines(win)
+    ocr_text = _ocr_left_analysis_tree(eye)
+    if analysis_tree_needs_paint_refresh(lines, data_name, ocr_text=ocr_text):
+        raise RuntimeError(
+            "분석목록 왼쪽 트리에 제어목록 잔상이 남아 있습니다. "
+            "같은 시료가 두 줄·컬러 아이콘으로 보이면 수동으로 "
+            "제어목록 탭 → 분석목록 탭 전환 후 다시 진행해 주세요. "
+            "(잔상 상태에서는 트리 우클릭이 되지 않습니다)"
+        )
 
 
 def _sample_table_candidates(win, *, prefer: str = "any"):
@@ -599,9 +777,24 @@ def _analysis_tree_view(win):
     raise RuntimeError("분석목록 왼쪽 트리 없음")
 
 
+def _notify_auto_cursor_rel(ctrl, rel_x: int, rel_y: int) -> None:
+    try:
+        rect = ctrl.rectangle()
+        sx = int(rect.left) + int(rel_x)
+        sy = int(rect.top) + int(rel_y)
+        from gc1_runtime.layer3_user_mouse_guard import notify_automation_cursor_at
+        from gc_screen_read import show_automation_cursor
+
+        notify_automation_cursor_at(sx, sy)
+        show_automation_cursor(sx, sy)
+    except Exception:
+        pass
+
+
 def _right_click_sample_table(sample_list) -> None:
-    rel_x, rel_y = _neutral_list_coords(sample_list)
+    rel_x, rel_y = _rightclick_list_coords(sample_list)
     sample_list.set_focus()
+    _notify_auto_cursor_rel(sample_list, rel_x, rel_y)
     sample_list.click_input(button="right", coords=(rel_x, rel_y))
     time.sleep(0.35)
 
@@ -724,14 +917,7 @@ def _select_tree_data_name(win, data_name: str) -> tuple[str, str, int]:
     from gc1_runtime.layer0_data import rank_tree_line_for_data_name
 
     tree = _analysis_tree_view(win)
-    candidates: List[str] = []
-    try:
-        for text in tree.texts():
-            line = (text or "").strip()
-            if line:
-                candidates.append(line)
-    except Exception:
-        pass
+    candidates = _analysis_tree_lines(win)
     ranked: List[tuple[float, str]] = []
     for line in candidates:
         score = rank_tree_line_for_data_name(line, data_name)
@@ -784,20 +970,6 @@ def _right_click_tree_data_name(
     """
     chosen, chosen_line, line_idx = _select_tree_data_name(win, data_name)
 
-    if eye is not None:
-        anchor = eye.find_tree_name_screen_xy(data_name)
-        if anchor:
-            from gc_screen_read import click_screen, flash_focus_point
-
-            flash_focus_point(anchor[0], anchor[1], color="lime")
-            click_screen(anchor[0], anchor[1], button="right")
-            eye._menu_anchor_screen = anchor
-            time.sleep(0.5)
-            if _wait_for_context_menu(1.8):
-                _log(f"  트리 OCR 우클릭: {chosen} @ {anchor}")
-                return anchor
-            _log("  [적응] OCR 좌표 메뉴 없음 — 행 인덱스 우클릭")
-
     tree = _analysis_tree_view(win)
     tree.set_focus()
     time.sleep(0.15)
@@ -810,13 +982,30 @@ def _right_click_tree_data_name(
     row_h = max(16, min(22, rect.height() // max(len(candidates), 8)))
     rel_x = max(24, min(rect.width() // 3, 80))
     rel_y = max(16, min(12 + line_idx * row_h, max(20, rect.height() - 12)))
+    _notify_auto_cursor_rel(tree, rel_x, rel_y)
     tree.click_input(button="right", coords=(rel_x, rel_y))
     time.sleep(0.4)
     screen_xy = (rect.left + rel_x, rect.top + rel_y)
     if _wait_for_context_menu(1.8):
         _log(f"  트리 우클릭(행{line_idx}): {chosen}")
         return screen_xy
-    _log(f"  [적응] 행{line_idx} 우클릭 메뉴 없음 — Apps 키 시도")
+    _log(f"  [적응] 행{line_idx} 우클릭 메뉴 없음 — OCR 좌표 시도")
+
+    if eye is not None:
+        anchor = eye.find_tree_name_screen_xy(data_name)
+        if anchor:
+            from gc_screen_read import click_screen, flash_focus_point
+
+            flash_focus_point(anchor[0], anchor[1], color="lime")
+            click_screen(anchor[0], anchor[1], button="right")
+            eye._menu_anchor_screen = anchor
+            time.sleep(0.5)
+            if _wait_for_context_menu(1.8):
+                _log(f"  트리 OCR 우클릭: {chosen} @ {anchor}")
+                return anchor
+            _log("  [적응] OCR 좌표 메뉴 없음 — Apps 키")
+
+    tree.set_focus()
     try:
         from pywinauto.keyboard import send_keys
 
@@ -832,30 +1021,55 @@ def _right_click_tree_data_name(
     return screen_xy
 
 
-def _neutral_list_coords(sample_list) -> tuple[int, int]:
-    """
-    분석목록 시료 표에서 Ctrl+A 전 클릭 좌표.
-    '소유자 ID' 열은 드롭다운 선택 모드 → Ctrl+A 불가.
-    '수집 일시' 열과 같은 가로 위치(표 우측)를 사용.
-    """
-    raw_frac = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "0.78").strip()
-    try:
-        x_frac = float(raw_frac)
-    except ValueError:
-        x_frac = 0.78
-    x_frac = min(max(x_frac, 0.55), 0.92)
+def _list_frac_coords(sample_list, x_frac: float) -> tuple[int, int]:
     rect = sample_list.rectangle()
     width = max(rect.width(), 400)
     height = max(rect.height(), 80)
-    rel_x = int(width * x_frac)
+    rel_x = max(8, int(width * x_frac))
     rel_y = max(16, min(32, height // 10))
     return rel_x, rel_y
+
+
+def _list_row_index_coords(sample_list) -> tuple[int, int]:
+    """행 번호 열 — Ctrl+A·포커스 (시료종류·미지시료 드롭다운 회피)."""
+    raw = os.getenv("AUTOCHRO_LIST_ROW_X_FRAC", "0.06").strip()
+    try:
+        x_frac = float(raw)
+    except ValueError:
+        x_frac = 0.06
+    x_frac = min(max(x_frac, 0.03), 0.14)
+    return _list_frac_coords(sample_list, x_frac)
+
+
+def _rightclick_list_coords(sample_list) -> tuple[int, int]:
+    """시료이름 열 — 우클릭 (시료종류 열 회피)."""
+    raw = os.getenv("AUTOCHRO_LIST_NAME_X_FRAC", "0.26").strip()
+    try:
+        x_frac = float(raw)
+    except ValueError:
+        x_frac = 0.26
+    x_frac = min(max(x_frac, 0.12), 0.38)
+    return _list_frac_coords(sample_list, x_frac)
+
+
+def _neutral_list_coords(sample_list) -> tuple[int, int]:
+    """분석목록 시료 표 — 행 번호 열 (구 0.78 수집일시 대신)."""
+    legacy = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "").strip()
+    if legacy:
+        try:
+            x_frac = float(legacy)
+            x_frac = min(max(x_frac, 0.03), 0.92)
+            return _list_frac_coords(sample_list, x_frac)
+        except ValueError:
+            pass
+    return _list_row_index_coords(sample_list)
 
 
 def _focus_list_for_ctrl_a(sample_list) -> None:
     """분석목록에서 Ctrl+A 전 — 소유자 ID 드롭다운 회피용 클릭 (수집 일시 열 쪽)."""
     rel_x, rel_y = _neutral_list_coords(sample_list)
     sample_list.set_focus()
+    _notify_auto_cursor_rel(sample_list, rel_x, rel_y)
     try:
         sample_list.move_mouse_input(coords=(rel_x, rel_y))
         time.sleep(0.12)
@@ -971,8 +1185,11 @@ def step_sync_control_to_analysis(
     eye = _make_step_eye(win, cfg)
     _select_control_tab(win)
     if eye:
-        eye.scan_between("P1.start", "control_sample_table", task_id="eye_before_control_sync")
-        eye.require_task("P1.tab_control", "eye_active_tab_control")
+        from gc1_runtime.layer3_eye_guide import autochro_eye_coord_only
+
+        if not autochro_eye_coord_only():
+            eye.scan_between("P1.start", "control_sample_table", task_id="eye_before_control_sync")
+            eye.require_task("P1.tab_control", "eye_active_tab_control")
     sample_list = _control_sync_list(win)
     control_count = _listview_item_count(sample_list)
     sample_list.set_focus()
@@ -983,6 +1200,7 @@ def step_sync_control_to_analysis(
         eye.guided_sync_execute_double_click(sample_list, fallback_rel=fallback)
     else:
         rel_x, rel_y = fallback
+        _notify_auto_cursor_rel(sample_list, rel_x, rel_y)
         try:
             sample_list.move_mouse_input(coords=(rel_x, rel_y))
             time.sleep(0.25)
@@ -991,7 +1209,10 @@ def step_sync_control_to_analysis(
         sample_list.double_click_input(coords=(rel_x, rel_y))
     time.sleep(1.5)
     if eye:
-        eye.scan_between("P1.after_dclick", "top_sample_table")
+        from gc1_runtime.layer3_eye_guide import autochro_eye_coord_only
+
+        if not autochro_eye_coord_only():
+            eye.scan_between("P1.after_dclick", "top_sample_table")
     _select_analysis_tab(win)
     if not _on_analysis_tab(win):
         raise RuntimeError("분석목록 탭 전환 실패 - Autochro 창 상태 확인")
@@ -1006,9 +1227,10 @@ def step_sync_control_to_analysis(
         f"제어목록->분석목록 동기화 OK - "
         f"제어 {post.control_item_count}행 / 분석 {post.analysis_item_count}행"
     )
+    dn = session_data_name((data_name or "").strip()) or read_active_control_data_name(win, cfg)
+    remember_session_data_name(dn)
     if eye:
         eye.require_task("P1.after_sync", "eye_after_sync_analysis_rows")
-        dn = (data_name or "").strip() or read_active_control_data_name(win, cfg)
         eye.require_tree_data_name(dn, step_id="P1.tree")
 
 
@@ -1044,36 +1266,49 @@ def step_load_analysis_method(win, cfg: AutochroConfig, data_name: str) -> None:
     if cfg.dry_run:
         return
     eye = _make_step_eye(win, cfg)
-    active = read_active_control_data_name(win, cfg)
-    if active and not tree_label_matches_data_name(active, data_name):
-        _log(f"[주의] 활성 데이터명 {active!r} — 요청 {data_name!r} 와 다름, 활성명 사용")
-        data_name = active
-    elif active:
-        data_name = active
+    data_name = session_data_name(data_name) or read_active_control_data_name(win, cfg)
+    remember_session_data_name(data_name)
+    _require_analysis_tree_ready_for_mtd(win, data_name, cfg)
     if eye:
-        eye.scan_between("P4.before_tree", "left_analysis_tree")
+        from gc1_runtime.layer3_eye_guide import autochro_eye_coord_only
+
+        if not autochro_eye_coord_only():
+            eye.scan_between("P4.before_tree", "left_analysis_tree")
         eye.require_tree_data_name(data_name, step_id="P4.before_mtd")
     _select_analysis_tab(win)
     if eye:
         eye.require_task("P4.tab_analysis", "eye_active_tab_analysis")
     anchor = _right_click_tree_data_name(win, data_name, eye=eye)
     if eye:
+        from gc1_runtime.layer3_eye_guide import autochro_eye_coord_only
+
         if anchor:
             eye._menu_anchor_screen = anchor
-        eye.scan_between("P4.after_tree_menu", "context_menu_popup")
-        if not eye.try_click_context_menu_ocr(
-            "불러오기",
-            forbid=(),
-            region_id="context_menu_popup",
-            step_id="P4.after_tree_menu",
-        ):
-            if not eye._try_click_popup_menu_win32(
+        menu_ok = False
+        if autochro_eye_coord_only():
+            menu_ok = eye._try_click_popup_menu_win32(
                 "분석방법", forbid=(), step_id="P4.after_tree_menu"
-            ) and not eye._try_click_popup_menu_win32(
+            ) or eye._try_click_popup_menu_win32(
                 "불러오기", forbid=(), step_id="P4.after_tree_menu"
-            ):
-                _log("[적응] 메뉴 OCR 실패 — pywinauto 분석방법 불러오기")
-                _click_context_load_analysis_method()
+            )
+        else:
+            if not autochro_eye_coord_only():
+                eye.scan_between("P4.after_tree_menu", "context_menu_popup")
+            menu_ok = eye.try_click_context_menu_ocr(
+                "불러오기",
+                forbid=(),
+                region_id="context_menu_popup",
+                step_id="P4.after_tree_menu",
+            )
+            if not menu_ok:
+                menu_ok = eye._try_click_popup_menu_win32(
+                    "분석방법", forbid=(), step_id="P4.after_tree_menu"
+                ) or eye._try_click_popup_menu_win32(
+                    "불러오기", forbid=(), step_id="P4.after_tree_menu"
+                )
+        if not menu_ok:
+            _log("[적응] 메뉴 실패 — pywinauto 분석방법 불러오기")
+            _click_context_load_analysis_method()
     else:
         _right_click_tree_data_name(win, data_name)
         _click_context_load_analysis_method()
@@ -1513,7 +1748,13 @@ def run_autochro_export(
             if stale_closed:
                 _log(f"이전 한컴 PDF 완료 창 {stale_closed}개 닫음")
             _, win = connect_main_window(cfg)
+            if _autochro_eye_enabled(cfg):
+                from gc_screen_read import ensure_ocr_focus_visible
+
+                ensure_ocr_focus_visible()
+                _log("OCR 포커스 표시 OFF (GC_SCREEN_SHOW_FOCUS=0) — 커서 이동만")
             data_name = read_active_control_data_name(win, cfg)
+            remember_session_data_name(data_name)
             pdf_path = build_export_pdf_path(cfg, data_name_raw=data_name)
             _log(f"제어목록 데이터명: {data_name}")
             _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")

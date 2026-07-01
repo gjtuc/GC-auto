@@ -10,6 +10,7 @@ from __future__ import annotations
 import array
 import ctypes
 import sys
+import time
 from ctypes import wintypes
 from typing import Optional
 
@@ -19,6 +20,10 @@ if sys.platform != "win32":
 user32 = ctypes.windll.user32
 gdi32 = ctypes.windll.gdi32
 kernel32 = ctypes.windll.kernel32
+
+LRESULT = ctypes.c_longlong if ctypes.sizeof(ctypes.c_void_p) == 8 else ctypes.c_long
+user32.DefWindowProcW.restype = LRESULT
+user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
 
 WS_POPUP = 0x80000000
 WS_EX_LAYERED = 0x00080000
@@ -75,50 +80,137 @@ class _BITMAPINFO(ctypes.Structure):
 
 
 _WNDPROC = ctypes.WINFUNCTYPE(
-    ctypes.c_longlong if ctypes.sizeof(ctypes.c_void_p) == 8 else ctypes.c_long,
+    LRESULT,
     wintypes.HWND,
     wintypes.UINT,
     wintypes.WPARAM,
     wintypes.LPARAM,
 )
 
+
+@_WNDPROC
+def _default_wnd_proc(hwnd, msg, wparam, lparam):
+    return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
+
+# Python 3.12+ ctypes.wintypes 에 WNDCLASSW 없음 — 직접 정의
+class WNDCLASSW(ctypes.Structure):
+    _fields_ = [
+        ("style", wintypes.UINT),
+        ("lpfnWndProc", _WNDPROC),
+        ("cbClsExtra", ctypes.c_int),
+        ("cbWndExtra", ctypes.c_int),
+        ("hInstance", wintypes.HINSTANCE),
+        ("hIcon", wintypes.HICON),
+        ("hCursor", wintypes.HANDLE),
+        ("hbrBackground", wintypes.HBRUSH),
+        ("lpszMenuName", wintypes.LPCWSTR),
+        ("lpszClassName", wintypes.LPCWSTR),
+    ]
+
+
 _CLASS_NAME = "GCFocusOverlayLayer2026"
-_class_atom: Optional[int] = None
+_class_ready = False
 _hwnd: Optional[int] = None
+
+ERROR_CLASS_ALREADY_EXISTS = 1410
+HWND_TOPMOST = -1
+SWP_NOACTIVATE = 0x0010
+SWP_SHOWWINDOW = 0x0040
+
+
+class _MSG(ctypes.Structure):
+    _fields_ = [
+        ("hwnd", wintypes.HWND),
+        ("message", wintypes.UINT),
+        ("wParam", wintypes.WPARAM),
+        ("lParam", wintypes.LPARAM),
+        ("time", wintypes.DWORD),
+        ("pt", _POINT),
+    ]
+
+
+def _pump_ui_brief(ms: int = 80) -> None:
+    """레이어 창이 실제로 그려지도록 메시지 펌프 (OCR 블로킹 전 짧게)."""
+    deadline = time.perf_counter() + max(10, ms) / 1000.0
+    msg = _MSG()
+    while time.perf_counter() < deadline:
+        while user32.PeekMessageW(ctypes.byref(msg), None, 0, 0, 1):
+            user32.TranslateMessage(ctypes.byref(msg))
+            user32.DispatchMessageW(ctypes.byref(msg))
+        time.sleep(0.01)
+
+
+def _raise_overlay(hwnd: int, pl: int, pt: int, w: int, h: int) -> None:
+    user32.SetWindowPos(
+        hwnd,
+        HWND_TOPMOST,
+        pl,
+        pt,
+        w,
+        h,
+        SWP_NOACTIVATE | SWP_SHOWWINDOW,
+    )
 
 
 def _ensure_class() -> None:
-    global _class_atom
-    if _class_atom is not None:
+    global _class_ready
+    if _class_ready:
         return
 
-    @_WNDPROC
-    def _proc(hwnd, msg, wparam, lparam):
-        return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
-
-    wc = wintypes.WNDCLASSW()
-    wc.lpfnWndProc = _proc
+    wc = WNDCLASSW()
+    wc.lpfnWndProc = _default_wnd_proc
     wc.hInstance = kernel32.GetModuleHandleW(None)
     wc.lpszClassName = _CLASS_NAME
     wc.hbrBackground = gdi32.GetStockObject(0)  # NULL_BRUSH
-    _class_atom = user32.RegisterClassW(ctypes.byref(wc))
-    if not _class_atom:
-        raise OSError("RegisterClassW failed for focus overlay")
+    atom = user32.RegisterClassW(ctypes.byref(wc))
+    if not atom:
+        err = kernel32.GetLastError()
+        if err != ERROR_CLASS_ALREADY_EXISTS:
+            raise OSError(f"RegisterClassW failed for focus overlay (err={err})")
+    _class_ready = True
 
 
-def _border_bgra(width: int, height: int, border: int, rgb: tuple[int, int, int]) -> array.array:
-    """32bpp BGRA — 테두리만 alpha=255."""
+_dpi_ready = False
+
+
+def _ensure_dpi_aware() -> None:
+    global _dpi_ready
+    if _dpi_ready:
+        return
+    try:
+        user32.SetProcessDPIAware()
+    except Exception:
+        pass
+    _dpi_ready = True
+
+
+def _border_bgra(
+    width: int,
+    height: int,
+    border: int,
+    rgb: tuple[int, int, int],
+    *,
+    fill_alpha: int = 55,
+) -> array.array:
+    """32bpp BGRA — 굵은 테두리 + 내부 반투명 채움 (빈 테두리만이면 잘 안 보임)."""
     r, g, b = rgb
     buf = array.array("B", [0] * (width * height * 4))
-    bd = max(1, min(border, min(width, height) // 2))
+    bd = max(2, min(border, min(width, height) // 2))
+    inner_a = max(0, min(120, fill_alpha))
     for y in range(height):
         for x in range(width):
-            if x < bd or x >= width - bd or y < bd or y >= height - bd:
-                i = (y * width + x) * 4
-                buf[i] = b
-                buf[i + 1] = g
-                buf[i + 2] = r
-                buf[i + 3] = 255
+            on_border = x < bd or x >= width - bd or y < bd or y >= height - bd
+            if on_border:
+                alpha = 255
+            elif inner_a > 0:
+                alpha = inner_a
+            else:
+                continue
+            i = (y * width + x) * 4
+            buf[i] = b
+            buf[i + 1] = g
+            buf[i + 2] = r
+            buf[i + 3] = alpha
     return buf
 
 
@@ -144,13 +236,12 @@ def _update_layered(hwnd: int, width: int, height: int, pixels: array.array) -> 
 
         pt_src = _POINT(0, 0)
         size = _SIZE(width, height)
-        pt_dst = _POINT(0, 0)
         blend = _BLENDFUNCTION(AC_SRC_OVER, 0, 255, AC_SRC_ALPHA)
 
         if not user32.UpdateLayeredWindow(
             hwnd,
             hdc_screen,
-            ctypes.byref(pt_dst),
+            None,
             ctypes.byref(size),
             hdc_mem,
             ctypes.byref(pt_src),
@@ -180,15 +271,17 @@ def overlay_show_border(
     width: int,
     height: int,
     *,
-    border: int = 3,
+    border: int = 6,
     color: str = "red",
     pad: int = 0,
+    fill_alpha: int = 55,
 ) -> None:
-    """화면 좌표에 속이 빈 테두리 창 (클릭 통과)."""
+    """화면 좌표에 반투명 채움+테두리 창 (클릭 통과)."""
     global _hwnd
     if width < 2 or height < 2:
         return
 
+    _ensure_dpi_aware()
     overlay_hide()
     _ensure_class()
 
@@ -218,8 +311,10 @@ def overlay_show_border(
     if not hwnd:
         raise OSError("CreateWindowExW failed for focus overlay")
 
-    pixels = _border_bgra(w, h, border, rgb)
+    pixels = _border_bgra(w, h, border, rgb, fill_alpha=fill_alpha)
     _update_layered(hwnd, w, h, pixels)
+    _raise_overlay(hwnd, pl, pt, w, h)
     user32.ShowWindow(hwnd, 5)  # SW_SHOW
     user32.UpdateWindow(hwnd)
+    _pump_ui_brief(120)
     _hwnd = hwnd

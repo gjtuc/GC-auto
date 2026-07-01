@@ -588,8 +588,29 @@ def ensure_output_dir() -> str:
 
 
 def focus_overlay_enabled() -> bool:
-    """기본 ON — 끄려면 ``GC_SCREEN_SHOW_FOCUS=0``."""
-    raw = os.getenv("GC_SCREEN_SHOW_FOCUS", "1").strip().lower()
+    """기본 OFF — 켜려면 ``GC_SCREEN_SHOW_FOCUS=1``."""
+    raw = os.getenv("GC_SCREEN_SHOW_FOCUS", "0").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
+def focus_backend() -> str:
+    """
+    포커스 오버레이 백엔드.
+
+    - ``tk`` (기본, 옵션 A) — 메인 스레드 tkinter
+    - ``win32`` (옵션 C) — 반투명 Win32 layered
+    """
+    raw = os.getenv("GC_SCREEN_FOCUS_BACKEND", "tk").strip().lower()
+    if raw in ("win32", "c", "w32"):
+        return "win32"
+    return "tk"
+
+
+def cursor_hint_enabled() -> bool:
+    """실제 커서 이동 + 라임 점 — pywinauto 경로에서도 보이게."""
+    if not focus_overlay_enabled():
+        return False
+    raw = os.getenv("GC_SCREEN_SHOW_CURSOR", "1").strip().lower()
     return raw not in ("0", "false", "no", "off")
 
 
@@ -601,9 +622,8 @@ def ensure_ocr_focus_visible(*, case_study: bool = False) -> None:
     케이스 스터디는 단계가 많아 ``GC_SCREEN_FOCUS_MS`` 기본 1000ms.
     """
     explicit = os.getenv("GC_SCREEN_SHOW_FOCUS", "").strip().lower()
-    if explicit in ("0", "false", "no", "off"):
-        return
-    os.environ["GC_SCREEN_SHOW_FOCUS"] = "1"
+    if explicit in ("1", "true", "yes", "on"):
+        os.environ["GC_SCREEN_SHOW_FOCUS"] = "1"
     if case_study and not os.getenv("GC_SCREEN_FOCUS_MS", "").strip():
         os.environ["GC_SCREEN_FOCUS_MS"] = "1000"
 
@@ -616,7 +636,7 @@ def focus_duration_ms() -> int:
             return max(200, min(2000, int(raw)))
         except ValueError:
             pass
-    return 800
+    return 1500
 
 
 _T = TypeVar("_T")
@@ -643,32 +663,50 @@ class FocusOverlay:
         if sys.platform != "win32":
             return
         try:
-            from gc_win32_overlay import overlay_hide
+            if focus_backend() == "tk":
+                from gc_tk_overlay import tk_overlay_hide
 
-            overlay_hide()
-        except Exception:
-            pass
+                tk_overlay_hide()
+            else:
+                from gc_win32_overlay import overlay_hide
 
-    def show(self, box: Box, *, border: int = 3, color: str = "red") -> None:
+                overlay_hide()
+        except Exception as exc:
+            _log(f"[focus] overlay hide failed: {exc}")
+
+    def show(self, box: Box, *, border: int = 6, color: str = "red") -> None:
         if not focus_overlay_enabled():
             return
         if sys.platform != "win32":
             return
         self.hide()
         try:
-            from gc_win32_overlay import overlay_show_border
+            if focus_backend() == "tk":
+                from gc_tk_overlay import tk_overlay_show_border
 
-            overlay_show_border(
-                box.left,
-                box.top,
-                box.width,
-                box.height,
-                border=border,
-                color=color,
-                pad=self._pad,
-            )
-        except Exception:
-            pass
+                tk_overlay_show_border(
+                    box.left,
+                    box.top,
+                    box.width,
+                    box.height,
+                    border=border,
+                    color=color,
+                    pad=self._pad,
+                )
+            else:
+                from gc_win32_overlay import overlay_show_border
+
+                overlay_show_border(
+                    box.left,
+                    box.top,
+                    box.width,
+                    box.height,
+                    border=border,
+                    color=color,
+                    pad=self._pad,
+                )
+        except Exception as exc:
+            _log(f"[focus] overlay show failed ({focus_backend()}): {exc}")
 
     def stage(self, box: Box, work: Callable[[], _T], *, min_ms: Optional[int] = None) -> _T:
         if not focus_overlay_enabled():
@@ -694,6 +732,28 @@ def focus_stage(box: Box, work: Callable[[], _T], *, min_ms: Optional[int] = Non
 
 def focus_hide() -> None:
     _FOCUS.hide()
+
+
+def show_automation_cursor(
+    x: int,
+    y: int,
+    *,
+    color: str = "lime",
+    dwell_ms: Optional[int] = None,
+) -> None:
+    """pywinauto·탭 전환 등 — 화면 커서를 실제로 옮기고 라임 네모 표시."""
+    if not cursor_hint_enabled():
+        return
+    ix, iy = int(x), int(y)
+    ms = dwell_ms if dwell_ms is not None else min(900, focus_duration_ms())
+    flash_focus_point(ix, iy, color=color, size=44, duration_ms=ms)
+    try:
+        import ctypes
+
+        ctypes.windll.user32.SetCursorPos(ix, iy)
+        time.sleep(0.12)
+    except Exception:
+        pass
 
 
 def flash_focus_box(
@@ -726,8 +786,8 @@ def flash_focus_point(
     half = max(8, size // 2)
     flash_focus_box(
         Box(int(x) - half, int(y) - half, size, size),
-        duration_ms=duration_ms or min(500, focus_duration_ms()),
-        border=2,
+        duration_ms=duration_ms or min(1200, focus_duration_ms()),
+        border=4,
         color=color,
     )
 
@@ -905,6 +965,12 @@ def token_screen_center(token: OcrToken, region_box: Box, scale: float) -> Tuple
 
 
 def click_screen(x: int, y: int, *, button: str = "left") -> None:
+    try:
+        from gc1_runtime.layer3_user_mouse_guard import notify_automation_cursor_at
+
+        notify_automation_cursor_at(x, y)
+    except Exception:
+        pass
     flash_focus_point(x, y, color="lime")
     try:
         import pywinauto.mouse as mouse
@@ -927,6 +993,12 @@ def click_screen(x: int, y: int, *, button: str = "left") -> None:
 
 def double_click_screen(x: int, y: int) -> None:
     """화면 좌표 더블클릭 — OCR 앵커 동기화용."""
+    try:
+        from gc1_runtime.layer3_user_mouse_guard import notify_automation_cursor_at
+
+        notify_automation_cursor_at(x, y)
+    except Exception:
+        pass
     flash_focus_point(x, y, color="lime")
     try:
         import pywinauto.mouse as mouse

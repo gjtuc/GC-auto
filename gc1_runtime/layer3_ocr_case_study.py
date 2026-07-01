@@ -151,6 +151,12 @@ def _probe_move_cursor(x: int, y: int, *, log_fn) -> None:
     try:
         import ctypes
 
+        try:
+            from gc1_runtime.layer3_user_mouse_guard import notify_automation_cursor_at
+
+            notify_automation_cursor_at(int(x), int(y))
+        except Exception:
+            pass
         ctypes.windll.user32.SetCursorPos(int(x), int(y))
     except Exception:
         pass

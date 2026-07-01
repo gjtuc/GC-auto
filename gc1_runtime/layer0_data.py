@@ -83,6 +83,70 @@ def rank_tree_line_for_data_name(line: str, data_name: str) -> float:
     return score
 
 
+def analysis_tree_matching_lines(
+    lines: Sequence[str], data_name: str
+) -> list[str]:
+    """분석목록 트리에서 데이터명과 매칭되는 줄."""
+    return [
+        (line or "").strip()
+        for line in lines
+        if (line or "").strip() and tree_label_matches_data_name(line, data_name)
+    ]
+
+
+def analysis_tree_has_control_overlap(
+    lines: Sequence[str], data_name: str
+) -> bool:
+    """
+    제어목록 잔상이 분석목록 왼쪽 트리에 겹친 상태.
+
+    같은 시료명이 트리에 2줄 이상 보이면 True — MTD·우클릭이 잘못된 노드로 감.
+    """
+    return len(analysis_tree_matching_lines(lines, data_name)) >= 2
+
+
+def analysis_tree_line_has_control_ghost(line: str) -> bool:
+    """
+    분석목록 트리 한 줄에 제어목록 잔상.
+
+    pywinauto 는 중복을 한 줄로 합쳐 읽을 수 있음 — 예: ``| 제어목록 | @ 20260630...``
+    탭 라벨만 섞인 ``제어목록`` 단독·짧은 줄은 잔상 아님 (W32 오탐).
+    """
+    s = (line or "").strip()
+    if "제어목록" not in s:
+        return False
+    if re.fullmatch(r"제어목록\s*", s):
+        return False
+    # 실제 잔상: 제어목록 탭 UI가 트리 노드와 한 줄로 겹침
+    if "@" in s and re.search(r"20\d{6}", s):
+        return True
+    if re.search(r"[|│].*제어목록", s) or re.search(r"제어목록.*[|│]", s):
+        return True
+    return False
+
+
+def analysis_tree_needs_paint_refresh(
+    lines: Sequence[str],
+    data_name: str,
+    *,
+    ocr_text: str = "",
+) -> bool:
+    """
+    제어목록→분석목록 탭 새로고침이 필요한지.
+
+    사람 눈에 2줄·컬러 아이콘 중복이어도 W32 ``tree.texts()`` 는 1줄일 수 있음.
+    ``제어목록`` 단독·탭 라벨 bleed 는 제외 — ``| 제어목록 | @`` 형태·동일 시료 2줄만.
+    """
+    if any(analysis_tree_line_has_control_ghost(ln) for ln in lines):
+        return True
+    blob = (ocr_text or "").strip() or "\n".join(lines)
+    if any(analysis_tree_line_has_control_ghost(ln) for ln in blob.splitlines()):
+        return True
+    if analysis_tree_has_control_overlap(lines, data_name):
+        return True
+    return False
+
+
 def is_valid_data_name(name: str) -> bool:
     """Ω.A.L0.DN.99 — 비어 있지 않고 날짜 접두(6자리+) 있음."""
     stem = (name or "").strip().split(".")[0].strip()

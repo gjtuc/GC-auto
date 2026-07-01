@@ -3,11 +3,20 @@
 사용자 마우스 감지 — GC1 런 중 **학습·케이스 스터디만** 일시 중단.
 
 실험실 진동(작은 떨림)은 무시하고, 사용자가 마우스를 **휙** 움직일 때만 중단.
-자동화(Autochro 클릭)는 계속 — 은규 사용자 불편 최소화.
+**자동화(OCR·pywinauto) 커서 이동은 제외** — notify_automation_cursor_at() 으로 표시.
+
+환경 변수 (기본값은 자동화 오탐 방지에 맞춤):
+  GC1_LEARN_MOUSE_SWIPE_PX          한 번에 이상(px) — 기본 140
+  GC1_LEARN_MOUSE_WINDOW_SEC        누적 창(초) — 기본 0.30
+  GC1_LEARN_MOUSE_WINDOW_TOTAL_PX   창 안 누적 이동 — 기본 420
+  GC1_LEARN_MOUSE_WINDOW_MIN_PX     창 안 최대 1회 이동 — 기본 100
+  GC1_LEARN_VIBRATION_MAX_PX        진동 무시 상한 — 기본 25
+  GC1_LEARN_AUTOMATION_GRACE_SEC    자동화 직후 무시(초) — 기본 1.0
 """
 from __future__ import annotations
 
 import math
+import os
 import sys
 import threading
 import time
@@ -15,24 +24,13 @@ from typing import Optional, Tuple
 
 _GUARD: Optional["UserMouseGuard"] = None
 
-# 한 번에 이 거리 이상 이동 → 사용자 조작
-_SWIPE_SINGLE_PX = float(
-    __import__("os").getenv("GC1_LEARN_MOUSE_SWIPE_PX", "55")
-)
-# 짧은 시간에 누적 이동 + 최대 한 번은 확실히 큰 이동
-_SWIPE_WINDOW_SEC = float(
-    __import__("os").getenv("GC1_LEARN_MOUSE_WINDOW_SEC", "0.35")
-)
-_SWIPE_WINDOW_TOTAL_PX = float(
-    __import__("os").getenv("GC1_LEARN_MOUSE_WINDOW_TOTAL_PX", "180")
-)
-_SWIPE_WINDOW_MIN_SINGLE_PX = float(
-    __import__("os").getenv("GC1_LEARN_MOUSE_WINDOW_MIN_PX", "38")
-)
-# 이 값 이하만 연속이면 진동으로 간주 (학습 중단 안 함)
-_VIBRATION_MAX_PX = float(
-    __import__("os").getenv("GC1_LEARN_VIBRATION_MAX_PX", "22")
-)
+# 사용자가 **의도적으로** 휙 움직일 때만 (자동화 점프보다 크게)
+_SWIPE_SINGLE_PX = float(os.getenv("GC1_LEARN_MOUSE_SWIPE_PX", "140"))
+_SWIPE_WINDOW_SEC = float(os.getenv("GC1_LEARN_MOUSE_WINDOW_SEC", "0.30"))
+_SWIPE_WINDOW_TOTAL_PX = float(os.getenv("GC1_LEARN_MOUSE_WINDOW_TOTAL_PX", "420"))
+_SWIPE_WINDOW_MIN_SINGLE_PX = float(os.getenv("GC1_LEARN_MOUSE_WINDOW_MIN_PX", "100"))
+_VIBRATION_MAX_PX = float(os.getenv("GC1_LEARN_VIBRATION_MAX_PX", "25"))
+_AUTOMATION_GRACE_SEC = float(os.getenv("GC1_LEARN_AUTOMATION_GRACE_SEC", "1.0"))
 _POLL_SEC = 0.05
 
 
@@ -57,6 +55,7 @@ class UserMouseGuard:
         self._pause_reason = ""
         self._last: Optional[Tuple[int, int]] = None
         self._moves: list[tuple[float, float]] = []
+        self._ignore_until = 0.0
 
     @property
     def paused(self) -> bool:
@@ -66,6 +65,15 @@ class UserMouseGuard:
     def pause_reason(self) -> str:
         return self._pause_reason
 
+    def on_automation_cursor(
+        self, x: int, y: int, *, grace_sec: Optional[float] = None
+    ) -> None:
+        """자동화가 커서를 옮기기 **직전** — 이 점프는 사용자 스와이프로 보지 않음."""
+        sec = _AUTOMATION_GRACE_SEC if grace_sec is None else grace_sec
+        self._last = (int(x), int(y))
+        self._moves.clear()
+        self._ignore_until = time.time() + max(0.05, sec)
+
     def start(self) -> None:
         if sys.platform != "win32":
             return
@@ -74,6 +82,7 @@ class UserMouseGuard:
         self._pause_reason = ""
         self._last = None
         self._moves = []
+        self._ignore_until = 0.0
         self._stop.clear()
         self._thread = threading.Thread(target=self._loop, daemon=True, name="gc1-mouse-guard")
         self._thread.start()
@@ -88,6 +97,7 @@ class UserMouseGuard:
         """새 런 시작 시."""
         self._paused = False
         self._pause_reason = ""
+        self._ignore_until = 0.0
 
     def _trigger(self, reason: str) -> None:
         if self._paused:
@@ -108,6 +118,10 @@ class UserMouseGuard:
             try:
                 pos = _cursor_pos()
                 now = time.time()
+                if now < self._ignore_until:
+                    self._last = pos
+                    self._stop.wait(_POLL_SEC)
+                    continue
                 if self._last is not None:
                     dx = pos[0] - self._last[0]
                     dy = pos[1] - self._last[1]
@@ -130,6 +144,20 @@ class UserMouseGuard:
             except Exception:
                 pass
             self._stop.wait(_POLL_SEC)
+
+
+def notify_automation_cursor_at(
+    x: int, y: int, *, grace_sec: Optional[float] = None
+) -> None:
+    """OCR·pywinauto 가 커서를 옮기기 직전 호출."""
+    if _GUARD is not None:
+        _GUARD.on_automation_cursor(x, y, grace_sec=grace_sec)
+
+
+def notify_automation_cursor_here(*, grace_sec: Optional[float] = None) -> None:
+    """현재 커서 위치 기준 자동화 grace (클릭 직후)."""
+    x, y = _cursor_pos()
+    notify_automation_cursor_at(x, y, grace_sec=grace_sec)
 
 
 def start_learning_guard() -> None:

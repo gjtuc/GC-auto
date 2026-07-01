@@ -1,6 +1,7 @@
 """gc_screen_read 단위 테스트 — OCR 없이 좌표·확대만."""
 import json
 import os
+import sys
 import tempfile
 import unittest
 
@@ -61,6 +62,13 @@ class TestGcScreenRead(unittest.TestCase):
             else:
                 os.environ["GC_SCREEN_SHOW_FOCUS"] = old
             os.environ.pop("GC_SCREEN_FOCUS_MS", None)
+
+    @unittest.skipUnless(sys.platform == "win32", "Win32 overlay")
+    def test_win32_overlay_show_border(self):
+        from gc_win32_overlay import overlay_hide, overlay_show_border
+
+        overlay_show_border(50, 50, 120, 80, border=3, color="red", pad=4)
+        overlay_hide()
 
     def test_adaptive_crop_tightens_on_needle(self):
         from gc_screen_read import OcrToken, adaptive_crop_frac, zoom_pipeline_settings, load_config
