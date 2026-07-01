@@ -959,8 +959,11 @@ def step_load_analysis_method(win, cfg: AutochroConfig, data_name: str) -> None:
             "불러오기",
             forbid=(),
             region_id="context_menu_popup",
+            step_id="P4.after_tree_menu",
         ):
-            if not eye._try_click_popup_menu_win32("불러오기", forbid=()):
+            if not eye._try_click_popup_menu_win32(
+                "불러오기", forbid=(), step_id="P4.after_tree_menu"
+            ):
                 _log("[적응] 메뉴 OCR 실패 — pywinauto 분석방법 불러오기")
                 _click_context_load_analysis_method()
     else:

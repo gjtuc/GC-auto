@@ -53,6 +53,14 @@ def begin_gc1_run_session(*, mode: str = "gc1") -> str:
             path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception:
             pass
+    try:
+        from gc1_runtime.layer3_user_mouse_guard import start_learning_guard
+        from gc1_runtime.layer3_ocr_study import review_prior_learning
+
+        review_prior_learning()
+        start_learning_guard()
+    except ImportError:
+        pass
     return run_id
 
 
@@ -139,6 +147,7 @@ def _write_agent_journal(
         "agent_recommendations": _agent_recommendations(
             reports, list(learn_summary.get("applied") or [])
         ),
+        "study_summary": learn_summary.get("study") or {},
         "overlay_regions": (load_overlay().get("regions") or {}),
         "result": result_fields,
     }
@@ -183,15 +192,35 @@ def close_gc1_run_session(
         except Exception:
             pass
 
-    learn_summary = finalize_ocr_run_session(
-        success=ok,
-        message=fail_reason,
-        log_fn=lambda _msg: None,  # 사용자/콘솔에 학습 로그 숨김
-    )
-
     reports = _load_fail_reports(str(run_data.get("started") or ""), run_data)
     if not run_id:
         run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    study_summary: dict = {}
+    try:
+        from gc1_runtime.layer3_user_mouse_guard import stop_learning_guard
+        from gc1_runtime.layer3_ocr_study import run_post_run_study
+
+        stop_learning_guard()
+        study_summary = run_post_run_study(
+            run_id,
+            run_data=run_data,
+            reports=reports,
+            pipeline_ok=ok,
+        )
+        os.environ["GC1_STUDY_APPLIED"] = "1"
+    except ImportError:
+        study_summary = {}
+
+    learn_summary = finalize_ocr_run_session(
+        success=ok,
+        message=fail_reason,
+        log_fn=lambda _msg: None,
+    )
+    os.environ.pop("GC1_STUDY_APPLIED", None)
+    if study_summary.get("applied_patches"):
+        learn_summary["applied"] = study_summary["applied_patches"]
+    learn_summary["study"] = study_summary
 
     journal_path = _write_agent_journal(
         run_id,

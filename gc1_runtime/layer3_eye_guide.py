@@ -38,6 +38,7 @@ from gc_screen_read import (
 )
 from gc1_runtime.layer3_eye import EyeActuator, default_eye_config, verify_read_task
 from gc1_runtime.layer3_ocr_case_study import case_study_on_fail
+from gc1_runtime.layer3_ocr_maturity import skill_key
 
 _LOG = print
 _RAW_TOKEN_RX = re.compile(r"(\d+)\s*[\.,]?\s*raw", re.IGNORECASE)
@@ -164,6 +165,50 @@ class AutochroStepEye:
             log_fn=log_fn or _LOG,
         )
 
+    def _current_run_id(self) -> str:
+        try:
+            from gc1_runtime.layer3_ocr_learn import _current_run_path
+
+            path = _current_run_path()
+            if path.is_file():
+                import json
+
+                data = json.loads(path.read_text(encoding="utf-8"))
+                return str(data.get("run_id") or "")
+        except Exception:
+            pass
+        return ""
+
+    def _record_skill_outcome(
+        self,
+        step_id: str,
+        region_id: str,
+        action: str,
+        *,
+        success: bool,
+        confidence: float = 0.0,
+        method: str = "ocr",
+        detail: str = "",
+    ) -> None:
+        run_id = self._current_run_id()
+        if not run_id:
+            return
+        try:
+            from gc1_runtime.layer3_ocr_maturity import append_observation
+
+            append_observation(
+                run_id,
+                step_id=step_id,
+                region_id=region_id,
+                action=action,
+                success=success,
+                confidence=confidence,
+                method=method,
+                detail=detail,
+            )
+        except Exception:
+            pass
+
     def _log(self, msg: str) -> None:
         safe = msg.replace("\u2014", "-").replace("\u2192", "->")
         self.log_fn(f"[눈] {safe}")
@@ -266,6 +311,18 @@ class AutochroStepEye:
         """인식 실패 시 막힌 단계에서 OCR 케이스 스터디."""
         if not case_study_on_fail():
             return
+        try:
+            from gc1_runtime.layer3_ocr_maturity import should_learn_skill, skill_key
+
+            reg = ""
+            tasks_cfg = self.config.get("read_tasks") or {}
+            if task_id in tasks_cfg:
+                reg = str(tasks_cfg[task_id].get("region") or "")
+            if reg and not should_learn_skill(skill_key(step_id, reg, task_id or kind)):
+                self._log(f"case-study skip (mature) - {step_id}")
+                return
+        except ImportError:
+            pass
         try:
             from gc_screen_read import ensure_ocr_focus_visible
             from gc1_runtime.layer3_ocr_case_study import run_failure_case_study
@@ -591,24 +648,35 @@ class AutochroStepEye:
         *,
         forbid: Sequence[str] = (),
         region_id: str = "context_menu_popup",
+        step_id: str = "P3.menu",
     ) -> bool:
         """우클릭 메뉴 OCR 클릭 — 실패 시 False (adaptive fallback 용)."""
         try:
             self.click_context_menu_ocr(
-                needle, forbid=forbid, region_id=region_id
+                needle, forbid=forbid, region_id=region_id, step_id=step_id
             )
             return True
         except Exception as exc:
             self._log(f"menu OCR miss — fallback allowed: {exc}")
+            self._record_skill_outcome(
+                step_id,
+                region_id,
+                needle,
+                success=False,
+                method="ocr_click",
+                detail=str(exc)[:120],
+            )
             self._on_ocr_miss(
-                "P3.menu",
+                step_id,
                 kind="menu",
                 reason=str(exc),
                 task_id=EYE_TASK_AFTER_MENU_INIT,
             )
             return False
 
-    def _try_click_popup_menu_win32(self, needle: str, *, forbid: Sequence[str]) -> bool:
+    def _try_click_popup_menu_win32(
+        self, needle: str, *, forbid: Sequence[str], step_id: str = "P3.menu"
+    ) -> bool:
         """#32768 팝업 메뉴 — OCR 전/후 보조."""
         from gc1_runtime.layer3_hand import menu_popup_pick
 
@@ -620,9 +688,24 @@ class AutochroStepEye:
         try:
             result = menu_popup_pick(matcher, timeout=8.0)
             self._log(f"menu win32 click {result.matched_text!r}")
+            self._record_skill_outcome(
+                step_id,
+                "context_menu_popup",
+                needle,
+                success=True,
+                method="win32_menu",
+            )
             return True
         except Exception as exc:
             self._log(f"menu win32 miss: {exc}")
+            self._record_skill_outcome(
+                step_id,
+                "context_menu_popup",
+                needle,
+                success=False,
+                method="win32_menu",
+                detail=str(exc)[:120],
+            )
             return False
 
     def click_context_menu_ocr(
@@ -631,6 +714,7 @@ class AutochroStepEye:
         *,
         forbid: Sequence[str] = (),
         region_id: str = "context_menu_popup",
+        step_id: str = "P3.menu",
     ) -> None:
         """우클릭 후 뜬 메뉴를 OCR 로 읽고 항목 클릭 (클릭점 근처 박스 우선)."""
         boxes: List[Tuple[str, Box]] = []
@@ -668,6 +752,14 @@ class AutochroStepEye:
         x, y = token_screen_center(best, region_box_used, scale)
         self._log(f"menu OCR click {needle!r} -> ({x},{y}) token={best.text!r}")
         click_screen(x, y, button="left")
+        self._record_skill_outcome(
+            step_id,
+            region_id,
+            needle,
+            success=True,
+            confidence=float(best.confidence),
+            method="ocr_click",
+        )
 
     def guided_right_click_then_menu(
         self,
@@ -691,9 +783,27 @@ class AutochroStepEye:
         self._menu_anchor_screen = (rect.left + rel_x, rect.top + rel_y)
         time.sleep(0.55)
         self.scan_between("P3.menu_open", "context_menu_popup")
-        clicked = self.try_click_context_menu_ocr(menu_needle, forbid=forbid)
+        sk = skill_key("P3.menu", "context_menu_popup", menu_needle)
+        try:
+            from gc1_runtime.layer3_ocr_maturity import get_preferred_method
+
+            pref = get_preferred_method(sk, "ocr_click")
+        except ImportError:
+            pref = "ocr_click"
+
+        clicked = False
+        if pref == "win32_menu":
+            clicked = self._try_click_popup_menu_win32(
+                menu_needle, forbid=forbid, step_id="P3.menu"
+            )
         if not clicked:
-            clicked = self._try_click_popup_menu_win32(menu_needle, forbid=forbid)
+            clicked = self.try_click_context_menu_ocr(
+                menu_needle, forbid=forbid, step_id="P3.menu"
+            )
+        if not clicked:
+            clicked = self._try_click_popup_menu_win32(
+                menu_needle, forbid=forbid, step_id="P3.menu"
+            )
         if eye_gate_should_raise():
             self.require_task("P3.after_menu_click", EYE_TASK_AFTER_MENU_INIT)
         elif clicked:

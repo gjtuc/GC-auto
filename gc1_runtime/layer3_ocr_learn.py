@@ -211,6 +211,7 @@ def finalize_ocr_run_session(*, success: bool, message: str = "", log_fn=None) -
     런 종료 — 이번 세션 fail JSON 을 읽어 overlay 반영.
 
     ``GC1_PIPELINE_RUN_ACTIVE`` 이면 overlay·저널은 파이프라인 ``close_gc1_run_session`` 에서 처리.
+    ``GC1_STUDY_APPLIED`` 이면 ``run_post_run_study`` 가 이미 overlay 반영.
     """
     _log = log_fn if log_fn is not None else (lambda _msg: None)
 
@@ -220,6 +221,7 @@ def finalize_ocr_run_session(*, success: bool, message: str = "", log_fn=None) -
         "applied": [],
         "fail_count": 0,
         "deferred": _pipeline_run_active(),
+        "skipped_study_handled": os.getenv("GC1_STUDY_APPLIED", "").strip() in ("1", "true"),
     }
     if _pipeline_run_active():
         path = _current_run_path()
@@ -229,6 +231,15 @@ def finalize_ocr_run_session(*, success: bool, message: str = "", log_fn=None) -
                 data["autochro_ok"] = success
                 data["autochro_message"] = message[:500]
                 path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+        return summary
+
+    if summary["skipped_study_handled"]:
+        path = _current_run_path()
+        if path.is_file():
+            try:
+                path.unlink(missing_ok=True)  # type: ignore[arg-type]
             except Exception:
                 pass
         return summary

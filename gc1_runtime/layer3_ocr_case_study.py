@@ -108,7 +108,17 @@ _EXPLORE_STEPS = (1.25, 1.5, 1.75, 2.0, 2.25)
 
 
 def case_study_on_fail() -> bool:
-    return os.getenv("GC1_OCR_CASE_STUDY", "1").strip().lower() not in ("0", "false", "no", "off")
+    """실패 시 케이스 스터디 실행 여부."""
+    if os.getenv("GC1_OCR_CASE_STUDY", "1").strip().lower() in ("0", "false", "no", "off"):
+        return False
+    try:
+        from gc1_runtime.layer3_user_mouse_guard import learning_collection_allowed
+
+        if not learning_collection_allowed():
+            return False
+    except ImportError:
+        pass
+    return True
 
 
 def explore_on_fail() -> bool:
