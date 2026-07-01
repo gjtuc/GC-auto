@@ -42,8 +42,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
     connect_main_window() 직후 _prepare_autochro_window() 로 복원·(옵션) 이동하고,
     SysListView32 / SysTreeView32 는 **창 내부 상대 위치**로 고릅니다.
 
-  · **Ctrl+A**: 분석목록 시료 표 **행 번호 열**(왼쪽) 클릭 후 전체 선택.
-    소유자 ID·시료종류 열은 셀 편집 모드 → Ctrl+A 불가 → PDF 1시료만 저장됨.
+  · **Ctrl+A**: 시료 표 **처리형태·적분 열**(우측, 편집 모드 없음) **한 번** 클릭 후 전체 선택.
+    시료이름 열 재클릭 시 이름 수정 모드 → Ctrl+A 불가 → PDF 1시료만 저장됨.
     **인쇄(Ctrl+P) 직전에도 반드시 전체 선택 재실행** (적분 후 단일행 선택 복귀 방지).
 
   · **32-bit Autochro**: 64-bit Python 으로도 동작하지만 pywinauto 경고가 납니다.
@@ -70,7 +70,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 
   AUTOCHRO_ENABLED, AUTOCHRO_WINDOW_TITLE_PATTERN, AUTOCHRO_DATA_NAME(CRM 경로용)
   AUTOCHRO_AUTO_POSITION, AUTOCHRO_WINDOW_X/Y
-  AUTOCHRO_LIST_NEUTRAL_X_FRAC  — Ctrl+A 전 클릭 가로 위치 (기본 0.78)
+  AUTOCHRO_LIST_STATUS_X_FRAC   — Ctrl+A 전 클릭 (처리형태·적분 열, 기본 0.78)
+  AUTOCHRO_LIST_NEUTRAL_X_FRAC — (구) STATUS_X_FRAC 와 동일
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
@@ -1055,29 +1056,47 @@ def step_load_analysis_method(win, cfg: AutochroConfig) -> str:
     return data_name
 
 
+def _list_status_column_coords(sample_list) -> tuple[int, int]:
+    """
+    처리형태·적분 열 — Ctrl+A 전 포커스 (시료이름 편집 모드 진입 없음).
+
+    시료이름·시료종류 열은 더블클릭/재클릭 시 수정 모드 → 전체 선택 불가.
+    """
+    raw = os.getenv("AUTOCHRO_LIST_STATUS_X_FRAC", "").strip()
+    if not raw:
+        raw = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "0.78").strip()
+    try:
+        x_frac = float(raw)
+    except ValueError:
+        x_frac = 0.78
+    x_frac = min(max(x_frac, 0.55), 0.92)
+    rect = sample_list.rectangle()
+    width = max(rect.width(), 400)
+    height = max(rect.height(), 80)
+    rel_x = int(width * x_frac)
+    rel_y = max(16, min(32, height // 10))
+    return rel_x, rel_y
+
+
 def _list_row_index_coords(sample_list) -> tuple[int, int]:
-    """행 번호 열 — Ctrl+A·인쇄 전 포커스 (미지시료·시료종류 드롭다운 열 회피)."""
+    """행 번호 열 — (구) 하위 호환."""
     from gc1_runtime.layer3_coord_learn import list_rel_from_purpose
 
     return list_rel_from_purpose(sample_list, "row")
 
 
 def _neutral_list_coords(sample_list) -> tuple[int, int]:
-    """하위 호환 — 행 번호 열."""
-    return _list_row_index_coords(sample_list)
+    """하위 호환 — 처리형태·적분 열."""
+    return _list_status_column_coords(sample_list)
 
 
 def _focus_list_for_ctrl_a(sample_list) -> None:
-    """분석목록 시료 표 — 행 번호 열 클릭 (단일 셀·드롭다운 회피)."""
-    rel_x, rel_y = _list_row_index_coords(sample_list)
+    """분석목록 시료 표 — 처리형태·적분 열 **한 번** 클릭 (편집 모드 회피)."""
+    rel_x, rel_y = _list_status_column_coords(sample_list)
     sample_list.set_focus()
-    try:
-        sample_list.move_mouse_input(coords=(rel_x, rel_y))
-        time.sleep(0.12)
-    except Exception:
-        pass
+    time.sleep(0.1)
     sample_list.click_input(coords=(rel_x, rel_y))
-    time.sleep(0.25)
+    time.sleep(0.3)
 
 
 def _select_all_in_sample_table(win) -> None:
@@ -1090,9 +1109,7 @@ def _select_all_in_sample_table(win) -> None:
     sample_list.set_focus()
     try:
         send_keys("{ESC}")
-        time.sleep(0.12)
-        send_keys("{ESC}")
-        time.sleep(0.15)
+        time.sleep(0.2)
     except Exception:
         pass
     _focus_list_for_ctrl_a(sample_list)
