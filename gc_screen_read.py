@@ -624,71 +624,51 @@ _T = TypeVar("_T")
 
 class FocusOverlay:
     """
-    단계마다 하나의 빨간 네모만 표시.
+    단계마다 하나의 빨간 네모만 표시 (Win32 layered — Tcl/tkinter 없음).
     다음 단계로 넘어가면 이전 네모는 즉시 제거 후 새 영역에만 표시.
     """
 
     def __init__(self) -> None:
-        self._stop = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._pad = self._read_pad()
+
+    @staticmethod
+    def _read_pad() -> int:
+        raw = os.getenv("GC_SCREEN_FOCUS_PAD", "6").strip()
+        try:
+            return max(0, min(24, int(raw)))
+        except ValueError:
+            return 6
 
     def hide(self) -> None:
-        self._stop.set()
-        if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=2.0)
-        self._stop = threading.Event()
-        self._thread = None
+        if sys.platform != "win32":
+            return
+        try:
+            from gc_win32_overlay import overlay_hide
+
+            overlay_hide()
+        except Exception:
+            pass
 
     def show(self, box: Box, *, border: int = 3, color: str = "red") -> None:
         if not focus_overlay_enabled():
             return
+        if sys.platform != "win32":
+            return
         self.hide()
-        stop = self._stop
+        try:
+            from gc_win32_overlay import overlay_show_border
 
-        def _run() -> None:
-            import tkinter as tk
-
-            root = tk.Tk()
-            root.overrideredirect(True)
-            root.attributes("-topmost", True)
-            chroma = "#010102"
-            root.configure(bg=chroma)
-            try:
-                root.wm_attributes("-transparentcolor", chroma)
-            except tk.TclError:
-                pass
-            w = max(1, box.width)
-            h = max(1, box.height)
-            root.geometry(f"{w}x{h}+{box.left}+{box.top}")
-            canvas = tk.Canvas(root, width=w, height=h, bg=chroma, highlightthickness=0)
-            canvas.pack(fill="both", expand=True)
-            pad = max(1, border)
-            canvas.create_rectangle(
-                pad,
-                pad,
-                w - pad,
-                h - pad,
-                outline=color,
-                width=border,
-                fill=chroma,
+            overlay_show_border(
+                box.left,
+                box.top,
+                box.width,
+                box.height,
+                border=border,
+                color=color,
+                pad=self._pad,
             )
-
-            def _poll() -> None:
-                if stop.is_set():
-                    root.quit()
-                    return
-                root.after(40, _poll)
-
-            _poll()
-            root.mainloop()
-            try:
-                root.destroy()
-            except tk.TclError:
-                pass
-
-        self._thread = threading.Thread(target=_run, daemon=True)
-        self._thread.start()
-        time.sleep(0.04)
+        except Exception:
+            pass
 
     def stage(self, box: Box, work: Callable[[], _T], *, min_ms: Optional[int] = None) -> _T:
         if not focus_overlay_enabled():

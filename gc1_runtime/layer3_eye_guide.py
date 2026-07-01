@@ -73,9 +73,9 @@ def autochro_eye_enabled(*, dry_run: bool = False) -> bool:
     if dry_run:
         return False
     enabled = os.getenv("GC1_AUTOCHRO_EYE", "1").strip().lower() in ("1", "true", "yes")
-    # tkinter 빨간 박스는 Tcl 스레드 충돌 — 명시하지 않으면 자동화 중 OFF
-    if enabled and not os.getenv("GC_SCREEN_SHOW_FOCUS", "").strip():
-        os.environ["GC_SCREEN_SHOW_FOCUS"] = "0"
+    # Win32 테두리 오버레이 — Tcl 없음, live 에서도 빨간 박스 기본 ON
+    if enabled:
+        os.environ.setdefault("GC_SCREEN_SHOW_FOCUS", "1")
     return enabled
 
 
