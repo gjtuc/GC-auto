@@ -62,15 +62,30 @@ EXCEL_OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "Desktop", "KCH")
 
 def default_send_state_path() -> str:
     """일일 자동 메일 횟수·마지막 처리 시각 기록 JSON."""
-    return os.path.join(EXCEL_OUTPUT_DIR, ".gc_send_state.json")
+    try:
+        from gc_profiles import resolve_runtime_status_paths
+
+        return resolve_runtime_status_paths()["send_state"]
+    except Exception:
+        return os.path.join(EXCEL_OUTPUT_DIR, ".gc_send_state.json")
 
 
 def default_watch_status_json() -> str:
-    return os.path.join(EXCEL_OUTPUT_DIR, ".gc_watch_status.json")
+    try:
+        from gc_profiles import resolve_runtime_status_paths
+
+        return resolve_runtime_status_paths()["watch_status_json"]
+    except Exception:
+        return os.path.join(EXCEL_OUTPUT_DIR, ".gc_watch_status.json")
 
 
 def default_watch_status_txt() -> str:
-    return os.path.join(EXCEL_OUTPUT_DIR, "GC_감시_상태.txt")
+    try:
+        from gc_profiles import resolve_runtime_status_paths
+
+        return resolve_runtime_status_paths()["watch_status_txt"]
+    except Exception:
+        return os.path.join(EXCEL_OUTPUT_DIR, "GC_감시_상태.txt")
 
 
 # ---------------------------------------------------------------------------

@@ -329,11 +329,16 @@ def migrate_gc1_runtime_layout(excel_output_dir: str) -> int:
                 except OSError:
                     pass
     moved += _migrate_gc1_stray_desktop_kch(runtime)
+    moved += _migrate_gc1_stray_desktop_cursor(runtime)
     return moved
 
 
 def _desktop_kch_dir() -> str:
     return os.path.normpath(os.path.join(os.path.expanduser("~"), "Desktop", "KCH"))
+
+
+def _desktop_cursor_dir() -> str:
+    return os.path.normpath(os.path.join(os.path.expanduser("~"), "Desktop", ".cursor"))
 
 
 def _merge_or_move_file(src: str, dst: str) -> bool:
@@ -367,48 +372,85 @@ def _migrate_gc1_stray_desktop_kch(runtime: str) -> int:
   GC1 PC에만: ``Desktop\\KCH`` 는 GC2/GC3용이라 은규가 보면 혼란.
   env 미로드 등으로 생긴 로그·잔여 파일을 ``_GC자동화`` 로 옮기고 빈 폴더 삭제.
     """
+    return _migrate_gc1_stray_desktop_folder(_desktop_kch_dir(), runtime)
+
+
+def _migrate_gc1_stray_desktop_cursor(runtime: str) -> int:
+    """
+    GC1 PC: ``Desktop\\.cursor`` 는 데이터 PC(은규/차헌)용.
+    실수로 복사된 env·촉매 반응 계산.py 등을 ``_GC자동화`` 로 옮기고 빈 폴더 삭제.
+    """
+    return _migrate_gc1_stray_desktop_folder(_desktop_cursor_dir(), runtime)
+
+
+def _migrate_gc1_stray_desktop_folder(src_dir: str, runtime: str) -> int:
+    """GC1: 바탕화면 잔여 폴더(KCH·.cursor) 내용을 ``_GC자동화`` 로 합침."""
     import shutil
 
-    kch = _desktop_kch_dir()
-    if not os.path.isdir(kch):
+    src = os.path.normpath(src_dir)
+    runtime = os.path.normpath(runtime)
+    if not os.path.isdir(src):
+        return 0
+    if os.path.normcase(os.path.abspath(src)) == os.path.normcase(os.path.abspath(runtime)):
         return 0
     moved = 0
     try:
-        names = list(os.listdir(kch))
+        names = list(os.listdir(src))
     except OSError:
         return 0
     for name in names:
-        src = os.path.join(kch, name)
-        if name == "_system" and os.path.isdir(src):
-            dst = os.path.join(runtime, "_system")
-            if os.path.isdir(dst):
-                for sub in os.listdir(src):
-                    sub_src = os.path.join(src, sub)
-                    sub_dst = os.path.join(dst, sub)
+        src_path = os.path.join(src, name)
+        dst_path = os.path.join(runtime, name)
+        if os.path.isdir(src_path):
+            if os.path.isdir(dst_path):
+                for sub in os.listdir(src_path):
+                    sub_src = os.path.join(src_path, sub)
+                    sub_dst = os.path.join(dst_path, sub)
                     if os.path.isfile(sub_src) and _merge_or_move_file(sub_src, sub_dst):
                         moved += 1
+                    elif os.path.isdir(sub_src) and not os.path.exists(sub_dst):
+                        try:
+                            shutil.move(sub_src, sub_dst)
+                            moved += 1
+                        except OSError:
+                            pass
                 try:
-                    os.rmdir(src)
+                    if not os.listdir(src_path):
+                        os.rmdir(src_path)
                 except OSError:
                     pass
             else:
                 try:
-                    shutil.move(src, dst)
+                    shutil.move(src_path, dst_path)
                     moved += 1
                 except OSError:
                     pass
             continue
-        if os.path.isfile(src):
-            dst = os.path.join(runtime, name)
-            if _merge_or_move_file(src, dst):
+        if os.path.isfile(src_path):
+            if os.path.isfile(dst_path) and name == "gc_automation.env":
+                alt = os.path.join(runtime, "gc_automation.env.desktop_cursor")
+                if _merge_or_move_file(src_path, alt):
+                    moved += 1
+            elif os.path.isfile(dst_path) and name == "machine_profile.json":
+                alt = os.path.join(runtime, "machine_profile.data_pc.json")
+                if _merge_or_move_file(src_path, alt):
+                    moved += 1
+            elif _merge_or_move_file(src_path, dst_path):
                 moved += 1
     try:
-        if not os.listdir(kch):
-            os.rmdir(kch)
+        if not os.listdir(src):
+            os.rmdir(src)
             moved += 1
     except OSError:
         pass
     return moved
+
+
+def resolve_runtime_status_paths() -> dict[str, str]:
+    """Env 로드 후 watch/status 경로 (GC1은 ``_GC자동화``)."""
+    base = script_dir()
+    output_dir, _ = bootstrap_env(base)
+    return paths_for_output_dir(output_dir)
 
 
 def resolve_required_hotspot(default: str = REQUIRED_HOTSPOT_SSID) -> str:

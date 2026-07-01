@@ -16,7 +16,7 @@ from gc_config import default_watch_status_json
 
 
 def watch_activity_log_path() -> str:
-    """Desktop\\KCH\\.gc_watch_activity.log (status JSON 과 같은 폴더)."""
+    """watch status JSON 과 같은 폴더 (GC1: ``박은규\\_GC자동화``)."""
     return os.path.join(os.path.dirname(default_watch_status_json()), ".gc_watch_activity.log")
 
 
