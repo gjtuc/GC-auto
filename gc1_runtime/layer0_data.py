@@ -46,6 +46,43 @@ def tree_label_matches_data_name(tree_line: str, data_name: str) -> bool:
     return compact_line == compact_name or compact_line.startswith(compact_name)
 
 
+def extract_date8_from_data_name(data_name: str) -> str:
+    """데이터명 앞 8자리 날짜 (20260630)."""
+    compact = re.sub(r"\s+", "", (data_name or "").strip())
+    match8 = _DATE8_PREFIX.match(compact)
+    if match8:
+        return match8.group(1)
+    match6 = re.match(r"^(\d{6})", compact)
+    if match6:
+        return f"20{match6.group(1)}"
+    return ""
+
+
+def rank_tree_line_for_data_name(line: str, data_name: str) -> float:
+    """
+    분석목록 트리 후보 점수 — 날짜가 다른 시료는 제외.
+
+    MTD·적분은 선택한 트리 노드에 저장되므로 제어목록 데이터명과 동일 노드 필수.
+    """
+    if not tree_label_matches_data_name(line, data_name):
+        return -1.0
+    line_c = re.sub(r"\s+", "", line.lower())
+    name_c = re.sub(r"\s+", "", data_name.lower())
+    target_date = extract_date8_from_data_name(data_name)
+    score = 0.0
+    line_dates = re.findall(r"20\d{6}", line_c)
+    if target_date:
+        if target_date in line_dates or target_date in line_c:
+            score += 100.0
+        elif line_dates:
+            return -1.0
+    if line_c.startswith(name_c[: min(20, len(name_c))]):
+        score += 50.0
+    if normalize_tree_label(line) == normalize_tree_label(data_name):
+        score += 30.0
+    return score
+
+
 def is_valid_data_name(name: str) -> bool:
     """Ω.A.L0.DN.99 — 비어 있지 않고 날짜 접두(6자리+) 있음."""
     stem = (name or "").strip().split(".")[0].strip()

@@ -699,7 +699,30 @@ def _open_path_in_file_dialog(
     time.sleep(0.3)
 
 
-def _select_tree_data_name(win, data_name: str) -> str:
+def _wait_for_context_menu(timeout: float = 2.0) -> bool:
+    """#32768 팝업 메뉴가 떴는지 확인."""
+    _require_pywinauto()
+    from pywinauto import Desktop
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            if Desktop(backend="win32").windows(class_name="#32768"):
+                return True
+        except Exception:
+            pass
+        time.sleep(0.1)
+    return False
+
+
+def _select_tree_data_name(win, data_name: str) -> tuple[str, str, int]:
+    """
+    분석목록 왼쪽 트리 — **제어목록과 동일 데이터명** 노드 선택.
+
+    다른 시료에서 MTD·적분을 불러오면 현재 분석 데이터가 아닌 이전 시료에 저장됨.
+    """
+    from gc1_runtime.layer0_data import rank_tree_line_for_data_name
+
     tree = _analysis_tree_view(win)
     candidates: List[str] = []
     try:
@@ -709,31 +732,104 @@ def _select_tree_data_name(win, data_name: str) -> str:
                 candidates.append(line)
     except Exception:
         pass
+    ranked: List[tuple[float, str]] = []
     for line in candidates:
-        if tree_label_matches_data_name(line, data_name):
-            chosen = line.split(".")[0].strip()
-            for select_arg in (chosen, [chosen], line):
-                try:
-                    tree.select(select_arg)
-                    time.sleep(0.25)
-                    return chosen
-                except Exception:
-                    continue
-    raise RuntimeError(
-        f"분석목록 트리에 제어목록 데이터명 없음: {data_name!r} "
-        f"(후보 {len(candidates)}개)"
-    )
+        score = rank_tree_line_for_data_name(line, data_name)
+        if score >= 0:
+            ranked.append((score, line))
+    if not ranked:
+        raise RuntimeError(
+            f"분석목록 트리에 제어목록 데이터명 없음: {data_name!r} "
+            f"(후보 {len(candidates)}개)"
+        )
+    ranked.sort(key=lambda x: (-x[0], x[1]))
+    chosen_line = ranked[0][1]
+    chosen = chosen_line.split(".")[0].strip()
+    line_idx = 0
+    for i, line in enumerate(candidates):
+        if line == chosen_line:
+            line_idx = i
+            break
+        if chosen in line and tree_label_matches_data_name(line, data_name):
+            line_idx = i
+    for select_arg in (chosen, [chosen], chosen_line):
+        try:
+            tree.select(select_arg)
+            time.sleep(0.35)
+            break
+        except Exception:
+            continue
+    try:
+        sel = tree.get_selected()
+        if sel and not tree_label_matches_data_name(str(sel[0]), data_name):
+            raise RuntimeError(
+                f"트리 선택 불일치 — 원하는 {data_name!r}, 실제 {sel[0]!r}"
+            )
+    except RuntimeError:
+        raise
+    except Exception:
+        pass
+    return chosen, chosen_line, line_idx
 
 
-def _right_click_tree_data_name(win, data_name: str) -> None:
-    chosen = _select_tree_data_name(win, data_name)
+def _right_click_tree_data_name(
+    win, data_name: str, *, eye=None
+) -> tuple[int, int] | None:
+    """
+    선택된 트리 노드에서 우클릭 — 고정 상단 좌표 금지.
+
+    1) pywinauto 로 동일 데이터명 선택
+    2) OCR 로 해당 행 화면 좌표 우클릭 (시료명 행 정확도)
+    3) 실패 시 선택 행 인덱스 우클릭
+    """
+    chosen, chosen_line, line_idx = _select_tree_data_name(win, data_name)
+
+    if eye is not None:
+        anchor = eye.find_tree_name_screen_xy(data_name)
+        if anchor:
+            from gc_screen_read import click_screen, flash_focus_point
+
+            flash_focus_point(anchor[0], anchor[1], color="lime")
+            click_screen(anchor[0], anchor[1], button="right")
+            eye._menu_anchor_screen = anchor
+            time.sleep(0.5)
+            if _wait_for_context_menu(1.8):
+                _log(f"  트리 OCR 우클릭: {chosen} @ {anchor}")
+                return anchor
+            _log("  [적응] OCR 좌표 메뉴 없음 — 행 인덱스 우클릭")
+
     tree = _analysis_tree_view(win)
+    tree.set_focus()
+    time.sleep(0.15)
     rect = tree.rectangle()
+    candidates: List[str] = []
+    try:
+        candidates = [(t or "").strip() for t in tree.texts() if (t or "").strip()]
+    except Exception:
+        pass
+    row_h = max(16, min(22, rect.height() // max(len(candidates), 8)))
     rel_x = max(24, min(rect.width() // 3, 80))
-    rel_y = max(16, min(28, rect.height() // 6))
+    rel_y = max(16, min(12 + line_idx * row_h, max(20, rect.height() - 12)))
     tree.click_input(button="right", coords=(rel_x, rel_y))
-    time.sleep(0.35)
-    _log(f"  트리 우클릭: {chosen}")
+    time.sleep(0.4)
+    screen_xy = (rect.left + rel_x, rect.top + rel_y)
+    if _wait_for_context_menu(1.8):
+        _log(f"  트리 우클릭(행{line_idx}): {chosen}")
+        return screen_xy
+    _log(f"  [적응] 행{line_idx} 우클릭 메뉴 없음 — Apps 키 시도")
+    try:
+        from pywinauto.keyboard import send_keys
+
+        tree.set_focus()
+        send_keys("{APPS}")
+        time.sleep(0.45)
+        if _wait_for_context_menu(1.5):
+            _log(f"  트리 메뉴(Apps): {chosen}")
+            return screen_xy
+    except Exception:
+        pass
+    _log(f"  [경고] 트리 컨텍스트 메뉴 미표시: {chosen}")
+    return screen_xy
 
 
 def _neutral_list_coords(sample_list) -> tuple[int, int]:
@@ -937,23 +1033,33 @@ def step_context_initialize_samples(win, cfg: AutochroConfig) -> None:
 
 
 def step_load_analysis_method(win, cfg: AutochroConfig, data_name: str) -> None:
-    """왼쪽 트리 시료명 우클릭 -> 분석방법 불러오기 -> 고정 MTD."""
+    """
+    왼쪽 트리 **동일 데이터명** 우클릭 -> 분석방법 불러오기 -> 고정 MTD.
+
+    다른 시료 노드에서 불러오면 적분값이 현재 분석이 아닌 이전 데이터에 저장됨.
+    PDF·엑셀 파일명도 ``data_name``(제어목록 활성 시료)과 동일해야 함.
+    """
     mtd_path = resolve_analysis_method_mtd_path()
     _log(f"분석방법 MTD: {os.path.basename(mtd_path)}")
     if cfg.dry_run:
         return
     eye = _make_step_eye(win, cfg)
+    active = read_active_control_data_name(win, cfg)
+    if active and not tree_label_matches_data_name(active, data_name):
+        _log(f"[주의] 활성 데이터명 {active!r} — 요청 {data_name!r} 와 다름, 활성명 사용")
+        data_name = active
+    elif active:
+        data_name = active
     if eye:
         eye.scan_between("P4.before_tree", "left_analysis_tree")
         eye.require_tree_data_name(data_name, step_id="P4.before_mtd")
     _select_analysis_tab(win)
     if eye:
         eye.require_task("P4.tab_analysis", "eye_active_tab_analysis")
+    anchor = _right_click_tree_data_name(win, data_name, eye=eye)
     if eye:
-        tree_ok = eye.guided_tree_right_click_data_name(data_name)
-        if not tree_ok:
-            _log("[적응] 트리 OCR 실패 — pywinauto 우클릭")
-            _right_click_tree_data_name(win, data_name)
+        if anchor:
+            eye._menu_anchor_screen = anchor
         eye.scan_between("P4.after_tree_menu", "context_menu_popup")
         if not eye.try_click_context_menu_ocr(
             "불러오기",
@@ -962,6 +1068,8 @@ def step_load_analysis_method(win, cfg: AutochroConfig, data_name: str) -> None:
             step_id="P4.after_tree_menu",
         ):
             if not eye._try_click_popup_menu_win32(
+                "분석방법", forbid=(), step_id="P4.after_tree_menu"
+            ) and not eye._try_click_popup_menu_win32(
                 "불러오기", forbid=(), step_id="P4.after_tree_menu"
             ):
                 _log("[적응] 메뉴 OCR 실패 — pywinauto 분석방법 불러오기")

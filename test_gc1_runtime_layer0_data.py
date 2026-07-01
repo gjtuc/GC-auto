@@ -8,10 +8,12 @@ import unittest
 
 from gc1_runtime.layer0_data import (
     build_analysis_method_mtd_path,
+    extract_date8_from_data_name,
     extract_mtd_date_prefix,
     is_valid_data_name,
     parse_data_name_from_tree_lines,
     parse_data_name_from_window_title,
+    rank_tree_line_for_data_name,
     resolve_analysis_method_mtd_path,
     resolve_data_name,
     tree_label_matches_data_name,
@@ -26,6 +28,23 @@ class TestTreeLabelMatches(unittest.TestCase):
             tree_label_matches_data_name("20260629 dre(3) ni-ce-la - 상온-1", name),
         )
         self.assertFalse(tree_label_matches_data_name("20260624 dre(3) ni-ce", name))
+
+    def test_rank_rejects_wrong_date(self):
+        target = "20260630dre(5)ni(환원)-ce"
+        self.assertGreater(
+            rank_tree_line_for_data_name("20260630dre(5)ni(환원)-ce", target),
+            rank_tree_line_for_data_name("20260629 dre(3) ni-ce-la", target),
+        )
+        self.assertEqual(
+            rank_tree_line_for_data_name("20260629 dre(3) ni-ce-la", target),
+            -1.0,
+        )
+
+    def test_extract_date8(self):
+        self.assertEqual(
+            extract_date8_from_data_name("20260630dre(5)ni(환원)-ce"),
+            "20260630",
+        )
 
 
 class TestMtdPath(unittest.TestCase):

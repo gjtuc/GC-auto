@@ -85,22 +85,27 @@ def _normalize_tok(text: str) -> str:
 
 
 def _score_tree_name_token(tok: OcrToken, data_name: str) -> float:
-    """트리 데이터명 앵커 — 한 글자·메뉴 잡음 제외."""
+    """트리 데이터명 앵커 — 한 글자·메뉴 잡음·다른 날짜 시료 제외."""
     tok_c = _normalize_tok(tok.text)
     name_c = _normalize_tok(data_name)
     if len(tok_c) < 5:
         return -1.0
+    from gc1_runtime.layer0_data import extract_date8_from_data_name
+
+    target_date = extract_date8_from_data_name(data_name)
+    tok_dates = re.findall(r"20\d{6}", tok_c)
+    if target_date and tok_dates and target_date not in tok_dates:
+        return -1.0
     score = float(tok.confidence)
-    date_m = re.match(r"(\d{8})", name_c)
-    if date_m and date_m.group(1) in tok_c:
-        score += 50.0
+    if target_date and target_date in tok_c:
+        score += 80.0
     prefix = name_c[: min(14, len(name_c))]
     if prefix in tok_c:
         score += 40.0
     elif tok_c in name_c:
         score += 25.0
-    if "dre" in name_c and "dre" in tok_c:
-        score += 20.0
+    if "dre" in name_c and "dre" in tok_c and target_date and target_date in tok_c:
+        score += 10.0
     if len(tok_c) < 8 and not re.search(r"\d{6}", tok_c):
         score -= 30.0
     return score
@@ -451,9 +456,13 @@ class AutochroStepEye:
     ) -> Optional[Tuple[int, int]]:
         """분석목록 트리 — 데이터명 OCR 토큰 중심 (우클릭 위치)."""
         try:
+            from gc1_runtime.layer0_data import extract_date8_from_data_name
+
+            date8 = extract_date8_from_data_name(data_name)
+            needles = [data_name[:14], date8 or "2026", "dre"]
             view, scale, tokens = self.ocr_region_tokens(
                 region_id,
-                needles=[data_name[:12], "2026", "dre"],
+                needles=needles,
             )
         except RuntimeError as exc:
             self._log(f"tree OCR skip: {exc}")
