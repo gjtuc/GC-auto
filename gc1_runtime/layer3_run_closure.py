@@ -56,8 +56,10 @@ def begin_gc1_run_session(*, mode: str = "gc1") -> str:
     try:
         from gc1_runtime.layer3_user_mouse_guard import start_learning_guard
         from gc1_runtime.layer3_ocr_study import review_prior_learning
+        from gc1_runtime.layer3_ocr_maturity import snapshot_learning_state
 
         review_prior_learning()
+        snapshot_learning_state(run_id)
         start_learning_guard()
     except ImportError:
         pass

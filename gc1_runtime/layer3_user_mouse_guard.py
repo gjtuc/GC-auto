@@ -94,6 +94,14 @@ class UserMouseGuard:
             return
         self._paused = True
         self._pause_reason = reason
+        try:
+            from gc1_runtime.layer3_ocr_maturity import (
+                invalidate_run_learning_on_contamination,
+            )
+
+            invalidate_run_learning_on_contamination(reason=reason)
+        except Exception:
+            pass
 
     def _loop(self) -> None:
         while not self._stop.is_set():

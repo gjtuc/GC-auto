@@ -28,7 +28,6 @@ from gc1_runtime.layer3_ocr_maturity import (
 from gc1_runtime.layer3_user_mouse_guard import (
     get_learning_pause_reason,
     is_learning_paused_by_user,
-    learning_collection_allowed,
 )
 
 _STUDY_LOG = "study_session_log.txt"
@@ -105,33 +104,64 @@ def run_post_run_study(
 ) -> Dict[str, Any]:
     """
     런 **종료 후** — 관측·fail 반영, overlay patch, study journal.
-    사용자 마우스로 학습 중단됐으면 patch·케이스 반영만 건너뜀 (성숙도는 관측분까지 반영됨).
+
+    인간 마우스로 오염된 런은 관측·성숙도·케이스 스터디를 **전부 폐기**.
     """
     _log = log_fn or (lambda _m: None)
+    paused = is_learning_paused_by_user()
+    pause_reason = get_learning_pause_reason() if paused else ""
+
+    if paused:
+        from gc1_runtime.layer3_ocr_maturity import discard_contaminated_run_learning
+
+        discard_info = discard_contaminated_run_learning(
+            run_id,
+            run_data=run_data,
+            reports=reports,
+            reason=pause_reason,
+        )
+        result: Dict[str, Any] = {
+            "run_id": run_id,
+            "observation_count": 0,
+            "fail_report_count": 0,
+            "demoted_skills": [],
+            "applied_patches": [],
+            "skipped_mature": [],
+            "user_paused_learning": True,
+            "user_pause_reason": pause_reason,
+            "learning_discarded": True,
+            "discard_detail": discard_info,
+            "pipeline_ok": pipeline_ok,
+        }
+        reason = pause_reason or "unknown"
+        _log(
+            f"[스터디] 사용자 마우스({reason}) — 이번 런 학습 데이터 전부 폐기 "
+            f"(obs={discard_info.get('observations_deleted')} "
+            f"case={discard_info.get('case_study_deleted')})"
+        )
+        _write_study_journal(run_id, result, [], [])
+        _append_study_log(
+            f"POST-RUN {run_id} discarded reason={reason} "
+            f"obs={discard_info.get('observations_deleted')} "
+            f"case={discard_info.get('case_study_deleted')}"
+        )
+        return result
+
     observations = load_run_observations(run_id)
     demoted = demote_skills_from_failures(reports)
 
-    result: Dict[str, Any] = {
+    result = {
         "run_id": run_id,
         "observation_count": len(observations),
         "fail_report_count": len(reports),
         "demoted_skills": demoted,
         "applied_patches": [],
         "skipped_mature": [],
-        "user_paused_learning": is_learning_paused_by_user(),
-        "user_pause_reason": get_learning_pause_reason(),
+        "user_paused_learning": False,
+        "user_pause_reason": "",
+        "learning_discarded": False,
         "pipeline_ok": pipeline_ok,
     }
-
-    if not learning_collection_allowed() and result["user_paused_learning"]:
-        reason = result["user_pause_reason"] or "unknown"
-        _log(f"[스터디] 사용자 마우스({reason}) — overlay patch·추가 학습 생략")
-        _write_study_journal(run_id, result, observations, reports)
-        _append_study_log(
-            f"POST-RUN {run_id} paused_by_user reason={reason} "
-            f"obs={len(observations)} fails={len(reports)}"
-        )
-        return result
 
     overlay = load_overlay()
     all_notes: List[str] = []

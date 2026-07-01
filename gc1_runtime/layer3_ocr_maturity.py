@@ -39,6 +39,181 @@ def run_observations_path(run_id: str) -> Path:
     return d / _OBS_NAME
 
 
+def _run_snapshot_dir(run_id: str) -> Path:
+    d = learnings_dir() / "runs" / run_id
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def snapshot_learning_state(run_id: str) -> None:
+    """
+    런 시작 시 maturity·policy 백업.
+
+    인간 마우스로 오염된 런은 종료 시(또는 감지 즉시) 이 스냅샷으로 복원.
+    """
+    import shutil
+
+    from gc1_runtime.layer3_ocr_learn import learnings_enabled
+
+    if not learnings_enabled() or not run_id:
+        return
+    snap = _run_snapshot_dir(run_id)
+    mp = _maturity_path()
+    pp = _policy_path()
+    if mp.is_file():
+        shutil.copy2(mp, snap / "maturity_snapshot.json")
+    else:
+        (snap / "maturity_snapshot.json").write_text(
+            json.dumps(
+                {"threshold": MATURITY_RATE, "min_attempts": MIN_ATTEMPTS, "skills": {}},
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    if pp.is_file():
+        shutil.copy2(pp, snap / "policy_snapshot.json")
+    else:
+        (snap / "policy_snapshot.json").write_text(
+            json.dumps({"skills": {}, "updated": ""}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+
+def _restore_learning_snapshots(run_id: str) -> tuple[bool, bool]:
+    import shutil
+
+    snap = _run_snapshot_dir(run_id)
+    mat_restored = False
+    pol_restored = False
+    mat_snap = snap / "maturity_snapshot.json"
+    pol_snap = snap / "policy_snapshot.json"
+    if mat_snap.is_file():
+        shutil.copy2(mat_snap, _maturity_path())
+        mat_restored = True
+    if pol_snap.is_file():
+        shutil.copy2(pol_snap, _policy_path())
+        pol_restored = True
+    return mat_restored, pol_restored
+
+
+def _current_pipeline_run_id() -> str:
+    from gc1_runtime.layer3_ocr_learn import _current_run_path
+
+    path = _current_run_path()
+    if not path.is_file():
+        return ""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return str(data.get("run_id") or "")
+    except Exception:
+        return ""
+
+
+def invalidate_run_learning_on_contamination(*, reason: str = "") -> dict:
+    """
+    인간 마우스 감지 직후 — 이번 런 관측·성숙도 갱신을 즉시 무효화.
+
+    케이스 스터디 JSON 은 런 종료 시 한꺼번에 삭제.
+    """
+    run_id = _current_pipeline_run_id()
+    result: Dict[str, Any] = {
+        "run_id": run_id,
+        "reason": reason,
+        "observations_deleted": 0,
+        "maturity_restored": False,
+        "policy_restored": False,
+    }
+    if not run_id:
+        return result
+
+    obs_path = run_observations_path(run_id)
+    if obs_path.is_file():
+        result["observations_deleted"] = len(
+            [ln for ln in obs_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        )
+        obs_path.unlink(missing_ok=True)  # type: ignore[arg-type]
+
+    mat_ok, pol_ok = _restore_learning_snapshots(run_id)
+    result["maturity_restored"] = mat_ok
+    result["policy_restored"] = pol_ok
+
+    from gc1_runtime.layer3_ocr_learn import _current_run_path
+
+    cur = _current_run_path()
+    if cur.is_file():
+        try:
+            data = json.loads(cur.read_text(encoding="utf-8"))
+            data["learning_contaminated"] = True
+            data["learning_contaminate_reason"] = reason
+            data["learning_contaminated_at"] = datetime.now(timezone.utc).isoformat()
+            cur.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+    return result
+
+
+def discard_contaminated_run_learning(
+    run_id: str,
+    *,
+    run_data: Optional[dict] = None,
+    reports: Optional[List[dict]] = None,
+    reason: str = "",
+) -> Dict[str, Any]:
+    """
+    오염 런 종료 처리 — 관측·성숙도·케이스 스터디 전부 폐기.
+    """
+    from gc1_runtime.layer3_ocr_learn import _collect_fail_json_since, case_study_dir
+
+    result: Dict[str, Any] = {
+        "discarded": True,
+        "run_id": run_id,
+        "reason": reason,
+        "observations_deleted": 0,
+        "case_study_deleted": 0,
+        "maturity_restored": False,
+        "policy_restored": False,
+    }
+    if not run_id:
+        return result
+
+    obs_path = run_observations_path(run_id)
+    if obs_path.is_file():
+        result["observations_deleted"] = len(
+            [ln for ln in obs_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        )
+        obs_path.unlink(missing_ok=True)  # type: ignore[arg-type]
+
+    mat_ok, pol_ok = _restore_learning_snapshots(run_id)
+    result["maturity_restored"] = mat_ok
+    result["policy_restored"] = pol_ok
+
+    paths_to_delete: set[Path] = set()
+    if run_data:
+        for p in run_data.get("fail_reports") or []:
+            if p:
+                paths_to_delete.add(Path(str(p)))
+        started = str(run_data.get("started") or "")
+        if started:
+            paths_to_delete.update(_collect_fail_json_since(started))
+    if reports:
+        for rep in reports:
+            p = rep.get("path")
+            if p:
+                paths_to_delete.add(Path(str(p)))
+
+    cdir = case_study_dir()
+    for fp in paths_to_delete:
+        try:
+            if fp.is_file() and (not cdir.is_dir() or fp.parent.resolve() == cdir.resolve()):
+                fp.unlink()
+                result["case_study_deleted"] += 1
+        except Exception:
+            continue
+
+    return result
+
+
 def load_maturity() -> dict:
     path = _maturity_path()
     if not path.is_file():
