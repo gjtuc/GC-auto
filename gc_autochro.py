@@ -442,7 +442,9 @@ def _read_data_name_from_window_title(win) -> str:
 
 
 def _read_data_name_from_control_tree(win) -> str:
-    """제어목록 왼쪽 트리 — YL6500 GC 0 바로 위(파란 선택) 데이터명."""
+    """제어목록 왼쪽 트리 — 파란 선택 시료명 (get_selected 우선)."""
+    from gc1_runtime.layer0_data import parse_data_name_from_tree_lines
+
     instrument_markers = ("YL6500 GC", "YL6500GC")
     win_rect = _window_rect(win)
     for ctrl in win.descendants(class_name="SysTreeView32"):
@@ -462,29 +464,37 @@ def _read_data_name_from_control_tree(win) -> str:
                     items.append(line)
         except Exception:
             continue
-        for idx, line in enumerate(items):
-            if any(marker in line for marker in instrument_markers) and idx > 0:
-                candidate = items[idx - 1].strip().split(".")[0].strip()
-                if _DATA_NAME_DATE_RE.match(candidate):
-                    return candidate
+        selected = None
         try:
-            selected = ctrl.get_selected()
-            if selected:
-                candidate = str(selected[0]).strip().split(".")[0].strip()
-                if _DATA_NAME_DATE_RE.match(candidate):
-                    return candidate
+            sel = ctrl.get_selected()
+            if sel:
+                selected = sel
         except Exception:
             pass
+        name = parse_data_name_from_tree_lines(
+            items, selected=selected, instrument_markers=instrument_markers
+        )
+        if name:
+            return name
     return ""
 
 
 def read_active_control_data_name(win, cfg: AutochroConfig) -> str:
     _select_control_tab(win)
     time.sleep(0.3)
-    for reader in (_read_data_name_from_window_title, _read_data_name_from_control_tree):
-        name = reader(win)
-        if name:
-            return name
+    from_tree = _read_data_name_from_control_tree(win)
+    from_title = _read_data_name_from_window_title(win)
+    if from_tree:
+        if from_title and normalize_tree_label(from_tree) != normalize_tree_label(
+            from_title
+        ):
+            _log(
+                f"[주의] 창 제목({from_title!r}) 과 트리 선택({from_tree!r}) 불일치 "
+                "— 파란 선택(트리) 우선"
+            )
+        return from_tree
+    if from_title:
+        return from_title
     fallback = _fallback_data_name(cfg)
     if fallback:
         _log(f"제어목록 데이터명 UI 읽기 실패 — AUTOCHRO_DATA_NAME 사용: {fallback}")

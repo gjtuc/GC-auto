@@ -193,20 +193,21 @@ def parse_data_name_from_tree_lines(
     instrument_markers: Sequence[str] = _DEFAULT_INSTRUMENT_MARKERS,
 ) -> str:
     """
-    Ω.A.L0.DN-R.01~04 — 제어목록 트리 텍스트에서 파란 선택 데이터명.
+    Ω.A.L0.DN-R.01~04 — 제어목록 트리 **파란 선택** 데이터명.
 
-    YL6500 GC 마커 **바로 위** 줄, 없으면 ``get_selected`` fallback.
+    1) ``get_selected`` (사용자가 클릭한 시료)
+    2) 없을 때만 YL6500 GC 바로 위 줄 (구 Autochro 고정 슬롯)
     """
+    if selected:
+        candidate = str(selected[0]).strip().split(".")[0].strip()
+        if is_valid_data_name(candidate):
+            return candidate
     items = [(line or "").strip() for line in lines if (line or "").strip()]
     for idx, line in enumerate(items):
         if any(marker in line for marker in instrument_markers) and idx > 0:
             candidate = items[idx - 1].split(".")[0].strip()
             if is_valid_data_name(candidate):
                 return candidate
-    if selected:
-        candidate = str(selected[0]).strip().split(".")[0].strip()
-        if is_valid_data_name(candidate):
-            return candidate
     return ""
 
 

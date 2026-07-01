@@ -152,6 +152,18 @@ class TestDataNameDn(unittest.TestCase):
             "20260629 dre(3) ni-ce-la",
         )
 
+    def test_tree_selected_wins_over_marker(self):
+        lines = [
+            "20260629 dre(3) ni-ce-la",
+            "YL6500 GC 0",
+            "20260630dre(5)ni(환원)-ce",
+        ]
+        got = parse_data_name_from_tree_lines(
+            lines,
+            selected=["20260630dre(5)ni(환원)-ce"],
+        )
+        self.assertEqual(got, "20260630dre(5)ni(환원)-ce")
+
     def test_tree_selected_fallback(self):
         got = parse_data_name_from_tree_lines(
             ["other"],
