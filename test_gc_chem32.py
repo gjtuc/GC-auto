@@ -2,6 +2,7 @@
 """GC3 Chem32 Report 파싱·병합 단위 테스트 (mock fixture, 실제 Chem32 PC 불필요)."""
 
 import os
+import tempfile
 import unittest
 from datetime import datetime
 
@@ -30,6 +31,7 @@ from gc_chem32 import (
     parse_sequence_datetime,
     parse_report_txt,
     resolve_chemstation_mode,
+    stamp_cycle_injection_symmetry,
 )
 
 FIXTURE_ROOT = os.path.join(
@@ -131,6 +133,32 @@ class TestGcChem32(unittest.TestCase):
         fid_cycles, tcd_cycles, matched, _skipped, _paths = build_merged_injection_cycles(sample)
         self.assertEqual(len(fid_cycles), len(tcd_cycles))
         self.assertEqual(len(fid_cycles), len(matched))
+
+    def test_parse_injection_reports_fills_fid_from_csv_when_txt_empty(self):
+        import tempfile
+
+        from gc_chem32 import parse_injection_reports, parse_report_csv
+
+        with tempfile.TemporaryDirectory() as tmp:
+            inj = os.path.join(tmp, "001F0101.D")
+            os.makedirs(inj)
+            txt = os.path.join(inj, "Report.TXT")
+            with open(txt, "w", encoding="utf-8") as f:
+                f.write(
+                    "Signal 1: FID3 B, Back Signal\n\n"
+                    "Signal 2: TCD1 A, Front Signal\n"
+                    "Peak RetTime Type  Width     Area      Height     Area  \n"
+                    "  #   [min]        [min]  [25 µV*s]   [25 µV]       %\n"
+                    "----|-------|----|-------|----------|----------|--------|\n"
+                    "   1   0.687 BB    0.0703 100.0  10.0  80.0\n"
+                )
+            csv_fid = os.path.join(inj, "REPORT01.CSV")
+            with open(csv_fid, "w", encoding="utf-8") as f:
+                f.write("1,3.5,BB,0.02,50.0,40.0,100.0\n")
+            reports = parse_injection_reports(inj)
+            self.assertEqual(len(reports["TCD"]), 1)
+            self.assertEqual(len(reports["FID"]), 1)
+            self.assertAlmostEqual(float(reports["FID"][0]["Time"]), 3.5, places=2)
 
     def test_chem32_injection_folder_002f_rollover(self):
         from gc_chem32 import CHEM32_INJECTION_RE, _parse_injection_folder_name
@@ -316,6 +344,27 @@ class TestGcChem32(unittest.TestCase):
         self.assertIn("001F0101.D", fid_out[1][0]["Area"])
         self.assertEqual(fid_out[2], peak)
         self.assertEqual(len(tcd_out), 3)
+
+    def test_stamp_cycle_injection_symmetry_from_report(self):
+        peaks = [
+            {
+                "#": 1,
+                "Time": 1.0,
+                "Area": 1.0,
+                "Height": 1.0,
+                "Width": 1.0,
+                "Area%": 1.0,
+                "Symmetry": "",
+            }
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            inj = os.path.join(tmp, "001F0101.D")
+            os.makedirs(inj)
+            report = os.path.join(inj, "Report.TXT")
+            with open(report, "w", encoding="utf-8") as handle:
+                handle.write("Injection Date  : 6/25/2026 8:53:12 AM Inj  :   1\n")
+            stamped = stamp_cycle_injection_symmetry(peaks, inj)
+        self.assertEqual(stamped[0]["Symmetry"], "2026-06-25 08:53:12")
 
 
 if __name__ == "__main__":

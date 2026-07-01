@@ -83,6 +83,7 @@ from gc_kch import (
     build_output_filename,
     build_stacked_dataframe,
     determine_sample_name,
+    format_watch_sample_name_required_message,
     is_new_sequence_date,
     resolve_sample_name,
     write_chem32_excel,
@@ -228,9 +229,8 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
 
     sample_name, seq_date = determine_sample_name(cycle_peaks_list, sequence_folder, config)
     if not sample_name:
-        detail = "시료명 미지정 — --sample-name 필요"
-        if is_new_sequence_date(config.excel_output_dir, seq_date):
-            detail = f"새 날짜({seq_date}) 시퀀스 — 시료명 필수"
+        reason = "new_date" if is_new_sequence_date(config.excel_output_dir, seq_date) else "rt_mismatch"
+        detail = format_watch_sample_name_required_message(seq_date, reason=reason)
         return ProcessResult(
             ok=False,
             sequence_folder=sequence_folder,
@@ -308,7 +308,26 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
     )
     analysis_gaps, gap_interval = detect_analysis_gaps(sample_folder)
     gap_injections = collect_reported_injections(sample_folder)
+    report_folder_count = len(gap_injections)
+    data_row_count = len(matched_labels)
     gap_email_lines = analysis_gaps_email_lines(analysis_gaps, gap_interval, gap_injections)
+    stats_lines = [
+        "",
+        "[데이터 대조]",
+        f"  Chem32 Report 주입 폴더: {report_folder_count}개",
+        f"  엑셀 적재(실주입): {data_row_count}개",
+    ]
+    if analysis_gaps:
+        stats_lines.append(f"  분석 중단(갭) 행: {len(analysis_gaps)}개")
+    if skipped:
+        stats_lines.append(f"  sliding/RT 필터 제외: {skipped}개")
+    report_not_in_excel = report_folder_count - data_row_count
+    if report_not_in_excel > 0:
+        stats_lines.append(
+            f"  → {report_not_in_excel}개 Report 는 엑셀 미포함 "
+            "(TCD 미적분·FID 없음·피크수/RT 불일치 등)"
+        )
+    gap_email_lines = stats_lines + (gap_email_lines or [])
     # 엑셀 갭 행: 메일과 동일 갭이지만 삽입 위치는 matched_paths 기준 (전체 주입 # ≠ 엑셀 행 #)
     fid_cycles, tcd_cycles = insert_analysis_gap_markers(
         fid_cycles,

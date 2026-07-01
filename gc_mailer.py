@@ -93,7 +93,10 @@ def generate_email_body(
         f"첨부 파일: {output_filename}",
     ]
     if chem32:
-        lines.append(f"시트 FID: {fid_cycles}주입 / 시트 TCD: {tcd_cycles}주입 / 피크 합계: {peak_count}개")
+        lines.append(
+            f"시트 FID: {fid_cycles}행 / 시트 TCD: {tcd_cycles}행 / 피크 합계: {peak_count}개"
+            f" (갭 행 포함 시 실주입보다 많을 수 있음)"
+        )
     else:
         lines.append(f"주입 폴더: {total_injection_folders}개 / 엑셀 적재: {cycle_count}개 / 피크: {peak_count}개")
 

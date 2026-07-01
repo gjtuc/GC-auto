@@ -16,7 +16,7 @@ GC3 폴더 구조:
 출력·메일 흐름은 GC2와 동일 (Desktop\\KCH).
 
 [병합 규칙 — gc_chem32.build_merged_injection_cycles]
-  · 1주입 = FID+TCD 1쌍 (둘 다 Report 에 피크 있을 때만)
+  · 1주입 = TCD 필수 (sliding·차헌 TCD). FID 는 Report/CSV 있으면 1쌍, 없으면 TCD만
   · 진행 중 주입: 폴더만 있고 Report 없음 → 제외 (다음 watch 에 포함)
   · TCD sliding match: 직전 주입 대비 RT·Area (DRM 장주기 drift 대응)
   · Area% 과학적 표기(1.000e2) 파싱 지원
@@ -37,6 +37,7 @@ GC3 폴더 구조:
 [엑셀 갭 행 — gap_marker_cycle / insert_analysis_gap_markers]
   · 메일 본문 + FID/TCD 시트 모두에 공백 표시 (차헌 PC는 **엑셀만** 읽음)
   · `#`=중단, Time=약 N사이클 미수집, Symmetry=GC_GAP:N=N → data_pc/gc_gap_contract.py
+  · 일반 주입 피크 Symmetry = Report Injection Date (YYYY-MM-DD HH:MM:SS, 주입 시각)
   · Area=공백 기간·폴더명(002F0209→001F0101)은 사람용; 차헌 PC 파서는 Time/Symmetry 만 사용
   · 갭 인덱스는 collect_reported_injections(전체 Report) 기준 — 엑셀은 sliding 통과분만
     있으므로 _gap_marker_excel_position 으로 “마지막 실측 주입” 뒤에 삽입 (002F FID 미완료 등)
@@ -83,6 +84,7 @@ INJECTION_DATE_FORMATS = (
     "%d/%m/%Y %H:%M:%S",
     "%Y-%m-%d %H:%M:%S",
 )
+INJECTION_SYMMETRY_DT_FMT = "%Y-%m-%d %H:%M:%S"
 
 
 def resolve_chemstation_mode(data_path: str, mode: str) -> str:
@@ -398,18 +400,27 @@ def parse_report_txt(report_path: str) -> Dict[str, List[dict]]:
 
 
 def parse_injection_reports(injection_folder: str) -> Dict[str, List[dict]]:
+    """
+    주입 폴더 → FID/TCD 피크.
+
+    Report.TXT 우선. 한쪽만 비어 있으면 REPORT01/02.CSV 로 보충
+    (002F 등 TXT 에 FID 구역만 비고 CSV 에 있는 경우 포함).
+    """
+    fid: List[dict] = []
+    tcd: List[dict] = []
     report_txt = find_report_txt(injection_folder)
     if report_txt:
         parsed = parse_report_txt(report_txt)
-        if parsed["FID"] or parsed["TCD"]:
-            return parsed
+        fid = parsed.get("FID", [])
+        tcd = parsed.get("TCD", [])
 
     fid_csv = find_report_csv(injection_folder, 1)
     tcd_csv = find_report_csv(injection_folder, 2)
-    return {
-        "FID": parse_report_csv(fid_csv) if fid_csv else [],
-        "TCD": parse_report_csv(tcd_csv) if tcd_csv else [],
-    }
+    if not fid and fid_csv:
+        fid = parse_report_csv(fid_csv)
+    if not tcd and tcd_csv:
+        tcd = parse_report_csv(tcd_csv)
+    return {"FID": fid, "TCD": tcd}
 
 
 def get_latest_report_mtime(sample_folder: str) -> Optional[float]:
@@ -426,7 +437,12 @@ def get_latest_report_mtime(sample_folder: str) -> Optional[float]:
 
 
 def injection_report_complete(reports: Dict[str, List[dict]]) -> bool:
-    """완료된 분석 — FID·TCD 피크가 Report 에 모두 있어야 함 (1주입 = 1쌍)."""
+    """엑셀 포함 최소 조건 — TCD 피크 필수 (sliding·차헌 TCD 시트). FID 는 있으면 함께 적재."""
+    return bool(reports.get("TCD"))
+
+
+def injection_report_has_fid_tcd_pair(reports: Dict[str, List[dict]]) -> bool:
+    """FID+TCD 모두 적분된 완전 주입."""
     return bool(reports.get("FID")) and bool(reports.get("TCD"))
 
 
@@ -447,7 +463,7 @@ def _log_in_progress_injections(sample_folder: str) -> None:
 def _filter_complete_injection_pairs(
     injections: List[Tuple[str, str]],
 ) -> Tuple[List[Tuple[str, str]], int]:
-    """Report 파일은 있으나 FID/TCD 중 하나만 있는 미완료 주입 제외."""
+    """Report 있는 주입 중 TCD 없는 것만 제외 (FID 는 CSV 보충 후에도 없으면 TCD만 적재)."""
     complete: List[Tuple[str, str]] = []
     skipped = 0
     for injection_path, sequence_path in injections:
@@ -455,13 +471,17 @@ def _filter_complete_injection_pairs(
         label = os.path.basename(injection_path)
         if injection_report_complete(reports):
             complete.append((injection_path, sequence_path))
+            if not reports.get("FID"):
+                print(
+                    f"[경고] {label}: FID 미적분 — TCD {len(reports.get('TCD', []))}피크만 엑셀 포함"
+                )
             continue
         skipped += 1
         fid_n = len(reports.get("FID", []))
         tcd_n = len(reports.get("TCD", []))
         print(
             f"[건너뜀] {label}: Report 미완료 "
-            f"(FID {fid_n}피크 / TCD {tcd_n}피크 — 완료 후 재처리)"
+            f"(FID {fid_n}피크 / TCD {tcd_n}피크 — TCD 없음)"
         )
     return complete, skipped
 
@@ -587,6 +607,33 @@ def parse_report_injection_datetime(report_path: str) -> Optional[datetime]:
     except OSError:
         return None
     return None
+
+
+def format_injection_datetime_symmetry(injection_path: str) -> str:
+    """엑셀 Symmetry 열 — Report Injection Date (없으면 Report mtime)."""
+    report_path = find_report_txt(injection_path)
+    if not report_path:
+        return ""
+    injected = parse_report_injection_datetime(report_path)
+    if injected is not None:
+        return injected.strftime(INJECTION_SYMMETRY_DT_FMT)
+    try:
+        return datetime.fromtimestamp(os.path.getmtime(report_path)).strftime(
+            INJECTION_SYMMETRY_DT_FMT
+        )
+    except OSError:
+        return ""
+
+
+def stamp_cycle_injection_symmetry(
+    peaks: List[dict],
+    injection_path: str,
+) -> List[dict]:
+    """주입 블록 모든 피크 Symmetry 에 주입 시각 기록 (갭 행은 별도)."""
+    stamp = format_injection_datetime_symmetry(injection_path)
+    if not stamp or not peaks:
+        return peaks
+    return [{**peak, "Symmetry": stamp} for peak in peaks]
 
 
 def _injection_analysis_timestamp(injection_path: str) -> Optional[float]:
@@ -962,11 +1009,13 @@ def _build_detector_cycles_chunk(
             continue
         assert chain_ref is not None
         if len(peaks) != len(chain_ref):
-            skipped += 1
             print(
-                f"[건너뜀] {label} {detector_key}: 피크 수 변경 "
-                f"({len(peaks)} vs 직전 {len(chain_ref)})"
+                f"[재기준] {label} {detector_key}: 피크 수 {len(peaks)} "
+                f"(직전 {len(chain_ref)}) — 반응 진행·적분 변경, sliding 기준 갱신"
             )
+            cycles.append(peaks)
+            matched_paths.append(injection_path)
+            chain_ref = peaks
             continue
         if cycles_match(chain_ref, peaks):
             cycles.append(peaks)
@@ -1048,6 +1097,10 @@ def build_merged_injection_cycles(
     if not tcd_cycles:
         fid_cycles, matched_paths, skipped_fid = build_detector_cycles(complete_injections, "FID")
         skipped += skipped_fid
+        fid_cycles = [
+            stamp_cycle_injection_symmetry(peaks, path)
+            for peaks, path in zip(fid_cycles, matched_paths)
+        ]
         return fid_cycles, [], matched_paths, skipped, matched_paths
 
     fid_cycles: List[List[dict]] = []
@@ -1055,17 +1108,25 @@ def build_merged_injection_cycles(
         reports = parse_injection_reports(injection_path)
         fid_peaks = reports.get("FID", [])
         label = os.path.basename(injection_path)
-        if not fid_peaks:
-            raise RuntimeError(
-                f"내부 오류: TCD 통과 주입 {label} 에 FID 없음 — complete 필터 버그"
-            )
         fid_cycles.append(fid_peaks)
-        print(f"[진행] {label} FID: 피크 {len(fid_peaks)}개")
+        if fid_peaks:
+            print(f"[진행] {label} FID: 피크 {len(fid_peaks)}개")
+        else:
+            print(f"[진행] {label} FID: 없음 (TCD만)")
 
     if len(fid_cycles) != len(tcd_cycles):
         raise RuntimeError(
             f"FID/TCD 사이클 수 불일치: FID {len(fid_cycles)} vs TCD {len(tcd_cycles)}"
         )
+
+    tcd_cycles = [
+        stamp_cycle_injection_symmetry(peaks, path)
+        for peaks, path in zip(tcd_cycles, matched_paths)
+    ]
+    fid_cycles = [
+        stamp_cycle_injection_symmetry(peaks, path)
+        for peaks, path in zip(fid_cycles, matched_paths)
+    ]
 
     matched_labels = [os.path.basename(path) for path in matched_paths]
     return fid_cycles, tcd_cycles, matched_labels, skipped, matched_paths

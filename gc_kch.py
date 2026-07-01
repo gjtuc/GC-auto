@@ -37,17 +37,57 @@ from gc_sanitize import InvalidSampleNameError, build_safe_output_filename, sani
 
 
 def is_new_sequence_date(excel_output_dir: str, seq_date: str) -> bool:
-    """해당 날짜의 KCH 엑셀이 아직 하나도 없으면 True (새 날짜 시퀀스)."""
+    """
+    해당 날짜 KCH 엑셀이 아직 없으면 True.
+
+    실무상 「새 날짜」= 시료가 바뀐 새 시퀀스 → watch 가 시료명 1회 입력을 요청.
+    같은 날짜·같은 RT 패턴의 추가 주입은 기존 엑셀·시료명으로 자동 처리.
+    """
     return len(list_excel_files_for_date(excel_output_dir, seq_date)) == 0
+
+
+def format_watch_sample_name_required_message(
+    seq_date: str,
+    *,
+    reason: str = "new_date",
+    new_injection_detected: bool = False,
+) -> str:
+    """
+    watch·바탕화면 heartbeat — 시료명은 사용자만 지정 (자동 생성·env 추측 금지).
+    """
+    if new_injection_detected:
+        lead = "새 주입 감지됨 — 시료명을 입력해 주세요."
+    else:
+        lead = "시료명 입력 대기 중"
+    if reason == "rt_mismatch":
+        head = f"날짜 {seq_date} — KCH 기존 엑셀과 RT(peak) 패턴 불일치"
+    else:
+        head = f"새 날짜({seq_date}) 시퀀스"
+    return (
+        f"{lead}\n"
+        f"  {head} (watch는 감시 중 · 시료명은 자동으로 만들지 않음)\n"
+        f"  시료명 1회 지정 후 같은 날짜·RT 패턴은 watch가 자동 엑셀·메일 처리\n"
+        f"  Cursor 또는: gc_동작해줘.bat --sample-name \"<직접입력>\" "
+        f"--sequence-date {seq_date}"
+    )
 
 
 def check_sample_name_before_processing(sequence_folder: str, config: AppConfig) -> Optional[str]:
     """
-    acam 파싱 전 빠른 검사 — 새 날짜인데 시료명 없으면 즉시 중단 메시지.
+    acam 파싱 전 빠른 검사 — **시료가 바뀐 경우** 시료명 없으면 pipeline 진입 차단.
+
+    차단 조건 (GC2 8860 watch 전용, GC1·Chem32 는 각자 pipeline 규칙):
+      · KCH 에 ``{seq_date} *.xlsx`` 가 없음 → 새 시료, 시료명 필수
+      · (pipeline 단계) RT 불일치 → 시료명 필수
+
+  통과 (None):
+      · config.sample_name 지정됨
+      · 해당 날짜 엑셀 있음 → RT 자동 매칭 시도 (같은 날짜 추가 주입 포함)
+      · allow_prompt (대화형 — watch 에서는 보통 False)
 
     Returns:
-        None 이면 계속 진행 가능 (RT 지문 자동 매칭 시도)
-        str 이면 시료명 필수 — 처리하지 말 것
+        None 이면 계속 진행 가능
+        str 이면 시료명 필수 — watch 가 need_sample_name 안내
     """
     seq_date = get_sequence_date(sequence_folder, config.sequence_date)
 
@@ -60,10 +100,100 @@ def check_sample_name_before_processing(sequence_folder: str, config: AppConfig)
     if config.allow_prompt:
         return None
 
-    return (
-        f"새 날짜({seq_date}) 시퀀스 — 시료명 필수. "
-        f'python gc_automation.py --sequence-date {seq_date} --sample-name "시료이름" --force'
+    return format_watch_sample_name_required_message(seq_date, reason="new_date")
+
+
+def resolve_active_sequence_folder(config: AppConfig) -> Optional[str]:
+    """GC2/GC3 watch 가 보는 활성 시퀀스·시료 폴더."""
+    from gc_chem32 import find_active_sample_folder, resolve_chemstation_mode
+    from gc_chemstation import find_sequence_folder
+
+    if not os.path.isdir(config.data_path):
+        return None
+    mode = resolve_chemstation_mode(config.data_path, config.chemstation_mode)
+    if mode == "chem32":
+        return find_active_sample_folder(config.data_path, config.sequence_folder)
+    return find_sequence_folder(
+        config.data_path,
+        config.sequence_date,
+        config.sequence_folder,
     )
+
+
+def resolve_watch_sample_name_alert(
+    config: AppConfig,
+    state_path: str,
+) -> Optional[dict]:
+    """
+    watch UI — 시료명 입력이 필요하면 메시지·폴더 반환.
+
+    Wi-Fi 유지 중 idle tick 에서도 need_sample_name 이 wifi_ok 로 덮이지 않게 유지.
+    KCH 에 해당 날짜 엑셀이 생기거나 force 로 시료명 지정되면 clear.
+
+    판정:
+      · 새 시료(날짜 엑셀 없음) 또는 state 의 watch_need_sample_name 잔존
+      · new_injection_detected = has_new_data_since_last_run (안내 문구용)
+    """
+    from gc_chem32 import resolve_chemstation_mode
+    from gc_state import (
+        clear_watch_need_sample_name,
+        get_watch_need_sample_name,
+        has_new_data_since_last_run,
+        load_send_state,
+        set_watch_need_sample_name,
+    )
+
+    sequence_folder = resolve_active_sequence_folder(config)
+    if not sequence_folder:
+        return None
+
+    seq_date = get_sequence_date(sequence_folder, config.sequence_date)
+    has_new = has_new_data_since_last_run(
+        state_path,
+        sequence_folder,
+        config.data_path,
+        config.chemstation_mode,
+    )
+
+    if config.sample_name:
+        clear_watch_need_sample_name(state_path)
+        return None
+
+    state = load_send_state(state_path)
+    pending = get_watch_need_sample_name(state)
+    new_date = is_new_sequence_date(config.excel_output_dir, seq_date)
+
+    if not new_date and not pending:
+        return None
+
+    if not new_date and pending and pending.get("reason") == "new_date":
+        clear_watch_need_sample_name(state_path)
+        return None
+
+    if new_date:
+        reason = "new_date"
+    else:
+        reason = str(pending.get("reason") if pending else "rt_mismatch")
+
+    message = format_watch_sample_name_required_message(
+        seq_date,
+        reason=reason,
+        new_injection_detected=has_new,
+    )
+    set_watch_need_sample_name(
+        state_path,
+        seq_date=seq_date,
+        sequence_folder=sequence_folder,
+        message=message,
+        reason=reason,
+    )
+    return {
+        "message": message,
+        "sequence_folder": sequence_folder,
+        "seq_date": seq_date,
+        "reason": reason,
+        "new_injection_detected": has_new,
+    }
 
 
 def list_excel_files_for_date(excel_output_dir: str, seq_date: str) -> List[str]:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 
-_WIN_INVALID = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+_WIN_INVALID_CHARS = re.compile(r'[<>:"\\|?*\x00-\x1f]')
 _SEQ_DATE_RE = re.compile(r'^\d{8}$')
 MAX_SAMPLE_NAME_LEN = 120
 
@@ -15,12 +15,19 @@ class InvalidSampleNameError(ValueError):
 
 
 def sanitize_sample_name(raw: str) -> str:
-    """KCH 엑셀 파일명에 쓸 시료명 — 경로 구분자·.. 금지."""
+    """
+    KCH 엑셀 파일명에 쓸 시료명.
+
+    Windows 파일명 불가 문자는 제거하고, ``/`` 만 ``-`` 로 치환한다.
+    (사용자가 슬래시로 구분한 이름은 하이픈으로 보존)
+    """
     name = str(raw).strip()
     if not name:
         raise InvalidSampleNameError('sample_name is empty')
-    if '..' in name or _WIN_INVALID.search(name):
-        raise InvalidSampleNameError(f'invalid sample_name: {raw!r}')
+    name = name.replace('/', '-')
+    name = _WIN_INVALID_CHARS.sub('', name)
+    while '..' in name:
+        name = name.replace('..', '')
     name = name.rstrip('. ')
     if not name:
         raise InvalidSampleNameError('sample_name is empty after sanitize')

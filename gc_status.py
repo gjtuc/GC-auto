@@ -210,10 +210,20 @@ class StatusReporter:
             status_file.write("\n".join(txt_lines))
 
         if not alive or wifi_ready:
-            _update_desktop_heartbeat(alive=alive, message=message, now=now)
+            _update_desktop_heartbeat(
+                alive=alive,
+                message=message,
+                now=now,
+                status_code=status_code,
+            )
 
 
-def _update_desktop_heartbeat(alive: bool, message: str, now: datetime | None = None) -> None:
+def _update_desktop_heartbeat(
+    alive: bool,
+    message: str,
+    now: datetime | None = None,
+    status_code: str | None = None,
+) -> None:
     """
     바탕화면 MMDDHHmm.txt — **GC 전체 OK 검증의 유일한 근거**.
 
@@ -244,6 +254,25 @@ def _update_desktop_heartbeat(alive: bool, message: str, now: datetime | None = 
             "※ 파일 이름이 지금 시각과 2분 이상 차이 → 감시 멈춤 또는 핫스팟 미연결",
             "※ 핫스팟 연결 중 1분마다 파일 이름이 바뀌면 정상",
         ]
+        # GC2/GC3: 시료 변경(새 날짜 엑셀 없음·RT 불일치) 시 watch 감시는 계속, 시료명만 대기
+        if status_code == "need_sample_name":
+            content_lines.extend(
+                [
+                    "",
+                    "========================================",
+                    "  [새 주입 감지] 시료명 입력 필요",
+                    "========================================",
+                    "  watch는 정상 감시 중입니다.",
+                    "  시료명을 1회 지정하면 이후 같은 날짜는",
+                    "  자동으로 엑셀·메일 처리됩니다.",
+                    "  (시료명은 사용자가 지정 — 자동 생성 안 함)",
+                    "",
+                    "  Cursor 채팅 또는:",
+                    "  gc_동작해줘.bat --sample-name \"<직접입력>\"",
+                    "    --sequence-date YYYYMMDD",
+                    "========================================",
+                ]
+            )
     else:
         new_name = f"{DESKTOP_STOPPED_PREFIX}{display_time}.txt"
         content_lines = [

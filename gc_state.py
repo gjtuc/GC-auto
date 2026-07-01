@@ -83,6 +83,44 @@ def save_send_state(state_path: str, state: dict) -> None:
         json.dump(state, state_file, ensure_ascii=False, indent=2)
 
 
+def set_watch_need_sample_name(
+    state_path: str,
+    *,
+    seq_date: str,
+    sequence_folder: str,
+    message: str,
+    reason: str = "new_date",
+) -> None:
+    """
+    watch — 시료명 입력 대기 상태 (.gc_send_state.json).
+
+    reason: new_date (KCH 엑셀 없음·시료 변경) | rt_mismatch (같은 날 RT 불일치)
+    GC1 장비 PC state 파일과 호환 — 키만 추가, 기존 필드는 건드리지 않음.
+    """
+    state = load_send_state(state_path)
+    state["watch_need_sample_name"] = {
+        "seq_date": seq_date,
+        "sequence_folder": sequence_folder,
+        "message": message,
+        "reason": reason,
+        "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    save_send_state(state_path, state)
+
+
+def clear_watch_need_sample_name(state_path: str) -> None:
+    state = load_send_state(state_path)
+    if "watch_need_sample_name" not in state:
+        return
+    state.pop("watch_need_sample_name", None)
+    save_send_state(state_path, state)
+
+
+def get_watch_need_sample_name(state: dict) -> Optional[dict]:
+    pending = state.get("watch_need_sample_name")
+    return pending if isinstance(pending, dict) else None
+
+
 def log_gc_event(excel_output_dir: str, event_type: str, message: str, **extra) -> None:
     """출력 폴더\\_system\\gc_events.jsonl — 오류·재시도 기록."""
     if not excel_output_dir:
@@ -510,6 +548,7 @@ def record_processing_result(
         chemstation_mode=chemstation_mode,
         prepare_done=prepare_done,
     )
+    clear_watch_need_sample_name(state_path)
 
 
 def try_pending_email_retry(

@@ -2,22 +2,29 @@ GC3 Win7 PC - USB 배포 (차헌)
 ================================
 
 1. 이 USB의 GC3_chem32-gc-automation.zip 을 GC3 PC에 복사
-2. 압축 해제: C:\Users\User\GC3_chem32-gc-automation
+2. 압축 해제: C:\Users\User\chemstation-gc-automation
    (기존 폴더 있으면 gc_*.py / gc_*.bat 덮어쓰기)
 3. Desktop\KCH\gc_automation.env 는 절대 덮어쓰지 말 것
    - AUTO_MAIL_COOLDOWN_HOURS=3 이 있으면 삭제하거나 =1 로 변경 (기본 1시간)
 4. gc_stop_watch.bat 후 gc_start_watch.bat (또는 gc_install_autostart 재로그인)
 
-이번 zip 포함 수정 (2026-06-16)
+이번 zip 포함 수정 (2026-06-26, 2차)
 --------------------------------
-  [gc_chem32] 분석 중단 갭 — Injection Date(실제 주입 시각) 기준, 연속 주입 사이만 검사
-  [gc_chem32] (수정) 파일 mtime·시퀀스 폴더 경계 비교 제거 — 12시간 오탐 방지
-  [gc_pipeline] 갭 감지 → FID/TCD 엑셀·메일 본문 안내
+  [gc_chem32] 일반 주입 Symmetry = Report Injection Date (YYYY-MM-DD HH:MM:SS)
+              갭(중단) 행만 GC_GAP:N= 유지
 
-차헌 PC (별도 배포 — data_pc/촉매 반응 계산.py)
-  [parse_gc_sheet] 중단 행 읽어 Cycle N칸 건너뜀, Origin 열 정렬 유지
+이번 zip 포함 수정 (2026-06-26)
+--------------------------------
+  [gc_chem32] Report 133 vs 엑셀 108 손실 수정
+              - TXT 비어도 REPORT01/02.CSV 로 FID/TCD 보충
+              - TCD만 있어도 엑셀 포함 (FID 없으면 경고)
+              - TCD 피크 수 변경 시 skip 대신 [재기준] re-anchor
+  [gc_chem32] 002F 롤오버 갭 — 001F0199→001F0101 대신 002F0209→001F0101 정확 감지
+  [gc_pipeline] 갭 행 Excel 삽입 위치 수정 (matched 주입 기준, #108 초과 시 무시 버그)
+  [gc_pipeline/gc_mailer] 메일 본문 [데이터 대조]
+              Report 폴더 수 / 실주입 / 갭 / 필터 제외 건수 표시
 
-이전 zip (2026-06-25)
+이전 zip (2026-06-16)
 --------------------------------
   [gc_chem32] 시료 폴더 자동 선택 — DATA 전 시료 스캔 후 시퀀스 폴더명 끝
               YYYY-MM-DD HH-MM-SS 가 가장 늦은 시료 1개 선택 (mtime 아님)
