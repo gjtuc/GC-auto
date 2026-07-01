@@ -1413,9 +1413,12 @@ def trim_reduction_and_first_reaction(
 
     while idx < count:
         fid_cycle, tcd_cycle = _cycle_at(fid_cycles, tcd_cycles, idx)
-        if reduction_seen and is_reaction_injection(fid_cycle, tcd_cycle, thresholds):
-            reaction_start = idx
-            break
+        if is_reaction_injection(fid_cycle, tcd_cycle, thresholds):
+            if reduction_seen or not _has_future_reduction(
+                fid_cycles, tcd_cycles, idx, thresholds
+            ):
+                reaction_start = idx
+                break
         if is_reduction_injection(fid_cycle, tcd_cycle, thresholds):
             reduction_seen = True
             skipped_reduction += 1
@@ -1430,8 +1433,20 @@ def trim_reduction_and_first_reaction(
         break
 
     if not reduction_seen and reaction_start is None:
+        for idx2 in range(count):
+            fid_cycle, tcd_cycle = _cycle_at(fid_cycles, tcd_cycles, idx2)
+            if is_reaction_injection(fid_cycle, tcd_cycle, thresholds):
+                reaction_start = idx2
+                skipped_pre = idx2
+                break
+
+    if not reduction_seen and reaction_start is None:
         if not quiet:
-            print(f"\n[GC1] H2~{thresholds.reduction_h2_area:.0f} 환원 구간 없음 - 반응 데이터 없음")
+            print(
+                f"\n[GC1] H2~{thresholds.reduction_h2_area:.0f} 환원 없음, "
+                f"CO≥{thresholds.reaction_co_min:.0f}/CO2>{thresholds.reaction_co2_min:.0f} "
+                f"반응도 없음"
+            )
         return [], [], count, 0, 0, 0, False
 
     if reaction_start is not None:

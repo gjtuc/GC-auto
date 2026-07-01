@@ -89,6 +89,23 @@ class TestGc1Trim(unittest.TestCase):
         self.assertEqual(skipped_red, 1)
         self.assertEqual(kept_tcd[0], _tcd(h2=20000, co=500, co2=80))
 
+    def test_reaction_without_h2_reduction_marker(self):
+        """H2~20000 환원 없어도 CO/CO2 반응 기준이면 엑셀 적재."""
+        fid = [[{"name": "CH4", "Area": 1.0}] for _ in range(4)]
+        tcd = [
+            _tcd(h2=1000, co=10, co2=5),
+            _tcd(h2=1200, co=50, co2=8),
+            _tcd(h2=1500, co=500, co2=10),
+            _tcd(h2=1800, co=300, co2=15),
+        ]
+        kept_fid, kept_tcd, skipped_pre, skipped_red, _, _, found_first = (
+            trim_reduction_and_first_reaction(fid, tcd, quiet=True)
+        )
+        self.assertTrue(found_first)
+        self.assertEqual(skipped_red, 0)
+        self.assertEqual(skipped_pre, 2)
+        self.assertEqual(len(kept_tcd), 2)
+
     def test_reduction_only_leaves_no_kept_cycles(self):
         """환원+전환만 있고 반응 시작 전 - trim 후 비움 (환원 단계)."""
         fid = [[], []]
