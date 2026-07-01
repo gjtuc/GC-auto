@@ -38,18 +38,21 @@ _PURPOSE_ENV = {
     "row": "AUTOCHRO_LIST_ROW_X_FRAC",
     "name": "AUTOCHRO_LIST_NAME_X_FRAC",
     "sync_raw": "AUTOCHRO_SYNC_RAW_X_FRAC",
+    "tree_name": "AUTOCHRO_TREE_NAME_X_FRAC",
 }
 
 _PURPOSE_DEFAULT = {
     "row": 0.06,
     "name": 0.26,
     "sync_raw": 0.62,
+    "tree_name": 0.22,
 }
 
 _PURPOSE_CLAMP = {
     "row": (ROW_X_FRAC_MIN, ROW_X_FRAC_MAX),
     "name": (NAME_X_FRAC_MIN, NAME_X_FRAC_MAX),
     "sync_raw": (SYNC_RAW_X_FRAC_MIN, SYNC_RAW_X_FRAC_MAX),
+    "tree_name": (0.08, 0.45),
 }
 
 _STEP_FOR_PURPOSE = {
@@ -193,6 +196,27 @@ def record_coord_click(
     entry["mature"] = att >= MIN_ATTEMPTS and entry["rate"] >= MATURITY_RATE
     coords[purpose] = entry
     _save_overlay_coords(coords)
+
+
+def record_tree_screen_click(
+    tree,
+    screen_x: int,
+    screen_y: int,
+    *,
+    success: bool,
+    step_id: str = "P4.tree_ocr",
+) -> None:
+    """트리 OCR 우클릭 성공 — maturity 기록 (Y 는 참고용, 매번 OCR 우선)."""
+    if not learnings_enabled():
+        return
+    try:
+        rect = tree.rectangle()
+        w = max(int(rect.width()), 200)
+        x_frac = (int(screen_x) - int(rect.left)) / w
+        x_frac = min(max(x_frac, 0.05), 0.45)
+        record_coord_click("tree_name", x_frac, success=success, step_id=step_id)
+    except Exception:
+        pass
 
 
 def sync_double_click_rel(width: int, height: int) -> Tuple[int, int]:

@@ -22,14 +22,16 @@ class TestTreeNameScore(unittest.TestCase):
             _score_tree_name_token(bad, name),
         )
 
-    def test_pick_best(self):
-        tokens = [
-            OcrToken("성", 90, Box(10, 40, 8, 12)),
-            OcrToken("20260630dre", 75, Box(10, 80, 90, 14)),
-        ]
-        best = _pick_tree_name_token(tokens, "20260630dre(5)ni(성형)-ce")
+    def test_rejects_child_label(self):
+        tok = OcrToken("시료정보", 90, Box(0, 50, 60, 12))
+        self.assertLess(_score_tree_name_token(tok, "20260630dre(5)ni(성형)-ce"), 0)
+
+    def test_pick_topmost_parent(self):
+        parent = OcrToken("20260630dre(5)ni", 85, Box(10, 30, 100, 14))
+        child = OcrToken("20260630dre(5)ni", 88, Box(10, 55, 100, 14))
+        best = _pick_tree_name_token([child, parent], "20260630dre(5)ni(성형)-ce")
         self.assertIsNotNone(best)
-        self.assertIn("20260630", best.text)
+        self.assertEqual(best.box.top, 30)
 
 
 if __name__ == "__main__":

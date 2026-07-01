@@ -599,7 +599,7 @@ def _tree_tab_refresh_enabled() -> bool:
     )
 
 
-def _release_table_selection_to_tree(win, data_name: str) -> None:
+def _release_table_selection_to_tree(win, data_name: str, *, eye=None) -> None:
     """
     Ctrl+A 직후 시료 표 전량 선택 상태에서 트리 작업 전 — 포커스를 트리로 옮김.
 
@@ -620,6 +620,15 @@ def _release_table_selection_to_tree(win, data_name: str) -> None:
     try:
         chosen, _chosen_line, line_idx = _resolve_tree_line_index(win, data_name)
         tree = _analysis_tree_view(win)
+        if eye is not None:
+            anchor = eye.find_tree_name_screen_xy(data_name)
+            if anchor:
+                from gc_screen_read import click_screen
+
+                click_screen(anchor[0], anchor[1], button="left")
+                time.sleep(0.4)
+                _log(f"  트리 단일선택(OCR): {chosen} @ {anchor}")
+                return
         rel_x, rel_y, _sx, _sy = _tree_row_coords(tree, line_idx)
         _screen_click_at(tree, rel_x, rel_y, button="left", dwell=0.4)
         _log(f"  트리 단일선택: {chosen}")
@@ -679,7 +688,8 @@ def _require_analysis_tree_ready_for_mtd(
     from gc1_runtime.layer0_data import analysis_tree_needs_paint_refresh
 
     _select_analysis_tab(win)
-    _release_table_selection_to_tree(win, data_name)
+    eye_pre = _make_step_eye(win, cfg)
+    _release_table_selection_to_tree(win, data_name, eye=eye_pre)
     _ensure_analysis_tree_clean(
         win, data_name, cfg=cfg, force_refresh=_tree_tab_refresh_enabled()
     )
@@ -977,6 +987,64 @@ def _wait_for_context_menu(timeout: float = 2.0) -> bool:
     return False
 
 
+def _context_menu_labels(timeout: float = 1.2) -> list[str]:
+    """열린 #32768 팝업 메뉴 항목 텍스트."""
+    _require_pywinauto()
+    from pywinauto import Desktop
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        for menu_win in Desktop(backend="win32").windows(class_name="#32768"):
+            try:
+                wrapper = menu_win.wrapper_object()
+                return [
+                    (item if isinstance(item, str) else str(item))
+                    for item in wrapper.menu().items()
+                ]
+            except Exception:
+                continue
+        time.sleep(0.08)
+    return []
+
+
+def _is_mtd_tree_context_menu(labels: list[str]) -> bool:
+    blob = " ".join(labels)
+    return "분석방법" in blob or ("불러" in blob and "오기" in blob)
+
+
+def _is_child_tree_context_menu(labels: list[str]) -> bool:
+    """하위 노드(시료 정보 등) 우클릭 — '열기'·'정보' 만 있는 메뉴."""
+    if not labels or _is_mtd_tree_context_menu(labels):
+        return False
+    blob = " ".join(labels)
+    return ("열기" in blob or "Open" in blob) and (
+        "정보" in blob or "Info" in blob
+    )
+
+
+def _dismiss_context_menu() -> None:
+    try:
+        from pywinauto.keyboard import send_keys
+
+        send_keys("{ESC}")
+        time.sleep(0.2)
+    except Exception:
+        pass
+
+
+def _rank_tree_line_indices(win, data_name: str) -> list[tuple[float, str, int]]:
+    from gc1_runtime.layer0_data import rank_tree_line_for_data_name
+
+    candidates = _analysis_tree_lines(win)
+    ranked: list[tuple[float, str, int]] = []
+    for i, line in enumerate(candidates):
+        score = rank_tree_line_for_data_name(line, data_name)
+        if score >= 0:
+            ranked.append((score, line, i))
+    ranked.sort(key=lambda x: (-x[0], x[1]))
+    return ranked
+
+
 def _resolve_tree_line_index(win, data_name: str) -> tuple[str, str, int]:
     """트리 후보에서 데이터명 행 인덱스만 계산 (mouse_only 에서 select 생략)."""
     from gc1_runtime.layer0_data import rank_tree_line_for_data_name
@@ -1057,48 +1125,73 @@ def _right_click_tree_data_name(
     win, data_name: str, *, eye=None
 ) -> tuple[int, int] | None:
     """
-    트리 데이터명 행 우클릭 — mouse_only: 화면 좌표만, OCR·Apps 키 fallback.
+    트리 **최상위 시료명** 행 우클릭 — OCR 화면좌표 우선.
+
+    트리 펼침·스크롤에 따라 Y 가 매번 달라져 고정 행번호를 쓰지 않음.
+    OCR 이 ``(screen_x, screen_y)`` 를 반환하면 그 위치를 클릭.
+  메뉴가 '분석방법' 이 아니라 '열기/정보'(하위 노드)이면 ESC 후 재시도.
     """
-    chosen, _chosen_line, line_idx = _select_tree_data_name(win, data_name)
     tree = _analysis_tree_view(win)
-    rel_x, rel_y, sx, sy = _tree_row_coords(tree, line_idx)
-    _screen_click_at(tree, rel_x, rel_y, button="right", dwell=0.4)
-    screen_xy = (sx, sy)
-    if _wait_for_context_menu(1.8):
-        _log(f"  트리 우클릭(행{line_idx}): {chosen}")
-        return screen_xy
-    _log(f"  [적응] 행{line_idx} 우클릭 메뉴 없음 — OCR 좌표 시도")
+    chosen = data_name
 
     if eye is not None:
-        anchor = eye.find_tree_name_screen_xy(data_name)
+        anchor = eye.right_click_tree_data_name_ocr(data_name)
         if anchor:
-            from gc_screen_read import click_screen, flash_focus_point
+            labels = _context_menu_labels()
+            if _is_mtd_tree_context_menu(labels):
+                _log(f"  트리 OCR 우클릭 OK @ {anchor}")
+                try:
+                    from gc1_runtime.layer3_coord_learn import record_tree_screen_click
 
-            flash_focus_point(anchor[0], anchor[1], color="lime")
-            click_screen(anchor[0], anchor[1], button="right")
-            eye._menu_anchor_screen = anchor
-            time.sleep(0.5)
-            if _wait_for_context_menu(1.8):
-                _log(f"  트리 OCR 우클릭: {chosen} @ {anchor}")
+                    record_tree_screen_click(tree, anchor[0], anchor[1], success=True)
+                except Exception:
+                    pass
                 return anchor
-            _log("  [적응] OCR 좌표 메뉴 없음 — Apps 키")
+            if _is_child_tree_context_menu(labels):
+                _log("  [주의] OCR 좌표가 하위 노드(시료 정보 등) — 재시도")
+            else:
+                _log(f"  [적응] OCR 메뉴 불명 labels={labels[:6]!r}")
+            _dismiss_context_menu()
 
+    ranked = _rank_tree_line_indices(win, data_name)
+    if not ranked:
+        raise RuntimeError(
+            f"분석목록 트리에 제어목록 데이터명 없음: {data_name!r}"
+        )
+    for _score, line, line_idx in ranked[:6]:
+        chosen = line.split(".")[0].strip()
+        rel_x, rel_y, sx, sy = _tree_row_coords(tree, line_idx)
+        _screen_click_at(tree, rel_x, rel_y, button="right", dwell=0.45)
+        if not _wait_for_context_menu(1.5):
+            continue
+        labels = _context_menu_labels(0.3)
+        if _is_child_tree_context_menu(labels):
+            _log(f"  행{line_idx} 하위노드 메뉴 — 다음 후보")
+            _dismiss_context_menu()
+            continue
+        if _is_mtd_tree_context_menu(labels):
+            _log(f"  트리 우클릭(행{line_idx}): {chosen}")
+            return (sx, sy)
+        _log(f"  행{line_idx} 메뉴 불명 — 다음 후보")
+        _dismiss_context_menu()
+
+    _log(f"  [적응] 행 후보 실패 — Apps 키")
     try:
         from pywinauto.keyboard import send_keys
 
-        if _autochro_mouse_only():
-            _activate_window(win)
-        else:
-            tree.set_focus()
+        _activate_window(win)
         send_keys("{APPS}")
         time.sleep(0.45)
-        if _wait_for_context_menu(1.5):
+        if _wait_for_context_menu(1.5) and _is_mtd_tree_context_menu(
+            _context_menu_labels(0.5)
+        ):
             _log(f"  트리 메뉴(Apps): {chosen}")
-            return screen_xy
+            rel_x, rel_y, sx, sy = _tree_row_coords(tree, ranked[0][2])
+            return (sx, sy)
     except Exception:
         pass
-    _log(f"  [경고] 트리 컨텍스트 메뉴 미표시: {chosen}")
-    return screen_xy
+    _log(f"  [경고] 트리 분석방법 메뉴 미표시: {data_name!r}")
+    return None
 
 
 def _list_frac_coords(sample_list, x_frac: float) -> tuple[int, int]:

@@ -110,11 +110,28 @@ def _normalize_tok(text: str) -> str:
     return re.sub(r"\s+", "", (text or "")).lower()
 
 
+_TREE_CHILD_LABELS = (
+    "시료정보",
+    "시료정보",
+    "분석결과",
+    "분석보고서",
+    "시료보고서",
+    "원본정보",
+    "열기",
+    "비교화면",
+    "통계분석",
+)
+
+
 def _score_tree_name_token(tok: OcrToken, data_name: str) -> float:
     """트리 데이터명 앵커 — 한 글자·메뉴 잡음·다른 날짜 시료 제외."""
     tok_c = _normalize_tok(tok.text)
     name_c = _normalize_tok(data_name)
     if len(tok_c) < 5:
+        return -1.0
+    if any(lbl in tok_c for lbl in _TREE_CHILD_LABELS):
+        return -1.0
+    if "분석목록" in tok_c or "제어목록" in tok_c:
         return -1.0
     from gc1_runtime.layer0_data import extract_date8_from_data_name
 
@@ -149,7 +166,10 @@ def _pick_tree_name_token(tokens: Sequence[OcrToken], data_name: str) -> Optiona
     scored = [(t, s) for t, s in scored if s >= 0]
     if not scored:
         return None
-    return max(scored, key=lambda x: x[1])[0]
+    best_score = max(s for _, s in scored)
+    tier = [t for t, s in scored if s >= best_score - 8.0]
+    # 같은 점수대 — 화면 위쪽(부모 시료명 행) 우선, 하위 '시료 정보' 등은 아래
+    return min(tier, key=lambda t: (t.box.top, -t.confidence))
 
 
 def token_looks_like_raw(tok: OcrToken) -> bool:
@@ -531,8 +551,25 @@ class AutochroStepEye:
             )
             return None
         x, y = token_screen_center(best, view, scale)
-        self._log(f"tree anchor '{best.text}' -> screen ({x},{y})")
+        self._log(f"tree anchor '{best.text}' -> screen ({x},{y}) conf={best.confidence:.0f}")
         return x, y
+
+    def right_click_tree_data_name_ocr(self, data_name: str) -> Optional[Tuple[int, int]]:
+        """
+        트리 시료명 — OCR 화면좌표 찾아 우클릭.
+
+        트리 펼침·스크롤마다 Y 가 바뀌므로 매 P4 마다 OCR 로 위치를 읽음.
+        """
+        anchor = self.find_tree_name_screen_xy(data_name)
+        if anchor is None:
+            return None
+        x, y = anchor
+        flash_focus_point(x, y, color="lime")
+        click_screen(x, y, button="right")
+        self._menu_anchor_screen = (x, y)
+        time.sleep(0.55)
+        self._log(f"tree OCR right-click ({x},{y})")
+        return anchor
 
     def guided_tree_right_click_data_name(self, data_name: str) -> bool:
         """OCR 로 트리 데이터명 찾아 우클릭. 성공 여부 반환."""
