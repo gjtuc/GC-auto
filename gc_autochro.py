@@ -42,9 +42,9 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
     connect_main_window() 직후 _prepare_autochro_window() 로 복원·(옵션) 이동하고,
     SysListView32 / SysTreeView32 는 **창 내부 상대 위치**로 고릅니다.
 
-  · **Ctrl+A**: 분석목록 「소유자 ID」열(관리자 드롭다운) 위에 마우스가 있으면
-    셀 편집 모드 → Ctrl+A 불가 → PDF 3페이지(1시료)만 저장됩니다.
-    _focus_list_for_ctrl_a() 가 「수집 일시」열과 같은 가로 위치(~78%)에 클릭합니다.
+  · **Ctrl+A**: 분석목록 시료 표 **행 번호 열**(왼쪽) 클릭 후 전체 선택.
+    소유자 ID·시료종류 열은 셀 편집 모드 → Ctrl+A 불가 → PDF 1시료만 저장됨.
+    **인쇄(Ctrl+P) 직전에도 반드시 전체 선택 재실행** (적분 후 단일행 선택 복귀 방지).
 
   · **32-bit Autochro**: 64-bit Python 으로도 동작하지만 pywinauto 경고가 납니다.
     GC1 장비 PC 배포 시 32-bit Python 권장.
@@ -1055,29 +1055,21 @@ def step_load_analysis_method(win, cfg: AutochroConfig) -> str:
     return data_name
 
 
+def _list_row_index_coords(sample_list) -> tuple[int, int]:
+    """행 번호 열 — Ctrl+A·인쇄 전 포커스 (미지시료·시료종류 드롭다운 열 회피)."""
+    from gc1_runtime.layer3_coord_learn import list_rel_from_purpose
+
+    return list_rel_from_purpose(sample_list, "row")
+
+
 def _neutral_list_coords(sample_list) -> tuple[int, int]:
-    """
-    분석목록 시료 표에서 Ctrl+A 전 클릭 좌표.
-    '소유자 ID' 열은 드롭다운 선택 모드 → Ctrl+A 불가.
-    '수집 일시' 열과 같은 가로 위치(표 우측)를 사용.
-    """
-    raw_frac = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "0.78").strip()
-    try:
-        x_frac = float(raw_frac)
-    except ValueError:
-        x_frac = 0.78
-    x_frac = min(max(x_frac, 0.55), 0.92)
-    rect = sample_list.rectangle()
-    width = max(rect.width(), 400)
-    height = max(rect.height(), 80)
-    rel_x = int(width * x_frac)
-    rel_y = max(16, min(32, height // 10))
-    return rel_x, rel_y
+    """하위 호환 — 행 번호 열."""
+    return _list_row_index_coords(sample_list)
 
 
 def _focus_list_for_ctrl_a(sample_list) -> None:
-    """분석목록에서 Ctrl+A 전 — 소유자 ID 드롭다운 회피용 클릭 (수집 일시 열 쪽)."""
-    rel_x, rel_y = _neutral_list_coords(sample_list)
+    """분석목록 시료 표 — 행 번호 열 클릭 (단일 셀·드롭다운 회피)."""
+    rel_x, rel_y = _list_row_index_coords(sample_list)
     sample_list.set_focus()
     try:
         sample_list.move_mouse_input(coords=(rel_x, rel_y))
@@ -1086,6 +1078,26 @@ def _focus_list_for_ctrl_a(sample_list) -> None:
         pass
     sample_list.click_input(coords=(rel_x, rel_y))
     time.sleep(0.25)
+
+
+def _select_all_in_sample_table(win) -> None:
+    """분석목록 상단 시료 표 전체 선택 — 인쇄 직전·초기화 전 공통."""
+    from pywinauto.keyboard import send_keys
+
+    _ensure_autochro_foreground(win)
+    _select_analysis_tab(win)
+    sample_list = _analysis_sample_table(win)
+    sample_list.set_focus()
+    try:
+        send_keys("{ESC}")
+        time.sleep(0.12)
+        send_keys("{ESC}")
+        time.sleep(0.15)
+    except Exception:
+        pass
+    _focus_list_for_ctrl_a(sample_list)
+    send_keys("^a")
+    time.sleep(0.5)
 
 
 def _largest_sample_list(win):
@@ -1131,13 +1143,7 @@ def step_select_all_samples(win, cfg: AutochroConfig) -> None:
     _log("3/6 시료 전체 선택 (Ctrl+A)")
     if cfg.dry_run:
         return
-    _select_analysis_tab(win)
-    sample_list = _analysis_sample_table(win)
-    _focus_list_for_ctrl_a(sample_list)
-    from pywinauto.keyboard import send_keys
-
-    send_keys("^a")
-    time.sleep(0.5)
+    _select_all_in_sample_table(win)
 
 
 def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
@@ -1163,17 +1169,14 @@ def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
 
 
 def step_print_pdf(win, cfg: AutochroConfig) -> None:
-    _log("5/6 분석목록 → 인쇄 (Ctrl+P)")
+    _log("5/6 인쇄 전 전체 선택 → PDF (Ctrl+P)")
     if cfg.dry_run:
         return
     from pywinauto.keyboard import send_keys
 
-    _select_analysis_tab(win)
-    sample_list = _analysis_sample_table(win)
-    _focus_list_for_ctrl_a(sample_list)
-    win.set_focus()
-    send_keys("^a")
-    time.sleep(0.3)
+    _log("  인쇄 직전 시료 표 전체 선택 (Ctrl+A)")
+    _select_all_in_sample_table(win)
+    _ensure_autochro_foreground(win)
     send_keys("^p")
     time.sleep(1.0)
     _confirm_print_dialog(cfg)
