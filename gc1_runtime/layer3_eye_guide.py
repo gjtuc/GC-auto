@@ -78,6 +78,17 @@ def autochro_eye_coord_only() -> bool:
     return raw not in ("0", "false", "no", "off")
 
 
+def autochro_mouse_only() -> bool:
+    """
+    Autochro 내부 컨트롤(SysListView/SysTreeView/탭)에 pywinauto click/select 금지.
+
+    창·컨트롤 ``rectangle()`` 으로 좌표만 읽고 ``click_screen`` 으로 조작.
+    팝업 메뉴(#32768)·상단 메뉴바·파일 대화상자는 Win32/키보드 유지.
+    """
+    raw = os.getenv("GC1_AUTOCHRO_MOUSE_ONLY", "1").strip().lower()
+    return raw not in ("0", "false", "no", "off")
+
+
 def autochro_eye_enabled(*, dry_run: bool = False) -> bool:
     """live Autochro 에서 OCR 눈 사용 여부. dry_run 이면 항상 False."""
     if dry_run:
@@ -542,9 +553,13 @@ class AutochroStepEye:
     ) -> None:
         """coord-only: 고정 좌표 더블클릭. 그 외 OCR .raw 앵커 시도."""
         rel_x, rel_y = self.guided_sync_double_click(sample_list, fallback_rel=fallback_rel)
-        if autochro_eye_coord_only():
+        rect = sample_list.rectangle()
+        screen_x = int(rect.left) + int(rel_x)
+        screen_y = int(rect.top) + int(rel_y)
+        if autochro_mouse_only() or autochro_eye_coord_only():
             self.move_mouse_on_list(sample_list, rel_x, rel_y)
-            sample_list.double_click_input(coords=(rel_x, rel_y))
+            double_click_screen(screen_x, screen_y)
+            self._log(f"sync screen double-click ({screen_x},{screen_y})")
             return
         anchor = self.find_raw_anchor_screen_xy()
         if anchor is not None:
@@ -552,7 +567,10 @@ class AutochroStepEye:
             double_click_screen(anchor[0], anchor[1])
         else:
             self.move_mouse_on_list(sample_list, rel_x, rel_y)
-            sample_list.double_click_input(coords=(rel_x, rel_y))
+            if autochro_mouse_only():
+                double_click_screen(screen_x, screen_y)
+            else:
+                sample_list.double_click_input(coords=(rel_x, rel_y))
 
     def list_rel_coords_from_screen(
         self,
@@ -582,7 +600,7 @@ class AutochroStepEye:
         return rel
 
     def move_mouse_on_list(self, sample_list, rel_x: int, rel_y: int) -> None:
-        """사용자가 커서 이동을 볼 수 있게 ListView 위로 이동 (화면 좌표 fallback)."""
+        """사용자가 커서 이동을 볼 수 있게 ListView 위로 이동 (화면 좌표)."""
         rect = sample_list.rectangle()
         screen_x = int(rect.left) + int(rel_x)
         screen_y = int(rect.top) + int(rel_y)
@@ -592,11 +610,12 @@ class AutochroStepEye:
             notify_automation_cursor_at(screen_x, screen_y)
         except Exception:
             pass
-        try:
-            sample_list.set_focus()
-            sample_list.move_mouse_input(coords=(rel_x, rel_y))
-        except Exception as exc:
-            self._log(f"move_mouse_input warn: {exc}")
+        if not autochro_mouse_only():
+            try:
+                sample_list.set_focus()
+                sample_list.move_mouse_input(coords=(rel_x, rel_y))
+            except Exception as exc:
+                self._log(f"move_mouse_input warn: {exc}")
         try:
             import pywinauto.mouse as mouse
 
@@ -828,10 +847,12 @@ class AutochroStepEye:
         if autochro_eye_coord_only():
             rel_x, rel_y = neutral_rel
             self.move_mouse_on_list(sample_list, rel_x, rel_y)
-            self._log(f"우클릭 coord-only rel=({rel_x},{rel_y})")
-            sample_list.click_input(button="right", coords=(rel_x, rel_y))
             rect = sample_list.rectangle()
-            self._menu_anchor_screen = (rect.left + rel_x, rect.top + rel_y)
+            screen_x = int(rect.left) + int(rel_x)
+            screen_y = int(rect.top) + int(rel_y)
+            self._log(f"우클릭 coord-only screen=({screen_x},{screen_y})")
+            click_screen(screen_x, screen_y, button="right")
+            self._menu_anchor_screen = (screen_x, screen_y)
             time.sleep(0.55)
             clicked = self._try_click_popup_menu_win32(
                 menu_needle, forbid=forbid, step_id="P3.menu"
@@ -852,9 +873,14 @@ class AutochroStepEye:
         self.scan_between("P3.before_right_click", "top_sample_table", task_id=EYE_TASK_BEFORE_TABLE)
         self.move_mouse_on_list(sample_list, rel_x, rel_y)
         self._log(f"우클릭 rel=({rel_x},{rel_y})")
-        sample_list.click_input(button="right", coords=(rel_x, rel_y))
         rect = sample_list.rectangle()
-        self._menu_anchor_screen = (rect.left + rel_x, rect.top + rel_y)
+        screen_x = int(rect.left) + int(rel_x)
+        screen_y = int(rect.top) + int(rel_y)
+        if autochro_mouse_only():
+            click_screen(screen_x, screen_y, button="right")
+        else:
+            sample_list.click_input(button="right", coords=(rel_x, rel_y))
+        self._menu_anchor_screen = (screen_x, screen_y)
         time.sleep(0.55)
         self.scan_between("P3.menu_open", "context_menu_popup")
         sk = skill_key("P3.menu", "context_menu_popup", menu_needle)

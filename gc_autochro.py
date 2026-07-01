@@ -52,6 +52,10 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
     셀 편집 모드 → Ctrl+A 불가 → PDF 3페이지(1시료)만 저장됩니다.
     _focus_list_for_ctrl_a() 가 「수집 일시」열과 같은 가로 위치(~78%)에 클릭합니다.
 
+  · **GC1_AUTOCHRO_MOUSE_ONLY** (기본 1): SysListView/Tree/탭은 ``click_screen`` 만.
+    pywinauto ``click_input``·``tree.select``·``tabs.select`` 는 Autochro UI 버그 유발.
+    창 연결·``rectangle()`` 읽기·키보드·팝업메뉴(#32768)만 pywinauto 유지.
+
   · **GC1_AUTOCHRO_EYE** (기본 live=1): 단계마다 OCR 로 영역 읽기·클릭·검증.
     제어목록 동기화는 ``.raw`` 토큰 위치로 더블클릭. 우클릭 메뉴는 OCR 클릭.
     끄기: ``GC1_AUTOCHRO_EYE=0`` · Tesseract: requirements-screen.txt
@@ -84,6 +88,7 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   AUTOCHRO_LIST_NAME_X_FRAC     — 우클릭 시료이름 열 (기본 0.26)
   AUTOCHRO_LIST_NEUTRAL_X_FRAC  — (구) — ROW_X_FRAC 와 동일 권장
   GC1_AUTOCHRO_EYE_COORD_ONLY   — 1=OCR은 제어 데이터명·트리 매칭만 (기본 1)
+  GC1_AUTOCHRO_MOUSE_ONLY       — 1=표·트리·탭은 화면좌표 클릭만 (기본 1, pywinauto click 금지)
   GC_SCREEN_FOCUS_BACKEND       — tk(기본,A) | win32(C)
   AUTOCHRO_ANALYSIS_METHOD_DIR    — MTD 폴더 (기본 바탕화면)
   AUTOCHRO_ANALYSIS_METHOD_FILENAME — MTD 파일명 (기본 20260629 분석방법.MTD)
@@ -521,9 +526,10 @@ def _on_control_tab(win) -> bool:
 
 def _select_tab_index(win, index: int) -> None:
     tabs = _bottom_tabs(win)
+    tab_x = tab_y = 0
     try:
         rect = tabs.rectangle()
-        from gc_screen_read import Box, flash_focus_box, show_automation_cursor
+        from gc_screen_read import Box, click_screen, flash_focus_box, show_automation_cursor
 
         tab_x = int(rect.left) + int(rect.width() * (0.25 if index == 0 else 0.75))
         tab_y = int(rect.top) + max(12, rect.height() // 2)
@@ -536,7 +542,10 @@ def _select_tab_index(win, index: int) -> None:
         )
     except Exception:
         pass
-    tabs.select(index)
+    if _autochro_mouse_only() and tab_x and tab_y:
+        click_screen(tab_x, tab_y)
+    else:
+        tabs.select(index)
     time.sleep(0.8)
 
 
@@ -606,22 +615,10 @@ def _release_table_selection_to_tree(win, data_name: str) -> None:
     except Exception:
         pass
     try:
-        chosen, _chosen_line, line_idx = _select_tree_data_name(win, data_name)
+        chosen, _chosen_line, line_idx = _resolve_tree_line_index(win, data_name)
         tree = _analysis_tree_view(win)
-        tree.set_focus()
-        time.sleep(0.15)
-        rect = tree.rectangle()
-        candidates: List[str] = []
-        try:
-            candidates = [(t or "").strip() for t in tree.texts() if (t or "").strip()]
-        except Exception:
-            pass
-        row_h = max(16, min(22, rect.height() // max(len(candidates), 8)))
-        rel_x = max(24, min(rect.width() // 3, 80))
-        rel_y = max(16, min(12 + line_idx * row_h, max(20, rect.height() - 12)))
-        _notify_auto_cursor_rel(tree, rel_x, rel_y)
-        tree.click_input(button="left", coords=(rel_x, rel_y))
-        time.sleep(0.4)
+        rel_x, rel_y, _sx, _sy = _tree_row_coords(tree, line_idx)
+        _screen_click_at(tree, rel_x, rel_y, button="left", dwell=0.4)
         _log(f"  트리 단일선택: {chosen}")
     except Exception as exc:
         _log(f"  트리 포커스 전환 스킵: {exc}")
@@ -777,6 +774,78 @@ def _analysis_tree_view(win):
     raise RuntimeError("분석목록 왼쪽 트리 없음")
 
 
+def _autochro_mouse_only() -> bool:
+    from gc1_runtime.layer3_eye_guide import autochro_mouse_only
+
+    return autochro_mouse_only()
+
+
+def _activate_window(win) -> None:
+    try:
+        import ctypes
+
+        ctypes.windll.user32.SetForegroundWindow(int(win.handle))
+    except Exception:
+        try:
+            win.set_focus()
+        except Exception:
+            pass
+
+
+def _rel_to_screen(ctrl, rel_x: int, rel_y: int) -> tuple[int, int]:
+    rect = ctrl.rectangle()
+    return int(rect.left) + int(rel_x), int(rect.top) + int(rel_y)
+
+
+def _screen_click_at(
+    ctrl,
+    rel_x: int,
+    rel_y: int,
+    *,
+    button: str = "left",
+    dwell: float = 0.25,
+) -> tuple[int, int]:
+    """ListView/TreeView — mouse_only 이면 ``click_screen``, 아니면 pywinauto."""
+    from gc_screen_read import click_screen
+
+    sx, sy = _rel_to_screen(ctrl, rel_x, rel_y)
+    _notify_auto_cursor_rel(ctrl, rel_x, rel_y)
+    if _autochro_mouse_only():
+        click_screen(sx, sy, button=button)
+    else:
+        try:
+            ctrl.set_focus()
+        except Exception:
+            pass
+        ctrl.click_input(button=button, coords=(rel_x, rel_y))
+    time.sleep(dwell)
+    return sx, sy
+
+
+def _screen_double_click_at(
+    ctrl, rel_x: int, rel_y: int, *, dwell: float = 0.3
+) -> tuple[int, int]:
+    from gc_screen_read import double_click_screen
+
+    sx, sy = _rel_to_screen(ctrl, rel_x, rel_y)
+    _notify_auto_cursor_rel(ctrl, rel_x, rel_y)
+    if _autochro_mouse_only():
+        double_click_screen(sx, sy)
+    else:
+        try:
+            ctrl.set_focus()
+        except Exception:
+            pass
+        try:
+            ctrl.move_mouse_input(coords=(rel_x, rel_y))
+            time.sleep(0.12)
+        except Exception:
+            pass
+        ctrl.double_click_input(coords=(rel_x, rel_y))
+    time.sleep(dwell)
+    return sx, sy
+
+
 def _notify_auto_cursor_rel(ctrl, rel_x: int, rel_y: int) -> None:
     try:
         rect = ctrl.rectangle()
@@ -793,10 +862,7 @@ def _notify_auto_cursor_rel(ctrl, rel_x: int, rel_y: int) -> None:
 
 def _right_click_sample_table(sample_list) -> None:
     rel_x, rel_y = _rightclick_list_coords(sample_list)
-    sample_list.set_focus()
-    _notify_auto_cursor_rel(sample_list, rel_x, rel_y)
-    sample_list.click_input(button="right", coords=(rel_x, rel_y))
-    time.sleep(0.35)
+    _screen_click_at(sample_list, rel_x, rel_y, button="right", dwell=0.35)
 
 
 def _click_popup_menu_item(
@@ -908,15 +974,10 @@ def _wait_for_context_menu(timeout: float = 2.0) -> bool:
     return False
 
 
-def _select_tree_data_name(win, data_name: str) -> tuple[str, str, int]:
-    """
-    분석목록 왼쪽 트리 — **제어목록과 동일 데이터명** 노드 선택.
-
-    다른 시료에서 MTD·적분을 불러오면 현재 분석 데이터가 아닌 이전 시료에 저장됨.
-    """
+def _resolve_tree_line_index(win, data_name: str) -> tuple[str, str, int]:
+    """트리 후보에서 데이터명 행 인덱스만 계산 (mouse_only 에서 select 생략)."""
     from gc1_runtime.layer0_data import rank_tree_line_for_data_name
 
-    tree = _analysis_tree_view(win)
     candidates = _analysis_tree_lines(win)
     ranked: List[tuple[float, str]] = []
     for line in candidates:
@@ -938,6 +999,22 @@ def _select_tree_data_name(win, data_name: str) -> tuple[str, str, int]:
             break
         if chosen in line and tree_label_matches_data_name(line, data_name):
             line_idx = i
+    return chosen, chosen_line, line_idx
+
+
+def _select_tree_data_name(win, data_name: str) -> tuple[str, str, int]:
+    """
+    분석목록 왼쪽 트리 — **제어목록과 동일 데이터명** 노드 선택.
+
+    다른 시료에서 MTD·적분을 불러오면 현재 분석 데이터가 아닌 이전 시료에 저장됨.
+
+    mouse_only: ``tree.select`` 생략 — 호출자가 화면 좌표로 클릭.
+    """
+    chosen, chosen_line, line_idx = _resolve_tree_line_index(win, data_name)
+    if _autochro_mouse_only():
+        return chosen, chosen_line, line_idx
+
+    tree = _analysis_tree_view(win)
     for select_arg in (chosen, [chosen], chosen_line):
         try:
             tree.select(select_arg)
@@ -958,21 +1035,8 @@ def _select_tree_data_name(win, data_name: str) -> tuple[str, str, int]:
     return chosen, chosen_line, line_idx
 
 
-def _right_click_tree_data_name(
-    win, data_name: str, *, eye=None
-) -> tuple[int, int] | None:
-    """
-    선택된 트리 노드에서 우클릭 — 고정 상단 좌표 금지.
-
-    1) pywinauto 로 동일 데이터명 선택
-    2) OCR 로 해당 행 화면 좌표 우클릭 (시료명 행 정확도)
-    3) 실패 시 선택 행 인덱스 우클릭
-    """
-    chosen, chosen_line, line_idx = _select_tree_data_name(win, data_name)
-
-    tree = _analysis_tree_view(win)
-    tree.set_focus()
-    time.sleep(0.15)
+def _tree_row_coords(tree, line_idx: int) -> tuple[int, int, int, int]:
+    """트리 행 — rel_x, rel_y, screen_x, screen_y."""
     rect = tree.rectangle()
     candidates: List[str] = []
     try:
@@ -982,10 +1046,21 @@ def _right_click_tree_data_name(
     row_h = max(16, min(22, rect.height() // max(len(candidates), 8)))
     rel_x = max(24, min(rect.width() // 3, 80))
     rel_y = max(16, min(12 + line_idx * row_h, max(20, rect.height() - 12)))
-    _notify_auto_cursor_rel(tree, rel_x, rel_y)
-    tree.click_input(button="right", coords=(rel_x, rel_y))
-    time.sleep(0.4)
-    screen_xy = (rect.left + rel_x, rect.top + rel_y)
+    sx, sy = _rel_to_screen(tree, rel_x, rel_y)
+    return rel_x, rel_y, sx, sy
+
+
+def _right_click_tree_data_name(
+    win, data_name: str, *, eye=None
+) -> tuple[int, int] | None:
+    """
+    트리 데이터명 행 우클릭 — mouse_only: 화면 좌표만, OCR·Apps 키 fallback.
+    """
+    chosen, _chosen_line, line_idx = _select_tree_data_name(win, data_name)
+    tree = _analysis_tree_view(win)
+    rel_x, rel_y, sx, sy = _tree_row_coords(tree, line_idx)
+    _screen_click_at(tree, rel_x, rel_y, button="right", dwell=0.4)
+    screen_xy = (sx, sy)
     if _wait_for_context_menu(1.8):
         _log(f"  트리 우클릭(행{line_idx}): {chosen}")
         return screen_xy
@@ -1005,11 +1080,13 @@ def _right_click_tree_data_name(
                 return anchor
             _log("  [적응] OCR 좌표 메뉴 없음 — Apps 키")
 
-    tree.set_focus()
     try:
         from pywinauto.keyboard import send_keys
 
-        tree.set_focus()
+        if _autochro_mouse_only():
+            _activate_window(win)
+        else:
+            tree.set_focus()
         send_keys("{APPS}")
         time.sleep(0.45)
         if _wait_for_context_menu(1.5):
@@ -1066,17 +1143,9 @@ def _neutral_list_coords(sample_list) -> tuple[int, int]:
 
 
 def _focus_list_for_ctrl_a(sample_list) -> None:
-    """분석목록에서 Ctrl+A 전 — 소유자 ID 드롭다운 회피용 클릭 (수집 일시 열 쪽)."""
+    """분석목록에서 Ctrl+A 전 — 행 번호 열 클릭 (드롭다운 회피)."""
     rel_x, rel_y = _neutral_list_coords(sample_list)
-    sample_list.set_focus()
-    _notify_auto_cursor_rel(sample_list, rel_x, rel_y)
-    try:
-        sample_list.move_mouse_input(coords=(rel_x, rel_y))
-        time.sleep(0.12)
-    except Exception:
-        pass
-    sample_list.click_input(coords=(rel_x, rel_y))
-    time.sleep(0.25)
+    _screen_click_at(sample_list, rel_x, rel_y, dwell=0.25)
 
 
 def _largest_sample_list(win):
@@ -1192,21 +1261,12 @@ def step_sync_control_to_analysis(
             eye.require_task("P1.tab_control", "eye_active_tab_control")
     sample_list = _control_sync_list(win)
     control_count = _listview_item_count(sample_list)
-    sample_list.set_focus()
-    sample_list.click_input()
     rect = sample_list.rectangle()
     fallback = sync_double_click_coords(rect.width(), rect.height())
     if eye:
         eye.guided_sync_execute_double_click(sample_list, fallback_rel=fallback)
     else:
-        rel_x, rel_y = fallback
-        _notify_auto_cursor_rel(sample_list, rel_x, rel_y)
-        try:
-            sample_list.move_mouse_input(coords=(rel_x, rel_y))
-            time.sleep(0.25)
-        except Exception:
-            pass
-        sample_list.double_click_input(coords=(rel_x, rel_y))
+        _screen_double_click_at(sample_list, fallback[0], fallback[1])
     time.sleep(1.5)
     if eye:
         from gc1_runtime.layer3_eye_guide import autochro_eye_coord_only
@@ -1331,8 +1391,7 @@ def step_select_all_samples(win, cfg: AutochroConfig) -> None:
 
     if eye:
         rel_x, rel_y = eye.guided_focus_for_ctrl_a(sample_list)
-        sample_list.click_input(coords=(rel_x, rel_y))
-        time.sleep(0.2)
+        _screen_click_at(sample_list, rel_x, rel_y, dwell=0.2)
     else:
         _focus_list_for_ctrl_a(sample_list)
     send_keys("^a")
@@ -1377,11 +1436,10 @@ def step_print_pdf(win, cfg: AutochroConfig) -> None:
     sample_list = _analysis_sample_table(win)
     if eye:
         rel_x, rel_y = eye.guided_focus_for_ctrl_a(sample_list)
-        sample_list.click_input(coords=(rel_x, rel_y))
-        time.sleep(0.2)
+        _screen_click_at(sample_list, rel_x, rel_y, dwell=0.2)
     else:
         _focus_list_for_ctrl_a(sample_list)
-    win.set_focus()
+    _activate_window(win)
     send_keys("^a")
     time.sleep(0.3)
     send_keys("^p")
@@ -1416,7 +1474,12 @@ def _confirm_print_dialog(cfg: AutochroConfig) -> None:
 
         send_keys("{ENTER}")
         return
-    _log("인쇄 대화상자 확인 클릭")
+    _log("인쇄 대화상자 확인")
+    if _autochro_mouse_only():
+        from pywinauto.keyboard import send_keys
+
+        send_keys("{ENTER}")
+        return
     for btn_title in ("확인", "OK", "&OK"):
         try:
             dlg.child_window(title=btn_title, class_name="Button").click_input()
