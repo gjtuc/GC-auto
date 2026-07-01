@@ -451,6 +451,83 @@ def parse_data_name_from_crm_path(path: str) -> str:
     return compact if _DATA_NAME_DATE_RE.match(compact) else stem
 
 
+def _tree_screen_coords(tree, rel_x: int, rel_y: int) -> tuple[int, int]:
+    rect = tree.rectangle()
+    return int(rect.left) + int(rel_x), int(rect.top) + int(rel_y)
+
+
+def _tree_screen_click(
+    tree,
+    rel_x: int,
+    rel_y: int,
+    *,
+    button: str = "left",
+    dwell: float = 0.25,
+) -> tuple[int, int]:
+    """32-bit Autochro — ``click_input`` 대신 화면 좌표 클릭."""
+    from gc_screen_read import click_screen
+
+    sx, sy = _tree_screen_coords(tree, rel_x, rel_y)
+    click_screen(sx, sy, button=button)
+    time.sleep(dwell)
+    return sx, sy
+
+
+def _popup_menu_item_text(item) -> str:
+    if isinstance(item, str):
+        return item.strip()
+    if hasattr(item, "text"):
+        try:
+            return (item.text() or "").strip()
+        except Exception:
+            pass
+    return str(item).strip()
+
+
+def _ensure_autochro_foreground(win) -> None:
+    try:
+        import ctypes
+
+        ctypes.windll.user32.SetForegroundWindow(win.handle)
+        time.sleep(0.2)
+    except Exception:
+        try:
+            win.set_focus()
+        except Exception:
+            pass
+
+
+def _open_tree_context_menu(win, tree, rel_x: int, rel_y: int) -> str:
+    """트리 행 선택 후 우클릭(또는 Shift+F10) → 컨텍스트 메뉴."""
+    from pywinauto.keyboard import send_keys
+
+    _ensure_autochro_foreground(win)
+    tree.set_focus()
+    time.sleep(0.15)
+    last_exc: RuntimeError | None = None
+    for dy in (0, -6, 6, -12, 12):
+        y = rel_y + dy
+        _tree_screen_click(tree, rel_x, y, button="left", dwell=0.15)
+        _tree_screen_click(tree, rel_x, y, button="right", dwell=0.5)
+        try:
+            return _click_popup_menu_item(lambda t: "정보" in t, timeout=3.0)
+        except RuntimeError as exc:
+            last_exc = exc
+            try:
+                send_keys("{ESC}")
+            except Exception:
+                pass
+            time.sleep(0.15)
+    send_keys("+{F10}")
+    time.sleep(0.45)
+    try:
+        return _click_popup_menu_item(lambda t: "정보" in t, timeout=4.0)
+    except RuntimeError:
+        if last_exc is not None:
+            raise last_exc
+        raise
+
+
 def _click_popup_menu_item(
     matcher,
     *,
@@ -464,9 +541,14 @@ def _click_popup_menu_item(
     while time.time() < deadline:
         for menu_win in Desktop(backend="win32").windows(class_name="#32768"):
             try:
-                wrapper = menu_win.wrapper_object()
+                try:
+                    wrapper = menu_win.wrapper_object()
+                except AttributeError:
+                    wrapper = menu_win
                 for item in wrapper.menu().items():
-                    text = item if isinstance(item, str) else str(item)
+                    text = _popup_menu_item_text(item)
+                    if not text:
+                        continue
                     seen.append(text)
                     if matcher(text):
                         wrapper.menu_item(text).click_input()
@@ -495,28 +577,62 @@ def _control_tree_view(win):
 
 
 def _control_tree_sample_row_coords(tree) -> tuple[int, int, str]:
-    """YL6500 GC 0 바로 위 시료명 행 — 우클릭 좌표."""
+    """YL6500 GC 0 부모(시료명) 행 — 우클릭 좌표 (트리 계층 기준)."""
     instrument_markers = ("YL6500 GC", "YL6500GC")
-    items: list[str] = []
+    label = ""
+    visible_row = 1
     try:
-        for text in tree.texts():
-            line = (text or "").strip()
-            if line:
-                items.append(line)
+        roots = list(tree.roots())
+        if roots:
+            root = roots[0]
+            for child in root.children():
+                text = (child.text() or "").strip()
+                if not text or text == "Tree1":
+                    continue
+                has_yl = any(
+                    any(m in (sub.text() or "") for m in instrument_markers)
+                    for sub in child.children()
+                )
+                if has_yl or _DATA_NAME_DATE_RE.search(text.replace(" ", "")):
+                    label = text.split(".")[0].strip()
+                    try:
+                        child.select()
+                        time.sleep(0.15)
+                    except Exception:
+                        pass
+                    break
     except Exception:
         pass
-    line_idx = 0
-    label = ""
-    for idx, line in enumerate(items):
-        if any(m in line for m in instrument_markers) and idx > 0:
-            line_idx = idx - 1
-            label = items[line_idx].split(".")[0].strip()
-            break
+    if not label:
+        items: list[str] = []
+        try:
+            for text in tree.texts():
+                line = (text or "").strip()
+                if line and line != "Tree1":
+                    items.append(line)
+        except Exception:
+            pass
+        for idx, line in enumerate(items):
+            if any(m in line for m in instrument_markers) and idx > 0:
+                visible_row = idx - 1
+                label = items[idx - 1].split(".")[0].strip()
+                break
     rect = tree.rectangle()
-    row_h = max(16, min(22, rect.height() // max(len(items), 6)))
+    row_h = max(18, min(22, max(60, rect.height()) // 40))
     rel_x = max(24, min(rect.width() // 3, 80))
-    rel_y = max(16, min(12 + line_idx * row_h, max(20, rect.height() - 12)))
+    if label:
+        # Autochro 제어목록 트리 — 루트 아래 2번째 행(시료명) 실측 Y≈20
+        rel_y = max(16, min(20, rect.height() - 12))
+    else:
+        rel_y = max(16, min(12 + visible_row * row_h, max(20, rect.height() - 12)))
     return rel_x, rel_y, label
+
+
+def _as_wrapper(handle):
+    try:
+        return handle.wrapper_object()
+    except AttributeError:
+        return handle
 
 
 def _find_stm_info_dialog(timeout: float = 8.0):
@@ -533,10 +649,10 @@ def _find_stm_info_dialog(timeout: float = 8.0):
             if not title:
                 continue
             if title.lower().endswith(".stm") or ".stm" in title.lower():
-                return handle
+                return _as_wrapper(handle)
             if re.search(r"20\d{6}", title) and "Autochro" not in title:
                 if len(title) < 120:
-                    return handle
+                    return _as_wrapper(handle)
         time.sleep(0.2)
     return None
 
@@ -592,15 +708,17 @@ def _read_data_name_from_crm_info_dialog(win) -> str:
     time.sleep(0.35)
     tree = _control_tree_view(win)
     rel_x, rel_y, hint = _control_tree_sample_row_coords(tree)
-    tree.set_focus()
-    time.sleep(0.15)
-    tree.click_input(button="right", coords=(rel_x, rel_y))
-    time.sleep(0.45)
     _log(f"제어목록 트리 우클릭 (시료: {hint or 'YL6500 위'})")
     try:
-        _click_popup_menu_item(lambda t: "정보" in t, timeout=6.0)
+        _open_tree_context_menu(win, tree, rel_x, rel_y)
     except RuntimeError as exc:
         _log(f"  정보 메뉴 실패: {exc}")
+        try:
+            from pywinauto.keyboard import send_keys
+
+            send_keys("{ESC}")
+        except Exception:
+            pass
         return ""
     time.sleep(0.55)
     dlg = _find_stm_info_dialog()
