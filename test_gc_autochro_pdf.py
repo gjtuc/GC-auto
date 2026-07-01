@@ -8,7 +8,29 @@ from gc_autochro import (
     build_export_pdf_path,
     format_data_name_for_pdf_filename,
     load_autochro_config,
+    parse_data_name_from_crm_path,
 )
+
+
+class TestParseDataNameFromCrmPath(unittest.TestCase):
+    def test_full_documents_path(self):
+        path = r"C:\Users\User\Documents\20260630dre(5)ni(환원)-ce.CRM"
+        self.assertEqual(
+            parse_data_name_from_crm_path(path),
+            "20260630dre(5)ni(환원)-ce",
+        )
+
+    def test_basename_only(self):
+        self.assertEqual(
+            parse_data_name_from_crm_path("20260629 dre(3) ni-ce-la.CRM"),
+            "20260629 dre(3) ni-ce-la",
+        )
+
+    def test_lowercase_extension(self):
+        self.assertEqual(
+            parse_data_name_from_crm_path(r"C:\Users\User\Documents\foo.crm"),
+            "foo",
+        )
 
 
 class TestGcAutochroPdfFilename(unittest.TestCase):

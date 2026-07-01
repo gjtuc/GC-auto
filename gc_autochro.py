@@ -426,6 +426,201 @@ def _window_rect(win):
         return None
 
 
+def parse_data_name_from_crm_path(path: str) -> str:
+    """
+    정보 대화상자 「분석목록」 CRM 경로 → 시료 데이터명.
+
+    ``C:\\Users\\User\\Documents\\20260630dre(5)ni(환원)-ce.CRM``
+    → ``20260630dre(5)ni(환원)-ce`` (경로·확장자 제거, OCR 아님)
+    """
+    text = (path or "").strip().strip('"').strip("'")
+    if not text:
+        return ""
+    text = os.path.normpath(os.path.expanduser(text))
+    base = os.path.basename(text)
+    for ext in (".CRM", ".crm"):
+        if base.lower().endswith(ext.lower()):
+            base = base[: -len(ext)]
+            break
+    stem = base.split(".")[0].strip()
+    if _DATA_NAME_DATE_RE.match(stem) or _DATA_NAME_DATE_RE.match(
+        re.sub(r"\s+", "", stem)
+    ):
+        return stem
+    compact = re.sub(r"\s+", "", stem)
+    return compact if _DATA_NAME_DATE_RE.match(compact) else stem
+
+
+def _click_popup_menu_item(
+    matcher,
+    *,
+    timeout: float = 5.0,
+) -> str:
+    _require_pywinauto()
+    from pywinauto import Desktop
+
+    deadline = time.time() + timeout
+    seen: list[str] = []
+    while time.time() < deadline:
+        for menu_win in Desktop(backend="win32").windows(class_name="#32768"):
+            try:
+                wrapper = menu_win.wrapper_object()
+                for item in wrapper.menu().items():
+                    text = item if isinstance(item, str) else str(item)
+                    seen.append(text)
+                    if matcher(text):
+                        wrapper.menu_item(text).click_input()
+                        return text
+            except Exception:
+                continue
+        time.sleep(0.12)
+    preview = ", ".join(seen[:8])
+    raise RuntimeError(f"컨텍스트 메뉴 항목 없음 (seen: {preview})")
+
+
+def _control_tree_view(win):
+    """제어목록 왼쪽 트리."""
+    win_rect = _window_rect(win)
+    for ctrl in win.descendants(class_name="SysTreeView32"):
+        try:
+            rect = ctrl.rectangle()
+        except Exception:
+            continue
+        if win_rect is not None:
+            rel_left = rect.left - win_rect.left
+            if rel_left > win_rect.width() * 0.5:
+                continue
+        return ctrl
+    raise RuntimeError("제어목록 왼쪽 트리 없음")
+
+
+def _control_tree_sample_row_coords(tree) -> tuple[int, int, str]:
+    """YL6500 GC 0 바로 위 시료명 행 — 우클릭 좌표."""
+    instrument_markers = ("YL6500 GC", "YL6500GC")
+    items: list[str] = []
+    try:
+        for text in tree.texts():
+            line = (text or "").strip()
+            if line:
+                items.append(line)
+    except Exception:
+        pass
+    line_idx = 0
+    label = ""
+    for idx, line in enumerate(items):
+        if any(m in line for m in instrument_markers) and idx > 0:
+            line_idx = idx - 1
+            label = items[line_idx].split(".")[0].strip()
+            break
+    rect = tree.rectangle()
+    row_h = max(16, min(22, rect.height() // max(len(items), 6)))
+    rel_x = max(24, min(rect.width() // 3, 80))
+    rel_y = max(16, min(12 + line_idx * row_h, max(20, rect.height() - 12)))
+    return rel_x, rel_y, label
+
+
+def _find_stm_info_dialog(timeout: float = 8.0):
+    _require_pywinauto()
+    from pywinauto import Desktop
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        for handle in Desktop(backend="win32").windows():
+            try:
+                title = (handle.window_text() or "").strip()
+            except Exception:
+                continue
+            if not title:
+                continue
+            if title.lower().endswith(".stm") or ".stm" in title.lower():
+                return handle
+            if re.search(r"20\d{6}", title) and "Autochro" not in title:
+                if len(title) < 120:
+                    return handle
+        time.sleep(0.2)
+    return None
+
+
+def _read_crm_path_from_info_dialog(dlg) -> str:
+    """정보 창 — 분석목록 아래 CRM 경로(Edit) 텍스트."""
+    for ctrl in dlg.descendants(class_name="Edit"):
+        for reader in (
+            lambda c: (c.window_text() or "").strip(),
+            lambda c: (c.get_value() or "").strip() if hasattr(c, "get_value") else "",
+        ):
+            try:
+                text = reader(ctrl)
+            except Exception:
+                text = ""
+            if text and re.search(r"\.crm", text, re.I):
+                return text
+    for ctrl in dlg.descendants():
+        try:
+            text = (ctrl.window_text() or "").strip()
+        except Exception:
+            continue
+        if re.search(r"\.crm", text, re.I) and len(text) > 8:
+            return text
+    return ""
+
+
+def _close_stm_info_dialog(dlg) -> None:
+    for pattern in ("확인", "OK", "취소", "Cancel"):
+        try:
+            btn = dlg.child_window(title_re=f".*{pattern}.*", class_name="Button")
+            if btn.exists(timeout=0.3):
+                btn.click_input()
+                time.sleep(0.25)
+                return
+        except Exception:
+            continue
+    try:
+        from pywinauto.keyboard import send_keys
+
+        dlg.set_focus()
+        send_keys("{ESC}")
+        time.sleep(0.2)
+    except Exception:
+        pass
+
+
+def _read_data_name_from_crm_info_dialog(win) -> str:
+    """
+    제어목록 시료명 우클릭 → 정보 → 분석목록 CRM 경로 복사와 동일한 텍스트 읽기.
+    """
+    _select_control_tab(win)
+    time.sleep(0.35)
+    tree = _control_tree_view(win)
+    rel_x, rel_y, hint = _control_tree_sample_row_coords(tree)
+    tree.set_focus()
+    time.sleep(0.15)
+    tree.click_input(button="right", coords=(rel_x, rel_y))
+    time.sleep(0.45)
+    _log(f"제어목록 트리 우클릭 (시료: {hint or 'YL6500 위'})")
+    try:
+        _click_popup_menu_item(lambda t: "정보" in t, timeout=6.0)
+    except RuntimeError as exc:
+        _log(f"  정보 메뉴 실패: {exc}")
+        return ""
+    time.sleep(0.55)
+    dlg = _find_stm_info_dialog()
+    if dlg is None:
+        _log("  정보(.stm) 대화상자 없음")
+        return ""
+    try:
+        crm_path = _read_crm_path_from_info_dialog(dlg)
+    finally:
+        _close_stm_info_dialog(dlg)
+        time.sleep(0.3)
+    if not crm_path:
+        _log("  분석목록 CRM 경로 필드 비어 있음")
+        return ""
+    name = parse_data_name_from_crm_path(crm_path)
+    if name:
+        _log(f"  CRM 경로 -> 데이터명: {crm_path!r} -> {name!r}")
+    return name
+
+
 def _read_data_name_from_window_title(win) -> str:
     title = (win.window_text() or "").strip()
     match = re.search(r"\s[-–]\s+.*[Aa]utochro", title)
@@ -476,6 +671,15 @@ def _read_data_name_from_control_tree(win) -> str:
 def read_active_control_data_name(win, cfg: AutochroConfig) -> str:
     _select_control_tab(win)
     time.sleep(0.3)
+    if os.getenv("GC1_CONTROL_DATA_NAME_CRM_INFO", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+    ):
+        name = _read_data_name_from_crm_info_dialog(win)
+        if name:
+            return name
     for reader in (_read_data_name_from_window_title, _read_data_name_from_control_tree):
         name = reader(win)
         if name:
