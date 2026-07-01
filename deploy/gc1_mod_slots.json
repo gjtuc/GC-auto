@@ -1,0 +1,39 @@
+{
+  "_comment": "GC1 MOD T70-T87. Pipeline: run_gc1_mod_pipeline.py | Intake: intake_gc1_mod.py",
+  "version": 1,
+  "slots": [
+    {
+      "mod_id": "MOD-1",
+      "queue_task": "T70",
+      "status": "pending",
+      "title": "",
+      "summary": "",
+      "leaf_ids": [],
+      "atom_ids": [],
+      "r_change": false,
+      "notes": "사용자 수정사항 #1 — 설계 §MOD, GC1_RUNTIME_DESIGN PART2_L4 atom"
+    },
+    {
+      "mod_id": "MOD-2",
+      "queue_task": "T71",
+      "status": "pending",
+      "title": "",
+      "summary": "",
+      "leaf_ids": [],
+      "atom_ids": [],
+      "r_change": false,
+      "notes": "사용자 수정사항 #2"
+    },
+    {
+      "mod_id": "MOD-3",
+      "queue_task": "T72",
+      "status": "pending",
+      "title": "",
+      "summary": "",
+      "leaf_ids": [],
+      "atom_ids": [],
+      "r_change": false,
+      "notes": "사용자 수정사항 #3"
+    }
+  ]
+}

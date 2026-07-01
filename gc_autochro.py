@@ -15,14 +15,20 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 본 모듈은 **PDF 파일을 Autochro 화면 조작으로 생성**하는 단계만 담당합니다.
 
 =============================================================================
-[5단계 UI 흐름]  (run_autochro_export)
+[UI 흐름]  (run_autochro_export)
 =============================================================================
 
-  1) 제어목록 탭 → 하단 시료 표 더블클릭 → 분석목록과 동기화
-  2) 분석목록 시료 표 Ctrl+A (전체 선택)
-  3) 메뉴 「시료목록 → 초기화+정량」 — 적분 대기(AUTOCHRO_QUANTIFY_WAIT_SEC)
-  4) Ctrl+P 인쇄 → Hancom PDF 변환 대화상자
-  5) 저장 경로에 PDF 기록 → 한컴 창 닫힘 대기 → gc_gc1.wait_for_pdf_file_ready
+  1) 제어목록 탭 → 하단 시료 표 **고정 위치** 더블클릭 → 분석목록과 동기화
+     (``1.raw`` 텍스트가 아님 — 주입이 쌓이면 라벨은 스크롤되어 사라짐)
+  2) 분석목록 시료 표 Ctrl+A
+  3) 시료 표 우클릭 → 초기화
+  4) 왼쪽 트리(제어목록 데이터명과 동일) 우클릭 → 분석방법 불러오기 → {YYYYMMDD} 분석방법.MTD
+  5) Ctrl+A → 우클릭 초기화 (아래 피크 표 0)
+  6) Ctrl+A → 메뉴 「시료목록 → 초기화+정량」 — 적분 대기
+  7) Ctrl+P 인쇄 → Hancom PDF
+  8) PDF 저장
+
+  GC1_AUTOCHRO_PREP_STEPS=0 이면 3~5 생략 (구버전: 2→6만).
 
 =============================================================================
 [PDF 파일명 — 하드코딩 금지]
@@ -30,8 +36,8 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 
   저장 stem 은 gc_automation.env 의 AUTOCHRO_DATA_NAME 이 아니라,
   **제어목록 왼쪽 트리에서 파란 선택된 실험 데이터명** + 창 제목에서 읽습니다.
-  format_data_name_for_pdf_filename() 이 260616dre(3)ni-ce →
-  「260616 dre@(3) ni-ce.pdf」 형식으로 변환합니다.
+  읽은 문자열을 **그대로** PDF 파일명으로 쓰며 (날짜·@·공백 재조합 없음),
+  Windows 금지문자만 제거합니다.
 
 =============================================================================
 [UI 자동화 함정 — pywinauto win32]
@@ -44,6 +50,10 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   · **Ctrl+A**: 분석목록 「소유자 ID」열(관리자 드롭다운) 위에 마우스가 있으면
     셀 편집 모드 → Ctrl+A 불가 → PDF 3페이지(1시료)만 저장됩니다.
     _focus_list_for_ctrl_a() 가 「수집 일시」열과 같은 가로 위치(~78%)에 클릭합니다.
+
+  · **GC1_AUTOCHRO_EYE** (기본 live=1): 단계마다 OCR 로 영역 읽기·클릭·검증.
+    제어목록 동기화는 ``.raw`` 토큰 위치로 더블클릭. 우클릭 메뉴는 OCR 클릭.
+    끄기: ``GC1_AUTOCHRO_EYE=0`` · Tesseract: requirements-screen.txt
 
   · **32-bit Autochro**: 64-bit Python 으로도 동작하지만 pywinauto 경고가 납니다.
     GC1 장비 PC 배포 시 32-bit Python 권장.
@@ -70,6 +80,19 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
   AUTOCHRO_ENABLED, AUTOCHRO_WINDOW_TITLE_PATTERN, AUTOCHRO_DATA_NAME(CRM 경로용)
   AUTOCHRO_AUTO_POSITION, AUTOCHRO_WINDOW_X/Y
   AUTOCHRO_LIST_NEUTRAL_X_FRAC  — Ctrl+A 전 클릭 가로 위치 (기본 0.78)
+  AUTOCHRO_ANALYSIS_METHOD_DIR    — MTD 폴더 (기본 바탕화면)
+  AUTOCHRO_ANALYSIS_METHOD_FILENAME — MTD 파일명 (기본 20260629 분석방법.MTD)
+  AUTOCHRO_ANALYSIS_METHOD_MTD    — MTD 전체 경로 override
+  GC1_AUTOCHRO_PREP_STEPS         — 1=적분 준비(초기화·MTD) 포함 (기본), 0=생략
+  GC1_USE_RUNTIME                 — 1=``gc1_runtime.layer4_job`` 위임 (기본 0, 기존 UI 경로)
+  GC1_AUTOCHRO_EYE               — 1=단계마다 OCR 눈 (live 기본 1, dry_run 제외)
+  GC1_AUTOCHRO_EYE_ADAPT         — 1=OCR 우선·fallback 허용 (기본 1)
+  GC1_AUTOCHRO_EYE_STRICT        — 1=OCR 게이트 실패 시 중단 (기본 0)
+  GC1_OCR_CASE_STUDY            — 1=실패 시 단계 케이스 스터디 (기본 1)
+  GC1_OCR_EXPLORE               — 1=실패 시 확대/축소·커서 탐색 (기본 1)
+  GC1_OCR_LEARN                 — 1=런 종료 후 overlay 학습 반영 (기본 1)
+  GC_SCREEN_SHOW_FOCUS          — 1=OCR·케이스 스터디 빨간 네모 (기본 1, 0=끔)
+  GC_SCREEN_FOCUS_MS            — 네모 최소 표시 ms (기본 800, 케이스 스터디 1000)
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
@@ -86,7 +109,7 @@ import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from gc_sanitize import sanitize_sample_name
 from gc_state import load_send_state, save_send_state
@@ -117,57 +140,12 @@ def format_data_name_for_pdf_filename(raw: str) -> str:
     """
     Autochro 데이터명 → PDF 저장 stem.
 
-    260616dre(3)ni-ce  → 260616 dre@(3) ni-ce
-    (날짜 뒤 공백, 반응@농도, 농도 뒤 공백)
+    UI·창 제목에서 읽은 문자열을 변환하지 않고 그대로 쓰고,
+    Windows 파일명 금지문자만 제거합니다.
     """
     text = raw.strip().split(".")[0].strip()
     if not text:
         raise ValueError("Autochro 데이터명이 비어 있음")
-
-    spaced = re.sub(r"\s+", " ", text)
-    match = re.match(
-        r"^(\d{6})\s+([a-zA-Z0-9.]+)@\(([^)]+)\)\s+(.+)$",
-        spaced,
-        re.I,
-    )
-    if match:
-        return (
-            f"{match.group(1)} {match.group(2)}@({match.group(3)}) {match.group(4).strip()}"
-        )
-
-    match = re.match(
-        r"^(\d{6})([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]*\(([^)]+)\)[\s\-_]*(.*)$",
-        text,
-        re.I,
-    )
-    if match and match.group(4).strip():
-        date, reaction, concentration, sample = match.groups()
-        return f"{date} {reaction}@({concentration}) {sample.strip()}"
-
-    match = re.match(
-        r"^(\d{6})([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]+(.+?)[\s\-_]*\(([^)]+)\)$",
-        text,
-        re.I,
-    )
-    if match:
-        date, reaction, sample, concentration = match.groups()
-        return f"{date} {reaction}@({concentration}) {sample.strip()}"
-
-    match = re.match(
-        r"^(\d{6})[\s\-_]+([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]*\(([^)]+)\)[\s\-_]*(.*)$",
-        text,
-        re.I,
-    )
-    if match:
-        date, reaction, concentration, sample = match.groups()
-        sample = sample.strip()
-        if sample:
-            return f"{date} {reaction}@({concentration}) {sample}"
-
-    match = re.match(r"^(\d{6})(.+)$", text)
-    if match:
-        return f"{match.group(1)} {match.group(2).strip()}"
-
     return sanitize_sample_name(text)
 
 
@@ -312,7 +290,8 @@ def record_autochro_export(state_path: str, crm_path: str, pdf_path: str) -> Non
 
 
 def _log(msg: str) -> None:
-    print(f"[Autochro] {msg}")
+    safe = msg.replace("\u2014", "-").replace("\u2192", "->")
+    print(f"[Autochro] {safe}", flush=True)
 
 
 def _require_pywinauto():
@@ -596,11 +575,261 @@ def _pick_listview(win, *, prefer: str, purpose: str):
 
 
 def _control_sync_list(win):
-    return _pick_listview(win, prefer="lower", purpose="제어목록")
+    """제어목록 탭 오른쪽 위 시료 표 (파일이름 1.raw)."""
+    return _pick_listview(win, prefer="upper", purpose="제어목록")
 
 
 def _analysis_sample_table(win):
     return _pick_listview(win, prefer="upper", purpose="분석목록")
+
+
+def _analysis_tree_view(win):
+    """분석목록 왼쪽 트리 — 노란 아이콘·시료명."""
+    win_rect = _window_rect(win)
+    for ctrl in win.descendants(class_name="SysTreeView32"):
+        try:
+            rect = ctrl.rectangle()
+        except Exception:
+            continue
+        if win_rect is not None:
+            rel_left = rect.left - win_rect.left
+            if rel_left > win_rect.width() * 0.5:
+                continue
+        return ctrl
+    raise RuntimeError("분석목록 왼쪽 트리 없음")
+
+
+def _right_click_sample_table(sample_list) -> None:
+    rel_x, rel_y = _neutral_list_coords(sample_list)
+    sample_list.set_focus()
+    sample_list.click_input(button="right", coords=(rel_x, rel_y))
+    time.sleep(0.35)
+
+
+def _click_popup_menu_item(
+    matcher: Callable[[str], bool],
+    *,
+    timeout: float = 5.0,
+) -> str:
+    _require_pywinauto()
+    from pywinauto import Desktop
+
+    deadline = time.time() + timeout
+    seen: List[str] = []
+    while time.time() < deadline:
+        for menu_win in Desktop(backend="win32").windows(class_name="#32768"):
+            try:
+                wrapper = menu_win.wrapper_object()
+                for item in wrapper.menu().items():
+                    text = item if isinstance(item, str) else str(item)
+                    seen.append(text)
+                    if matcher(text):
+                        wrapper.menu_item(text).click_input()
+                        return text
+            except Exception:
+                continue
+        time.sleep(0.12)
+    preview = ", ".join(seen[:10])
+    raise RuntimeError(f"컨텍스트 메뉴 항목 없음 (seen: {preview})")
+
+
+def _click_context_initialize() -> None:
+    matcher = lambda t: "초기화" in t and "정량" not in t and "검량" not in t
+    try:
+        _click_popup_menu_item(matcher, timeout=8.0)
+        _log("  → 초기화 클릭 (win32)")
+        return
+    except RuntimeError as exc:
+        _log(f"  [적응] win32 메뉴 실패 — 단축키 N: {exc}")
+    try:
+        from pywinauto.keyboard import send_keys
+
+        send_keys("n")
+        time.sleep(0.35)
+        _log("  → 초기화 클릭 (단축키 N)")
+    except Exception as exc2:
+        raise RuntimeError(f"초기화 메뉴 클릭 실패: {exc2}") from exc2
+
+
+def _click_context_load_analysis_method() -> None:
+    _click_popup_menu_item(
+        lambda t: "분석방법" in t and "불러" in t,
+    )
+    _log("  → 분석방법 불러오기 클릭")
+
+
+def _open_path_in_file_dialog(
+    dialog_title_re: str,
+    file_path: str,
+    *,
+    timeout: float = 30.0,
+) -> None:
+    dlg = _find_window_title_re(dialog_title_re, timeout=timeout)
+    if dlg is None:
+        raise RuntimeError(f"파일 대화상자 없음 — {dialog_title_re}")
+    dlg.set_focus()
+    norm_path = os.path.normpath(os.path.abspath(file_path))
+    edit = _find_filename_edit(dlg)
+    if edit is not None:
+        edit.set_focus()
+        try:
+            edit.set_edit_text(norm_path)
+        except Exception:
+            from pywinauto.keyboard import send_keys
+
+            send_keys("^a")
+            send_keys(norm_path, with_spaces=True)
+    else:
+        from pywinauto.keyboard import send_keys
+
+        send_keys("^a")
+        send_keys(norm_path, with_spaces=True)
+    time.sleep(0.4)
+    for btn_title in ("열기(&O)", "열기(O)", "열기", "Open", "&Open"):
+        try:
+            btn = dlg.child_window(title=btn_title, class_name="Button")
+            if btn.exists(timeout=0.3):
+                btn.click_input()
+                return
+        except Exception:
+            continue
+    from pywinauto.keyboard import send_keys
+
+    send_keys("%o")
+    time.sleep(0.3)
+
+
+def _wait_for_context_menu(timeout: float = 2.0) -> bool:
+    """#32768 팝업 메뉴가 떴는지 확인."""
+    _require_pywinauto()
+    from pywinauto import Desktop
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            if Desktop(backend="win32").windows(class_name="#32768"):
+                return True
+        except Exception:
+            pass
+        time.sleep(0.1)
+    return False
+
+
+def _select_tree_data_name(win, data_name: str) -> tuple[str, str, int]:
+    """
+    분석목록 왼쪽 트리 — **제어목록과 동일 데이터명** 노드 선택.
+
+    다른 시료에서 MTD·적분을 불러오면 현재 분석 데이터가 아닌 이전 시료에 저장됨.
+    """
+    from gc1_runtime.layer0_data import rank_tree_line_for_data_name
+
+    tree = _analysis_tree_view(win)
+    candidates: List[str] = []
+    try:
+        for text in tree.texts():
+            line = (text or "").strip()
+            if line:
+                candidates.append(line)
+    except Exception:
+        pass
+    ranked: List[tuple[float, str]] = []
+    for line in candidates:
+        score = rank_tree_line_for_data_name(line, data_name)
+        if score >= 0:
+            ranked.append((score, line))
+    if not ranked:
+        raise RuntimeError(
+            f"분석목록 트리에 제어목록 데이터명 없음: {data_name!r} "
+            f"(후보 {len(candidates)}개)"
+        )
+    ranked.sort(key=lambda x: (-x[0], x[1]))
+    chosen_line = ranked[0][1]
+    chosen = chosen_line.split(".")[0].strip()
+    line_idx = 0
+    for i, line in enumerate(candidates):
+        if line == chosen_line:
+            line_idx = i
+            break
+        if chosen in line and tree_label_matches_data_name(line, data_name):
+            line_idx = i
+    for select_arg in (chosen, [chosen], chosen_line):
+        try:
+            tree.select(select_arg)
+            time.sleep(0.35)
+            break
+        except Exception:
+            continue
+    try:
+        sel = tree.get_selected()
+        if sel and not tree_label_matches_data_name(str(sel[0]), data_name):
+            raise RuntimeError(
+                f"트리 선택 불일치 — 원하는 {data_name!r}, 실제 {sel[0]!r}"
+            )
+    except RuntimeError:
+        raise
+    except Exception:
+        pass
+    return chosen, chosen_line, line_idx
+
+
+def _right_click_tree_data_name(
+    win, data_name: str, *, eye=None
+) -> tuple[int, int] | None:
+    """
+    선택된 트리 노드에서 우클릭 — 고정 상단 좌표 금지.
+
+    1) pywinauto 로 동일 데이터명 선택
+    2) OCR 로 해당 행 화면 좌표 우클릭 (시료명 행 정확도)
+    3) 실패 시 선택 행 인덱스 우클릭
+    """
+    chosen, chosen_line, line_idx = _select_tree_data_name(win, data_name)
+
+    if eye is not None:
+        anchor = eye.find_tree_name_screen_xy(data_name)
+        if anchor:
+            from gc_screen_read import click_screen, flash_focus_point
+
+            flash_focus_point(anchor[0], anchor[1], color="lime")
+            click_screen(anchor[0], anchor[1], button="right")
+            eye._menu_anchor_screen = anchor
+            time.sleep(0.5)
+            if _wait_for_context_menu(1.8):
+                _log(f"  트리 OCR 우클릭: {chosen} @ {anchor}")
+                return anchor
+            _log("  [적응] OCR 좌표 메뉴 없음 — 행 인덱스 우클릭")
+
+    tree = _analysis_tree_view(win)
+    tree.set_focus()
+    time.sleep(0.15)
+    rect = tree.rectangle()
+    candidates: List[str] = []
+    try:
+        candidates = [(t or "").strip() for t in tree.texts() if (t or "").strip()]
+    except Exception:
+        pass
+    row_h = max(16, min(22, rect.height() // max(len(candidates), 8)))
+    rel_x = max(24, min(rect.width() // 3, 80))
+    rel_y = max(16, min(12 + line_idx * row_h, max(20, rect.height() - 12)))
+    tree.click_input(button="right", coords=(rel_x, rel_y))
+    time.sleep(0.4)
+    screen_xy = (rect.left + rel_x, rect.top + rel_y)
+    if _wait_for_context_menu(1.8):
+        _log(f"  트리 우클릭(행{line_idx}): {chosen}")
+        return screen_xy
+    _log(f"  [적응] 행{line_idx} 우클릭 메뉴 없음 — Apps 키 시도")
+    try:
+        from pywinauto.keyboard import send_keys
+
+        tree.set_focus()
+        send_keys("{APPS}")
+        time.sleep(0.45)
+        if _wait_for_context_menu(1.5):
+            _log(f"  트리 메뉴(Apps): {chosen}")
+            return screen_xy
+    except Exception:
+        pass
+    _log(f"  [경고] 트리 컨텍스트 메뉴 미표시: {chosen}")
+    return screen_xy
 
 
 def _neutral_list_coords(sample_list) -> tuple[int, int]:
@@ -641,6 +870,59 @@ def _largest_sample_list(win):
     return _analysis_sample_table(win)
 
 
+def _prep_steps_enabled() -> bool:
+    return os.getenv("GC1_AUTOCHRO_PREP_STEPS", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+    )
+
+
+def normalize_tree_label(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def tree_label_matches_data_name(tree_line: str, data_name: str) -> bool:
+    """분석목록 트리 시료명 ↔ 제어목록 데이터명 (접미사 -상온 등 허용)."""
+    line = normalize_tree_label(tree_line)
+    name = normalize_tree_label(data_name)
+    if not line or not name:
+        return False
+    if line == name:
+        return True
+    if line.startswith(name + " ") or line.startswith(name + "-"):
+        return True
+    compact_line = re.sub(r"\s+", "", line)
+    compact_name = re.sub(r"\s+", "", name)
+    return compact_line == compact_name or compact_line.startswith(compact_name)
+
+
+def resolve_analysis_method_mtd_path(data_name: str = "") -> str:
+    """
+    GC1 적분 MTD — **고정 파일명** (실험 데이터명 날짜와 무관).
+
+    기본: ``20260629 분석방법.MTD`` (바탕화면 또는 AUTOCHRO_ANALYSIS_METHOD_DIR).
+  override: ``AUTOCHRO_ANALYSIS_METHOD_MTD`` 전체 경로.
+    """
+    explicit = os.getenv("AUTOCHRO_ANALYSIS_METHOD_MTD", "").strip()
+    if explicit:
+        path = os.path.normpath(os.path.expanduser(explicit))
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"분석방법 MTD 없음: {path}")
+        return path
+    filename = os.getenv(
+        "AUTOCHRO_ANALYSIS_METHOD_FILENAME", "20260629 분석방법.MTD"
+    ).strip()
+    base = os.getenv("AUTOCHRO_ANALYSIS_METHOD_DIR", "").strip()
+    if not base:
+        base = os.path.join(os.path.expanduser("~"), "Desktop")
+    path = os.path.join(os.path.normpath(os.path.expanduser(base)), filename)
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"분석방법 MTD 없음: {path}")
+    return path
+
+
 def _menu_select_by_suffix(win, top_suffix: str, item_text: str) -> None:
     """top_suffix 예: '시료목록', item_text 예: '초기화+정량'."""
     for top in win.menu_items():
@@ -657,41 +939,180 @@ def _menu_select_by_suffix(win, top_suffix: str, item_text: str) -> None:
     raise RuntimeError(f"메뉴 없음: {top_suffix} -> {item_text}")
 
 
-def step_sync_control_to_analysis(win, cfg: AutochroConfig) -> None:
-    _log("1/5 제어목록 탭 → 시료 더블클릭 → 분석목록")
+def _listview_item_count(ctrl) -> int:
+    try:
+        return max(0, int(ctrl.item_count()))
+    except Exception:
+        return 0
+
+
+def _autochro_eye_enabled(cfg: AutochroConfig) -> bool:
+    from gc1_runtime.layer3_eye_guide import autochro_eye_enabled
+
+    return autochro_eye_enabled(dry_run=cfg.dry_run)
+
+
+def _make_step_eye(win, cfg: AutochroConfig):
+    if not _autochro_eye_enabled(cfg):
+        return None
+    from gc1_runtime.layer3_eye_guide import AutochroStepEye
+
+    return AutochroStepEye.from_window_rect(win.rectangle(), log_fn=_log)
+
+
+def step_sync_control_to_analysis(
+    win, cfg: AutochroConfig, data_name: str | None = None
+) -> None:
+    _log("제어목록 탭 -> 시료 더블클릭 -> 분석목록")
     if cfg.dry_run:
         return
+    from gc1_runtime.layer0_sync import evaluate_sync_post_check, sync_double_click_coords
+
+    eye = _make_step_eye(win, cfg)
     _select_control_tab(win)
+    if eye:
+        eye.scan_between("P1.start", "control_sample_table", task_id="eye_before_control_sync")
+        eye.require_task("P1.tab_control", "eye_active_tab_control")
     sample_list = _control_sync_list(win)
+    control_count = _listview_item_count(sample_list)
     sample_list.set_focus()
     sample_list.click_input()
     rect = sample_list.rectangle()
-    rel_y = max(12, rect.height() - 24)
-    rel_x = max(20, rect.width() // 4)
-    sample_list.double_click_input(coords=(rel_x, rel_y))
+    fallback = sync_double_click_coords(rect.width(), rect.height())
+    if eye:
+        eye.guided_sync_execute_double_click(sample_list, fallback_rel=fallback)
+    else:
+        rel_x, rel_y = fallback
+        try:
+            sample_list.move_mouse_input(coords=(rel_x, rel_y))
+            time.sleep(0.25)
+        except Exception:
+            pass
+        sample_list.double_click_input(coords=(rel_x, rel_y))
     time.sleep(1.5)
+    if eye:
+        eye.scan_between("P1.after_dclick", "top_sample_table")
     _select_analysis_tab(win)
     if not _on_analysis_tab(win):
         raise RuntimeError("분석목록 탭 전환 실패 - Autochro 창 상태 확인")
+    analysis_count = _listview_item_count(_analysis_sample_table(win))
+    post = evaluate_sync_post_check(control_count, analysis_count)
+    if not post.ok:
+        raise RuntimeError(
+            f"{post.operator_hint} "
+            f"(제어목록 {post.control_item_count}행, 분석목록 {post.analysis_item_count}행)"
+        )
+    _log(
+        f"제어목록->분석목록 동기화 OK - "
+        f"제어 {post.control_item_count}행 / 분석 {post.analysis_item_count}행"
+    )
+    if eye:
+        eye.require_task("P1.after_sync", "eye_after_sync_analysis_rows")
+        dn = (data_name or "").strip() or read_active_control_data_name(win, cfg)
+        eye.require_tree_data_name(dn, step_id="P1.tree")
+
+
+def step_context_initialize_samples(win, cfg: AutochroConfig) -> None:
+    """분석목록 시료 표 우클릭 -> 초기화 (적분·초기화+정량 아님)."""
+    _log("시료 표 우클릭 -> 초기화")
+    if cfg.dry_run:
+        return
+    eye = _make_step_eye(win, cfg)
+    _select_analysis_tab(win)
+    sample_list = _analysis_sample_table(win)
+    if eye:
+        menu_ok = eye.guided_right_click_then_menu(sample_list, "초기화", forbid=("정량", "검량"))
+        if not menu_ok:
+            _log("[적응] 메뉴 OCR 실패 — pywinauto 초기화")
+            _click_context_initialize()
+        eye.require_task("P3.after_init", "eye_after_context_init")
+    else:
+        _right_click_sample_table(sample_list)
+        _click_context_initialize()
+    time.sleep(0.8)
+
+
+def step_load_analysis_method(win, cfg: AutochroConfig, data_name: str) -> None:
+    """
+    왼쪽 트리 **동일 데이터명** 우클릭 -> 분석방법 불러오기 -> 고정 MTD.
+
+    다른 시료 노드에서 불러오면 적분값이 현재 분석이 아닌 이전 데이터에 저장됨.
+    PDF·엑셀 파일명도 ``data_name``(제어목록 활성 시료)과 동일해야 함.
+    """
+    mtd_path = resolve_analysis_method_mtd_path()
+    _log(f"분석방법 MTD: {os.path.basename(mtd_path)}")
+    if cfg.dry_run:
+        return
+    eye = _make_step_eye(win, cfg)
+    active = read_active_control_data_name(win, cfg)
+    if active and not tree_label_matches_data_name(active, data_name):
+        _log(f"[주의] 활성 데이터명 {active!r} — 요청 {data_name!r} 와 다름, 활성명 사용")
+        data_name = active
+    elif active:
+        data_name = active
+    if eye:
+        eye.scan_between("P4.before_tree", "left_analysis_tree")
+        eye.require_tree_data_name(data_name, step_id="P4.before_mtd")
+    _select_analysis_tab(win)
+    if eye:
+        eye.require_task("P4.tab_analysis", "eye_active_tab_analysis")
+    anchor = _right_click_tree_data_name(win, data_name, eye=eye)
+    if eye:
+        if anchor:
+            eye._menu_anchor_screen = anchor
+        eye.scan_between("P4.after_tree_menu", "context_menu_popup")
+        if not eye.try_click_context_menu_ocr(
+            "불러오기",
+            forbid=(),
+            region_id="context_menu_popup",
+            step_id="P4.after_tree_menu",
+        ):
+            if not eye._try_click_popup_menu_win32(
+                "분석방법", forbid=(), step_id="P4.after_tree_menu"
+            ) and not eye._try_click_popup_menu_win32(
+                "불러오기", forbid=(), step_id="P4.after_tree_menu"
+            ):
+                _log("[적응] 메뉴 OCR 실패 — pywinauto 분석방법 불러오기")
+                _click_context_load_analysis_method()
+    else:
+        _right_click_tree_data_name(win, data_name)
+        _click_context_load_analysis_method()
+    _open_path_in_file_dialog(r"분석방법 불러오기", mtd_path, timeout=cfg.dialog_wait_sec)
+    time.sleep(2.0)
+    if eye:
+        from gc1_runtime.layer3_eye_guide import EYE_TASK_AFTER_MTD
+
+        eye.require_task("P4.after_mtd", EYE_TASK_AFTER_MTD)
 
 
 def step_select_all_samples(win, cfg: AutochroConfig) -> None:
-    _log("2/5 시료 전체 선택 (Ctrl+A)")
+    _log("시료 전체 선택 (Ctrl+A)")
     if cfg.dry_run:
         return
+    eye = _make_step_eye(win, cfg)
     _select_analysis_tab(win)
     sample_list = _analysis_sample_table(win)
-    _focus_list_for_ctrl_a(sample_list)
     from pywinauto.keyboard import send_keys
 
+    if eye:
+        rel_x, rel_y = eye.guided_focus_for_ctrl_a(sample_list)
+        sample_list.click_input(coords=(rel_x, rel_y))
+        time.sleep(0.2)
+    else:
+        _focus_list_for_ctrl_a(sample_list)
     send_keys("^a")
     time.sleep(0.5)
+    if eye:
+        eye.guided_after_ctrl_a()
 
 
 def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
-    _log("3/5 시료목록 → 초기화+정량")
+    _log("시료목록 -> 초기화+정량")
     if cfg.dry_run:
         return
+    eye = _make_step_eye(win, cfg)
+    if eye:
+        eye.scan_between("P6.before_quantify", "bottom_peak_table_fine")
     _select_analysis_tab(win)
     try:
         _menu_select_by_suffix(win, "시료목록", "초기화+정량")
@@ -711,14 +1132,20 @@ def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
 
 
 def step_print_pdf(win, cfg: AutochroConfig) -> None:
-    _log("4/5 분석목록 → 인쇄 (Ctrl+P)")
+    _log("분석목록 -> 인쇄 (Ctrl+P)")
     if cfg.dry_run:
         return
     from pywinauto.keyboard import send_keys
 
+    eye = _make_step_eye(win, cfg)
     _select_analysis_tab(win)
     sample_list = _analysis_sample_table(win)
-    _focus_list_for_ctrl_a(sample_list)
+    if eye:
+        rel_x, rel_y = eye.guided_focus_for_ctrl_a(sample_list)
+        sample_list.click_input(coords=(rel_x, rel_y))
+        time.sleep(0.2)
+    else:
+        _focus_list_for_ctrl_a(sample_list)
     win.set_focus()
     send_keys("^a")
     time.sleep(0.3)
@@ -1016,6 +1443,11 @@ def step_save_pdf(cfg: AutochroConfig, pdf_path: str) -> None:
     )
 
 
+def _gc1_use_runtime() -> bool:
+    """Ω.A.B.CFG.15 — 기본 0: 기존 step_* 경로. 1: ``gc1_runtime.layer4_job`` (T61)."""
+    return os.getenv("GC1_USE_RUNTIME", "0").strip().lower() in ("1", "true", "yes")
+
+
 def run_autochro_export(
     excel_output_dir: str,
     state_path: str,
@@ -1027,6 +1459,21 @@ def run_autochro_export(
     Returns:
         (ok, pdf_path, message)
     """
+    if _gc1_use_runtime():
+        from gc1_runtime.layer4_job import ExportJobContext, run_autochro_export as _runtime_export
+
+        return _runtime_export(
+            excel_output_dir,
+            state_path,
+            force=force,
+            job_ctx=ExportJobContext(
+                excel_output_dir=excel_output_dir,
+                send_state_path=state_path,
+                force=force,
+                log_fn=_log,
+            ),
+        )
+
     cfg = load_autochro_config(excel_output_dir)
     if not cfg.enabled and not force:
         return False, None, "AUTOCHRO_ENABLED=0"
@@ -1036,6 +1483,14 @@ def run_autochro_export(
     if not need and not force:
         return True, None, reason
     _log(f"시작 - {reason}")
+
+    from gc1_runtime.layer3_ocr_learn import begin_ocr_run_session, finalize_ocr_run_session
+    from gc1_runtime.layer3_workflow_gate import log_failure_disposition
+
+    begin_ocr_run_session()
+    ok = False
+    pdf_out: Optional[str] = None
+    msg_out = ""
     try:
         if cfg.dry_run:
             source = _fallback_data_name(cfg)
@@ -1043,47 +1498,68 @@ def run_autochro_export(
             _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
             _log("[DRY RUN] UI 단계만 로그")
             for label in (
-                "1/5 제어목록 → 더블클릭",
-                "2/5 Ctrl+A",
-                "3/5 초기화+정량",
-                "4/5 인쇄",
-                "5/5 PDF 저장",
+                "1 제어목록 → 분석목록",
+                "2 Ctrl+A → 우클릭 초기화",
+                "3 트리 → 분석방법 MTD",
+                "4 Ctrl+A → 우클릭 초기화",
+                "5 Ctrl+A → 초기화+정량",
+                "6 인쇄",
+                "7 PDF 저장",
             ):
                 _log(label)
-            return True, pdf_path, "dry-run"
-        stale_closed = close_all_hancom_pdf_windows()
-        if stale_closed:
-            _log(f"이전 한컴 PDF 완료 창 {stale_closed}개 닫음")
-        _, win = connect_main_window(cfg)
-        data_name = read_active_control_data_name(win, cfg)
-        pdf_path = build_export_pdf_path(cfg, data_name_raw=data_name)
-        _log(f"제어목록 데이터명: {data_name}")
-        _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
-        if not force and is_pdf_recently_exported(pdf_path):
-            return True, pdf_path, f"방금 PDF 내보냄 — Autochro 재실행 생략 ({pdf_fresh_skip_sec()}초 이내)"
-        step_sync_control_to_analysis(win, cfg)
-        step_select_all_samples(win, cfg)
-        step_initialize_quantify(win, cfg)
-        step_print_pdf(win, cfg)
-        step_save_pdf(cfg, pdf_path)
-        if not os.path.isfile(pdf_path):
-            folder_pdfs = sorted(
-                glob.glob(os.path.join(cfg.pdf_output_dir, "*.pdf")),
-                key=os.path.getmtime,
-                reverse=True,
-            )
-            if folder_pdfs:
-                pdf_path = folder_pdfs[0]
-        from gc_gc1 import cleanup_superseded_gc1_files
+            ok, pdf_out, msg_out = True, pdf_path, "dry-run"
+        else:
+            stale_closed = close_all_hancom_pdf_windows()
+            if stale_closed:
+                _log(f"이전 한컴 PDF 완료 창 {stale_closed}개 닫음")
+            _, win = connect_main_window(cfg)
+            data_name = read_active_control_data_name(win, cfg)
+            pdf_path = build_export_pdf_path(cfg, data_name_raw=data_name)
+            _log(f"제어목록 데이터명: {data_name}")
+            _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
+            if not force and is_pdf_recently_exported(pdf_path):
+                ok, pdf_out, msg_out = (
+                    True,
+                    pdf_path,
+                    f"방금 PDF보냄 — Autochro 재실행 생략 ({pdf_fresh_skip_sec()}초 이내)",
+                )
+            else:
+                step_sync_control_to_analysis(win, cfg, data_name)
+                if _prep_steps_enabled():
+                    step_select_all_samples(win, cfg)
+                    step_context_initialize_samples(win, cfg)
+                    step_load_analysis_method(win, cfg, data_name)
+                    step_select_all_samples(win, cfg)
+                    step_context_initialize_samples(win, cfg)
+                    step_select_all_samples(win, cfg)
+                else:
+                    step_select_all_samples(win, cfg)
+                step_initialize_quantify(win, cfg)
+                step_print_pdf(win, cfg)
+                step_save_pdf(cfg, pdf_path)
+                if not os.path.isfile(pdf_path):
+                    folder_pdfs = sorted(
+                        glob.glob(os.path.join(cfg.pdf_output_dir, "*.pdf")),
+                        key=os.path.getmtime,
+                        reverse=True,
+                    )
+                    if folder_pdfs:
+                        pdf_path = folder_pdfs[0]
+                from gc_gc1 import cleanup_superseded_gc1_files
 
-        removed, pdf_path = cleanup_superseded_gc1_files(cfg.pdf_output_dir, pdf_path, log_fn=_log)
-        if removed:
-            _log(f"잘못된 출력 파일 {removed}개 정리")
-        record_autochro_export(state_path, cfg.crm_path, pdf_path)
-        return True, pdf_path, os.path.basename(pdf_path)
+                removed, pdf_path = cleanup_superseded_gc1_files(
+                    cfg.pdf_output_dir, pdf_path, log_fn=_log
+                )
+                if removed:
+                    _log(f"잘못된 출력 파일 {removed}개 정리")
+                record_autochro_export(state_path, cfg.crm_path, pdf_path)
+                ok, pdf_out, msg_out = True, pdf_path, os.path.basename(pdf_path)
     except Exception as exc:
-        return False, None, str(exc)
-
+        log_failure_disposition(str(exc), log_fn=_log)
+        ok, pdf_out, msg_out = False, None, str(exc)
+    finally:
+        finalize_ocr_run_session(success=ok, message=msg_out, log_fn=_log)
+    return ok, pdf_out, msg_out
 
 def ensure_gc1_pdf_exported(
     excel_output_dir: str,

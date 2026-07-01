@@ -47,11 +47,23 @@ from gc_state import (
 from gc_wifi import format_required_ssids_label, parse_required_ssids
 
 DESKTOP_HEARTBEAT_RE = re.compile(r"^\d{8}\.txt$")
+DESKTOP_WAITING_PREFIX = "GC_대기_"
 _last_desktop_heartbeat_path: str | None = None
 
 
 def get_desktop_dir() -> str:
-    """Windows 사용자 바탕화면 실제 경로 (OneDrive 등 포함)."""
+    """
+    heartbeat txt 폴더.
+
+    GC1: ``박은규\\_GC자동화`` (자동화 전용 — 데이터 xlsx·pdf 와 분리).
+    GC2/GC3: Windows 사용자 바탕화면 (OneDrive 등 포함).
+    """
+    from gc_profiles import gc_runtime_dir, resolve_gc_instance
+
+    instance = os.getenv("GC_INSTANCE", "").strip().lower() or resolve_gc_instance()
+    excel_out = os.getenv("EXCEL_OUTPUT_DIR", "").strip()
+    if instance == "gc1" and excel_out:
+        return gc_runtime_dir(excel_out, gc_instance="gc1")
     if sys.platform == "win32":
         try:
             import ctypes
@@ -69,7 +81,11 @@ def get_desktop_dir() -> str:
 
 
 def _is_desktop_heartbeat_file(name: str) -> bool:
-    return bool(DESKTOP_HEARTBEAT_RE.match(name) or name.startswith(DESKTOP_STOPPED_PREFIX))
+    return bool(
+        DESKTOP_HEARTBEAT_RE.match(name)
+        or name.startswith(DESKTOP_STOPPED_PREFIX)
+        or name.startswith(DESKTOP_WAITING_PREFIX)
+    )
 
 
 def _sync_last_heartbeat_path_from_disk() -> None:
@@ -201,7 +217,8 @@ class StatusReporter:
             [
                 "",
                 f"※ '갱신' 시각이 {stale_minutes}분 이상 변하지 않으면 감시가 멈춘 것입니다.",
-                "※ 핫스팟 연결 중에만 MMDDHHmm.txt 이름이 갱신됩니다.",
+                "※ iPhone 핫스팟 연결 시 MMDDHHmm.txt 이름이 갱신됩니다.",
+                "※ 핫스팟 대기 중에는 GC_대기_MMDDHHmm.txt 가 갱신됩니다.",
                 "========================================",
                 "",
             ]
@@ -209,12 +226,21 @@ class StatusReporter:
         with open(self.status_txt_path, "w", encoding="utf-8") as status_file:
             status_file.write("\n".join(txt_lines))
 
-        if not alive or wifi_ready:
+        if not alive:
+            _update_desktop_heartbeat(alive=False, message=message, now=now)
+        elif wifi_ready:
             _update_desktop_heartbeat(
-                alive=alive,
+                alive=True,
                 message=message,
                 now=now,
                 status_code=status_code,
+            )
+        else:
+            _update_desktop_heartbeat(
+                alive=True,
+                message=message,
+                now=now,
+                waiting_wifi=True,
             )
 
 
@@ -222,6 +248,8 @@ def _update_desktop_heartbeat(
     alive: bool,
     message: str,
     now: datetime | None = None,
+    *,
+    waiting_wifi: bool = False,
     status_code: str | None = None,
 ) -> None:
     """
@@ -231,7 +259,8 @@ def _update_desktop_heartbeat(
       · 06151513.txt 처럼 파일 **이름**을 현재 시각으로 rename
       · 어제·중복 파일은 갱신 전후에 삭제해 1개만 유지
 
-    Wi-Fi 미연결 → 파일명 갱신 안 함 (마지막 연결 시각에 고정)
+    Wi-Fi 미연결 + watch 실행 중 → ``GC_대기_MMDDHHmm.txt`` (이름 갱신, verify 제외)
+    Wi-Fi 미연결 + watch 종료 → 파일명 갱신 안 함
     alive=False (--watch 종료) → GC_중지_MMDDHHmm.txt 로 변경
 
     verify_desktop_heartbeat() 는 이 파일명 시각 ±5분만 검사합니다.
@@ -244,35 +273,47 @@ def _update_desktop_heartbeat(
     heartbeat_full = now.strftime("%Y-%m-%d %H:%M:%S")
 
     if alive:
-        new_name = f"{display_time}.txt"
-        content_lines = [
-            "GC 자동 감시 실행 중",
-            f"파일 이름 = 컴퓨터 시각 (MMDDHHmm) → 지금은 {display_time}",
-            f"갱신: {heartbeat_full}",
-            f"상태: {message}",
-            "",
-            "※ 파일 이름이 지금 시각과 2분 이상 차이 → 감시 멈춤 또는 핫스팟 미연결",
-            "※ 핫스팟 연결 중 1분마다 파일 이름이 바뀌면 정상",
-        ]
-        # GC2/GC3: 시료 변경(새 날짜 엑셀 없음·RT 불일치) 시 watch 감시는 계속, 시료명만 대기
-        if status_code == "need_sample_name":
-            content_lines.extend(
-                [
-                    "",
-                    "========================================",
-                    "  [새 주입 감지] 시료명 입력 필요",
-                    "========================================",
-                    "  watch는 정상 감시 중입니다.",
-                    "  시료명을 1회 지정하면 이후 같은 날짜는",
-                    "  자동으로 엑셀·메일 처리됩니다.",
-                    "  (시료명은 사용자가 지정 — 자동 생성 안 함)",
-                    "",
-                    "  Cursor 채팅 또는:",
-                    "  gc_동작해줘.bat --sample-name \"<직접입력>\"",
-                    "    --sequence-date YYYYMMDD",
-                    "========================================",
-                ]
-            )
+        if waiting_wifi:
+            new_name = f"{DESKTOP_WAITING_PREFIX}{display_time}.txt"
+            content_lines = [
+                "GC 자동 감시 실행 중 — iPhone 핫스팟 대기",
+                f"파일 이름 = 컴퓨터 시각 (MMDDHHmm) → 지금은 {display_time}",
+                f"갱신: {heartbeat_full}",
+                f"상태: {message}",
+                "",
+                "※ iPhone 연결되면 이 파일 대신 MMDDHHmm.txt 로 바뀝니다.",
+                "※ 파일 이름이 지금 시각과 2분 이상 차이 → 감시 멈춤",
+            ]
+        else:
+            new_name = f"{display_time}.txt"
+            content_lines = [
+                "GC 자동 감시 실행 중",
+                f"파일 이름 = 컴퓨터 시각 (MMDDHHmm) → 지금은 {display_time}",
+                f"갱신: {heartbeat_full}",
+                f"상태: {message}",
+                "",
+                "※ 파일 이름이 지금 시각과 2분 이상 차이 → 감시 멈춤 또는 핫스팟 미연결",
+                "※ 핫스팟 연결 중 1분마다 파일 이름이 바뀌면 정상",
+            ]
+            # GC2/GC3: 시료 변경(새 날짜 엑셀 없음·RT 불일치) 시 watch 감시는 계속, 시료명만 대기
+            if status_code == "need_sample_name":
+                content_lines.extend(
+                    [
+                        "",
+                        "========================================",
+                        "  [새 주입 감지] 시료명 입력 필요",
+                        "========================================",
+                        "  watch는 정상 감시 중입니다.",
+                        "  시료명을 1회 지정하면 이후 같은 날짜는",
+                        "  자동으로 엑셀·메일 처리됩니다.",
+                        "  (시료명은 사용자가 지정 — 자동 생성 안 함)",
+                        "",
+                        "  Cursor 채팅 또는:",
+                        '  gc_동작해줘.bat --sample-name "<직접입력>"',
+                        "    --sequence-date YYYYMMDD",
+                        "========================================",
+                    ]
+                )
     else:
         new_name = f"{DESKTOP_STOPPED_PREFIX}{display_time}.txt"
         content_lines = [

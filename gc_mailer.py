@@ -51,7 +51,9 @@ def load_dotenv_files(script_dir: str, excel_output_dir: str) -> bool:
         print("[오류] python-dotenv 미설치: pip install python-dotenv")
         return False
 
-    for base in (script_dir, excel_output_dir):
+    from gc_profiles import gc_runtime_dir
+
+    for base in (script_dir, excel_output_dir, gc_runtime_dir(excel_output_dir)):
         for name in (".env", "gc_automation.env"):
             path = os.path.join(base, name)
             if os.path.isfile(path):
@@ -196,7 +198,9 @@ def send_email_via_smtp(
     retries = smtp_send_retries if smtp_send_retries is not None else SMTP_SEND_RETRIES
     sender, app_password, recipient = get_smtp_credentials(script_dir, excel_output_dir)
     if not sender or not app_password:
-        env_hint = os.path.join(excel_output_dir, "gc_automation.env")
+        from gc_profiles import gc_runtime_dir
+
+        env_hint = os.path.join(gc_runtime_dir(excel_output_dir), "gc_automation.env")
         print("\n[오류] 메일 설정 없음 — gc_automation.env 또는 .env 를 만드세요.")
         print(f"       경로 예: {env_hint}")
         return False

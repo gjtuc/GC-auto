@@ -35,6 +35,19 @@ class TestGc1Trim(unittest.TestCase):
         self.assertTrue(found_first)
         self.assertEqual(kept_tcd[0], _tcd(h2=1000, co=500))
 
+    def test_reduction_only_leaves_no_kept_cycles(self):
+        """환원+전환만 있고 반응 시작 전 - trim 후 비움 (환원 단계)."""
+        fid = [[], []]
+        tcd = [_tcd(h2=20000, co=10), _tcd(h2=500, co=50)]
+        kept_fid, kept_tcd, skipped_pre, skipped_red, skipped_trans, skipped_first, found_first = (
+            trim_reduction_and_first_reaction(fid, tcd, quiet=True)
+        )
+        self.assertEqual(len(kept_fid), 0)
+        self.assertEqual(len(kept_tcd), 0)
+        self.assertEqual(skipped_red, 1)
+        self.assertGreaterEqual(skipped_trans, 1)
+        self.assertFalse(found_first)
+
 
 if __name__ == "__main__":
     unittest.main()

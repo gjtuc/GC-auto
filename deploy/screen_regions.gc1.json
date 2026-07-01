@@ -1,0 +1,196 @@
+{
+  "_comment": "GC1 Autochro — 창 내부 상대 좌표 (0~1). 캘리브레이션 전 기본값. deploy/GC1_SCREEN_READ.md 참고.",
+  "display_profile": {
+    "width": 1920,
+    "height": 1080,
+    "scale_percent": 100,
+    "notes": "Autochro 창 최대화·배율 100% 기준. PC마다 calibrate 후 box 조정."
+  },
+  "window_title_contains": "Autochro",
+    "zoom_pipeline": {
+    "step_min": 1.25,
+    "step_max": 2.25,
+    "step": 1.5,
+    "max_depth": 5,
+    "crop_frac_min": 0.22,
+    "crop_frac_max": 0.75,
+    "crop_frac": 0.55,
+    "target_glyph_px": 20,
+    "stop_confidence": 72,
+    "min_confidence": 35,
+    "_comment": "적응 확대: 영역 크기·토큰·needles 로 step/crop 매 단계 조절"
+  },
+  "regions": {
+    "autochro_window": {
+      "parent": null,
+      "box": [0, 0, 1, 1],
+      "stage": "full",
+      "description": "Autochro 메인 창 전체"
+    },
+    "bottom_tabs": {
+      "parent": "autochro_window",
+      "box": [0, 0.90, 0.28, 0.10],
+      "stage": "panel",
+      "description": "왼쪽 아래 분석목록/제어목록 탭",
+      "zoom_hints": {
+        "profile": "tab",
+        "step_min": 1.85,
+        "target_glyph_px": 24,
+        "needles": ["분석", "목록", "제어", "분석목록", "제어목록"]
+      }
+    },
+    "bottom_tab_labels": {
+      "parent": "bottom_tabs",
+      "box": [0.02, 0.1, 0.98, 0.88],
+      "stage": "fine",
+      "description": "탭 글자만 (제어목록/분석목록)",
+      "zoom_hints": {
+        "profile": "tab",
+        "step_min": 2.0,
+        "step_max": 2.5,
+        "max_depth": 4,
+        "crop_frac_min": 0.35,
+        "needles": ["분석", "목록", "제어"]
+      }
+    },
+    "left_analysis_tree": {
+      "parent": "autochro_window",
+      "box": [0, 0.08, 0.22, 0.84],
+      "stage": "panel",
+      "description": "분석목록 왼쪽 트리(노란 아이콘·시료명)",
+      "zoom_hints": {
+        "profile": "tree",
+        "needles": ["dre", "ni", "2026"]
+      }
+    },
+    "top_sample_table": {
+      "parent": "autochro_window",
+      "box": [0.22, 0.08, 0.78, 0.22],
+      "stage": "panel",
+      "description": "오른쪽 위 시료 표(전체선택·우클릭)",
+      "zoom_hints": {
+        "profile": "table",
+        "needles": ["raw", "시료", "수집"]
+      }
+    },
+    "bottom_peak_table": {
+      "parent": "autochro_window",
+      "box": [0.22, 0.72, 0.78, 0.2],
+      "stage": "panel",
+      "description": "아래 피크 결과 표(면적·RT)"
+    },
+    "bottom_peak_table_fine": {
+      "parent": "bottom_peak_table",
+      "box": [0, 0.12, 1, 0.88],
+      "stage": "fine",
+      "description": "피크 표 데이터 행(헤더 제외) — MTD 적용·초기화 검증",
+      "zoom_hints": {
+        "profile": "numeric",
+        "needles": ["H2", "CH4", "CO", "RT", "면적", "0.0"]
+      }
+    },
+    "chromatogram_center": {
+      "parent": "autochro_window",
+      "box": [0.22, 0.3, 0.45, 0.4],
+      "stage": "panel",
+      "description": "가운데 크로마(적분선 확인용, OCR 약함)"
+    },
+    "control_sample_table": {
+      "parent": "autochro_window",
+      "box": [0.22, 0.08, 0.78, 0.22],
+      "stage": "panel",
+      "description": "제어목록 탭 오른쪽 위 시료 표 전체"
+    },
+    "control_file_name_column": {
+      "parent": "autochro_window",
+      "box": [0.48, 0.10, 0.50, 0.20],
+      "stage": "panel",
+      "description": "제어목록 파일이름 열 (1.raw 더블클릭)"
+    },
+    "context_menu_popup": {
+      "parent": "autochro_window",
+      "box": [0.12, 0.1, 0.76, 0.75],
+      "stage": "panel",
+      "description": "우클릭 컨텍스트 메뉴 (초기화 등)",
+      "zoom_hints": {
+        "profile": "menu",
+        "needles": ["초기화", "불러", "정량"]
+      }
+    }
+  },
+  "read_tasks": {
+    "verify_active_tab_analysis": {
+      "region": "bottom_tab_labels",
+      "expect_loose_tab": "analysis",
+      "description": "분석목록 탭 활성(파란 선택) 근처 글자"
+    },
+    "verify_peak_table_has_data": {
+      "region": "bottom_peak_table_fine",
+      "expect_numeric_min": 1,
+      "reject_if_mostly_zero": true,
+      "description": "MTD 후 면적/RT 숫자 존재"
+    },
+    "verify_peak_table_cleared": {
+      "region": "bottom_peak_table_fine",
+      "expect_mostly_zero": true,
+      "description": "초기화 후 0.0000 위주"
+    },
+    "eye_before_control_sync": {
+      "region": "control_sample_table",
+      "expect_contains_raw": true,
+      "description": "제어목록 탭 전 시료 표 .raw 가시 여부"
+    },
+    "eye_before_sync_dclick": {
+      "region": "top_sample_table",
+      "expect_contains_raw": true,
+      "description": "동기화 더블클릭 직전 제어목록 표"
+    },
+    "eye_after_sync_analysis_rows": {
+      "region": "top_sample_table",
+      "expect_numeric_min": 1,
+      "reject_if_mostly_zero": true,
+      "description": "동기화 후 분석목록 시료 표에 행/숫자"
+    },
+    "eye_before_sample_table": {
+      "region": "top_sample_table",
+      "expect_contains": ["시료"],
+      "description": "시료 표 헤더 보임 (클릭 전)"
+    },
+    "eye_after_ctrl_a": {
+      "region": "top_sample_table",
+      "expect_contains": ["시료"],
+      "description": "Ctrl+A 후 표 영역 유지"
+    },
+    "eye_after_context_init": {
+      "region": "bottom_peak_table_fine",
+      "expect_mostly_zero": true,
+      "description": "우클릭 초기화 후 피크 표 cleared"
+    },
+    "eye_after_mtd_peak": {
+      "region": "bottom_peak_table_fine",
+      "expect_numeric_min": 1,
+      "reject_if_mostly_zero": true,
+      "description": "MTD 불러온 뒤 아래 피크 표 면적/RT 숫자"
+    },
+    "eye_sync_tree_name": {
+      "region": "left_analysis_tree",
+      "expect_contains": [],
+      "description": "동기화 후 분석목록 트리에 제어목록 데이터명 (런타임 주입)"
+    },
+    "eye_active_tab_control": {
+      "region": "bottom_tab_labels",
+      "expect_loose_tab": "control",
+      "description": "제어목록 탭 활성"
+    },
+    "eye_active_tab_analysis": {
+      "region": "bottom_tab_labels",
+      "expect_loose_tab": "analysis",
+      "description": "분석목록 탭 활성"
+    },
+    "eye_after_menu_초기화": {
+      "region": "context_menu_popup",
+      "expect_contains": ["초기화"],
+      "description": "메뉴 OCR 클릭 직후 (메뉴 닫힘 전 스캔)"
+    }
+  }
+}

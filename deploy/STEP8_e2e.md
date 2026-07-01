@@ -105,6 +105,21 @@ python gc_automation.py --force
 python gc_automation.py --watch
 ```
 
+### 8.3d GC1 runtime dry-run E2E (실장비·메일 없음)
+
+Autochro UI 없이 **P0→P9 atom 전부 ok** 시뮬레이션 (`gc1_runtime`, T63).
+
+```powershell
+cd C:\Users\User\chemstation-gc-automation
+python scripts\run_gc1_runtime_e2e.py
+python scripts\run_gc1_runtime_e2e.py --full -v   # test_gc1_runtime*.py 전체
+```
+
+**PASS:** exit 0, ``[OK] py_compile`` + ``[OK] unittest``
+
+**의미:** Step 8.3b(실장비 메일) **이전**에 런타임 state machine·job JSON·PDF dry-run 경로가 깨지지 않았는지 확인.  
+실장비 Autochro 연동은 ``GC1_USE_RUNTIME=1`` + ``AUTOCHRO_DRY_RUN=0`` (별도).
+
 ---
 
 ## 8.4 — 은규 PC: IMAP 수신 (1단계)

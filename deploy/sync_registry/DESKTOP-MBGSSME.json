@@ -1,7 +1,7 @@
 {
     "pc_id":  "DESKTOP-MBGSSME",
-    "label":  "은규 — GC1 PC (DESKTOP-MBGSSME)",
-    "role":  "gc1_pc",
+    "label":  "은규 — 데이터 PC (DESKTOP-MBGSSME)",
+    "role":  "data_pc",
     "operator":  "은규",
     "identifiers":  {
                         "smbios_uuid":  "2729BF60-374D-11E1-91AC-E8039A622559",
@@ -10,8 +10,8 @@
                         "windows_user":  "User"
                     },
     "sync":  {
-                 "last_push_at":  "2026-06-22T20:58:16+09:00",
-                 "last_push_commit":  "587b96f",
+                 "last_push_at":  "2026-07-01T10:57:16+09:00",
+                 "last_push_commit":  "7c6d44e",
                  "last_push_by":  "DESKTOP-MBGSSME\\은규",
                  "last_pull_at":  "2026-06-22T20:40:27+09:00",
                  "last_pull_commit":  "564d5b3",
@@ -21,107 +21,163 @@
     "history":  [
                     {
                         "event":  "push",
-                        "at":  "2026-06-22T20:58:16+09:00",
-                        "commit":  "587b96f",
-                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-22 20:58:13",
-                        "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "pull",
-                        "at":  "2026-06-22T20:40:27+09:00",
-                        "commit":  "564d5b3",
-                        "subject":  "fix: Origin ?뚰겕?쒗듃 ?댁쓣 Comments ?좎쭨?쒖쑝濡??쎌엯",
-                        "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "cursor:sessionStart"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-06-22T19:46:29+09:00",
-                        "commit":  "6bb6cd2",
-                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-22 19:46:26",
+                        "at":  "2026-07-01T10:57:16+09:00",
+                        "commit":  "7c6d44e",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-07-01 10:57:09",
                         "by":  "DESKTOP-MBGSSME\\은규",
                         "triggered_by":  "auto_git_sync"
                     },
                     {
                         "event":  "push",
-                        "at":  "2026-06-22T18:57:15+09:00",
-                        "commit":  "1777b81",
-                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-22 18:57:13",
+                        "at":  "2026-07-01T10:53:38+09:00",
+                        "commit":  "fe6a0f3",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-07-01 10:53:04",
                         "by":  "DESKTOP-MBGSSME\\은규",
                         "triggered_by":  "auto_git_sync"
                     },
                     {
                         "event":  "push",
-                        "at":  "2026-06-22T18:41:19+09:00",
-                        "commit":  "da8286f",
-                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-22 18:41:15",
+                        "at":  "2026-07-01T10:46:05+09:00",
+                        "commit":  "763920f",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-07-01 10:45:51",
                         "by":  "DESKTOP-MBGSSME\\은규",
                         "triggered_by":  "auto_git_sync"
                     },
                     {
-                        "event":  "pull",
-                        "at":  "2026-06-22T18:28:29+09:00",
-                        "commit":  "d8d61c8",
-                        "subject":  "sync: registry GC8860 push @ 2026-06-19 19:16:30",
-                        "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "cursor:sessionStart"
-                    },
-                    {
                         "event":  "push",
-                        "at":  "2026-06-18T20:15:59+09:00",
-                        "commit":  "9ee9665",
-                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-18 20:15:56",
+                        "at":  "2026-07-01T09:31:16+09:00",
+                        "commit":  "6999be9",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-07-01 09:31:06",
                         "by":  "DESKTOP-MBGSSME\\은규",
                         "triggered_by":  "auto_git_sync"
                     },
                     {
-                        "event":  "pull",
-                        "at":  "2026-06-18T20:15:51+09:00",
-                        "commit":  "15e186c",
-                        "subject":  "Merge branch \u0027main\u0027 of https://github.com/gjtuc/GC-auto",
+                        "event":  "push",
+                        "at":  "2026-07-01T09:15:44+09:00",
+                        "commit":  "f609715",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-07-01 09:15:26",
                         "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "agent_restart"
-                    },
-                    {
-                        "event":  "pull",
-                        "at":  "2026-06-18T20:02:33+09:00",
-                        "commit":  "ce04837",
-                        "subject":  "docs: 은규 PC는 G: 미사용, 연구노트 로컬 경로로 통일",
-                        "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "gc_git_pull.bat"
-                    },
-                    {
-                        "event":  "pull",
-                        "at":  "2026-06-18T16:27:54+09:00",
-                        "commit":  "3b3cbcb",
-                        "subject":  "sync: registry GC8860 push git-auto-sync",
-                        "by":  "DESKTOP-MBGSSME\\은규",
-                        "triggered_by":  "gc_git_pull.bat"
+                        "triggered_by":  "auto_git_sync"
                     },
                     {
                         "event":  "push",
-                        "at":  "2026-06-18T15:30:02+09:00",
-                        "commit":  "2fafb2d",
-                        "subject":  "feat: Steps 6-9 guides, GC1 calib scaffolding, pull-before-push rules",
-                        "by":  "DESKTOP-MBGSSME\\User",
-                        "triggered_by":  "manual_push"
+                        "at":  "2026-07-01T00:38:56+09:00",
+                        "commit":  "82a5f4e",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-07-01 00:38:49",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
                     },
                     {
                         "event":  "push",
-                        "at":  "2026-06-18T14:47:20+09:00",
-                        "commit":  "e5d3c5c",
-                        "subject":  "feat: PC sync tracking ??who pushed/pulled and who is behind",
-                        "by":  "DESKTOP-MBGSSME\\User",
-                        "triggered_by":  "manual"
+                        "at":  "2026-06-30T23:52:46+09:00",
+                        "commit":  "bf0833f",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 23:52:39",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
                     },
                     {
-                        "event":  "pull",
-                        "at":  "2026-06-18T14:46:21+09:00",
-                        "commit":  "dff49c2",
-                        "subject":  "docs: add cross-PC comments and CODEBASE_GUIDE",
-                        "by":  "DESKTOP-MBGSSME\\User",
-                        "triggered_by":  "setup"
+                        "event":  "push",
+                        "at":  "2026-06-30T22:41:35+09:00",
+                        "commit":  "ad98682",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 22:41:27",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T22:33:28+09:00",
+                        "commit":  "3252c0a",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 22:33:21",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T22:27:26+09:00",
+                        "commit":  "b98a0bb",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 22:27:20",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T22:20:47+09:00",
+                        "commit":  "4f3a50d",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 22:20:41",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T22:15:06+09:00",
+                        "commit":  "e0d5bfb",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 22:14:47",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T21:58:08+09:00",
+                        "commit":  "562fea7",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 21:58:02",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T21:43:23+09:00",
+                        "commit":  "1666958",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 21:43:18",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T21:40:32+09:00",
+                        "commit":  "fa11e69",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 21:40:24",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T21:33:26+09:00",
+                        "commit":  "7b77509",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 21:33:20",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T21:09:06+09:00",
+                        "commit":  "1720939",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 21:08:58",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T20:58:16+09:00",
+                        "commit":  "e804bbf",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 20:58:06",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T20:40:55+09:00",
+                        "commit":  "8ee58d8",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 20:40:49",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
+                    },
+                    {
+                        "event":  "push",
+                        "at":  "2026-06-30T20:37:44+09:00",
+                        "commit":  "273471a",
+                        "subject":  "auto: sync DESKTOP-MBGSSME @ 2026-06-30 20:37:37",
+                        "by":  "DESKTOP-MBGSSME\\은규",
+                        "triggered_by":  "auto_git_sync"
                     }
                 ]
 }

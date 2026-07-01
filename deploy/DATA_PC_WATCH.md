@@ -15,21 +15,33 @@
 
 ---
 
-## 모듈 구성
+## 모듈 구성 (2026-06 — data_pc_runtime)
 
 ```
-Desktop\.cursor\
-  촉매 반응 계산.py      --watch 진입
-  data_pc_watch.py       Wi-Fi poll · 쿨다운 · 파이프라인 호출
-  data_pc_watchdog.py    watch 프로세스 감시·재시작
+Desktop\.cursor\  (또는 %USERPROFILE%\gc-data-pc\)
+  촉매 반응 계산.py          process_new_gc_emails — 메일·계산·G:·Origin
+  data_pc_runtime\           L0~L4 계층형 감시 (supervisor 1프로세스)
+    layer0_probes.py         Wi-Fi · G: · IMAP TCP · PID (읽기 전용)
+    layer1_state.py          쿨다운·G:재시도 상태 JSON
+    layer2_gates.py          Wi-Fi → 락 → 쿨다운 게이트
+    layer2_lock.py           .data_pc_pipeline.lock
+    layer3_job.py            JobRunner → process_new_gc_emails
+    layer4_supervisor.py     폴링 루프 + Ensure 재기동
+  data_pc_watchdog.py        [레거시] → data_pc_runtime 위임만
   data_pc_wifi_autoconnect.py  부팅 시 iptime WLAN 자동 연결
-  gc_wifi_autoconnect.py   GC2/GC3·데이터 PC 공통 Wi-Fi 모듈
-  gc_data_pc_*.bat/vbs   Windows 자동 시작 (차헌)
-  gc_automation.env      아래 DATA_PC_* 설정
+  gc_wifi.py                 GC2/GC3·데이터 PC 공통 Wi-Fi 모듈
+  gc_data_pc_*.bat/vbs       Windows 자동 시작 (차헌)
+  gc_automation.env          DATA_PC_* 설정
   KCH\
-    .data_pc_watch_status.json   실시간 heartbeat (감시 살아있음)
-    .data_pc_watch_state.json    쿨다운·G: 재시도 상태
+    .data_pc_runtime_status.json   supervisor heartbeat
+    .data_pc_runtime_state.json    쿨다운·G: 재시도
+    .data_pc_pipeline.lock         파이프라인 동시 실행 방지
+    .origin_update.lock            Origin 4단계 직렬화 (촉매 반응 계산.py)
 ```
+
+**사용자 관점 흐름은 동일:** 로그인 → Wi-Fi → 백그라운드 감시 → 메일 → 엑셀 → G: → Origin.
+
+**Origin Read-Only 팝업:** `촉매 반응 계산.py` 가 `.origin_update.lock` + 자동 Yes 클릭으로 처리 (수동 개입 불필요).
 
 ---
 
@@ -61,8 +73,8 @@ deploy\gc_data_pc_install_autostart_chaheon.bat
 | 작업 이름 | 주기 | 동작 |
 |-----------|------|------|
 | `Chaheon_GC_DataPC_WiFi` | 로그인 | iptime WLAN 자동 연결 |
-| `Chaheon_GC_DataPC_Watch` | 로그인 | `pythonw` + VBS — **콘솔 창 없음** |
-| `Chaheon_GC_DataPC_Watch_Ensure` | 15분 | watch 죽었으면 재기동 |
+| `Chaheon_GC_DataPC_Watch` | 로그인 | `pythonw -m data_pc_runtime` — **콘솔 창 없음** |
+| `Chaheon_GC_DataPC_Watch_Ensure` | 15분 | supervisor 죽었으면 `--ensure-once` — **hidden VBS** |
 
 은규 PC: `deploy\gc_data_pc_install_autostart.bat` (`%USERPROFILE%\gc-data-pc`)
 
@@ -72,16 +84,18 @@ deploy\gc_data_pc_install_autostart_chaheon.bat
 
 | 파일 | 내용 |
 |------|------|
-| `%USERPROFILE%\.cursor\gc-runtime-temp\data_pc_watch.log` | watch 이벤트 (G: 재시도·쿨다운·파이프라인) |
-| `%USERPROFILE%\.cursor\gc-runtime-temp\data_pc_watchdog.log` | watchdog 재시작 |
-| `KCH\.data_pc_watch_status.json` | `status_code`, `cooldown_remaining_sec`, `wifi_ready` |
-| `KCH\.data_pc_watch_state.json` | `gdrive_retry_pending`, `last_pipeline_at` |
+| `%USERPROFILE%\.cursor\gc-runtime-temp\data_pc_runtime.log` | supervisor · 게이트 · 파이프라인 이벤트 |
+| `%USERPROFILE%\.cursor\gc-runtime-temp\origin_automation.log` | Origin Read-Only 자동 Yes 등 |
+| `%USERPROFILE%\.cursor\gc-runtime-temp\data_pc_watchdog.log` | 레거시 watchdog 위임 기록 |
+| `KCH\.data_pc_runtime_status.json` | `status_code`, `cooldown_remaining_sec`, `wifi_ready` |
+| `KCH\.data_pc_runtime_state.json` | `gdrive_retry_pending`, `last_pipeline_at` |
 
 수동 확인:
 
 ```powershell
-Get-Content "$env:USERPROFILE\.cursor\gc-runtime-temp\data_pc_watch.log" -Tail 30
-Get-Content "$env:USERPROFILE\Desktop\.cursor\KCH\.data_pc_watch_status.json"
+Get-Content "$env:USERPROFILE\.cursor\gc-runtime-temp\data_pc_runtime.log" -Tail 30
+Get-Content "$env:USERPROFILE\Desktop\.cursor\KCH\.data_pc_runtime_status.json"
+python -m data_pc_runtime.verify --live --dry-job --dry-supervisor
 ```
 
 ---

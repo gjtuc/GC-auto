@@ -18,12 +18,18 @@
 - [ ] **Step 8** — E2E: GC1 메일 → 은규 PC → G: → Origin ([`deploy/STEP8_e2e.md`](STEP8_e2e.md))
   - [x] 8.0 가이드 + `verify_e2e_prerequisites.ps1` + `test_e2e_mail_auth.py`
   - [x] 8.0b GC1 장비 PC: SMTP/IMAP 로그인 PASS (2026-06-18)
+  - [x] 8.3d GC1 runtime dry-run E2E (`scripts/run_gc1_runtime_e2e.py`, `test_gc1_runtime_e2e.py`)
   - [ ] 8.1 G: (SecuYouSB) / 8.2 originpro
   - [ ] 8.3~8.8 full pipeline (Step 7 CALIB 선행)
 - [ ] **Step 9** — 차헌 GC2/GC3 장비 PC git pull + 회귀 ([`deploy/STEP9_gc2_pc.md`](STEP9_gc2_pc.md))
   - [x] 9.0 가이드 + `verify_gc2_setup.ps1` + `run_gc2_regression.ps1` + GC2 machine_profile 템플릿
   - [x] 9.0b GC1 장비 PC: `verify_gc2_pull_ready.ps1` (인수인계 준비)
   - [ ] 9.1~9.11 **차헌 GC2 장비 PC**에서 실행
+
+## 보류 / 아이디어 (GC3)
+
+- [x] **GC3 화면 영역 캡처·OCR** — 스켈레톤 [`gc3_screen_read.py`](../gc3_screen_read.py) · [`deploy/GC3_SCREEN_REGION_READ.md`](GC3_SCREEN_REGION_READ.md)  
+  Report.TXT 보조·무인 검증용. GC3 PC live 캘리브레이션·zip 배포는 이후.
 
 ## PC별 git
 

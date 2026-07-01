@@ -9,6 +9,7 @@ import base64
 import time
 import shutil
 import argparse
+import threading
 import imaplib
 import email
 import json
@@ -158,6 +159,222 @@ def _get_originpro():
             print("   G:/Origin 연동(3~4단계)에 필요합니다. 계산만 할 때는 --no-archive 를 사용하세요.")
             sys.exit(1)
     return _originpro
+
+
+# ---------------------------------------------------------------------------
+# Origin 자동화 보조 — [4단계] update_origin() 전용
+#
+# [배경]
+#   originpro(op.open)는 동일 .opju 를 다른 Python/Origin 세션이 이미 열고 있으면
+#   GUI 확인창을 띄운다:
+#     "The file is opened in another instance of Origin.
+#      Do you still want to open it as Read-Only?"
+#   예전에는 watchdog+watch 가 중복 기동되며 이 창이 반복되어 수동 Yes 가 필요했다.
+#
+# [대응 — 3겹]
+#   1) KCH\.origin_update.lock
+#        Origin 4단계(열기→워크시트 반영→저장→exit) 전 구간을 PID 파일로 직렬화.
+#        data_pc_runtime 파이프라인 락과 별개 — Origin COM 세션만 보호.
+#   2) _origin_exit_quiet()
+#        op.open 직전 이 프로세스의 이전 originpro 외부 세션(op.oext) 정리.
+#   3) _origin_dialog_watcher + Win32 EnumWindows
+#        op.open / op.save 동안 백그라운드 스레드가 Read-Only 확인창을 감지해 Yes 클릭.
+#        (잔여 경쟁·Origin 내부 잠금 지연 대비 — 완전 차단은 1)+2)가 담당)
+#
+# [로그] %USERPROFILE%\.cursor\gc-runtime-temp\origin_automation.log
+# [운영] 차헌·은규 PC 공통 — SCRIPT_DIR\KCH\.origin_update.lock
+# ---------------------------------------------------------------------------
+
+
+def _origin_update_lock_path():
+    """Origin 4단계 직렬화 락 파일 (KCH 하위, PID 한 줄)."""
+    return os.path.join(SCRIPT_DIR, _DATA_PC_WORK, ".origin_update.lock")
+
+
+def _origin_lock_pid_alive(pid: int) -> bool:
+    """락 파일에 기록된 PID 가 아직 살아 있는지 (Windows: OpenProcess SYNCHRONIZE)."""
+    if pid <= 0:
+        return False
+    if sys.platform != "win32":
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+    import ctypes
+    handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+    if handle:
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
+    return False
+
+
+def _origin_clear_stale_lock():
+    """크래시 등으로 남은 .origin_update.lock 제거 (PID 없으면 stale)."""
+    path = _origin_update_lock_path()
+    if not os.path.isfile(path):
+        return
+    try:
+        with open(path, encoding="ascii") as f:
+            pid = int(f.read().strip())
+    except (OSError, ValueError):
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+        return
+    if not _origin_lock_pid_alive(pid):
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+def _origin_acquire_lock(wait_sec: int = 900):
+    """Origin .opju 동시 열기 방지 — 다른 프로세스 Origin 작업이 끝날 때까지 대기.
+
+    wait_sec 기본 15분: 메일 8건 연속 Origin 시 앞 작업이 길어져도 큐 대기.
+    """
+    path = _origin_update_lock_path()
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    deadline = time.time() + wait_sec
+    while time.time() < deadline:
+        _origin_clear_stale_lock()
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode("ascii"))
+            os.close(fd)
+            return
+        except FileExistsError:
+            time.sleep(2)
+    raise TimeoutError(f"Origin lock timeout ({wait_sec}s): {path}")
+
+
+def _origin_release_lock():
+    """update_origin finally 에서 호출 — 다음 메일/프로세스가 Origin 락 획득 가능."""
+    path = _origin_update_lock_path()
+    try:
+        if os.path.isfile(path):
+            os.unlink(path)
+    except OSError:
+        pass
+
+
+def _origin_exit_quiet(op):
+    """이전 originpro 외부 세션 정리 — op.open 전후·finally 에서 호출."""
+    if not getattr(op, "oext", False):
+        return
+    try:
+        op.exit()
+    except Exception:
+        pass
+
+
+def _origin_window_texts(hwnd) -> str:
+    """Win32: 최상위 창 + 자식 컨트롤 텍스트 수집 (Static 본문 포함)."""
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.windll.user32
+    parts: list[str] = []
+
+    @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+    def _enum_child(ch, _):
+        buf = ctypes.create_unicode_buffer(2048)
+        user32.GetWindowTextW(ch, buf, 2048)
+        if buf.value:
+            parts.append(buf.value)
+        return True
+
+    buf = ctypes.create_unicode_buffer(512)
+    user32.GetWindowTextW(hwnd, buf, 512)
+    if buf.value:
+        parts.append(buf.value)
+    user32.EnumChildWindows(hwnd, _enum_child, 0)
+    return "\n".join(parts)
+
+
+def _origin_click_readonly_yes() -> bool:
+    """Origin Read-Only 확인창에서 Yes 버튼 SendMessage(BM_CLICK).
+
+    본문은 창 제목이 아니라 자식 Static 에 있으므로 _origin_window_texts 로 검색.
+    """
+    if sys.platform != "win32":
+        return False
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.windll.user32
+    BM_CLICK = 0x00F5
+    clicked = False
+
+    @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+    def _enum_btn(hwnd, _):
+        nonlocal clicked
+        buf = ctypes.create_unicode_buffer(32)
+        user32.GetClassNameW(hwnd, buf, 32)
+        if buf.value != "Button":
+            return True
+        user32.GetWindowTextW(hwnd, buf, 32)
+        label = buf.value.replace("&", "")
+        if label.lower() == "yes":
+            user32.SendMessageW(hwnd, BM_CLICK, 0, 0)
+            clicked = True
+            return False
+        return True
+
+    @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+    def _enum_top(hwnd, _):
+        if not user32.IsWindowVisible(hwnd):
+            return True
+        text = _origin_window_texts(hwnd).lower()
+        if "read-only" not in text and "another instance" not in text:
+            return True
+        user32.EnumChildWindows(hwnd, _enum_btn, 0)
+        return not clicked
+
+    user32.EnumWindows(_enum_top, 0)
+    return clicked
+
+
+def _origin_dialog_watcher(stop_event: threading.Event) -> None:
+    """op.open / op.save 블로킹 구간 동안 0.4초마다 Read-Only 창 Yes 시도."""
+    while not stop_event.wait(0.4):
+        if _origin_click_readonly_yes():
+            _log_origin("[Origin] Read-Only 확인창 — Yes 자동 클릭")
+
+
+def _log_origin(msg: str) -> None:
+    """Origin 자동화 이벤트 (자동 Yes 등) — gc-runtime-temp 에만 기록."""
+    try:
+        log_dir = os.path.join(os.path.expanduser("~"), ".cursor", "gc-runtime-temp")
+        os.makedirs(log_dir, exist_ok=True)
+        with open(os.path.join(log_dir, "origin_automation.log"), "a", encoding="utf-8") as f:
+            f.write(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {msg}\n")
+    except OSError:
+        pass
+
+
+def _open_opju_for_update(op, opju_path: str) -> None:
+    """4단계 진입: 세션 정리 → 숨김 → watcher 기동 → op.open(asksave=False)."""
+    _origin_exit_quiet(op)
+    op.set_show(False)
+    stop = threading.Event()
+    watcher = threading.Thread(
+        target=_origin_dialog_watcher,
+        args=(stop,),
+        name="origin-readonly-watcher",
+        daemon=True,
+    )
+    watcher.start()
+    try:
+        if not op.open(opju_path, asksave=False):
+            _origin_exit_quiet(op)
+            if not op.open(opju_path, asksave=False):
+                raise RuntimeError(f"Origin 프로젝트 열기 실패: {opju_path}")
+    finally:
+        stop.set()
+        watcher.join(timeout=3)
 
 # ==========================================
 # ⚙️ 사용자 설정 (USER SETTINGS)
@@ -1681,48 +1898,67 @@ def update_origin(opju_path, df_data, sample_name, save_in_place=True, identity_
     · ORIGIN_MAPPING 으로 엑셀 열 → Origin 워크시트 키워드 매칭
     · Comments 행에 sample_name 기록 (from_list comments= 인자)
     · save_in_place=True: G: 아카이브 시 같은 .opju 에 덮어쓰기
+
+    Origin 동시 열기 방지:
+      · _origin_acquire_lock() 으로 4단계 전체 직렬화
+      · Read-Only 확인창은 watcher 가 Yes 자동 클릭 (수동 개입 불필요)
+      · finally 에서 op.exit() + 락 해제
     """
     print(f"\n[4단계] Origin 워크시트 — Comments: '{sample_name}'")
     op = _get_originpro()
-    op.set_show(False)
-    op.open(opju_path)
-    updated_count = 0
-    n_rows = len(df_data)
+    _origin_acquire_lock()
+    try:
+        _open_opju_for_update(op, opju_path)
+        updated_count = 0
+        n_rows = len(df_data)
 
-    for df_col, origin_keyword in ORIGIN_MAPPING.items():
-        if df_col not in df_data.columns:
-            continue
+        for df_col, origin_keyword in ORIGIN_MAPPING.items():
+            if df_col not in df_data.columns:
+                continue
 
-        target_wks = None
-        for book in op.pages('w'):
-            for wks in book:
-                search_str = f"{book.name} {wks.name} {book.lname}"
-                if _normalize_origin_key(origin_keyword) in _normalize_origin_key(search_str):
-                    target_wks = wks
+            target_wks = None
+            for book in op.pages('w'):
+                for wks in book:
+                    search_str = f"{book.name} {wks.name} {book.lname}"
+                    if _normalize_origin_key(origin_keyword) in _normalize_origin_key(search_str):
+                        target_wks = wks
+                        break
+                if target_wks:
                     break
-            if target_wks:
-                break
 
-        if not target_wks:
-            continue
+            if not target_wks:
+                continue
 
-        col_idx = _find_worksheet_column_for_sample(target_wks, sample_name, identity_key)
-        target_wks.from_list(col_idx, df_data[df_col].tolist(), comments=sample_name)
-        updated_count += 1
+            col_idx = _find_worksheet_column_for_sample(target_wks, sample_name, identity_key)
+            target_wks.from_list(col_idx, df_data[df_col].tolist(), comments=sample_name)
+            updated_count += 1
 
-    if updated_count > 0:
-        print(f"  → 워크시트 {updated_count}개 · {n_rows}행 반영")
-        if save_in_place:
-            op.save(opju_path)
-            print(f" ✅ Origin 저장 완료: {opju_path}")
+        if updated_count > 0:
+            print(f"  → 워크시트 {updated_count}개 · {n_rows}행 반영")
+            stop = threading.Event()
+            watcher = threading.Thread(
+                target=_origin_dialog_watcher,
+                args=(stop,),
+                name="origin-readonly-watcher-save",
+                daemon=True,
+            )
+            watcher.start()
+            try:
+                if save_in_place:
+                    op.save(opju_path)
+                    print(f" ✅ Origin 저장 완료: {opju_path}")
+                else:
+                    new_opju = opju_path.replace('.opju', '_Updated.opju')
+                    op.save(new_opju)
+                    print(f" ✅ Origin 파일 업데이트 완료! 저장 위치: {new_opju}")
+            finally:
+                stop.set()
+                watcher.join(timeout=3)
         else:
-            new_opju = opju_path.replace('.opju', '_Updated.opju')
-            op.save(new_opju)
-            print(f" ✅ Origin 파일 업데이트 완료! 저장 위치: {new_opju}")
-    else:
-        print(" ⚠️ Origin에서 일치하는 데이터 시트를 하나도 찾지 못했습니다.")
-
-    op.exit()
+            print(" ⚠️ Origin에서 일치하는 데이터 시트를 하나도 찾지 못했습니다.")
+    finally:
+        _origin_exit_quiet(op)
+        _origin_release_lock()
 
 # ==========================================
 # 기능 5: 네이버 IMAP 메일 수신 (gc_automation.env 계정)
@@ -2258,7 +2494,8 @@ def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True):
 # ==========================================
 # 🚀 메인 실행부 (Workflow Controller)
 # ==========================================
-if __name__ == "__main__":
+def build_cli_parser() -> argparse.ArgumentParser:
+    """CLI 인자 파서 — unittest(T81) 및 ``__main__`` 공용."""
     parser = argparse.ArgumentParser(
         description="GC KCH 원본(메일) → 수율/전환율 계산 → Origin",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -2290,6 +2527,16 @@ if __name__ == "__main__":
         action="store_true",
         help="--watch 테스트용 — Wi-Fi SSID 검사 생략",
     )
+    return parser
+
+
+def cli_auto_archive(args: argparse.Namespace) -> bool:
+    """``--no-archive`` / ``--opju`` → ``auto_archive`` 인자 (G:·Origin 3~4단계)."""
+    return not args.no_archive and args.opju is None
+
+
+if __name__ == "__main__":
+    parser = build_cli_parser()
     args = parser.parse_args()
 
     print("=" * 60)
@@ -2302,7 +2549,7 @@ if __name__ == "__main__":
         run_data_pc_watch(
             SCRIPT_DIR,
             opju_path=args.opju,
-            auto_archive=not args.no_archive and args.opju is None,
+            auto_archive=cli_auto_archive(args),
             skip_wifi_check=args.no_wifi_check,
         )
         sys.exit(0)
@@ -2316,7 +2563,7 @@ if __name__ == "__main__":
             run_workflow_for_file(
                 excel_path,
                 opju_path=args.opju,
-                auto_archive=not args.no_archive and args.opju is None,
+                auto_archive=cli_auto_archive(args),
             )
             print("-" * 60)
         sys.exit(0)
@@ -2324,7 +2571,7 @@ if __name__ == "__main__":
     if args.poll_once:
         result = process_new_gc_emails(
             opju_path=args.opju,
-            auto_archive=not args.no_archive and args.opju is None,
+            auto_archive=cli_auto_archive(args),
         )
         sys.exit(0 if result.workflow_count >= 0 else 1)
 
@@ -2332,7 +2579,7 @@ if __name__ == "__main__":
     while True:
         process_new_gc_emails(
             opju_path=args.opju,
-            auto_archive=not args.no_archive and args.opju is None,
+            auto_archive=cli_auto_archive(args),
         )
         print("-" * 60)
         again = input("메일 다시 확인: Enter / 종료: q ➔ ").strip().lower()

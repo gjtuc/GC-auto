@@ -1,0 +1,36 @@
+{
+  "_comment_for_llm": "PART6 BLOCKED — agent_queue_state Hook 중단. validate: scripts/validate_gc1_blocked_policy.py",
+  "schema_version": 1,
+  "design_ref": "deploy/GC1_RUNTIME_DESIGN_PART6_RETRY.md",
+  "hook_status": "blocked",
+  "rules": [
+    {
+      "code": "autochro_live_ui",
+      "description": "Autochro 실장비 UI 필요",
+      "operator_hint": "Autochro 창을 열고 force 또는 8.3b 실장비 E2E 진행",
+      "tower": "A",
+      "step_ref": "8.3b"
+    },
+    {
+      "code": "origin_gui",
+      "description": "Origin GUI 필요",
+      "operator_hint": "은규 PC에서 Origin 실행 후 촉매 반응 계산.py 4단계",
+      "tower": "B",
+      "step_ref": "8.2"
+    },
+    {
+      "code": "gdrive_secuyou",
+      "description": "G: SecuYou 수동 unlock",
+      "operator_hint": "SecuYouSB 로그인 후 G: 실험 폴더 확인",
+      "tower": "B",
+      "step_ref": "8.1"
+    },
+    {
+      "code": "user_credential",
+      "description": "사용자 비밀번호 입력 필요",
+      "operator_hint": "env·앱비밀번호·Origin 라이선스 등 사람만 입력 가능",
+      "tower": "AB",
+      "step_ref": "8.0"
+    }
+  ]
+}

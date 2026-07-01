@@ -26,34 +26,60 @@ from gc_config import (
 )
 if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW"):
     _SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW
+else:
+    _SUBPROCESS_FLAGS = 0
+
+_SSID_CACHE: tuple[float, str | None] = (0.0, None)
+_SSID_CACHE_TTL_SEC = 180
 
 
-def get_connected_wifi_ssid() -> str | None:
-    """Windows netsh 로 현재 Wi-Fi SSID. 미연결·오류 시 None."""
-    if sys.platform != "win32":
-        return None
-    try:
-        result = subprocess.run(
-            ["netsh", "wlan", "show", "interfaces"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=15,
-            creationflags=_SUBPROCESS_FLAGS,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        print(f"[경고] Wi-Fi SSID 조회 실패: {exc}")
-        return None
-    if result.returncode != 0:
-        return None
-    for line in result.stdout.splitlines():
+def _parse_ssid_from_netsh(stdout: str) -> str | None:
+    for line in stdout.splitlines():
         stripped = line.strip()
         if stripped.startswith("SSID") and not stripped.startswith("BSSID"):
             _, _, value = stripped.partition(":")
             ssid = value.strip()
             if ssid:
                 return ssid
+    return None
+
+
+def get_connected_wifi_ssid() -> str | None:
+    """Windows netsh 로 현재 Wi-Fi SSID. 미연결·오류 시 None."""
+    global _SSID_CACHE
+    if sys.platform != "win32":
+        return None
+    last_exc: Exception | None = None
+    for attempt in range(3):
+        try:
+            result = subprocess.run(
+                ["netsh", "wlan", "show", "interfaces"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=30,
+                creationflags=_SUBPROCESS_FLAGS,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            last_exc = exc
+            if attempt < 2:
+                time.sleep(1.5)
+                continue
+            break
+        if result.returncode != 0:
+            break
+        ssid = _parse_ssid_from_netsh(result.stdout)
+        if ssid:
+            _SSID_CACHE = (time.time(), ssid)
+            return ssid
+        return None
+    cached_at, cached_ssid = _SSID_CACHE
+    if cached_ssid and (time.time() - cached_at) <= _SSID_CACHE_TTL_SEC:
+        print(f"[경고] Wi-Fi SSID 조회 실패({last_exc}) — 최근 캐시 사용: {cached_ssid}")
+        return cached_ssid
+    if last_exc is not None:
+        print(f"[경고] Wi-Fi SSID 조회 실패: {last_exc}")
     return None
 
 

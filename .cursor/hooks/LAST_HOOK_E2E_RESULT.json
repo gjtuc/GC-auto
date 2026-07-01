@@ -1,0 +1,27 @@
+{
+  "at": "2026-06-30T00:51:12.936378+00:00",
+  "ok": true,
+  "state": {
+    "armed": true,
+    "status": "running",
+    "request_quit_cursor": false,
+    "updated": "2026-06-30T10:30:00+09:00",
+    "last_task": "T12"
+  },
+  "ps1_test": {
+    "exit_code": 0,
+    "pass": true,
+    "tail": [
+      "OK",
+      "ALL PASS"
+    ]
+  },
+  "continue_sim": {
+    "next_task": "**T13** 동 문서 — Ω-L4 **P0~P4** leaf 전개(번호·pre/post probe ID만, ~150 leaf)",
+    "followup_len": 901,
+    "followup_has_task": true,
+    "followup_preview": "# =============================================================================\n# task_queue_followup_template.txt\n# continue Hook 이 다음 단계 followup_message 를 만들 때 쓰는 **본문 템플릿**\n# =====================",
+    "log_lines_added": 1
+  },
+  "verdict": "HOOK_CHAIN_OK"
+}
