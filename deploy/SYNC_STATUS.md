@@ -1,13 +1,13 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-07-01 22:23:05 | HEAD: `61af945` | auto: sync DESKTOP-MBGSSME @ 2026-07-01 22:22:58
+> Updated: 2026-07-01 22:33:09 | HEAD: `978a119` | auto: sync DESKTOP-MBGSSME @ 2026-07-01 22:33:02
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
 | PC | role | last push (who @ when) | push | last pull (who @ when) | pull | status |
 |----|------|-------------------------|------|-------------------------|------|--------|
 | `DESKTOP-BFMLJ9J` | data_pc | - @ - | `-` | DESKTOP-BFMLJ9J\user @ 2026-06-25T13:09:09+09:00 | `b8db047` | [WARN] need pull |
-| `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\은규 @ 2026-07-01T22:23:05+09:00 | `61af945` | DESKTOP-MBGSSME\은규 @ 2026-07-01T19:50:13+09:00 | `43419e8` | [WARN] need pull |
+| `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\은규 @ 2026-07-01T22:33:08+09:00 | `978a119` | DESKTOP-MBGSSME\은규 @ 2026-07-01T19:50:13+09:00 | `43419e8` | [WARN] need pull |
 | `DESKTOP-XXXXXXX` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
 | `GC8860` | gc2_pc | GC8860\차헌 @ 2026-07-01T13:18:57+09:00 | `11bcf45` | GC8860\차헌 @ 2026-06-25T10:06:40+09:00 | `74cedcd` | [WARN] need pull |
 
