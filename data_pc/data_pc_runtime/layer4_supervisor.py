@@ -145,6 +145,54 @@ def _pythonw_executable() -> str:
     return exe
 
 
+def stop_supervisor(script_dir: str, *, wait_sec: float = 5.0) -> bool:
+    """실행 중인 supervisor 프로세스 종료. 없으면 False."""
+    paths = RuntimePaths(script_dir)
+    store = StateStore(paths)
+    status = store.load_status()
+    pid = int(status.pid or 0)
+    if pid <= 0 or not PidProbe.alive(pid):
+        if status.alive:
+            status.alive = False
+            store.save_status(status)
+        return False
+
+    try:
+        if sys.platform == "win32":
+            subprocess.run(
+                ["taskkill", "/F", "/PID", str(pid)],
+                capture_output=True,
+                creationflags=_SUBPROCESS_FLAGS,
+            )
+        else:
+            os.kill(pid, 15)
+    except OSError as exc:
+        _log(f"[supervisor] stop pid={pid} failed: {exc}")
+        return False
+
+    deadline = time.time() + wait_sec
+    while time.time() < deadline:
+        if not PidProbe.alive(pid):
+            break
+        time.sleep(0.2)
+
+    status.alive = False
+    status.status_code = "stopped"
+    status.message = "supervisor 재시작을 위해 종료"
+    status.pid = 0
+    store.save_status(status)
+    _log(f"[supervisor] stopped pid={pid}")
+    return True
+
+
+def restart_supervisor(script_dir: str) -> bool:
+    """기동 중인 supervisor 종료 후 새 pythonw 프로세스로 재기동."""
+    _log(f"[restart] supervisor 재시작 script_dir={script_dir}")
+    stop_supervisor(script_dir)
+    time.sleep(0.5)
+    return spawn_supervisor(script_dir)
+
+
 def ensure_supervisor_once(script_dir: str) -> bool:
     """Ensure 작업 스케줄러 진입 — 살아있으면 False, 기동했으면 True."""
     paths = RuntimePaths(script_dir)
@@ -276,7 +324,18 @@ def run_supervisor(script_dir: str) -> None:
     Supervisor(script_dir).run_forever()
 
 
+def _cleanup_desktop_nul() -> None:
+    try:
+        import desktop_nul_guard
+
+        if desktop_nul_guard.remove_if_present():
+            _log("[supervisor] removed spurious Desktop\\nul (Git Bash >nul artifact)")
+    except Exception:
+        pass
+
+
 def cli_main(argv: list[str] | None = None) -> int:
+    _cleanup_desktop_nul()
     parser = argparse.ArgumentParser(description="data_pc_runtime L4 supervisor")
     parser.add_argument(
         "--script-dir",
@@ -287,7 +346,16 @@ def cli_main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="supervisor 생존 확인 후 없으면 1회 기동 (작업 스케줄러)",
     )
+    parser.add_argument(
+        "--restart",
+        action="store_true",
+        help="실행 중 supervisor 종료 후 새로 기동 (코드 수정 후)",
+    )
     args = parser.parse_args(argv)
+
+    if args.restart:
+        ok = restart_supervisor(args.script_dir)
+        return 0 if ok else 1
 
     if args.ensure_once:
         ensure_supervisor_once(args.script_dir)

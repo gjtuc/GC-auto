@@ -15,6 +15,7 @@ from data_pc_origin.p5_workflow import (
     Stage2RunResult,
     Stage3Result,
     WorkflowResult,
+    resolve_stage4_opju,
     run_workflow_stages,
 )
 from data_pc_origin.p6_catalyst_adapter import make_stage2_runner, make_stage3_runner, Stage2Runner
@@ -151,6 +152,55 @@ def print_workflow_outcome(result: WorkflowResult, *, printer: PrintFn = print) 
         printer(f"    {result.stage3.archive_xlsx}")
 
 
+def _maybe_sync_parallel_peer_origins(
+    catalyst_module: Any,
+    result: WorkflowResult,
+    options: WorkflowOptions,
+    *,
+    mail_received_at=None,
+    skip_origin: bool | None = None,
+    environ: Mapping[str, str] | None = None,
+    printer: PrintFn = print,
+) -> None:
+    """4단계 성공 후 병렬 동일반응 Origin 교차 반영."""
+    if not result.ok or result.stage2 is None or result.stage4 is None:
+        return
+    if result.stage4.skipped:
+        return
+    sync_fn = getattr(catalyst_module, "sync_parallel_peer_origins", None)
+    if not callable(sync_fn):
+        return
+    opju = resolve_stage4_opju(result.mode, options, result.stage3)
+    if not opju:
+        return
+    skip = skip_origin
+    if skip is None and environ is not None:
+        skip = environ.get("DATA_PC_SKIP_ORIGIN", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+    elif skip is None:
+        skip = False
+    try:
+        stage2 = result.stage2
+        saved = stage2.metadata.saved_excel
+        mod = catalyst_module
+        sync_fn(
+            mod.reaction_type_from_output_file(saved),
+            mod.generate_experiment_basename(saved),
+            stage2.metadata.identity_key,
+            stage2.metadata.sample_name,
+            stage2.artifacts.df,
+            opju,
+            skip_origin=bool(skip),
+            mail_received_at=mail_received_at,
+        )
+    except Exception as exc:
+        printer(f"  [경고] 병렬 Origin 동기화 실패: {exc}")
+
+
 def run_workflow_bridged(
     excel_path: str,
     *,
@@ -161,6 +211,7 @@ def run_workflow_bridged(
     origin_runner: OriginRunner | None = None,
     environ: Mapping[str, str] | None = None,
     printer: PrintFn = print,
+    mail_received_at=None,
 ) -> bool:
     """촉매 `run_workflow_for_file` 대체 진입 — P5/P6 위임."""
     ok, _result = run_workflow_bridged_detailed(
@@ -172,6 +223,7 @@ def run_workflow_bridged(
         origin_runner=origin_runner,
         environ=environ,
         printer=printer,
+        mail_received_at=mail_received_at,
     )
     return ok
 
@@ -188,11 +240,13 @@ def run_workflow_bridged_detailed(
     printer: PrintFn = print,
     stage2_runner: Stage2Runner | None = None,
     stage3_runner: Stage3Runner | None = None,
+    mail_received_at=None,
 ) -> tuple[bool, WorkflowResult | None]:
     """
     `run_workflow_bridged` + `WorkflowResult` — live harness artifact용.
 
     `skip_origin`: None 이면 env, True/False 명시 override.
+    반환 tuple[bool, WorkflowResult | None] — bool 은 watch·메일 루프 호환, Result 는 P층 테스트용.
     """
     ensure_import_path()
     path = (excel_path or "").strip()
@@ -219,6 +273,15 @@ def run_workflow_bridged_detailed(
         if result.stage2 is not None:
             saved_excel = result.stage2.metadata.saved_excel
         print_workflow_outcome(result, printer=printer)
+        _maybe_sync_parallel_peer_origins(
+            catalyst_module,
+            result,
+            options,
+            mail_received_at=mail_received_at,
+            skip_origin=skip_origin,
+            environ=env,
+            printer=printer,
+        )
         return result.ok, result
     except Exception as exc:
         gdrive = getattr(catalyst_module, "GDriveUnavailableError", None)

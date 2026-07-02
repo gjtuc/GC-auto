@@ -35,6 +35,9 @@ class FetchedMail:
     mail_key: str
     source: str
     filename: str
+    folder: str = ""
+    msg_id: object = None
+    received_at: object = None
 
     def to_dict(self) -> Dict[str, str]:
         return {
@@ -43,6 +46,7 @@ class FetchedMail:
             "mail_key": self.mail_key,
             "source": self.source,
             "filename": self.filename,
+            "folder": self.folder,
         }
 
 
@@ -187,6 +191,9 @@ def fetch_oldest_pending(
         )
         identity = catalyst._experiment_identity_key(filename)
         catalyst._cleanup_inbox_duplicate_files(path, identity)
+        received_dt = item.get("date")
+        if identity and received_dt is not None:
+            catalyst._record_gc_mail_received(identity, received_dt)
         printer(f"IMAP fetch: {filename} → {path}")
 
         if mark_seen:
@@ -198,7 +205,64 @@ def fetch_oldest_pending(
             mail_key=str(item.get("mail_key", "")),
             source=str(item.get("source", "")),
             filename=filename,
+            folder=str(item.get("folder", "")),
+            msg_id=item.get("msg_id"),
+            received_at=received_dt,
         )
+    finally:
+        try:
+            mail.logout()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def mark_fetched_mail_seen(
+    fetched: FetchedMail,
+    *,
+    printer: PrintFn = print,
+) -> bool:
+    """워크플로 성공 후 IMAP \\Seen (fetch 시 mark_seen=False 여도 적용)."""
+    if not fetched.folder or fetched.msg_id is None:
+        return False
+    catalyst = load_imap_catalyst()
+    mail = _connect_imap(catalyst)
+    try:
+        done_keys = catalyst._load_processed_mail_ids()
+        item = {
+            "folder": fetched.folder,
+            "msg_id": fetched.msg_id,
+            "mail_key": fetched.mail_key,
+            "subject": fetched.subject,
+        }
+        ok = catalyst._mark_mail_seen_and_logged(mail, item, done_keys)
+        if ok:
+            printer(f"IMAP mark seen: {fetched.subject}")
+        return ok
+    finally:
+        try:
+            mail.logout()
+        except Exception:  # noqa: BLE001
+            pass
+
+
+def reconcile_processed_unseen_mails(
+    mod: Any | None = None,
+    *,
+    days: int = 30,
+    printer: PrintFn = print,
+) -> int:
+    """처리 로그에만 있고 네이버 미읽음인 GC 메일 → \\Seen 재적용."""
+    catalyst = mod if mod is not None else load_imap_catalyst()
+    prep = prepare_imap(catalyst=catalyst)
+    if not prep.ready:
+        return 0
+    mail = _connect_imap(catalyst)
+    try:
+        done_keys = catalyst._load_processed_mail_ids()
+        count = catalyst._reconcile_processed_unseen_mails(mail, done_keys, days=days)
+        if count:
+            printer(f"IMAP reconcile: {count} processed mail(s) marked seen")
+        return count
     finally:
         try:
             mail.logout()

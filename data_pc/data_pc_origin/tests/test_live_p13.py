@@ -2,10 +2,11 @@
 import json
 import os
 import unittest
+import unittest.mock
 from pathlib import Path
 
 from data_pc_origin.live_imap import run_imap_probe, run_live_imap
-from data_pc_origin.p13_imap_adapter import mask_email, prepare_imap
+from data_pc_origin.p13_imap_adapter import mask_email, prepare_imap, reconcile_processed_unseen_mails
 
 IMAP_LIVE = os.getenv("DATA_PC_IMAP_LIVE", "").strip().lower() in ("1", "true", "yes")
 
@@ -18,6 +19,20 @@ class TestP13ImapAdapter(unittest.TestCase):
     def test_prepare_imap(self) -> None:
         prep = prepare_imap()
         self.assertIn("email_masked", prep.to_dict())
+
+    def test_reconcile_no_creds_returns_zero(self) -> None:
+        with unittest.mock.patch(
+            "data_pc_origin.p13_imap_adapter.prepare_imap",
+            return_value=type(
+                "P",
+                (),
+                {
+                    "ready": False,
+                    "to_dict": lambda self: {"ready": False},
+                },
+            )(),
+        ):
+            self.assertEqual(reconcile_processed_unseen_mails(), 0)
 
 
 class TestLiveImap(unittest.TestCase):

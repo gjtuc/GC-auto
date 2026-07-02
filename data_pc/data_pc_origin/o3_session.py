@@ -3,11 +3,86 @@
 
 from __future__ import annotations
 
+import logging
+import os
+import subprocess
+import sys
+import time
 from types import ModuleType
 from typing import Callable, Optional
 
 from data_pc_origin.o3_import import import_originpro
 from data_pc_origin.o3_plugins import PluginRegistry
+
+_LOGGER = logging.getLogger("data_pc_origin")
+
+_ORIGIN_IMAGE_NAMES = ("Origin64.exe", "Origin.exe")
+
+_SUBPROCESS_FLAGS = 0
+if sys.platform == "win32" and hasattr(subprocess, "CREATE_NO_WINDOW"):
+    _SUBPROCESS_FLAGS = subprocess.CREATE_NO_WINDOW
+
+
+def _keep_origin_gui() -> bool:
+    return os.getenv("DATA_PC_KEEP_ORIGIN_GUI", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def is_origin_gui_running() -> bool:
+    """Origin GUI(Origin64.exe / Origin.exe) 실행 여부."""
+    if sys.platform != "win32":
+        return False
+    proc = subprocess.run(
+        ["tasklist"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        creationflags=_SUBPROCESS_FLAGS,
+    )
+    if proc.returncode != 0:
+        return False
+    low = proc.stdout.lower()
+    return any(name.lower() in low for name in _ORIGIN_IMAGE_NAMES)
+
+
+def kill_stale_origin_gui(
+    *,
+    allow_kill: bool = False,
+    log: Callable[[str], None] | None = None,
+) -> int:
+    """
+    Origin GUI 프로세스 종료.
+
+    · `allow_kill=False`(기본) — 종료하지 않음 (supervisor·일반 파이프라인)
+    · `allow_kill=True` — 사용자 확인 후 에이전트가 호출
+    · `DATA_PC_KEEP_ORIGIN_GUI=1` — 항상 건너뜀
+    """
+    if not allow_kill or _keep_origin_gui() or sys.platform != "win32":
+        return 0
+    if not is_origin_gui_running():
+        return 0
+    emit = log or _LOGGER.info
+    killed = 0
+    for image in _ORIGIN_IMAGE_NAMES:
+        proc = subprocess.run(
+            ["taskkill", "/F", "/IM", image],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            creationflags=_SUBPROCESS_FLAGS,
+        )
+        if proc.returncode == 0:
+            killed += 1
+            emit(f"[Origin] {image} 종료")
+    if killed:
+        time.sleep(1.5)
+    return killed
 
 
 def set_show_false(op: ModuleType) -> None:

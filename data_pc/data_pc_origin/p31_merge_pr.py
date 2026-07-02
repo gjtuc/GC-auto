@@ -58,6 +58,8 @@ def gh_available() -> bool:
             ["gh", "auth", "status"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             check=False,
         )
         out = ((proc.stdout or "") + (proc.stderr or "")).lower()

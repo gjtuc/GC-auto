@@ -1,4 +1,4 @@
-# O0-C — Comments (11 L4)
+# O0-C — Comments (16 L4)
 
 > module: `o0_comments`
 
@@ -64,3 +64,29 @@
 
 | L7 | Q3-L1 O | no date → sort key > any dated |
 | L8 | FA-B1 | `"no date"` → large key |
+
+---
+
+## O0-C-04 — 장비 접미사 (Task C)
+
+> `strip_equipment_suffix` · `parse_equipment_suffix` · identity 매칭 시 접미사 제외
+
+## O0-C-04-a-1 — strip _DRM 장비
+
+| L7 | Q3-L1 E | 본문만 남음 |
+
+## O0-C-04-b-1 — strip _OCM 장비
+
+| L7 | Q3-L1 E | DRME + OCM 접미사 제거 |
+
+## O0-C-04-c-1 — parse → GC2
+
+| L7 | Q3-L1 E | `_DRM 장비` → `"GC2"` |
+
+## O0-C-04-d-1 — parse → GC3
+
+| L7 | Q3-L1 E | `_OCM 장비` → `"GC3"` |
+
+## O0-C-04-e-1 — identity with suffix
+
+| L7 | Q3-L1 E | 접미사 있어도 `comment_matches_identity` True |

@@ -1,4 +1,4 @@
-# O0-I — Identity tokens (9 L4)
+# O0-I — Identity tokens (14 L4)
 
 > module: `o0_identity.identity_match_tokens` · regex: 촉매 L791–795 동일
 
@@ -90,3 +90,33 @@
 | Q3-L1 | E | n=3→2, n=5→3, n=2→2 |
 | FA-B1 | n | 3 |
 | FA-B2 | thr | 2 |
+
+---
+
+## O0-I-03 — Task C (% · @ · / 촉매 · 장비 접미사)
+
+> `identity_match_tokens` 확장 + `comment_matches_identity` 통합
+
+## O0-I-03-a-1 — 농도 토큰 1.5
+
+| L7 | Q3-L1 IN | `"1.5" in tokens` |
+| FA-B1 | in | `dre(1.5) 600c ni5_ce5_al2o3` |
+
+## O0-I-03-b-1 — 600C → @600
+
+| L7 | Q3-L1 IN | `"@600" in tokens` |
+| FA-B1 | in | 파일명 `600c` stem |
+
+## O0-I-03-c-1 — 슬래시 촉매
+
+| L7 | Q3-L1 IN | ni5 · al2o3 in `ni5/ce5/al2o3` |
+
+## O0-I-03-d-1 — Task C Comments ↔ identity
+
+| L7 | Q3-L1 E | `comment_matches_identity` True |
+| FA-B1 | comment | `…Ni5/Ce5/Al2O3_OCM 장비` |
+| FA-B2 | key | FX-IDENTITY-DRE |
+
+## O0-I-03-e-1 — 장비 라벨 제외
+
+| L7 | Q3-L1 NE | `"장비" not in tokens` |

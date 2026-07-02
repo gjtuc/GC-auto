@@ -24,6 +24,8 @@ from data_pc_runtime.layer4_supervisor import (  # noqa: E402
     SupervisorConfig,
     ensure_supervisor_once,
     is_supervisor_healthy,
+    restart_supervisor,
+    stop_supervisor,
 )
 
 
@@ -115,6 +117,21 @@ class TestL4Supervisor(unittest.TestCase):
                     started = ensure_supervisor_once(tmp)
             self.assertTrue(started)
             sp.assert_called_once()
+
+    def test_restart_stops_then_spawns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch(
+                "data_pc_runtime.layer4_supervisor.stop_supervisor",
+                return_value=True,
+            ) as stop:
+                with patch(
+                    "data_pc_runtime.layer4_supervisor.spawn_supervisor",
+                    return_value=True,
+                ) as spawn:
+                    ok = restart_supervisor(tmp)
+            self.assertTrue(ok)
+            stop.assert_called_once_with(tmp)
+            spawn.assert_called_once_with(tmp)
 
 
 if __name__ == "__main__":

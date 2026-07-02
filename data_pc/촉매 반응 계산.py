@@ -1,3 +1,5 @@
+from __future__ import annotations  # bool | None 등 PEP 604 — 런타임 평가 없이 타입 힌트만
+
 import runtime_paths  # noqa: F401 — [LLM] .cursor\\gc-python-cache 로 __pycache__ 리다이렉트 (실험 폴더 오염 방지)
 
 import pandas as pd
@@ -19,7 +21,11 @@ from typing import NamedTuple
 
 
 class PipelineRunResult(NamedTuple):
-    """watch 쿨다운 판정용 — G: 잠금 시 gdrive_retry_needed=True (1시간 쿨다운 생략)."""
+    """watch 쿨다운 판정용 — G: 잠금 시 gdrive_retry_needed=True (1시간 쿨다운 생략).
+
+    NamedTuple(불변·경량) — dataclass 대신: 필드 2개, 튜플 언패킹·속성 접근 둘 다,
+    data_pc_watch 가 result.workflow_count / result.gdrive_retry_needed 로 분기.
+    """
     workflow_count: int
     gdrive_retry_needed: bool = False
 
@@ -336,6 +342,8 @@ REACTION_ROOTS = {
 }
 EXPERIMENT_DATA_ROOT = r"G:\연구소\실험\실험데이터"
 
+# import 시 1회: machine_profile 이 repo 기본값(G:)보다 우선.
+# 모듈 전역 재할당 — 함수 호출마다 disk I/O 없이 경로 일관성 유지.
 _profile_roots, _profile_exp_root = _paths_from_machine_profile()
 if _profile_roots:
     REACTION_ROOTS = _profile_roots
@@ -366,7 +374,10 @@ def _load_dotenv_files():
 
 
 def _skip_origin_enabled(explicit: bool | None = None) -> bool:
-    """True → 4단계 Origin 생략 (메일·엑셀·G: xlsx 까지만). env: DATA_PC_SKIP_ORIGIN=1"""
+    """True → 4단계 Origin 생략 (메일·엑셀·G: xlsx 까지만). env: DATA_PC_SKIP_ORIGIN=1
+
+    explicit=None → env 조회. True/False → CLI·호출자가 env 보다 우선.
+    """
     if explicit is not None:
         return bool(explicit)
     _load_dotenv_files()
@@ -430,9 +441,12 @@ def _sanitize_folder_name(name):
 def get_reaction_type_from_filename(filename):
     """파일 이름에 포함된 반응 종류(DRME, DRM, DRE)를 정확하게 파악합니다."""
     name_upper = os.path.basename(filename).upper()
-    if "DRME" in name_upper: return "DRME"
-    elif "DRM" in name_upper: return "DRM"
-    else: return "DRE" # 기본값은 DRE
+    # 순서 고정: DRME 먼저 — "DRM" 이 "DRME" 부분문자열이므로 elif DRM 이 먼저면 오판.
+    if "DRME" in name_upper:
+        return "DRME"
+    if "DRM" in name_upper:
+        return "DRM"
+    return "DRE"  # 토큰 없으면 DRE (연구실 기본 반응)
 
 def _extract_concentration(name):
     """
@@ -871,11 +885,39 @@ def _strip_mail_dedup_suffix(name):
     """IMAP 첨부 중복 저장 시 붙는 _1781505851 같은 타임스탬프 접미사 제거."""
     return re.sub(r'_\d{10,}$', '', name)
 
+def _canonicalize_experiment_stem(name):
+    """
+    KCH/메일 파일명 잡음 정리 — G: 폴더·parallel peer 키 일관성.
+    예) 20260630 260630 DRE(1.5)600C Ni5-Al2O3 → 20260630 DRE(1.5)@600 Ni5-Al2O3
+    """
+    work = (name or "").strip()
+    date, _rest = _parse_origin_date(work)
+    if not date or not re.match(rf"^{re.escape(date)}\b", work):
+        return work
+    rest = work[len(date) :].strip()
+    yy_mm_dd = date[2:]
+    if rest.startswith(yy_mm_dd):
+        rest = rest[len(yy_mm_dd) :].strip()
+    rest = re.sub(
+        r"^(DRE|DRM|DRME)\(([^)]+)\)(\d{3,4})C?\b",
+        r"\1(\2)@\3",
+        rest,
+        count=1,
+        flags=re.I,
+    )
+    canon = f"{date} {rest}".strip()
+    return canon if canon != work else work
+
+
 def _normalize_input_basename(filename):
     """시료명·폴더명 파싱 전 — 계산완료 접미사·메일 dedup 접미사 제거."""
-    name = os.path.splitext(os.path.basename(filename))[0]
+    name = os.path.basename(filename)
+    ext = os.path.splitext(name)[1].lower()
+    if ext in (".xlsx", ".xls", ".opju", ".csv"):
+        name = os.path.splitext(name)[0]
     name = _strip_calc_suffix(name)
-    return _strip_mail_dedup_suffix(name)
+    name = _strip_mail_dedup_suffix(name)
+    return _canonicalize_experiment_stem(name)
 
 def _normalize_origin_key(text):
     """Origin 북명(H2yield) ↔ 매핑 키(H2 yield) 비교용 — 공백 제거 후 소문자."""
@@ -894,7 +936,9 @@ def _experiment_identity_key(source):
     if isinstance(source, tuple):
         return source
     if os.path.isdir(source):
-        name = os.path.basename(source.rstrip("\\/"))
+        name = _canonicalize_experiment_stem(
+            os.path.basename(source.rstrip("\\/"))
+        )
     else:
         name = _normalize_input_basename(source)
     match = re.match(r'^(\d{8})\s+(.+)$', name, re.I)
@@ -973,7 +1017,7 @@ CHAIN_COMPARE_COLS = [
     "CH4 Conversion (%)",
 ]
 CHAIN_COMPARE_RTOL = 1e-3
-CHAIN_COMPARE_ATOL = 0.05
+CHAIN_COMPARE_ATOL = 0.05  # %p 단위 — 소수 반올림·엑셀 저장 오차 허용
 
 def _folder_sample_key(folder_name):
     """
@@ -1143,6 +1187,7 @@ def _chains_are_compatible(metrics_a, metrics_b):
         shorter, longer = b, a.iloc[:nb]
 
     try:
+        # equal_nan=True — 갭·빈 주입 행(NaN)이 prefix 양쪽에 같으면 동일 체인으로 인정.
         return np.allclose(
             shorter.values,
             longer.values,
@@ -1154,7 +1199,11 @@ def _chains_are_compatible(metrics_a, metrics_b):
         return False
 
 def _canonical_folder_rank(folder_name, injection_count):
-    """주입 수 최다 → 날짜 최신 → 이름 순으로 canonical 우선순위."""
+    """주입 수 최다 → 날짜 최신 → 이름 순으로 canonical 우선순위.
+
+    3-tuple 정렬 키 — max()·sort(reverse=True) 에 그대로 사용.
+    날짜는 YYYYMMDD 문자열이라 사전순 = 시간순.
+    """
     return (injection_count, _folder_date_prefix(folder_name), folder_name)
 
 def _cleanup_canonical_experiment_folders(reaction_type, focus_sample_key=None):
@@ -1417,6 +1466,264 @@ def setup_experiment_folder(source_excel, calculated_excel, reaction_type):
     )
     return dest_dir, opju_path, archive_xlsx
 
+# ---------------------------------------------------------------------------
+# 병렬 동일반응(다른 장비·다른 시료) — Origin 교차 반영
+# ---------------------------------------------------------------------------
+# DRE 1.5%@600 등 동일 조건이 GC2/GC3에서 동시에 돌면 폴더·opju 가 2개 생김.
+# peer 판정: **반응 시작 시각이 아니라 수신 메일 시각** — 같은 반응·다른 시료 메일이
+# 2시간 이내에 도착했으면 병렬 반응기로 보고 Origin 교차 반영.
+
+GC_MAIL_RECEIVED_LOG = os.path.join(DATA_PC_INBOX_DIR, ".gc_mail_received.json")
+
+
+def _parallel_origin_window_sec():
+    try:
+        return max(300, int(os.getenv("DATA_PC_PARALLEL_ORIGIN_SEC", "7200").strip()))
+    except (TypeError, ValueError):
+        return 7200
+
+
+def _identity_key_str(identity_key):
+    if not identity_key:
+        return ""
+    date, sample = identity_key
+    return f"{date}|{sample}"
+
+
+def _load_gc_mail_received_registry():
+    if not os.path.isfile(GC_MAIL_RECEIVED_LOG):
+        return {}
+    try:
+        with open(GC_MAIL_RECEIVED_LOG, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_gc_mail_received_registry(data):
+    os.makedirs(DATA_PC_INBOX_DIR, exist_ok=True)
+    with open(GC_MAIL_RECEIVED_LOG, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _datetime_to_epoch(dt):
+    if dt is None:
+        return None
+    if getattr(dt, "tzinfo", None) is not None:
+        return dt.timestamp()
+    return time.mktime(dt.timetuple())
+
+
+def _mail_date_epoch(mail_date):
+    if mail_date is None:
+        return 0.0
+    return _datetime_to_epoch(mail_date) or 0.0
+
+
+def _mail_datetime_naive(dt):
+    if dt is None:
+        return None
+    if getattr(dt, "tzinfo", None) is not None:
+        return dt.replace(tzinfo=None)
+    return dt
+
+
+def _record_gc_mail_received(identity_key, received_dt):
+    """GC 메일 수신 시각 기록 — 병렬 peer 판정(2시간 창)용."""
+    key = _identity_key_str(identity_key)
+    if not key or received_dt is None:
+        return
+    epoch = _datetime_to_epoch(received_dt)
+    if epoch is None:
+        return
+    registry = _load_gc_mail_received_registry()
+    prev = registry.get(key, {})
+    prev_epoch = prev.get("received_epoch")
+    if prev_epoch is not None and float(prev_epoch) >= epoch:
+        return
+    naive = _mail_datetime_naive(received_dt)
+    registry[key] = {
+        "received_at": naive.strftime("%Y-%m-%d %H:%M:%S") if naive else "",
+        "received_epoch": epoch,
+    }
+    _save_gc_mail_received_registry(registry)
+
+
+def _mail_received_epoch(identity_key, mail_received_at=None):
+    if mail_received_at is not None:
+        epoch = _datetime_to_epoch(mail_received_at)
+        if epoch is not None:
+            return epoch
+    entry = _load_gc_mail_received_registry().get(_identity_key_str(identity_key), {})
+    raw = entry.get("received_epoch")
+    return float(raw) if raw is not None else None
+
+
+def _find_parallel_peer_folders(
+    reaction_type, experiment_base, identity_key, mail_received_at=None
+):
+    from data_pc_origin.parallel_origin import (
+        folder_parallel_reaction_key,
+        folder_sample_body,
+        folders_are_parallel_peers,
+    )
+
+    if not _is_g_drive_available():
+        return []
+    root = REACTION_ROOTS.get(reaction_type)
+    if not root or not os.path.isdir(root):
+        return []
+    my_key = folder_parallel_reaction_key(experiment_base)
+    if not my_key:
+        return []
+    my_ts = _mail_received_epoch(identity_key, mail_received_at)
+    if my_ts is None:
+        return []
+    window = _parallel_origin_window_sec()
+    peers = []
+    try:
+        folder_names = os.listdir(root)
+    except OSError:
+        return []
+    for name in folder_names:
+        if name == experiment_base:
+            continue
+        peer_dir = os.path.join(root, name)
+        if not os.path.isdir(peer_dir):
+            continue
+        if identity_key and _folder_matches_experiment_identity(name, identity_key):
+            continue
+        peer_identity = _experiment_identity_key(name)
+        peer_ts = _mail_received_epoch(peer_identity)
+        if peer_ts is None:
+            continue
+        if not folders_are_parallel_peers(
+            experiment_base,
+            name,
+            window_sec=window,
+            ts_a=my_ts,
+            ts_b=peer_ts,
+        ):
+            continue
+        if folder_sample_body(name) == folder_sample_body(experiment_base):
+            continue
+        peers.append((peer_dir, name))
+    peers.sort(key=lambda p: _experiment_identity_key(p[1])[0])
+    return peers
+
+
+def _find_processed_calculated_excel(identity_key):
+    if not identity_key or not os.path.isdir(DATA_PC_PROCESSED_DIR):
+        return None
+    matches = []
+    for fname in os.listdir(DATA_PC_PROCESSED_DIR):
+        if not fname.lower().endswith(".xlsx") or "계산완료" not in fname:
+            continue
+        if _experiment_identity_key(fname) != identity_key:
+            continue
+        matches.append(os.path.join(DATA_PC_PROCESSED_DIR, fname))
+    if not matches:
+        return None
+    if len(matches) == 1:
+        return matches[0]
+
+    def _score(path):
+        try:
+            n = len(pd.read_excel(path, index_col=0))
+        except Exception:
+            n = 0
+        return (n, os.path.getmtime(path))
+
+    return max(matches, key=_score)
+
+
+def _df_columns_for_origin(df):
+    cols = [c for c in ORIGIN_MAPPING if c in df.columns]
+    return df[cols] if cols else df
+
+
+def _resolve_origin_sample_from_excel(xlsx_path, peer_identity):
+    equip = None
+    proc = _find_processed_calculated_excel(peer_identity)
+    source = proc or xlsx_path
+    if proc:
+        equip = equipment_from_output_file(proc)
+    if not equip:
+        for fname in os.listdir(DATA_PC_INBOX_DIR):
+            if _experiment_identity_key(fname) == peer_identity:
+                equip = equipment_from_output_file(fname)
+                break
+    sn = generate_sample_name(source, equipment=equip)
+    if isinstance(sn, tuple):
+        sample_name, _, needs_input, _ = sn
+        if needs_input or not sample_name:
+            return None, None
+        return sample_name, peer_identity
+    return sn, peer_identity
+
+
+def sync_parallel_peer_origins(
+    reaction_type,
+    experiment_base,
+    identity_key,
+    sample_name,
+    df_final,
+    primary_opju,
+    *,
+    skip_origin=False,
+    mail_received_at=None,
+):
+    """peer Origin 에 현재 시료 반영 + 현재 Origin 에 peer 시료 역반영."""
+    if skip_origin or not primary_opju or df_final is None:
+        return
+    peers = _find_parallel_peer_folders(
+        reaction_type, experiment_base, identity_key, mail_received_at
+    )
+    if not peers:
+        return
+    df_origin = _df_columns_for_origin(df_final)
+    if df_origin.empty:
+        return
+    window_min = _parallel_origin_window_sec() // 60
+    print(f"\n[4단계+] 병렬 동일반응 Origin 동기화 — peer {len(peers)}개 (수신 메일 {window_min}분 이내)")
+    for peer_dir, peer_base in peers:
+        peer_opju = _find_opju_in_folder(peer_dir, peer_base)
+        if peer_opju and os.path.normcase(peer_opju) != os.path.normcase(primary_opju):
+            try:
+                print(f"  → peer Origin: {peer_base}")
+                update_origin(
+                    peer_opju,
+                    df_origin,
+                    sample_name,
+                    save_in_place=True,
+                    identity_key=identity_key,
+                )
+            except Exception as exc:
+                print(f"  [경고] peer Origin 반영 실패 ({peer_base}): {exc}")
+        peer_identity = _experiment_identity_key(peer_base)
+        peer_xlsx = _find_folder_archive_xlsx(peer_dir) or _find_processed_calculated_excel(
+            peer_identity
+        )
+        if not peer_xlsx or not os.path.isfile(peer_xlsx):
+            continue
+        try:
+            peer_df = _df_columns_for_origin(pd.read_excel(peer_xlsx, index_col=0))
+            peer_sample, peer_id = _resolve_origin_sample_from_excel(peer_xlsx, peer_identity)
+            if not peer_sample:
+                print(f"  [경고] peer 시료명 해석 불가: {peer_base}")
+                continue
+            print(f"  → 현재 Origin ← peer: {peer_sample[:70]}")
+            update_origin(
+                primary_opju,
+                peer_df,
+                peer_sample,
+                save_in_place=True,
+                identity_key=peer_id or peer_identity,
+            )
+        except Exception as exc:
+            print(f"  [경고] peer 역반영 실패 ({peer_base}): {exc}")
+
 # ==========================================
 # 기능 2: GC 시트 파싱 · 피크/RT 이상 감지
 # ==========================================
@@ -1468,6 +1775,7 @@ def parse_gc_sheet(df_raw, detector_type, equipment, time_bounds):
     placeholder_cycles = set()
     cycle_num, cycle_list, unassigned_list = 1, [], []  # 1주입 = Cycle 1 (KCH 첫 블록에 헤더 없음)
 
+    # iterrows() 를 list 로 고정 — i±1 lookahead·역방향 헤더 스캔에 인덱스 접근 필요.
     rows = list(df_raw.iterrows())
     i = 0
     while i < len(rows):
@@ -1595,7 +1903,7 @@ def process_excel(input_file):
 
     # 장비 자동 판별: 시트별 H2 RT 구간으로 GC2 → GC3 → GC1 순 검사.
     # GC2 H2 ~0.5분, GC3 ~0.7분, GC1 ~2.0분 — 구간이 겹치지 않도록 설계됨.
-    # GC1 xlsx는 FID+TCD 2시트이므로 루프에서 tcd/fid 각각 채움.
+    # GC2: 단일 시트 → H2 매칭 시 break. GC3/GC1: FID+TCD 2시트 → break 없이 누적.
     for sn in xls.sheet_names:
         df = pd.read_excel(xls, sheet_name=sn)
         if df.empty and len(df.columns) == 0:
@@ -1700,9 +2008,9 @@ def process_excel(input_file):
     elif eq == 'GC3':
         df_t, warn_t, gap_t = parse_gc_sheet(df_gc3_tcd, 'TCD', 'GC3', GC3_TIME_TCD)
         df_f, warn_f, gap_f = parse_gc_sheet(df_gc3_fid, 'FID', 'GC3', GC3_TIME_FID)
-        gap_cycles = gap_t | gap_f
+        gap_cycles = gap_t | gap_f  # set union — TCD·FID 각각의 갭·빈주입 Cycle 합집합
         all_warnings.extend(warn_t); all_warnings.extend(warn_f)
-        df_p = pd.concat([df_t, df_f], axis=1).fillna(0)
+        df_p = pd.concat([df_t, df_f], axis=1).fillna(0)  # 열=가스, 행=Cycle — 시트 병합
         
         for g in ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area']:
             if g not in df_p.columns: df_p[g] = 0
@@ -1729,10 +2037,10 @@ def process_excel(input_file):
     elif eq == 'GC1':
         df_t, warn_t, gap_t = parse_gc_sheet(df_gc1_tcd, 'TCD', 'GC1', GC1_TIME_TCD)
         df_f, warn_f, gap_f = parse_gc_sheet(df_gc1_fid, 'FID', 'GC1', GC1_TIME_FID)
-        gap_cycles = gap_t | gap_f
+        gap_cycles = gap_t | gap_f  # set union — TCD·FID 각각의 갭·빈주입 Cycle 합집합
         all_warnings.extend(warn_t)
         all_warnings.extend(warn_f)
-        df_p = pd.concat([df_t, df_f], axis=1).fillna(0)
+        df_p = pd.concat([df_t, df_f], axis=1).fillna(0)  # 열=가스, 행=Cycle — 시트 병합
 
         for g in ['H2 Area', 'CO Area', 'CH4 Area', 'CO2 Area', 'C2H4 Area', 'C2H6 Area']:
             if g not in df_p.columns:
@@ -2028,6 +2336,20 @@ def _fetch_message_peek(mail, msg_id):
             return email.message_from_bytes(part[1])
     return None
 
+def _is_mail_seen(mail, msg_id):
+    """IMAP FLAGS — \\Seen 여부 (네이버 웹 미읽음 동기화용)."""
+    try:
+        status, fetched = mail.fetch(msg_id, "(FLAGS)")
+    except imaplib.IMAP4.error:
+        return False
+    if status != "OK" or not fetched:
+        return False
+    for part in fetched:
+        text = part.decode("utf-8", errors="replace") if isinstance(part, bytes) else str(part)
+        if "\\Seen" in text:
+            return True
+    return False
+
 def _parse_imap_list_entry(raw):
     """IMAP LIST 한 줄 → (flags, mailbox_name)."""
     line = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw
@@ -2149,6 +2471,11 @@ def _format_mail_datetime(dt):
 
 def _collect_pending_gc_mails(mail, msg_ids, done_keys, folder):
     """미처리 GC 메일 수집. msg_ids 순서(보통 오래된→최신) 유지."""
+    return _collect_gc_mails(mail, msg_ids, folder, done_keys=done_keys)
+
+
+def _collect_gc_mails(mail, msg_ids, folder, *, done_keys=None):
+    """GC 메일 수집 — done_keys 가 있으면 처리 로그에 있는 메일은 제외."""
     source = _folder_mail_source(folder)
     pending = []
     for msg_id in msg_ids:
@@ -2163,7 +2490,7 @@ def _collect_pending_gc_mails(mail, msg_ids, done_keys, folder):
         if not attachments:
             continue
         mail_key = _mail_unique_key(msg, msg_id)
-        if mail_key in done_keys:
+        if done_keys is not None and mail_key in done_keys:
             continue
         pending.append({
             "msg_id": msg_id,
@@ -2176,6 +2503,48 @@ def _collect_pending_gc_mails(mail, msg_ids, done_keys, folder):
         })
     return pending
 
+
+def _gather_all_gc_mails_from_folder(mail, folder, days=30):
+    if not _imap_select_folder(mail, folder):
+        print(f"       [경고] 메일함 접근 실패: {folder}")
+        return []
+    msg_ids = _list_recent_mail_ids(mail, days, unseen_only=False)
+    if not msg_ids:
+        return []
+    return _collect_gc_mails(mail, msg_ids, folder, done_keys=None)
+
+
+def _expand_mail_items_to_jobs(mail_items):
+    jobs = []
+    for item in mail_items:
+        for filename, payload in item["attachments"]:
+            identity = _experiment_identity_key(filename)
+            jobs.append(
+                {
+                    "item": item,
+                    "filename": filename,
+                    "payload": payload,
+                    "identity": identity,
+                    "identity_str": _identity_key_str(identity),
+                    "exp_date": identity[0],
+                    "rxn_key": _attachment_parallel_reaction_key(filename),
+                    "mail_date": item["date"],
+                }
+            )
+    return jobs
+
+
+def _latest_mail_job_per_identity(jobs):
+    latest = {}
+    for job in jobs:
+        key = job.get("identity_str") or _identity_key_str(job["identity"])
+        prev = latest.get(key)
+        if prev is None or _mail_date_epoch(job["mail_date"]) > _mail_date_epoch(
+            prev["mail_date"]
+        ):
+            latest[key] = job
+    return list(latest.values())
+
 def _gather_pending_from_folder(mail, folder, done_keys, days=30, unseen_only=False):
     if not _imap_select_folder(mail, folder):
         print(f"       [경고] 메일함 접근 실패: {folder}")
@@ -2183,28 +2552,184 @@ def _gather_pending_from_folder(mail, folder, done_keys, days=30, unseen_only=Fa
     msg_ids = _list_recent_mail_ids(mail, days, unseen_only)
     if not msg_ids:
         return []
-    return _collect_pending_gc_mails(mail, msg_ids, done_keys, folder)
+    return _collect_gc_mails(mail, msg_ids, folder, done_keys=done_keys)
 
 def _merge_pending_by_date(*pending_lists):
     """여러 메일함 병합 — Message-ID 중복 제거, 수신/발송 시각 오래된 순."""
     merged = {}
     for pending in pending_lists:
         for item in pending:
+            # setdefault: 동일 mail_key 는 첫 항목 유지 (받은·보낸·내게쓴 교차 중복 방지).
             merged.setdefault(item["mail_key"], item)
     return sorted(merged.values(), key=lambda x: x["date"])
 
+
+def _attachment_parallel_reaction_key(filename):
+    from data_pc_origin.parallel_origin import folder_parallel_reaction_key
+
+    return folder_parallel_reaction_key(generate_experiment_basename(filename))
+
+
+def _sort_parallel_work_jobs(jobs, window_sec):
+    """병렬 동일반응 묶음은 실험 날짜(YYYYMMDD) 오래된 순으로 정렬."""
+    if len(jobs) <= 1:
+        return list(jobs)
+
+    def mail_epoch(job):
+        if job.get("mail_date") is not None:
+            epoch = _datetime_to_epoch(job["mail_date"])
+            if epoch is not None:
+                return epoch
+        return _mail_received_epoch(job["identity"]) or 0.0
+
+    ordered = []
+    used = set()
+    for i, job in enumerate(jobs):
+        if i in used:
+            continue
+        cluster = [job]
+        used.add(i)
+        rxn_key = job.get("rxn_key")
+        if not rxn_key:
+            ordered.append(job)
+            continue
+        for j, other in enumerate(jobs):
+            if j in used:
+                continue
+            if other.get("rxn_key") != rxn_key:
+                continue
+            if other["identity"] == job["identity"]:
+                continue
+            if any(
+                abs(mail_epoch(member) - mail_epoch(other)) <= window_sec
+                for member in cluster
+            ):
+                cluster.append(other)
+                used.add(j)
+        cluster.sort(key=lambda x: x["exp_date"])
+        ordered.extend(cluster)
+    return ordered
+
+
+def _expand_pending_to_jobs(pending_all):
+    """메일 항목 → 첨부별 작업 목록."""
+    jobs = []
+    for item in pending_all:
+        for filename, payload in item["attachments"]:
+            identity = _experiment_identity_key(filename)
+            jobs.append(
+                {
+                    "item": item,
+                    "filename": filename,
+                    "payload": payload,
+                    "identity": identity,
+                    "identity_str": _identity_key_str(identity),
+                    "exp_date": identity[0],
+                    "rxn_key": _attachment_parallel_reaction_key(filename),
+                    "mail_date": item["date"],
+                }
+            )
+    return jobs
+
+
+def _expand_pending_to_parallel_jobs(pending_all):
+    """메일 항목 → 병렬 정렬된 작업 목록 (레거시 호환)."""
+    return _sort_parallel_work_jobs(
+        _expand_pending_to_jobs(pending_all), _parallel_origin_window_sec()
+    )
+
 def _mark_mail_seen_and_logged(mail, item, done_keys):
-    if item["mail_key"] in done_keys:
-        return False
+    """IMAP \\Seen + 처리 로그. 로그에만 있고 미읽음인 메일도 \\Seen 재적용."""
     if not _imap_select_folder(mail, item["folder"]):
         return False
+    if _is_mail_seen(mail, item["msg_id"]):
+        return item["mail_key"] in done_keys
     try:
         mail.store(item["msg_id"], "+FLAGS", "\\Seen")
-        _append_processed_mail_id(item["mail_key"])
-        done_keys.add(item["mail_key"])
+        if item["mail_key"] not in done_keys:
+            _append_processed_mail_id(item["mail_key"])
+            done_keys.add(item["mail_key"])
         return True
     except imaplib.IMAP4.error:
         return False
+
+def _load_processed_experiment_identities():
+    """KCH/processed 계산완료 xlsx → (YYYYMMDD, sample_key) 집합."""
+    identities = set()
+    if not os.path.isdir(DATA_PC_PROCESSED_DIR):
+        return identities
+    for fname in os.listdir(DATA_PC_PROCESSED_DIR):
+        if not fname.lower().endswith(".xlsx"):
+            continue
+        if "계산완료" not in fname:
+            continue
+        identities.add(_experiment_identity_key(fname))
+    return identities
+
+def _gc_mail_attachment_identities(item):
+    ids = set()
+    for filename, _ in item.get("attachments") or []:
+        ids.add(_experiment_identity_key(filename))
+    return ids
+
+def _should_mark_gc_mail_seen(mail_key, item, done_keys, processed_identities):
+    """이 메일 ID가 처리 로그에 있을 때만 읽음 동기화.
+
+    KCH/processed 에 같은 시료가 있어도 여기서 읽음 처리하지 않는다.
+    GC 누적 xlsx 는 같은 시료로 새 메일이 올 수 있으므로, identity 만으로
+  ㅤ  건너뛰면 첨부가 inbox 에 반영되지 않는다.
+    """
+    del item, processed_identities  # reconcile 호출부 시그니처 유지
+    return mail_key in done_keys
+
+def _reconcile_processed_unseen_mails(mail, done_keys, days=30):
+    """처리 로그 또는 KCH/processed 에 있는 GC 메일이 IMAP 미읽음이면 \\Seen."""
+    processed_identities = _load_processed_experiment_identities()
+    if not done_keys and not processed_identities:
+        return 0
+    # INBOX: SINCE 제한 없이 UNSEEN 전체 (네이버는 SINCE+UNSEEN 조합이 누락됨)
+    folders = [("INBOX", None)]
+    sent_mb = _find_sent_mailbox(mail)
+    if sent_mb:
+        folders.append((sent_mb, days))
+    self_mb = _find_self_mailbox(mail)
+    if self_mb:
+        folders.append((self_mb, None))
+
+    reconciled = 0
+    for folder, folder_days in folders:
+        if not _imap_select_folder(mail, folder):
+            continue
+        msg_ids = _list_recent_mail_ids(mail, folder_days, unseen_only=True)
+        if not msg_ids:
+            continue
+        source = _folder_mail_source(folder)
+        for msg_id in msg_ids:
+            msg = _fetch_message_peek(mail, msg_id)
+            if msg is None:
+                continue
+            subject = _decode_mime_header(msg.get("Subject", ""))
+            attachments = _extract_attachments_from_message(msg)
+            if not _mail_qualifies_for_gc(subject, attachments, source):
+                continue
+            attachments = _attachments_for_gc_workflow(subject, attachments, source)
+            if not attachments:
+                continue
+            mail_key = _mail_unique_key(msg, msg_id)
+            item = {
+                "msg_id": msg_id,
+                "mail_key": mail_key,
+                "subject": subject,
+                "folder": folder,
+                "attachments": attachments,
+            }
+            if not _should_mark_gc_mail_seen(
+                mail_key, item, done_keys, processed_identities
+            ):
+                continue
+            if _mark_mail_seen_and_logged(mail, item, done_keys):
+                reconciled += 1
+    return reconciled
 
 def process_new_gc_emails(opju_path=None, auto_archive=True, skip_origin=None):
     """
@@ -2234,6 +2759,11 @@ def process_new_gc_emails(opju_path=None, auto_archive=True, skip_origin=None):
     done_keys = _load_processed_mail_ids()
     try:
         mail.login(email_addr, app_password)
+
+        reconciled = _reconcile_processed_unseen_mails(mail, done_keys)
+        if reconciled:
+            print(f"       → 처리 완료 메일 읽음 동기화: {reconciled}건")
+            read_count += reconciled
 
         inbox_pending = _gather_pending_from_folder(
             mail, "INBOX", done_keys, unseen_only=False
@@ -2271,39 +2801,65 @@ def process_new_gc_emails(opju_path=None, auto_archive=True, skip_origin=None):
             return PipelineRunResult(0)
 
         print(f"       → 처리 순서: 오래된 메일부터 {len(pending_all)}건")
+        all_jobs = _expand_pending_to_jobs(pending_all)
+        latest_jobs = _latest_mail_job_per_identity(all_jobs)
+        if len(latest_jobs) < len(all_jobs):
+            print(
+                f"       → 시료별 최신 메일만 {len(latest_jobs)}건 "
+                f"(누적 구버전 {len(all_jobs) - len(latest_jobs)}건 제외)"
+            )
+        parallel_jobs = _sort_parallel_work_jobs(
+            latest_jobs, _parallel_origin_window_sec()
+        )
+        if len(parallel_jobs) > 1:
+            print(f"       → 병렬 동일반응 포함 — 실험 날짜(폴더) 순 {len(parallel_jobs)}건")
+
+        mail_keys_by_identity = {}
+        for job in all_jobs:
+            mail_keys_by_identity.setdefault(job["identity_str"], set()).add(
+                job["item"]["mail_key"]
+            )
 
         gdrive_retry_needed = False
-        for item in pending_all:
+        mail_ok_map = {item["mail_key"]: True for item in pending_all}
+        for job in parallel_jobs:
+            item = job["item"]
+            filename = job["filename"]
+            payload = job["payload"]
             source_label = _MAIL_SOURCE_LABELS.get(item["source"], item["source"])
             print(f"\n       → 반영: {item['subject']}")
             print(
                 f"       → 출처: {source_label}메일함 · "
-                f"{_format_mail_datetime(item['date'])}"
+                f"{_format_mail_datetime(item['date'])} · 실험일 {job['exp_date']}"
             )
+            print(f"       → KCH 원본 저장: {filename} ({len(payload):,}B)")
+            identity = job["identity"]
+            excel_path = _save_attachment_bytes(
+                DATA_PC_INBOX_DIR, filename, payload
+            )
+            _cleanup_inbox_duplicate_files(excel_path, identity)
+            _record_gc_mail_received(identity, item["date"])
 
-            mail_ok = True
-            for filename, payload in item["attachments"]:
-                print(f"       → KCH 원본 저장: {filename}")
-                identity = _experiment_identity_key(filename)
-                excel_path = _save_attachment_bytes(
-                    DATA_PC_INBOX_DIR, filename, payload
-                )
-                _cleanup_inbox_duplicate_files(excel_path, identity)
+            if run_workflow_for_file(
+                excel_path,
+                opju_path=opju_path,
+                auto_archive=auto_archive and opju_path is None,
+                skip_origin=skip_origin,
+                mail_received_at=item["date"],
+            ):
+                workflow_count += 1
+                for mk in mail_keys_by_identity.get(job["identity_str"], []):
+                    mail_ok_map[mk] = True
+            else:
+                mail_ok_map[item["mail_key"]] = False
+                if auto_archive and opju_path is None and not _is_g_drive_available():
+                    gdrive_retry_needed = True
+                print("       [경고] 워크플로 실패 — 같은 시료 메일은 재시도 가능")
 
-                if run_workflow_for_file(
-                    excel_path,
-                    opju_path=opju_path,
-                    auto_archive=auto_archive and opju_path is None,
-                    skip_origin=skip_origin,
-                ):
-                    workflow_count += 1
-                else:
-                    mail_ok = False
-                    if auto_archive and opju_path is None and not _is_g_drive_available():
-                        gdrive_retry_needed = True
-                    print("       [경고] 워크플로 실패 — 같은 시료 메일은 재시도 가능")
-
-            if mail_ok and _mark_mail_seen_and_logged(mail, item, done_keys):
+        for item in pending_all:
+            if mail_ok_map.get(item["mail_key"]) and _mark_mail_seen_and_logged(
+                mail, item, done_keys
+            ):
                 read_count += 1
 
         if workflow_count == 0 and read_count == 0:
@@ -2331,7 +2887,175 @@ def process_new_gc_emails(opju_path=None, auto_archive=True, skip_origin=None):
 
     return PipelineRunResult(workflow_count, gdrive_retry_needed)
 
-def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True, skip_origin=None):
+
+def replay_inbox_parallel_workflows(
+    *,
+    opju_path=None,
+    auto_archive=True,
+    skip_origin=None,
+):
+    """
+    inbox 에 이미 있는 KCH 원본으로 병렬 묶음 재처리 (IMAP 재수신 없음).
+    병렬 동일반응은 실험 날짜(폴더) 오래된 순으로 2→3→4 단계 실행.
+    """
+    if not os.path.isdir(DATA_PC_INBOX_DIR):
+        print("inbox 폴더 없음")
+        return 0
+    registry = _load_gc_mail_received_registry()
+    jobs = []
+    for fname in os.listdir(DATA_PC_INBOX_DIR):
+        if not fname.lower().endswith(".xlsx") or "계산완료" in fname:
+            continue
+        path = os.path.join(DATA_PC_INBOX_DIR, fname)
+        if not os.path.isfile(path):
+            continue
+        identity = _experiment_identity_key(fname)
+        if registry and _identity_key_str(identity) not in registry:
+            continue
+        jobs.append(
+            {
+                "path": path,
+                "filename": fname,
+                "identity": identity,
+                "exp_date": identity[0],
+                "rxn_key": _attachment_parallel_reaction_key(fname),
+                "mail_date": None,
+            }
+        )
+    if not jobs:
+        print("\n[inbox replay] .gc_mail_received.json 에 등록된 inbox xlsx 없음")
+        return 0
+    ordered = _sort_parallel_work_jobs(jobs, _parallel_origin_window_sec())
+    print(
+        f"\n[inbox replay] 수신 메일 등록 시료 {len(ordered)}건 — 실험 날짜 순 (메일 재수신 없음)"
+    )
+    count = 0
+    for job in ordered:
+        identity = job["identity"]
+        reg = _load_gc_mail_received_registry().get(_identity_key_str(identity), {})
+        mail_at = None
+        raw_at = reg.get("received_at")
+        if raw_at:
+            try:
+                mail_at = datetime.strptime(raw_at, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                mail_at = None
+        print(f"\n  → {job['filename']} (실험일 {job['exp_date']})")
+        if run_workflow_for_file(
+            job["path"],
+            opju_path=opju_path,
+            auto_archive=auto_archive and opju_path is None,
+            skip_origin=skip_origin,
+            mail_received_at=mail_at,
+        ):
+            count += 1
+    print(f"\n[inbox replay 완료] {count}/{len(ordered)}건 반영")
+    return count
+
+
+def force_process_latest_gc_mails(
+    *,
+    identity_keys=None,
+    opju_path=None,
+    auto_archive=True,
+    skip_origin=None,
+    days=30,
+):
+    """
+    읽음·처리 로그 무시 — 시료별 **최신** GC 메일 첨부를 IMAP 에서 받아 강제 재처리.
+    identity_keys: None 이면 .gc_mail_received.json 등록 시료만 대상.
+    """
+    skip_origin = _skip_origin_enabled(skip_origin)
+    target_keys = set(identity_keys or [])
+    if not target_keys:
+        target_keys = set(_load_gc_mail_received_registry().keys())
+    if not target_keys:
+        print("\n[force-mail] 대상 시료 없음 (.gc_mail_received.json 비어 있음)")
+        return PipelineRunResult(0)
+
+    email_addr, app_password = _get_mail_credentials()
+    if not email_addr or not app_password:
+        print("\n[오류] 메일 계정 설정 없음")
+        return PipelineRunResult(0)
+
+    os.makedirs(DATA_PC_INBOX_DIR, exist_ok=True)
+    print(
+        f"\n[force-mail] 시료별 최신 메일 첨부 강제 재처리 ({len(target_keys)}건 대상)"
+    )
+    print("       읽음·처리 로그 무시 — IMAP 최신본 기준")
+
+    mail = imaplib.IMAP4_SSL(NAVER_IMAP_HOST, NAVER_IMAP_PORT)
+    workflow_count = 0
+    done_keys = _load_processed_mail_ids()
+    try:
+        mail.login(email_addr, app_password)
+        all_items = _gather_all_gc_mails_from_folder(mail, "INBOX", days=days)
+        sent_mb = _find_sent_mailbox(mail)
+        if sent_mb:
+            all_items.extend(_gather_all_gc_mails_from_folder(mail, sent_mb, days=days))
+        self_mb = _find_self_mailbox(mail)
+        if self_mb:
+            all_items.extend(
+                _gather_all_gc_mails_from_folder(mail, self_mb, days=None)
+            )
+
+        jobs = _latest_mail_job_per_identity(_expand_mail_items_to_jobs(all_items))
+        jobs = [j for j in jobs if j["identity_str"] in target_keys]
+        if not jobs:
+            print("       → 대상 시료의 GC 메일을 찾지 못했습니다.")
+            return PipelineRunResult(0)
+
+        ordered = _sort_parallel_work_jobs(jobs, _parallel_origin_window_sec())
+        print(f"       → 최신 메일 {len(ordered)}건 — 실험 날짜 순 처리")
+
+        gdrive_retry_needed = False
+        for job in ordered:
+            item = job["item"]
+            filename = job["filename"]
+            payload = job["payload"]
+            identity = job["identity"]
+            source_label = _MAIL_SOURCE_LABELS.get(item["source"], item["source"])
+            print(f"\n       → [force] {item['subject']}")
+            print(
+                f"       → 출처: {source_label} · {_format_mail_datetime(item['date'])}"
+                f" · 첨부 {len(payload):,}B · 실험일 {job['exp_date']}"
+            )
+            excel_path = _save_attachment_bytes(
+                DATA_PC_INBOX_DIR, filename, payload
+            )
+            _cleanup_inbox_duplicate_files(excel_path, identity)
+            _record_gc_mail_received(identity, item["date"])
+
+            if run_workflow_for_file(
+                excel_path,
+                opju_path=opju_path,
+                auto_archive=auto_archive and opju_path is None,
+                skip_origin=skip_origin,
+                mail_received_at=item["date"],
+            ):
+                workflow_count += 1
+                _mark_mail_seen_and_logged(mail, item, done_keys)
+            else:
+                if auto_archive and opju_path is None and not _is_g_drive_available():
+                    gdrive_retry_needed = True
+                print("       [경고] 워크플로 실패")
+
+        print(f"\n[force-mail 완료] {workflow_count}/{len(ordered)}건 반영")
+        return PipelineRunResult(workflow_count, gdrive_retry_needed)
+    finally:
+        try:
+            mail.logout()
+        except Exception:
+            pass
+
+
+def run_workflow_for_file(
+    excel_path,
+    opju_path=None,
+    auto_archive=True,
+    skip_origin=None,
+    mail_received_at=None,
+):
     """
     단일 KCH 원본 엑셀에 대한 2→3→4 단계 오케스트레이션.
 
@@ -2342,6 +3066,8 @@ def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True, skip_or
     """
     import sys
 
+    # P5/P6 workflow_bridge 위임 — 본 모듈을 catalyst_module 로 넘겨 계산·G:·Origin 구현 재사용.
+    # _run_workflow_for_file_legacy 는 회귀·문서용 보존.
     from data_pc_origin.workflow_bridge import run_workflow_bridged
 
     return run_workflow_bridged(
@@ -2350,10 +3076,11 @@ def run_workflow_for_file(excel_path, opju_path=None, auto_archive=True, skip_or
         auto_archive=auto_archive,
         skip_origin=skip_origin,
         catalyst_module=sys.modules[__name__],
+        mail_received_at=mail_received_at,
     )
 
 
-def _run_workflow_for_file_legacy(excel_path, opju_path=None, auto_archive=True, skip_origin=None):
+def _run_workflow_for_file_legacy(excel_path, opju_path=None, auto_archive=True, skip_origin=None, mail_received_at=None):
     """구현 보존 — data_pc_origin P층 미사용 시 참고용."""
     skip_origin = _skip_origin_enabled(skip_origin)
     if not os.path.exists(excel_path) or not excel_path.lower().endswith((".xlsx", ".xls")):
@@ -2411,6 +3138,16 @@ def _run_workflow_for_file_legacy(excel_path, opju_path=None, auto_archive=True,
                 print("\n[4단계] Origin 건너뜀 — --no-origin / DATA_PC_SKIP_ORIGIN")
                 return True
             update_origin(opju_path, df_final, sample_name, save_in_place=False, identity_key=identity_key)
+            sync_parallel_peer_origins(
+                reaction_type,
+                experiment_base,
+                identity_key,
+                sample_name,
+                df_final,
+                opju_path,
+                skip_origin=skip_origin,
+                mail_received_at=mail_received_at,
+            )
             return True
 
         if not auto_archive:
@@ -2426,6 +3163,16 @@ def _run_workflow_for_file_legacy(excel_path, opju_path=None, auto_archive=True,
             print(f"    {archive_xlsx}")
             return True
         update_origin(target_opju, df_final, sample_name, save_in_place=True, identity_key=identity_key)
+        sync_parallel_peer_origins(
+            reaction_type,
+            experiment_base,
+            identity_key,
+            sample_name,
+            df_final,
+            target_opju,
+            skip_origin=skip_origin,
+            mail_received_at=mail_received_at,
+        )
         print(f"\n ✅ 전체 완료 — G: 실험 폴더 및 Origin 반영")
         print(f"    {archive_xlsx}")
         return True
@@ -2494,6 +3241,16 @@ if __name__ == "__main__":
     )
     parser.add_argument("--poll-once", action="store_true", help="메일 1회 확인 후 종료 (비대화형)")
     parser.add_argument(
+        "--replay-inbox",
+        action="store_true",
+        help="inbox KCH 원본으로 병렬 묶음 재처리 (메일 재수신 없음, 실험날짜 순)",
+    )
+    parser.add_argument(
+        "--force-mail",
+        action="store_true",
+        help="시료별 최신 GC 메일 첨부 IMAP 강제 재처리 (읽음·처리로그 무시)",
+    )
+    parser.add_argument(
         "--watch",
         action="store_true",
         help="G: 감시 + 1시간 쿨다운 — G: 접근 가능 시 자동 파이프라인",
@@ -2535,6 +3292,22 @@ if __name__ == "__main__":
                 skip_origin=skip_origin,
             )
             print("-" * 60)
+        sys.exit(0)
+
+    if args.force_mail:
+        result = force_process_latest_gc_mails(
+            opju_path=args.opju,
+            auto_archive=not args.no_archive and args.opju is None,
+            skip_origin=skip_origin,
+        )
+        sys.exit(0 if result.workflow_count >= 0 else 1)
+
+    if args.replay_inbox:
+        replay_inbox_parallel_workflows(
+            opju_path=args.opju,
+            auto_archive=not args.no_archive and args.opju is None,
+            skip_origin=skip_origin,
+        )
         sys.exit(0)
 
     if args.poll_once:

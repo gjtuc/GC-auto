@@ -15,7 +15,9 @@ from data_pc_origin.p13_imap_adapter import (
     FetchedMail,
     gather_pending_counts,
     fetch_oldest_pending,
+    mark_fetched_mail_seen,
     prepare_imap,
+    reconcile_processed_unseen_mails,
 )
 from data_pc_origin.p6_catalyst_adapter import make_stage3_runner
 from data_pc_origin.p7_mail_hook import MailJob, parse_mail_attachment
@@ -118,6 +120,7 @@ def run_live_imap(
         }
     elif fetch_only:
         try:
+            reconcile_processed_unseen_mails(printer=printer)
             fetched = fetch_oldest_pending(mark_seen=mark_seen, printer=printer)
             if fetched is None:
                 counts = gather_pending_counts(printer=printer)
@@ -169,6 +172,7 @@ def run_live_imap(
             }
         else:
             try:
+                reconcile_processed_unseen_mails(printer=printer)
                 fetched = fetch_oldest_pending(mark_seen=False, printer=printer)
                 if fetched is None:
                     out = {
@@ -214,6 +218,7 @@ def run_live_imap(
                             if mode == WorkflowMode.OPJU_ONLY
                             else make_stage3_runner(catalyst)
                         ),
+                        mail_received_at=fetched.received_at,
                     )
                     save_path = ""
                     sheets = 0
@@ -233,6 +238,7 @@ def run_live_imap(
                     if wf is not None and wf.stage4 is not None and wf.stage4.origin:
                         sheets = wf.stage4.origin.sheets_updated
                     if ok:
+                        mark_fetched_mail_seen(fetched, printer=printer)
                         out = {
                             "status": "ok",
                             "prep": prep.to_dict(),
@@ -282,6 +288,11 @@ def main() -> int:
 
     if probe:
         result = run_imap_probe(dry_run=dry)
+    elif "--reconcile-seen" in sys.argv:
+        count = reconcile_processed_unseen_mails()
+        result = {"status": "ok", "reconciled": count}
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return 0
     else:
         result = run_live_imap(
             dry_run=dry,

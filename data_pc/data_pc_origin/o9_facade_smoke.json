@@ -4,7 +4,9 @@
     "df_data",
     "sample_name",
     "save_in_place",
-    "identity_key"
+    "identity_key",
+    "column_guard_confirm",
+    "skip_equipment_day_guard"
   ],
   "sheets_updated": 8,
   "row_count": 107,
