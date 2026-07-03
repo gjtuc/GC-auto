@@ -20,7 +20,11 @@ data_pc_request.py — 은규 PC / 차헌 PC 개시 요청 판별
   판별 로직은 장비 PC `gc_request.py` 와 **동일 키워드** (연구실 통일).
   장비 PC force: gc_automation.py — **은규 PC에서 실행 금지**
 
-  Cursor 규칙: `.cursor/rules/eungyu-pc-initiation.mdc`
+  Cursor 규칙: `.cursor/rules/eungyu-pc-initiation.mdc` (일상 개시)
+               `.cursor/rules/eungyu-pc-migration.mdc` (이식 작업)
+
+  이식 트리거: "이식 작업해", "이식해" → message_is_migration() → port_eungyu_data_pc.ps1
+  문서: docs/은규PC_이식_가이드.md
 
 =============================================================================
 [사용 예]
@@ -104,6 +108,44 @@ def is_initiation_phrase(text: str) -> bool:
     for keyword in INITIATION_KEYWORDS:
         if _normalize(keyword) in compact:
             return True
+    return False
+
+
+# 이식 작업 트리거 (은규 PC — 차헌 PC 수정본 → gc-data-pc)
+MIGRATION_KEYWORDS = (
+    "이식작업", "이식", "포팅", "porting", "migrate", "migration",
+    "옮겨", "적용해", "이전해", "세팅해", "설치해",
+)
+
+MIGRATION_PHRASE_RE = re.compile(
+    r"^[\s!?]*("
+    r"이식\s*작업\s*해|이식\s*해|이식\s*작업|이식"
+    r"|포팅\s*해|은규\s*pc.*이식|이식.*은규"
+    r"|gc-data-pc\s*세팅|데이터\s*pc\s*이식"
+    r")[\s!?]*$",
+    re.IGNORECASE,
+)
+
+
+def message_is_migration(text: str) -> bool:
+    """
+    [LLM] 은규 PC 이식 요청 — 「이식 작업해」만 말해도 True.
+
+    True 예: "이식 작업해", "이식해", "은규 PC에서 이식 작업해"
+    False 예: "이식이 뭐야?", "이식 원리 설명해줘"
+    """
+    stripped = text.strip()
+    if not stripped or len(stripped) > 80:
+        return False
+    if stripped.endswith("?"):
+        return False
+    if MIGRATION_PHRASE_RE.match(stripped):
+        return True
+    compact = _normalize(stripped)
+    for keyword in MIGRATION_KEYWORDS:
+        if _normalize(keyword) in compact:
+            if "이식" in compact or "포팅" in compact or "porting" in compact:
+                return True
     return False
 
 

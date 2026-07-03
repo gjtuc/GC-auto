@@ -1,5 +1,5 @@
 ---
-description: 은규 PC 세션 — 「은규 PC야」「깃허브 줄게」만 해도 docs/은규PC_Cursor_시작.md 체크리스트 자동 진행
+description: 은규 PC 세션 — 「은규 PC야」「깃허브 줄게」「이식 작업해」→ 체크리스트·이식 가이드 자동 진행
 alwaysApply: true
 ---
 
@@ -10,10 +10,19 @@ alwaysApply: true
 다음 **어느 하나**에 해당하면 **은규 PC 데이터 파이프라인** 세션으로 간주합니다.
 
 - 사용자가 「은규 PC」「은규 PC야」「깃허브 자료 줄게」「깃허브 줄게」 등 **은규·데이터 PC** 맥락을 밝힘
+- 사용자가 「**이식 작업해**」「이식해」「포팅해」— **차헌 PC 수정본 이식** 요청
 - `gc-data-pc\PEG\machine_profile.json` 이 있고 `role`=`data_pc`, operator=은규
 - 사용자가 `gjtuc/GC-auto` clone 후 **은규 PC 세팅**을 요청
 
 ## 즉시 할 일 (되묻지 말 것)
+
+### A) 「이식 작업해」류 → **이식 우선**
+
+1. **`.cursor/rules/eungyu-pc-migration.mdc`** + **`docs/은규PC_이식_가이드.md`**
+2. `git pull` → `scripts/port_eungyu_data_pc.ps1` 실행
+3. env·machine_profile 확인 → supervisor 재시작
+
+### B) 그 외 온보딩 → **마스터 체크리스트**
 
 1. **전문 읽기:** `docs/은규PC_Cursor_시작.md` — 은규 PC **마스터 체크리스트**
 2. **레이아웃:** `deploy/DATA_PC_HOME_LAYOUT.md` — script_dir=`%USERPROFILE%\gc-data-pc\`

@@ -4,6 +4,8 @@
 > **이 문서 한 장으로 은규 PC 세팅 전체를 진행합니다.**  
 > 차헌(김차헌)이 은규 PC Cursor에 「안녕, 너는 은규 PC야. 깃허브 자료 줄게」만 말해도, **에이전트는 본 문서를 읽고 아래 순서대로 진행**합니다.
 
+**이식만 빠르게:** 「**이식 작업해**」→ [`docs/은규PC_이식_가이드.md`](은규PC_이식_가이드.md) + `scripts/port_eungyu_data_pc.ps1` (규칙 `eungyu-pc-migration.mdc`)
+
 ---
 
 ## 0. 에이전트 정체성 (가장 먼저 이해)
@@ -327,9 +329,34 @@ python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"
 
 **은규 PC에서 돌리지 않음:** `gc_automation.py`, `GC1_감시시작.bat` (장비 PC)
 
----
+### 11.3 백그라운드 자동 감시 (supervisor — 은규 PC 기본)
 
-## 12. 파일·경로 치트시트
+은규 PC는 **항상 인터넷(이더넷) 연결** + **G: 미사용** → 차헌 PC와 달리 **G: 게이트·Wi‑Fi 게이트 없이** 15초마다 메일만 확인합니다.
+
+| 항목 | 은규 PC |
+|------|---------|
+| 감시 주기 | `DATA_PC_WATCH_INTERVAL_SEC=15` (기본) |
+| Wi‑Fi 게이트 | **끔** — `DATA_PC_SKIP_WIFI_CHECK=1` |
+| G: 게이트 | **끔** — `machine_profile.json` 에 `"uses_g_drive": false` |
+| IMAP TCP 사전검사 | **안 함** (게이트 없음 — 매 tick IMAP 처리) |
+| 성공 후 쿨다운 | `DATA_PC_AUTO_MAIL_COOLDOWN_MINUTES=10` (기본) |
+
+`PEG\machine_profile.json` 예:
+
+```json
+"uses_g_drive": false,
+"experiment_data_root": "C:\\Users\\User\\Desktop\\새 폴더\\연구노트"
+```
+
+supervisor 기동 (은규 PC, `gc-data-pc` 기준):
+
+```powershell
+cd $env:USERPROFILE\gc-data-pc
+python -m data_pc_runtime --script-dir $env:USERPROFILE\gc-data-pc
+```
+
+상태: `PEG\.data_pc_runtime_status.json` — `status_code: ready` 이면 15초 폴링 중.
+
 
 | 용도 | 은규 PC 경로 |
 |------|----------------|

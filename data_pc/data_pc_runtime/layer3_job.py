@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Callable
 
+from data_pc_runtime.layer1_profile import resolve_check_gdrive
 from data_pc_runtime.layer1_state import RuntimePaths, RuntimeStatus, StateStore
 from data_pc_runtime.layer2_gates import GateAction, GateConfig, GateEvaluator, GateVerdict
 from data_pc_runtime.layer2_lock import PipelineLock
@@ -112,12 +113,16 @@ def load_gate_config(script_dir: str) -> GateConfig:
         "true",
         "yes",
     )
+    check_gdrive = resolve_check_gdrive(script_dir)
+    # [LLM] 은규 PC: check_gdrive=False → Wi‑Fi/G: 게이트 없이 15초 메일 폴링
+    #       차헌 PC: check_gdrive=True  → G: 열릴 때만 파이프라인 (Wi‑Fi 끔)
     return GateConfig(
         required_hotspot=required,
         cooldown_sec=_mail_cooldown_sec(),
         gdrive_retry_sec=_int("DATA_PC_GDRIVE_RETRY_SEC", 180),
         skip_wifi_check=explicit_skip or not require_wifi,
         check_imap_tcp=False,
+        check_gdrive=check_gdrive,
     )
 
 
@@ -284,6 +289,7 @@ def run_job_once(
             gdrive_retry_sec=gate.gdrive_retry_sec,
             skip_wifi_check=True,
             check_imap_tcp=gate.check_imap_tcp,
+            check_gdrive=gate.check_gdrive,
         )
     if pipeline is None:
         from data_pc_origin.p14_runtime_bridge import resolve_job_pipeline
