@@ -15,23 +15,24 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 본 모듈은 **PDF 파일을 Autochro 화면 조작으로 생성**하는 단계만 담당합니다.
 
 =============================================================================
-[5단계 UI 흐름]  (run_autochro_export)
+[6단계 UI 흐름]  (run_autochro_export)
 =============================================================================
 
   1) 제어목록 탭 → 하단 시료 표 더블클릭 → 분석목록과 동기화
-  2) 분석목록 시료 표 Ctrl+A (전체 선택)
-  3) 메뉴 「시료목록 → 초기화+정량」 — 적분 대기(AUTOCHRO_QUANTIFY_WAIT_SEC)
-  4) Ctrl+P 인쇄 → Hancom PDF 변환 대화상자
-  5) 저장 경로에 PDF 기록 → 한컴 창 닫힘 대기 → gc_gc1.wait_for_pdf_file_ready
+  2) 분석목록 왼쪽 트리 — CRM 시료 우클릭 → 분석방법 불러오기 (고정 MTD)
+  3) 분석목록 시료 표 Ctrl+A (전체 선택)
+  4) 메뉴 「시료목록 → 초기화+정량」 — 적분 대기(AUTOCHRO_QUANTIFY_WAIT_SEC)
+  5) Ctrl+A → Ctrl+P → Hancom PDF 변환 대화상자
+  6) CRM 데이터명으로 PDF 저장 → 한컴 창 닫힘 대기 → gc_gc1.wait_for_pdf_file_ready
+
+  CRM 정보 대화상자 읽기는 **2단계(MTD)·6단계(PDF) 직전**에만 수행합니다.
 
 =============================================================================
 [PDF 파일명 — 하드코딩 금지]
 =============================================================================
 
-  저장 stem 은 gc_automation.env 의 AUTOCHRO_DATA_NAME 이 아니라,
-  **제어목록 왼쪽 트리에서 파란 선택된 실험 데이터명** + 창 제목에서 읽습니다.
-  format_data_name_for_pdf_filename() 이 260616dre(3)ni-ce →
-  「260616 dre@(3) ni-ce.pdf」 형식으로 변환합니다.
+  저장 stem 은 **CRM 분석목록 경로의 파일명**(``.CRM`` 제외)을 그대로 씁니다.
+  제어목록 정보 대화상자에서 읽으며, 공백 삽입·이름 재조합은 하지 않습니다.
 
 =============================================================================
 [UI 자동화 함정 — pywinauto win32]
@@ -41,9 +42,9 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
     connect_main_window() 직후 _prepare_autochro_window() 로 복원·(옵션) 이동하고,
     SysListView32 / SysTreeView32 는 **창 내부 상대 위치**로 고릅니다.
 
-  · **Ctrl+A**: 분석목록 「소유자 ID」열(관리자 드롭다운) 위에 마우스가 있으면
-    셀 편집 모드 → Ctrl+A 불가 → PDF 3페이지(1시료)만 저장됩니다.
-    _focus_list_for_ctrl_a() 가 「수집 일시」열과 같은 가로 위치(~78%)에 클릭합니다.
+  · **Ctrl+A**: 시료 표 **처리형태·적분 열**(우측, 편집 모드 없음) **한 번** 클릭 후 전체 선택.
+    시료이름 열 재클릭 시 이름 수정 모드 → Ctrl+A 불가 → PDF 1시료만 저장됨.
+    **인쇄 직전** ``Ctrl+A`` → ``Ctrl+P`` 만 (클릭·툴바·ListView 조작 없음).
 
   · **32-bit Autochro**: 64-bit Python 으로도 동작하지만 pywinauto 경고가 납니다.
     GC1 장비 PC 배포 시 32-bit Python 권장.
@@ -69,8 +70,12 @@ GC1(박은규, YL6500GC)은 ChemStation 경로가 아니라 **Autochro-3000 UI**
 
   AUTOCHRO_ENABLED, AUTOCHRO_WINDOW_TITLE_PATTERN, AUTOCHRO_DATA_NAME(CRM 경로용)
   AUTOCHRO_AUTO_POSITION, AUTOCHRO_WINDOW_X/Y
-  AUTOCHRO_LIST_NEUTRAL_X_FRAC  — Ctrl+A 전 클릭 가로 위치 (기본 0.78)
+  AUTOCHRO_LIST_STATUS_X_FRAC   — Ctrl+A 전 클릭 (처리형태·적분 열, 기본 0.88;
+                                  쉼표 구분 후보 0.88,0.82,0.92 — 열 너비 변경 허용)
+  AUTOCHRO_PRINT_CTRL_A_X_FRAC   — 3단계 Ctrl+A 전 클릭 열 (기본 0.78)
+  AUTOCHRO_LIST_NEUTRAL_X_FRAC — (동일)
   AUTOCHRO_HANCOM_WAIT_SEC, AUTOCHRO_QUANTIFY_WAIT_SEC
+  AUTOCHRO_HANCOM_FOREGROUND_SEC — 변환 중 한컴 창 앞으로 올리기 주기(초, 기본 3)
   GC1_PDF_READY_WAIT_SEC — gc_gc1 쪽 PDF 잠금 해제 대기
 
 테스트: Desktop\\박은규\\GC1_데이터갱신.bat  또는  python gc_autochro.py --export --force
@@ -88,7 +93,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Tuple
 
-from gc_sanitize import sanitize_sample_name
 from gc_state import load_send_state, save_send_state
 
 
@@ -109,66 +113,28 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-# 제어목록(파란 선택) 데이터명 → PDF 파일명 stem
+# 제어목록 데이터명·CRM 경로 basename → PDF/엑셀 stem (가공 없음)
 _DATA_NAME_DATE_RE = re.compile(r"^\d{6}")
 
 
 def format_data_name_for_pdf_filename(raw: str) -> str:
     """
-    Autochro 데이터명 → PDF 저장 stem.
+    CRM 분석목록 경로·데이터명 → PDF/엑셀 파일 stem.
 
-    260616dre(3)ni-ce  → 260616 dre@(3) ni-ce
-    (날짜 뒤 공백, 반응@농도, 농도 뒤 공백)
+    **변환·공백 삽입 없음** — CRM basename(``.CRM`` 제외) 그대로.
     """
-    text = raw.strip().split(".")[0].strip()
+    if "\\" in raw or "/" in raw:
+        stem = parse_data_name_from_crm_path(raw)
+        if stem:
+            return stem
+    text = (raw or "").strip().strip('"').strip("'")
     if not text:
         raise ValueError("Autochro 데이터명이 비어 있음")
-
-    spaced = re.sub(r"\s+", " ", text)
-    match = re.match(
-        r"^(\d{6})\s+([a-zA-Z0-9.]+)@\(([^)]+)\)\s+(.+)$",
-        spaced,
-        re.I,
-    )
-    if match:
-        return (
-            f"{match.group(1)} {match.group(2)}@({match.group(3)}) {match.group(4).strip()}"
-        )
-
-    match = re.match(
-        r"^(\d{6})([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]*\(([^)]+)\)[\s\-_]*(.*)$",
-        text,
-        re.I,
-    )
-    if match and match.group(4).strip():
-        date, reaction, concentration, sample = match.groups()
-        return f"{date} {reaction}@({concentration}) {sample.strip()}"
-
-    match = re.match(
-        r"^(\d{6})([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]+(.+?)[\s\-_]*\(([^)]+)\)$",
-        text,
-        re.I,
-    )
-    if match:
-        date, reaction, sample, concentration = match.groups()
-        return f"{date} {reaction}@({concentration}) {sample.strip()}"
-
-    match = re.match(
-        r"^(\d{6})[\s\-_]+([a-zA-Z][a-zA-Z0-9.]*)[\s\-_]*\(([^)]+)\)[\s\-_]*(.*)$",
-        text,
-        re.I,
-    )
-    if match:
-        date, reaction, concentration, sample = match.groups()
-        sample = sample.strip()
-        if sample:
-            return f"{date} {reaction}@({concentration}) {sample}"
-
-    match = re.match(r"^(\d{6})(.+)$", text)
-    if match:
-        return f"{match.group(1)} {match.group(2).strip()}"
-
-    return sanitize_sample_name(text)
+    for ext in (".CRM", ".crm", ".pdf", ".xlsx"):
+        if text.lower().endswith(ext.lower()):
+            text = text[: -len(ext)]
+            break
+    return text.strip()
 
 
 @dataclass(frozen=True)
@@ -426,6 +392,324 @@ def _window_rect(win):
         return None
 
 
+def parse_data_name_from_crm_path(path: str) -> str:
+    """
+    정보 대화상자 「분석목록」 CRM 경로 → 시료 데이터명.
+
+    ``C:\\Users\\User\\Documents\\20260630dre(5)ni(환원)-ce.CRM``
+    → ``20260630dre(5)ni(환원)-ce`` (경로·``.CRM`` 만 제거, 대소문자·공백 유지)
+    """
+    text = (path or "").strip().strip('"').strip("'")
+    if not text:
+        return ""
+    text = os.path.normpath(os.path.expanduser(text))
+    base = os.path.basename(text)
+    for ext in (".CRM", ".crm"):
+        if base.lower().endswith(ext.lower()):
+            base = base[: -len(ext)]
+            break
+    return base.strip()
+
+
+def _tree_screen_coords(tree, rel_x: int, rel_y: int) -> tuple[int, int]:
+    rect = tree.rectangle()
+    return int(rect.left) + int(rel_x), int(rect.top) + int(rel_y)
+
+
+def _tree_screen_click(
+    tree,
+    rel_x: int,
+    rel_y: int,
+    *,
+    button: str = "left",
+    dwell: float = 0.25,
+) -> tuple[int, int]:
+    """32-bit Autochro — ``click_input`` 대신 화면 좌표 클릭."""
+    from gc_screen_read import click_screen
+
+    sx, sy = _tree_screen_coords(tree, rel_x, rel_y)
+    click_screen(sx, sy, button=button)
+    time.sleep(dwell)
+    return sx, sy
+
+
+def _popup_menu_item_text(item) -> str:
+    if isinstance(item, str):
+        return item.strip()
+    if hasattr(item, "text"):
+        try:
+            return (item.text() or "").strip()
+        except Exception:
+            pass
+    return str(item).strip()
+
+
+def _bring_window_foreground(win) -> None:
+    """창을 복원·최상단으로 — 가려진 한컴 PDF 등에서 닫기 버튼 클릭 가능하게."""
+    try:
+        import ctypes
+
+        hwnd = int(win.handle)
+        user32 = ctypes.windll.user32
+        if user32.IsIconic(hwnd):
+            user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+        user32.BringWindowToTop(hwnd)
+        user32.SetForegroundWindow(hwnd)
+        time.sleep(0.15)
+    except Exception:
+        try:
+            win.set_focus()
+            time.sleep(0.1)
+        except Exception:
+            pass
+
+
+def _ensure_autochro_foreground(win) -> None:
+    _bring_window_foreground(win)
+
+
+def _open_tree_context_menu(win, tree, rel_x: int, rel_y: int) -> str:
+    """트리 행 선택 후 우클릭(또는 Shift+F10) → 컨텍스트 메뉴."""
+    from pywinauto.keyboard import send_keys
+
+    _ensure_autochro_foreground(win)
+    tree.set_focus()
+    time.sleep(0.15)
+    last_exc: RuntimeError | None = None
+    for dy in (0, -6, 6, -12, 12):
+        y = rel_y + dy
+        _tree_screen_click(tree, rel_x, y, button="left", dwell=0.15)
+        _tree_screen_click(tree, rel_x, y, button="right", dwell=0.5)
+        try:
+            return _click_popup_menu_item(lambda t: "정보" in t, timeout=3.0)
+        except RuntimeError as exc:
+            last_exc = exc
+            try:
+                send_keys("{ESC}")
+            except Exception:
+                pass
+            time.sleep(0.15)
+    send_keys("+{F10}")
+    time.sleep(0.45)
+    try:
+        return _click_popup_menu_item(lambda t: "정보" in t, timeout=4.0)
+    except RuntimeError:
+        if last_exc is not None:
+            raise last_exc
+        raise
+
+
+def _click_popup_menu_item(
+    matcher,
+    *,
+    timeout: float = 5.0,
+) -> str:
+    _require_pywinauto()
+    from pywinauto import Desktop
+
+    deadline = time.time() + timeout
+    seen: list[str] = []
+    while time.time() < deadline:
+        for menu_win in Desktop(backend="win32").windows(class_name="#32768"):
+            try:
+                try:
+                    wrapper = menu_win.wrapper_object()
+                except AttributeError:
+                    wrapper = menu_win
+                for item in wrapper.menu().items():
+                    text = _popup_menu_item_text(item)
+                    if not text:
+                        continue
+                    seen.append(text)
+                    if matcher(text):
+                        wrapper.menu_item(text).click_input()
+                        return text
+            except Exception:
+                continue
+        time.sleep(0.12)
+    preview = ", ".join(seen[:8])
+    raise RuntimeError(f"컨텍스트 메뉴 항목 없음 (seen: {preview})")
+
+
+def _control_tree_view(win):
+    """제어목록 왼쪽 트리."""
+    win_rect = _window_rect(win)
+    for ctrl in win.descendants(class_name="SysTreeView32"):
+        try:
+            rect = ctrl.rectangle()
+        except Exception:
+            continue
+        if win_rect is not None:
+            rel_left = rect.left - win_rect.left
+            if rel_left > win_rect.width() * 0.5:
+                continue
+        return ctrl
+    raise RuntimeError("제어목록 왼쪽 트리 없음")
+
+
+def _control_tree_sample_row_coords(tree) -> tuple[int, int, str]:
+    """YL6500 GC 0 부모(시료명) 행 — 우클릭 좌표 (트리 계층 기준)."""
+    instrument_markers = ("YL6500 GC", "YL6500GC")
+    label = ""
+    visible_row = 1
+    try:
+        roots = list(tree.roots())
+        if roots:
+            root = roots[0]
+            for child in root.children():
+                text = (child.text() or "").strip()
+                if not text or text == "Tree1":
+                    continue
+                has_yl = any(
+                    any(m in (sub.text() or "") for m in instrument_markers)
+                    for sub in child.children()
+                )
+                if has_yl or _DATA_NAME_DATE_RE.search(text.replace(" ", "")):
+                    label = text.split(".")[0].strip()
+                    try:
+                        child.select()
+                        time.sleep(0.15)
+                    except Exception:
+                        pass
+                    break
+    except Exception:
+        pass
+    if not label:
+        items: list[str] = []
+        try:
+            for text in tree.texts():
+                line = (text or "").strip()
+                if line and line != "Tree1":
+                    items.append(line)
+        except Exception:
+            pass
+        for idx, line in enumerate(items):
+            if any(m in line for m in instrument_markers) and idx > 0:
+                visible_row = idx - 1
+                label = items[idx - 1].split(".")[0].strip()
+                break
+    rect = tree.rectangle()
+    row_h = max(18, min(22, max(60, rect.height()) // 40))
+    rel_x = max(24, min(rect.width() // 3, 80))
+    if label:
+        # Autochro 제어목록 트리 — 루트 아래 2번째 행(시료명) 실측 Y≈20
+        rel_y = max(16, min(20, rect.height() - 12))
+    else:
+        rel_y = max(16, min(12 + visible_row * row_h, max(20, rect.height() - 12)))
+    return rel_x, rel_y, label
+
+
+def _as_wrapper(handle):
+    try:
+        return handle.wrapper_object()
+    except AttributeError:
+        return handle
+
+
+def _find_stm_info_dialog(timeout: float = 8.0):
+    _require_pywinauto()
+    from pywinauto import Desktop
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        for handle in Desktop(backend="win32").windows():
+            try:
+                title = (handle.window_text() or "").strip()
+            except Exception:
+                continue
+            if not title:
+                continue
+            if title.lower().endswith(".stm") or ".stm" in title.lower():
+                return _as_wrapper(handle)
+            if re.search(r"20\d{6}", title) and "Autochro" not in title:
+                if len(title) < 120:
+                    return _as_wrapper(handle)
+        time.sleep(0.2)
+    return None
+
+
+def _read_crm_path_from_info_dialog(dlg) -> str:
+    """정보 창 — 분석목록 아래 CRM 경로(Edit) 텍스트."""
+    for ctrl in dlg.descendants(class_name="Edit"):
+        for reader in (
+            lambda c: (c.window_text() or "").strip(),
+            lambda c: (c.get_value() or "").strip() if hasattr(c, "get_value") else "",
+        ):
+            try:
+                text = reader(ctrl)
+            except Exception:
+                text = ""
+            if text and re.search(r"\.crm", text, re.I):
+                return text
+    for ctrl in dlg.descendants():
+        try:
+            text = (ctrl.window_text() or "").strip()
+        except Exception:
+            continue
+        if re.search(r"\.crm", text, re.I) and len(text) > 8:
+            return text
+    return ""
+
+
+def _close_stm_info_dialog(dlg) -> None:
+    for pattern in ("확인", "OK", "취소", "Cancel"):
+        try:
+            btn = dlg.child_window(title_re=f".*{pattern}.*", class_name="Button")
+            if btn.exists(timeout=0.3):
+                btn.click_input()
+                time.sleep(0.25)
+                return
+        except Exception:
+            continue
+    try:
+        from pywinauto.keyboard import send_keys
+
+        dlg.set_focus()
+        send_keys("{ESC}")
+        time.sleep(0.2)
+    except Exception:
+        pass
+
+
+def _read_data_name_from_crm_info_dialog(win) -> str:
+    """
+    제어목록 시료명 우클릭 → 정보 → 분석목록 CRM 경로 복사와 동일한 텍스트 읽기.
+    """
+    _select_control_tab(win)
+    time.sleep(0.35)
+    tree = _control_tree_view(win)
+    rel_x, rel_y, hint = _control_tree_sample_row_coords(tree)
+    _log(f"제어목록 트리 우클릭 (시료: {hint or 'YL6500 위'})")
+    try:
+        _open_tree_context_menu(win, tree, rel_x, rel_y)
+    except RuntimeError as exc:
+        _log(f"  정보 메뉴 실패: {exc}")
+        try:
+            from pywinauto.keyboard import send_keys
+
+            send_keys("{ESC}")
+        except Exception:
+            pass
+        return ""
+    time.sleep(0.55)
+    dlg = _find_stm_info_dialog()
+    if dlg is None:
+        _log("  정보(.stm) 대화상자 없음")
+        return ""
+    try:
+        crm_path = _read_crm_path_from_info_dialog(dlg)
+    finally:
+        _close_stm_info_dialog(dlg)
+        time.sleep(0.3)
+    if not crm_path:
+        _log("  분석목록 CRM 경로 필드 비어 있음")
+        return ""
+    name = parse_data_name_from_crm_path(crm_path)
+    if name:
+        _log(f"  CRM 경로 -> 데이터명: {crm_path!r} -> {name!r}")
+    return name
+
+
 def _read_data_name_from_window_title(win) -> str:
     title = (win.window_text() or "").strip()
     match = re.search(r"\s[-–]\s+.*[Aa]utochro", title)
@@ -473,9 +757,27 @@ def _read_data_name_from_control_tree(win) -> str:
     return ""
 
 
-def read_active_control_data_name(win, cfg: AutochroConfig) -> str:
+def read_crm_data_name(win) -> str:
+    """제어목록 정보 대화상자 — CRM 분석목록 경로 basename (PDF/MTD 직전 호출)."""
+    if os.getenv("GC1_CONTROL_DATA_NAME_CRM_INFO", "1").strip().lower() in (
+        "0",
+        "false",
+        "no",
+        "off",
+    ):
+        return ""
+    return _read_data_name_from_crm_info_dialog(win)
+
+
+def read_active_control_data_name(
+    win, cfg: AutochroConfig, *, use_crm: bool = True
+) -> str:
     _select_control_tab(win)
     time.sleep(0.3)
+    if use_crm:
+        name = read_crm_data_name(win)
+        if name:
+            return name
     for reader in (_read_data_name_from_window_title, _read_data_name_from_control_tree):
         name = reader(win)
         if name:
@@ -603,15 +905,249 @@ def _analysis_sample_table(win):
     return _pick_listview(win, prefer="upper", purpose="분석목록")
 
 
-def _neutral_list_coords(sample_list) -> tuple[int, int]:
-    """
-    분석목록 시료 표에서 Ctrl+A 전 클릭 좌표.
-    '소유자 ID' 열은 드롭다운 선택 모드 → Ctrl+A 불가.
-    '수집 일시' 열과 같은 가로 위치(표 우측)를 사용.
-    """
-    raw_frac = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "0.78").strip()
+_ANALYSIS_TREE_SUB = ("적분", "검량", "보고", "지연", "비교", "통계")
+
+
+def _analysis_tree_view(win):
+    """분석목록 왼쪽 트리 — ``texts()`` 에 「분석목록」 포함 (제어목록 트리와 구분)."""
+    for ctrl in win.descendants(class_name="SysTreeView32"):
+        try:
+            if "분석목록" in " ".join(ctrl.texts() or []):
+                return ctrl
+        except Exception:
+            continue
+    raise RuntimeError("분석목록 왼쪽 트리 없음")
+
+
+def _is_analysis_tree_sub_line(label: str) -> bool:
+    s = (label or "").strip()
+    return not s or any(k in s for k in _ANALYSIS_TREE_SUB) or "목록" in s
+
+
+def _find_analysis_folder_node(tree, data_name: str):
+    """분석목록 루트 아래 CRM과 일치하는 시료 폴더 노드."""
+    from gc1_runtime.layer0_data import rank_tree_line_for_data_name
+
+    best = None
+    best_score = -1.0
+    for root in tree.roots():
+        for child in root.children():
+            label = (child.text() or "").strip()
+            if _is_analysis_tree_sub_line(label):
+                continue
+            score = rank_tree_line_for_data_name(label, data_name)
+            if score > best_score:
+                best_score = score
+                best = child
+    if best is None or best_score < 0:
+        raise RuntimeError(f"분석목록 트리에 데이터명 없음: {data_name!r}")
+    return best
+
+
+def _right_click_tree_node(win, node) -> None:
+    """TreeView 시료 폴더 노드 우클릭 — ``click_input`` 우선, 실패 시 Apps 키."""
+    from pywinauto.keyboard import send_keys
+
+    _ensure_autochro_foreground(win)
     try:
-        x_frac = float(raw_frac)
+        node.select()
+        time.sleep(0.2)
+    except Exception:
+        pass
+    try:
+        node.click_input(button="right")
+        time.sleep(0.45)
+        return
+    except Exception:
+        pass
+    try:
+        node.click_input(button="left")
+        time.sleep(0.15)
+        send_keys("+{F10}")
+        time.sleep(0.45)
+    except Exception as exc:
+        raise RuntimeError(f"트리 노드 우클릭 실패: {exc}") from exc
+
+
+def _click_context_load_analysis_method() -> None:
+    _click_popup_menu_item(lambda t: "분석방법" in t and "불러" in t)
+    _log("  → 분석방법 불러오기 클릭")
+
+
+def resolve_analysis_method_mtd_path() -> str:
+    """
+    GC1 적분 MTD — 기본 ``20260629 분석방법.MTD`` (바탕화면).
+
+    override: ``AUTOCHRO_ANALYSIS_METHOD_MTD`` 전체 경로.
+    """
+    explicit = os.getenv("AUTOCHRO_ANALYSIS_METHOD_MTD", "").strip()
+    if explicit:
+        path = os.path.normpath(os.path.expanduser(explicit))
+        if not os.path.isfile(path):
+            raise FileNotFoundError(f"분석방법 MTD 없음: {path}")
+        return path
+    filename = os.getenv(
+        "AUTOCHRO_ANALYSIS_METHOD_FILENAME", "20260629 분석방법.MTD"
+    ).strip()
+    base = os.getenv("AUTOCHRO_ANALYSIS_METHOD_DIR", "").strip()
+    if not base:
+        base = os.path.join(os.path.expanduser("~"), "Desktop")
+    path = os.path.join(os.path.normpath(os.path.expanduser(base)), filename)
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"분석방법 MTD 없음: {path}")
+    return path
+
+
+def _open_path_in_file_dialog(
+    dialog_title_re: str,
+    file_path: str,
+    *,
+    timeout: float = 30.0,
+) -> None:
+    dlg = _find_window_title_re(dialog_title_re, timeout=timeout)
+    if dlg is None:
+        raise RuntimeError(f"파일 대화상자 없음 — {dialog_title_re}")
+    dlg.set_focus()
+    norm_path = os.path.normpath(os.path.abspath(file_path))
+    edit = _find_filename_edit(dlg)
+    if edit is not None:
+        edit.set_focus()
+        try:
+            edit.set_edit_text(norm_path)
+        except Exception:
+            from pywinauto.keyboard import send_keys
+
+            send_keys("^a")
+            send_keys(norm_path, with_spaces=True)
+    else:
+        from pywinauto.keyboard import send_keys
+
+        send_keys("^a")
+        send_keys(norm_path, with_spaces=True)
+    time.sleep(0.4)
+    for btn_title in ("열기(&O)", "열기(O)", "열기", "Open", "&Open"):
+        try:
+            btn = dlg.child_window(title=btn_title, class_name="Button")
+            if btn.exists(timeout=0.3):
+                btn.click_input()
+                return
+        except Exception:
+            continue
+    from pywinauto.keyboard import send_keys
+
+    send_keys("%o")
+    time.sleep(0.3)
+
+
+def step_load_analysis_method(win, cfg: AutochroConfig) -> str:
+    """
+    분석목록 왼쪽 트리 — CRM 시료 폴더 우클릭 → 분석방법 불러오기 → 고정 MTD.
+
+    Returns:
+        CRM에서 읽은 데이터명 (PDF 파일명에 재사용).
+    """
+    _log("2/6 분석목록 트리 → 분석방법 불러오기")
+    if cfg.dry_run:
+        return _fallback_data_name(cfg)
+    data_name = read_crm_data_name(win)
+    if not data_name:
+        data_name = read_active_control_data_name(win, cfg, use_crm=False)
+        _log(f"  CRM 읽기 실패 — UI fallback: {data_name}")
+    mtd_path = resolve_analysis_method_mtd_path()
+    _log(f"  데이터명: {data_name}")
+    _log(f"  MTD: {os.path.basename(mtd_path)}")
+    _select_analysis_tab(win)
+    time.sleep(0.35)
+    tree = _analysis_tree_view(win)
+    node = _find_analysis_folder_node(tree, data_name)
+    _log(f"  트리 노드: {(node.text() or '').strip()}")
+    _right_click_tree_node(win, node)
+    _click_context_load_analysis_method()
+    _open_path_in_file_dialog(
+        r"분석방법 불러오기", mtd_path, timeout=cfg.dialog_wait_sec
+    )
+    time.sleep(1.5)
+    return data_name
+
+
+_STATUS_X_FRAC_MIN = 0.45  # 미지시료·시료종류(~0.18–0.38) 회피
+_STATUS_X_FRAC_MAX = 0.92
+_STATUS_X_FRAC_DEFAULT = 0.88
+_STATUS_X_FRAC_FALLBACKS = (0.88, 0.82, 0.92)
+
+
+def _clamp_status_x_frac(x_frac: float) -> float:
+    return min(max(float(x_frac), _STATUS_X_FRAC_MIN), _STATUS_X_FRAC_MAX)
+
+
+def _parse_status_x_fracs() -> list[float]:
+    """
+    AUTOCHRO_LIST_STATUS_X_FRAC — 단일 또는 쉼표 구분.
+    미지시료 열(<0.45) 회피, 높은(우측) 값 우선.
+    """
+    raw = os.getenv("AUTOCHRO_LIST_STATUS_X_FRAC", "").strip()
+    if not raw:
+        raw = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "").strip()
+    if raw:
+        parsed: list[float] = []
+        for part in raw.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                parsed.append(_clamp_status_x_frac(float(part)))
+            except ValueError:
+                continue
+        if parsed:
+            return sorted(set(parsed), reverse=True)
+    return list(_STATUS_X_FRAC_FALLBACKS)
+
+
+def _list_status_column_coords(
+    sample_list, *, x_frac: float | None = None
+) -> tuple[int, int]:
+    """
+    처리형태·적분 열 — Ctrl+A 전 포커스 (시료이름 편집 모드 진입 없음).
+
+    시료이름·시료종류 열은 더블클릭/재클릭 시 수정 모드 → 전체 선택 불가.
+    """
+    if x_frac is None:
+        x_frac = _parse_status_x_fracs()[0]
+    x_frac = _clamp_status_x_frac(x_frac)
+    rect = sample_list.rectangle()
+    width = max(rect.width(), 400)
+    height = max(rect.height(), 80)
+    rel_x = int(width * x_frac)
+    rel_y = max(16, min(32, height // 10))
+    return rel_x, rel_y
+
+
+def _listview_item_count(ctrl) -> int:
+    try:
+        return max(0, int(ctrl.item_count()))
+    except Exception:
+        return 0
+
+
+def _listview_selected_count(ctrl) -> int:
+    try:
+        sel = ctrl.get_selected()
+        return len(sel) if sel else 0
+    except Exception:
+        return 0
+
+
+def _raw_ctrl_a_click_coords(sample_list) -> tuple[int, int]:
+    """
+    원시 Ctrl+A 전 1회 클릭 — 수집일시·처리형태 열 (기본 x=0.78).
+
+    ``AUTOCHRO_PRINT_CTRL_A_X_FRAC`` 또는 ``AUTOCHRO_LIST_NEUTRAL_X_FRAC``.
+    """
+    raw = os.getenv("AUTOCHRO_PRINT_CTRL_A_X_FRAC", "").strip()
+    if not raw:
+        raw = os.getenv("AUTOCHRO_LIST_NEUTRAL_X_FRAC", "0.78").strip() or "0.78"
+    try:
+        x_frac = float(raw)
     except ValueError:
         x_frac = 0.78
     x_frac = min(max(x_frac, 0.55), 0.92)
@@ -623,17 +1159,33 @@ def _neutral_list_coords(sample_list) -> tuple[int, int]:
     return rel_x, rel_y
 
 
-def _focus_list_for_ctrl_a(sample_list) -> None:
-    """분석목록에서 Ctrl+A 전 — 소유자 ID 드롭다운 회피용 클릭 (수집 일시 열 쪽)."""
-    rel_x, rel_y = _neutral_list_coords(sample_list)
-    sample_list.set_focus()
-    try:
-        sample_list.move_mouse_input(coords=(rel_x, rel_y))
-        time.sleep(0.12)
-    except Exception:
-        pass
+def _raw_select_all_keyboard(sample_list) -> None:
+    """원시 전체선택: 표 1클릭 → Ctrl+A (ESC·set_focus·검증 없음)."""
+    from pywinauto.keyboard import send_keys
+
+    rel_x, rel_y = _raw_ctrl_a_click_coords(sample_list)
     sample_list.click_input(coords=(rel_x, rel_y))
-    time.sleep(0.25)
+    send_keys("^a")
+
+
+def _select_all_in_sample_table(win) -> None:
+    """3/6 원시 전체선택."""
+    _select_analysis_tab(win)
+    sample_list = _analysis_sample_table(win)
+    _raw_select_all_keyboard(sample_list)
+    time.sleep(0.3)
+
+
+def _list_row_index_coords(sample_list) -> tuple[int, int]:
+    """행 번호 열 — (구) 하위 호환."""
+    from gc1_runtime.layer3_coord_learn import list_rel_from_purpose
+
+    return list_rel_from_purpose(sample_list, "row")
+
+
+def _neutral_list_coords(sample_list) -> tuple[int, int]:
+    """하위 호환 — ``_raw_ctrl_a_click_coords`` 와 동일."""
+    return _raw_ctrl_a_click_coords(sample_list)
 
 
 def _largest_sample_list(win):
@@ -658,7 +1210,7 @@ def _menu_select_by_suffix(win, top_suffix: str, item_text: str) -> None:
 
 
 def step_sync_control_to_analysis(win, cfg: AutochroConfig) -> None:
-    _log("1/5 제어목록 탭 → 시료 더블클릭 → 분석목록")
+    _log("1/6 제어목록 탭 → 시료 더블클릭 → 분석목록")
     if cfg.dry_run:
         return
     _select_control_tab(win)
@@ -676,20 +1228,14 @@ def step_sync_control_to_analysis(win, cfg: AutochroConfig) -> None:
 
 
 def step_select_all_samples(win, cfg: AutochroConfig) -> None:
-    _log("2/5 시료 전체 선택 (Ctrl+A)")
+    _log("3/6 시료 전체 선택 (Ctrl+A)")
     if cfg.dry_run:
         return
-    _select_analysis_tab(win)
-    sample_list = _analysis_sample_table(win)
-    _focus_list_for_ctrl_a(sample_list)
-    from pywinauto.keyboard import send_keys
-
-    send_keys("^a")
-    time.sleep(0.5)
+    _select_all_in_sample_table(win)
 
 
 def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
-    _log("3/5 시료목록 → 초기화+정량")
+    _log("4/6 시료목록 → 초기화+정량")
     if cfg.dry_run:
         return
     _select_analysis_tab(win)
@@ -711,17 +1257,15 @@ def step_initialize_quantify(win, cfg: AutochroConfig) -> None:
 
 
 def step_print_pdf(win, cfg: AutochroConfig) -> None:
-    _log("4/5 분석목록 → 인쇄 (Ctrl+P)")
+    """5/6 원시 인쇄 — Ctrl+A → Ctrl+P (클릭·ListView 조작 없음)."""
+    _log("5/6 인쇄 (원시: ^a → ^p)")
     if cfg.dry_run:
         return
     from pywinauto.keyboard import send_keys
 
     _select_analysis_tab(win)
-    sample_list = _analysis_sample_table(win)
-    _focus_list_for_ctrl_a(sample_list)
-    win.set_focus()
     send_keys("^a")
-    time.sleep(0.3)
+    time.sleep(0.2)
     send_keys("^p")
     time.sleep(1.0)
     _confirm_print_dialog(cfg)
@@ -835,6 +1379,7 @@ def _hancom_close_button_enabled(win) -> bool:
 
 def _close_hancom_window(win) -> bool:
     """닫기(&C)만 클릭 — 열기(O)는 절대 클릭하지 않음."""
+    _bring_window_foreground(win)
     for btn_title in ("닫기(&C)", "닫기(C)", "닫기", "Close", "&Close"):
         try:
             btn = win.child_window(title=btn_title, class_name="Button")
@@ -863,6 +1408,8 @@ def _wait_and_close_all_hancom_pdf(cfg: AutochroConfig) -> None:
     deadline = time.time() + cfg.hancom_wait_sec
     seen = False
     last_progress = ""
+    last_foreground = 0.0
+    fg_interval = float(os.getenv("AUTOCHRO_HANCOM_FOREGROUND_SEC", "3") or "3")
     while time.time() < deadline:
         windows = _find_all_hancom_pdf_windows()
         if not windows:
@@ -873,6 +1420,12 @@ def _wait_and_close_all_hancom_pdf(cfg: AutochroConfig) -> None:
             continue
 
         seen = True
+        now = time.time()
+        if now - last_foreground >= fg_interval:
+            for win in windows:
+                _bring_window_foreground(win)
+            last_foreground = now
+
         converting = False
         for win in windows:
             if _hancom_is_complete(win):
@@ -900,6 +1453,7 @@ def _wait_and_close_all_hancom_pdf(cfg: AutochroConfig) -> None:
     if remaining:
         _log(f"한컴 PDF 대기 시간 초과 — 남은 창 {len(remaining)}개 닫기 시도")
         for win in remaining:
+            _bring_window_foreground(win)
             if _hancom_is_complete(win) or _hancom_close_button_enabled(win):
                 _close_hancom_window(win)
     else:
@@ -940,7 +1494,7 @@ def _confirm_overwrite_if_present(timeout: float = 5.0) -> bool:
 
 
 def step_save_pdf(cfg: AutochroConfig, pdf_path: str) -> None:
-    _log(f"5/5 PDF 저장: {pdf_path}")
+    _log(f"6/6 PDF 저장: {pdf_path}")
     if cfg.dry_run:
         return
     os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
@@ -1043,11 +1597,12 @@ def run_autochro_export(
             _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
             _log("[DRY RUN] UI 단계만 로그")
             for label in (
-                "1/5 제어목록 → 더블클릭",
-                "2/5 Ctrl+A",
-                "3/5 초기화+정량",
-                "4/5 인쇄",
-                "5/5 PDF 저장",
+                "1/6 제어목록 → 더블클릭",
+                "2/6 분석방법 MTD",
+                "3/6 Ctrl+A",
+                "4/6 초기화+정량",
+                "5/6 인쇄",
+                "6/6 PDF 저장",
             ):
                 _log(label)
             return True, pdf_path, "dry-run"
@@ -1055,16 +1610,25 @@ def run_autochro_export(
         if stale_closed:
             _log(f"이전 한컴 PDF 완료 창 {stale_closed}개 닫음")
         _, win = connect_main_window(cfg)
-        data_name = read_active_control_data_name(win, cfg)
-        pdf_path = build_export_pdf_path(cfg, data_name_raw=data_name)
-        _log(f"제어목록 데이터명: {data_name}")
-        _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
-        if not force and is_pdf_recently_exported(pdf_path):
-            return True, pdf_path, f"방금 PDF 내보냄 — Autochro 재실행 생략 ({pdf_fresh_skip_sec()}초 이내)"
+        probe_name = _fallback_data_name(cfg)
+        if probe_name:
+            pdf_probe = build_export_pdf_path(cfg, data_name_raw=probe_name)
+            if not force and is_pdf_recently_exported(pdf_probe):
+                return True, pdf_probe, (
+                    f"방금 PDF보냄 — Autochro 재실행 생략 ({pdf_fresh_skip_sec()}초 이내)"
+                )
         step_sync_control_to_analysis(win, cfg)
+        data_name = step_load_analysis_method(win, cfg)
         step_select_all_samples(win, cfg)
         step_initialize_quantify(win, cfg)
         step_print_pdf(win, cfg)
+        if not (data_name or "").strip():
+            data_name = read_crm_data_name(win) or read_active_control_data_name(
+                win, cfg, use_crm=False
+            )
+        pdf_path = build_export_pdf_path(cfg, data_name_raw=data_name)
+        _log(f"제어목록 데이터명: {data_name}")
+        _log(f"PDF 저장 이름: {os.path.basename(pdf_path)}")
         step_save_pdf(cfg, pdf_path)
         if not os.path.isfile(pdf_path):
             folder_pdfs = sorted(

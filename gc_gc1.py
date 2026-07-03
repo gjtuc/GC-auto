@@ -36,11 +36,12 @@ gc_gc1.py — GC1 YL6500GC PDF 보고서 파싱 · 엑셀 · trim · 정리
     → maybe_drop_last_incomplete_gc1_cycle()  마지막 주입 B 채널 전압선 길이
     → trim_reduction_and_first_reaction()  GC1 비즈니스 규칙
 
-  trim 규칙 (H2 area 기준, env 로 임계값 조정):
+  trim 규칙 (H2 area 기준 환원 제외, 반응 시작은 CO/CO2):
     · 사전 노이즈 제거
-    · 환원 구간 제거 (GC1 환원은 엑셀에 넣지 않음)
-    · 전환(환원→반응 사이) 1주입 제거
-    · **첫 반응 1주입 포함** — GC1 전용 (GC2/GC3 는 첫 반응 제외 규칙 유지)
+    · 환원 구간 제거 (H2 ~20000 — GC1 환원은 엑셀에 넣지 않음)
+    · 전환(환원→반응 사이) 1주입 제외 + 반응 시작 전까지 스캔
+    · **반응 시작:** CO area ≥ 100 **또는** CO2 area > 20 (H2 무관)
+    · 첫 반응 주입부터 끝까지 엑셀 적재 — 이후 CO/CO2 재검사 없음 (GC1 전용)
 
   마지막 주입 incomplete:
     · 항상 제거하지 않음. YL6500GC B 페이지 벡터에서 **전압선 x축 끝(분)** 측정.
@@ -781,16 +782,37 @@ def _try_parse_gc1_pdf_quiet(pdf_path: str) -> Optional[Gc1PdfReport]:
         return None
 
 
+def build_gc1_excel_path_from_pdf(excel_output_dir: str, pdf_path: str) -> str:
+    """GC1 — PDF 파일명 stem 과 동일한 ``{stem}.xlsx`` (CRM 경로명 그대로)."""
+    from gc_sanitize import ensure_path_under_dir
+
+    stem = os.path.splitext(os.path.basename(pdf_path))[0].strip()
+    if not stem:
+        raise ValueError("PDF 파일명 stem 이 비어 있음")
+    path = os.path.join(excel_output_dir, f"{stem}.xlsx")
+    return ensure_path_under_dir(excel_output_dir, path)
+
+
 def _related_xlsx_paths(pdf_path: str, report: Gc1PdfReport, output_dir: str) -> List[str]:
+    stem = os.path.splitext(os.path.basename(pdf_path))[0].strip()
+    paths: List[str] = []
+    verbatim = os.path.join(output_dir, f"{stem}.xlsx")
+    if os.path.isfile(verbatim):
+        paths.append(verbatim)
     sample = infer_sample_name_from_pdf(pdf_path, report.analysis_date)
-    exact = os.path.join(output_dir, f"{report.analysis_date} {sample}.xlsx")
-    if os.path.isfile(exact):
-        return [exact]
-    return []
+    legacy = os.path.join(output_dir, f"{report.analysis_date} {sample}.xlsx")
+    if os.path.isfile(legacy) and legacy not in paths:
+        paths.append(legacy)
+    return paths
 
 
 def _experiment_group_key(stem: str) -> str:
-    """날짜 + 반응@(농도) 까지 — 시료명·대소문자 차이 무시."""
+    """
+    날짜 + 반응@(농도) 까지 — 시료명·대소문자 차이 무시.
+
+    YYYYMMDD verbatim stem(R-03) 은 **8자리** 날짜로 구분 — 6자리만 쓰면
+    ``20260629 …`` 와 ``202606 24dre…`` 가 같은 그룹으로 오판됨 (CL.05 버그).
+    """
     normalized = re.sub(r"\s+", " ", stem.strip().lower())
     match = re.match(r"^(\d{6})\s+([a-z0-9.]+@\([^)]+\))", normalized)
     if match:
@@ -798,9 +820,22 @@ def _experiment_group_key(stem: str) -> str:
     match = re.match(r"^(\d{6})([a-z0-9.]+@\([^)]+\))", normalized.replace(" ", ""))
     if match:
         return f"{match.group(1)} {match.group(2)}"
+    compact = re.sub(r"\s+", "", normalized)
+    match8 = re.match(r"^(\d{8})", compact)
+    if match8:
+        return match8.group(1)
     if len(normalized) >= 6 and normalized[:6].isdigit():
         return normalized[:6]
     return normalized
+
+
+def _verbatim_kept_parse_ok(path: str, report: Optional[Gc1PdfReport]) -> bool:
+    """
+    CL.j.05.5 — Autochro 가 방금 저장한 verbatim PDF 가 파싱되면 정리 대상 아님.
+
+    ``cleanup_superseded_gc1_files`` 의 ``kept_pdf_path`` 인자 = export 직후 경로.
+    """
+    return report is not None and os.path.isfile(path)
 
 
 def _is_obsolete_gc1_stem(stem: str) -> bool:
@@ -829,9 +864,11 @@ def cleanup_superseded_gc1_files(
     잘못된/중복 PDF·엑셀 정리.
 
     - placeholder·잘린 파일명
-    - 반응 주입 area 가 같고 사이클 수가 더 적은 PDF (이름·날짜 달라도)
+    - 반응 주입 area 가 같고 사이클 수가 더 적은 PDF (fingerprint 일치 시만)
+    - **CL.j.05.5:** ``kept_pdf_path`` verbatim PDF 가 파싱되면 삭제·교체하지 않음
     """
-    surviving = os.path.normpath(os.path.abspath(kept_pdf_path))
+    initial_kept = os.path.normpath(os.path.abspath(kept_pdf_path))
+    surviving = initial_kept
     surviving_stem = os.path.splitext(os.path.basename(surviving))[0]
     removed = 0
     reports: Dict[str, Gc1PdfReport] = {}
@@ -875,7 +912,6 @@ def cleanup_superseded_gc1_files(
 
     seed_report = _report_for(surviving)
     seed_cycles = _reaction_cycle_pairs(seed_report) if seed_report else []
-    seed_key = _experiment_group_key(surviving_stem)
 
     group = {surviving}
     for path in pdf_paths:
@@ -885,32 +921,40 @@ def cleanup_superseded_gc1_files(
         if not other_report:
             continue
         other_cycles = _reaction_cycle_pairs(other_report)
+        # CL.j.05.3 — fingerprint prefix 일치할 때만 동일 실험 그룹 (group_key 단독 비교 금지)
         if seed_cycles and other_cycles and _same_experiment_reaction_data(seed_cycles, other_cycles):
-            group.add(path)
-            continue
-        other_stem = os.path.splitext(os.path.basename(path))[0]
-        if _experiment_group_key(other_stem) == seed_key and (seed_cycles or other_cycles):
             group.add(path)
 
     if len(group) > 1:
         best_path = surviving
         best_count = len(seed_cycles)
-        for path in group:
-            report = _report_for(path)
-            if not report:
-                continue
-            count = len(_reaction_cycle_pairs(report))
-            if count > best_count:
-                best_path = path
-                best_count = count
+        initial_report = _report_for(initial_kept)
+        if _verbatim_kept_parse_ok(initial_kept, initial_report):
+            # export 직후 verbatim PDF 우선 — 주입 수 많은 옛 파일로 교체하지 않음
+            best_path = initial_kept
+            best_count = len(_reaction_cycle_pairs(initial_report))
+        else:
+            for path in group:
+                report = _report_for(path)
+                if not report:
+                    continue
+                count = len(_reaction_cycle_pairs(report))
+                if count > best_count:
+                    best_path = path
+                    best_count = count
 
         for path in group:
-            if path != best_path:
-                delete_pdfs.add(path)
+            if path == best_path:
+                continue
+            if path == initial_kept and _verbatim_kept_parse_ok(initial_kept, _report_for(path)):
+                continue
+            delete_pdfs.add(path)
         surviving = best_path
         surviving_stem = os.path.splitext(os.path.basename(surviving))[0]
 
     for path in sorted(delete_pdfs):
+        if path == initial_kept and _verbatim_kept_parse_ok(initial_kept, _report_for(path)):
+            continue
         report = _report_for(path)
         _remove_path(path, "중복/구버전 PDF 삭제")
         if report:
@@ -1062,6 +1106,7 @@ DEFAULT_REDUCTION_H2_AREA = 20000.0
 DEFAULT_REDUCTION_H2_TOL = 0.35
 DEFAULT_NOISE_AREA_MAX = 100.0
 DEFAULT_REACTION_CO_MIN = 100.0
+DEFAULT_REACTION_CO2_MIN = 20.0
 
 
 @dataclass(frozen=True)
@@ -1070,6 +1115,7 @@ class Gc1PhaseThresholds:
     reduction_h2_tol: float = DEFAULT_REDUCTION_H2_TOL
     noise_area_max: float = DEFAULT_NOISE_AREA_MAX
     reaction_co_min: float = DEFAULT_REACTION_CO_MIN
+    reaction_co2_min: float = DEFAULT_REACTION_CO2_MIN
 
     @property
     def reduction_h2_low(self) -> float:
@@ -1094,6 +1140,7 @@ def load_gc1_phase_thresholds() -> Gc1PhaseThresholds:
         reduction_h2_tol=load_float_env("GC1_REDUCTION_H2_TOL", DEFAULT_REDUCTION_H2_TOL),
         noise_area_max=load_float_env("GC1_NOISE_AREA_MAX", DEFAULT_NOISE_AREA_MAX),
         reaction_co_min=load_float_env("GC1_REACTION_CO_MIN", DEFAULT_REACTION_CO_MIN),
+        reaction_co2_min=load_float_env("GC1_REACTION_CO2_MIN", DEFAULT_REACTION_CO2_MIN),
     )
 
 
@@ -1177,10 +1224,11 @@ def is_reduction_injection(
     thresholds: Optional[Gc1PhaseThresholds] = None,
 ) -> bool:
     """
-    환원 구간: H2 area가 ~20000 대역이면 환원.
-    FID/TCD 노이즈 피크(CH4, CO 등)가 함께 잡혀도 H2 area만 기준으로 판단.
+    환원 구간: H2 area ~20000 — 단, CO/CO2 반응 기준 충족 시 환원 아님.
     """
     thresholds = thresholds or load_gc1_phase_thresholds()
+    if is_reaction_injection(fid_cycle, tcd_cycle, thresholds):
+        return False
     return is_reduction_h2_area(h2_area(tcd_cycle), thresholds)
 
 
@@ -1190,13 +1238,21 @@ def is_reaction_injection(
     thresholds: Optional[Gc1PhaseThresholds] = None,
 ) -> bool:
     """
-    반응 시작: CO가 충분히 검출되고 H2가 환원 고정값(~20000)이 아님.
+    반응 시작 (H2 무시) — 아래 **하나라도** 만족:
+      · CO area ≥ reaction_co_min (기본 100), 또는
+      · CO2 area > reaction_co2_min (기본 20)
+      (둘 다 동시에 넘어도 반응)
+
+    첫 주입만 이 검사를 통과하면 trim 이 이후 전 주입을 엑셀에 유지.
     """
     thresholds = thresholds or load_gc1_phase_thresholds()
     co = get_compound_area(tcd_cycle, "CO")
-    if co is None or co < thresholds.reaction_co_min:
-        return False
-    return not is_reduction_h2_area(h2_area(tcd_cycle), thresholds)
+    if co is not None and co >= thresholds.reaction_co_min:
+        return True
+    co2 = get_compound_area(tcd_cycle, "CO2")
+    if co2 is not None and co2 > thresholds.reaction_co2_min:
+        return True
+    return False
 
 
 def is_transition_injection(
@@ -1204,7 +1260,7 @@ def is_transition_injection(
     tcd_cycle: List[dict],
     thresholds: Optional[Gc1PhaseThresholds] = None,
 ) -> bool:
-    """환원 직후 전환 구간: 환원 H2도 아니고 반응 신호(CO+H2 변동)도 아님."""
+    """환원 직후 전환 구간: 환원 H2이거나, 아직 CO/CO2 반응 기준 미달."""
     thresholds = thresholds or load_gc1_phase_thresholds()
     if is_reduction_injection(fid_cycle, tcd_cycle, thresholds):
         return False
@@ -1332,10 +1388,10 @@ def trim_reduction_and_first_reaction(
     bool,
 ]:
     """
-    H2 area 교차 검증으로 구간 분리:
-      1) H2~20000 나오기 전 노이즈 + 환원(H2~20000) 제외
-      2) 환원 직후 전환 1주입 제외 (CO 노이즈가 있어도 반응으로 보지 않음)
-      3) 첫 반응 주입부터 엑셀 적재 — **GC1 전용** (GC2/GC3 는 첫 반응 1회 제외)
+    H2 area 로 환원·사전노이즈 제외 후:
+      1) 환원(H2~20000) 제외
+      2) 환원 직후 전환 1주입 제외 + 반응 시작(CO≥100 또는 CO2>20) 전까지 스캔
+      3) 첫 반응 주입부터 끝까지 엑셀 — **GC1 전용**, 이후 주입은 CO/CO2 재검사 없음
 
     GC1_EXCEL_START_CYCLE=N 이 설정되면 위 규칙 대신 N번째 주입(1-based)부터 적재.
     """
@@ -1353,9 +1409,16 @@ def trim_reduction_and_first_reaction(
     skipped_reduction = 0
     skipped_transition = 0
     reduction_seen = False
+    reaction_start: Optional[int] = None
 
     while idx < count:
         fid_cycle, tcd_cycle = _cycle_at(fid_cycles, tcd_cycles, idx)
+        if is_reaction_injection(fid_cycle, tcd_cycle, thresholds):
+            if reduction_seen or not _has_future_reduction(
+                fid_cycles, tcd_cycles, idx, thresholds
+            ):
+                reaction_start = idx
+                break
         if is_reduction_injection(fid_cycle, tcd_cycle, thresholds):
             reduction_seen = True
             skipped_reduction += 1
@@ -1369,16 +1432,50 @@ def trim_reduction_and_first_reaction(
             break
         break
 
-    if not reduction_seen:
+    if not reduction_seen and reaction_start is None:
+        for idx2 in range(count):
+            fid_cycle, tcd_cycle = _cycle_at(fid_cycles, tcd_cycles, idx2)
+            if is_reaction_injection(fid_cycle, tcd_cycle, thresholds):
+                reaction_start = idx2
+                skipped_pre = idx2
+                break
+
+    if not reduction_seen and reaction_start is None:
         if not quiet:
-            print(f"\n[GC1] H2~{thresholds.reduction_h2_area:.0f} 환원 구간 없음 - 반응 데이터 없음")
+            print(
+                f"\n[GC1] H2~{thresholds.reduction_h2_area:.0f} 환원 없음, "
+                f"CO≥{thresholds.reaction_co_min:.0f}/CO2>{thresholds.reaction_co2_min:.0f} "
+                f"반응도 없음"
+            )
         return [], [], count, 0, 0, 0, False
+
+    if reaction_start is not None:
+        keep_from = reaction_start
+        kept_count = count - keep_from
+        if not quiet:
+            print(
+                f"\n[GC1] 반응 시작 CO≥{thresholds.reaction_co_min:.0f} 또는 "
+                f"CO2>{thresholds.reaction_co2_min:.0f} — "
+                f"사전노이즈 {skipped_pre}, 환원 {skipped_reduction}, "
+                f"전환 {skipped_transition}주입 제외, "
+                f"첫 반응(#{reaction_start + 1}) 포함 → 엑셀 {kept_count}주입"
+            )
+        if kept_count <= 0:
+            return [], [], skipped_pre, skipped_reduction, skipped_transition, 0, False
+        return (
+            fid_cycles[keep_from:],
+            tcd_cycles[keep_from:],
+            skipped_pre,
+            skipped_reduction,
+            skipped_transition,
+            0,
+            True,
+        )
 
     if idx < count:
         skipped_transition += 1
         idx += 1
 
-    reaction_start: Optional[int] = None
     while idx < count:
         fid_cycle, tcd_cycle = _cycle_at(fid_cycles, tcd_cycles, idx)
         if is_reaction_injection(fid_cycle, tcd_cycle, thresholds):
@@ -1399,8 +1496,10 @@ def trim_reduction_and_first_reaction(
     kept_count = count - keep_from
     if not quiet:
         print(
-            f"\n[GC1] H2~{thresholds.reduction_h2_area:.0f} 기준 - "
-            f"사전노이즈 {skipped_pre}, 환원 {skipped_reduction}, 전환 {skipped_transition}주입 제외, "
+            f"\n[GC1] 반응 시작 CO≥{thresholds.reaction_co_min:.0f} 또는 "
+            f"CO2>{thresholds.reaction_co2_min:.0f} — "
+            f"사전노이즈 {skipped_pre}, 환원 {skipped_reduction}, "
+            f"전환 {skipped_transition}주입 제외, "
             f"첫 반응(#{reaction_start + 1}) 포함 → 엑셀 {kept_count}주입"
         )
     if kept_count <= 0:

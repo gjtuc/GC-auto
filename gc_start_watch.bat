@@ -25,7 +25,7 @@ for %%m in (gc_config gc_console gc_instance gc_profiles gc_gc1 gc_autochro gc_c
 )
 
 for /f "delims=" %%d in ('python "%~dp0gc_profiles.py" --print-output-dir') do set "GC_OUT=%%d"
-if not defined GC_OUT set "GC_OUT=%USERPROFILE%\Desktop\KCH"
+if not defined GC_OUT set "GC_OUT=%USERPROFILE%\Desktop\박은규\_GC자동화"
 if not exist "%GC_OUT%" mkdir "%GC_OUT%"
 
 REM cmd /c 로 실행 — 중복/종료 시 창이 자동으로 닫힘 (/K 사용 금지)

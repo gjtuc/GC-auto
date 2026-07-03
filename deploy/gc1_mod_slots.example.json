@@ -1,0 +1,17 @@
+{
+  "_comment": "EXAMPLE ONLY — copy fields into deploy/gc1_mod_slots.json or use intake_gc1_mod.py",
+  "version": 1,
+  "slots": [
+    {
+      "mod_id": "MOD-1",
+      "queue_task": "T70",
+      "status": "ready",
+      "title": "P3 peak cleared verify 강화",
+      "summary": "P3.06 사후 eye gate — peak table must be empty after context init",
+      "leaf_ids": ["Ω.A.L4.P3.06"],
+      "atom_ids": ["Ω.A.L4.P3.06"],
+      "r_change": false,
+      "notes": "example — not active until copied to gc1_mod_slots.json"
+    }
+  ]
+}

@@ -12,7 +12,7 @@ gc_automation.py — ChemStation / GC1 자동 정리 (CLI 진입점)
   은규 PC·차헌 PC에서는 data_pc/촉매 반응 계산.py 를 실행하세요.
 
   PC 명칭: docs/PC_NAMING.md
-    · GC1 장비 PC (은규)  → Desktop\\박은규\\gc_automation.env
+    · GC1 장비 PC (은규)  → Desktop\\박은규\\_GC자동화\\gc_automation.env (데이터 xlsx·pdf 는 박은규 루트)
     · GC2/GC3 장비 PC (차헌) → Desktop\\KCH\\gc_automation.env
     · 은규 PC / 차헌 PC → Desktop\\.cursor\\ (본 스크립트 실행 금지)
 
@@ -294,9 +294,21 @@ def after_successful_run(config: AppConfig, result, count_email_toward_limit: bo
 
 def run_force_once(config: AppConfig, script_dir: str) -> None:
     """pipeline 1회 — force 규칙(핫스팟·한도 무시). 메일은 daily_send_count에 안 넣음."""
+    from gc1_runtime.layer3_run_closure import format_end_user_summary
+
     print("[안내] force 우선 실행 — 핫스팟·메일 쿨다운 규칙 적용 안 함")
     result = run_processing(config, script_dir)
     after_successful_run(config, result, count_email_toward_limit=False)
+    out_base = os.path.basename(result.output_path) if result.output_path else ""
+    print()
+    print(
+        format_end_user_summary(
+            ok=result.ok,
+            email_sent=bool(result.email_sent),
+            output_basename=out_base,
+            fail_reason=result.fail_reason or "",
+        )
+    )
 
 
 def submit_force_request(config: AppConfig, script_dir: str, trigger_text: str) -> None:
@@ -360,6 +372,15 @@ def handle_user_message(text: str, config: AppConfig) -> int:
 
 def main() -> None:
     args = build_parser().parse_args()
+
+    from gc_profiles import bootstrap_env, gc_runtime_dir, migrate_gc1_runtime_layout, resolve_gc_instance
+
+    data_root, _ = bootstrap_env(SCRIPT_DIR)
+    if resolve_gc_instance() == "gc1":
+        moved = migrate_gc1_runtime_layout(data_root)
+        if moved:
+            bootstrap_env(SCRIPT_DIR)
+            print(f"[안내] GC1 자동화 파일 {moved}개 → {gc_runtime_dir(data_root)} 로 정리됨")
 
     if args.show_profile:
         print_profile_summary(resolve_profile(SCRIPT_DIR))

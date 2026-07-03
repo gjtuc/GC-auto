@@ -1,0 +1,26 @@
+﻿[2026-06-29 22:28:09] skip: not armed
+[2026-06-29 22:28:10] followup: **T01** `task_queue_continue.ps1` + `hooks.json` 등록 — stop Hook이 followup 또는 `{}` 반환하는지 stdin 시뮬레이션으로 실행 검증
+[2026-06-29 22:28:11] skip: status=complete
+[2026-06-29 22:28:27] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 쓰기, 첫 `[ ]` 단계만 수행, 완료 시 `[x]`
+[2026-06-29 22:28:50] followup: **T01** `task_queue_continue.ps1` + `hooks.json` 등록 — stop Hook이 followup 또는 `{}` 반환하는지 stdin 시뮬레이션으로 실행 검증
+[2026-06-29 22:29:53] skip: armed=False status=idle
+[2026-06-29 22:29:54] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 쓰기, 첫 `[ ]` 단계만 수행, 완료 시 `[x]`
+[2026-06-29 22:29:55] skip: armed=True status=complete
+[2026-06-29 22:30:10] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 쓰기, 첫 `[ ]` 단계만 수행, 완료 시 `[x]`
+[2026-06-29 22:30:43] skip: armed=False status=idle
+[2026-06-29 22:30:44] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 쓰기, 첫 `[ ]` 단계만 수행, 완료 시 `[x]`
+[2026-06-29 22:30:44] skip: armed=True status=complete
+[2026-06-29 22:31:00] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 쓰기, 첫 `[ ]` 단계만 수행, 완료 시 `[x]`
+[2026-06-29 22:31:29] idle: bad state file
+[2026-06-29 22:31:29] idle: bad state file
+[2026-06-29 22:31:29] idle: bad state file
+[2026-06-29 22:31:29] idle: bad state file
+[2026-06-29 22:31:39] skip: not armed
+[2026-06-29 22:31:39] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 
+[2026-06-29 22:31:39] skip: status=complete
+[2026-06-29 22:31:45] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 
+[2026-06-29 22:31:56] skip: not armed
+[2026-06-29 22:31:56] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 
+[2026-06-29 22:31:56] skip: status=complete
+[2026-06-29 22:31:57] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 
+[2026-06-29 22:32:10] followup: **T02** `agent-task-queue.mdc` Rule — `큐 시작` 시 `armed:true` 

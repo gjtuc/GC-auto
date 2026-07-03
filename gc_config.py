@@ -11,7 +11,7 @@ gc_config.py — 경로·상수·실행 설정(AppConfig)
 
   | PC 종류              | env 위치              | 이 파일 기본값 덮어씀? |
   |----------------------|-----------------------|------------------------|
-  | GC1 장비 PC (은규)   | Desktop\\박은규\\...  | 예 (iPhone, gc1)       |
+  | GC1 장비 PC (은규)   | Desktop\\박은규\\_GC자동화\\...  | 예 (iPhone, gc1)       |
   | GC2/GC3 장비 (차헌)  | Desktop\\KCH\\...   | env 없으면 기본값 사용 |
   | 은규 PC / 차헌 PC    | Desktop\\.cursor\\... | (본 모듈 미사용)       |
 
@@ -19,7 +19,7 @@ gc_config.py — 경로·상수·실행 설정(AppConfig)
 [env vs 코드]
 =============================================================================
 
-  GC1 장비 PC는 Desktop\\박은규\\gc_automation.env 가 로드되면 덮어씁니다:
+  GC1 장비 PC는 Desktop\\박은규\\_GC자동화\\gc_automation.env (또는 루트 레거시) 가 로드되면 덮어씁니다:
 
     REQUIRED_HOTSPOT=iPhone
     CHEMSTATION_MODE=gc1
@@ -34,7 +34,7 @@ gc_config.py — 경로·상수·실행 설정(AppConfig)
   gc_automation CLI 인자 + gc_automation.env 가 합쳐진 **한 번의 실행** 설정.
 
   hotspot_reconnect_min_sec:
-    GC1 90s / GC2·3 45s — 순간 끊김 vs 재연결 구분 (gc_watch.py)
+    GC1 30분 / GC2·3 45s — 순간 끊김 vs 재연결 구분 (gc_watch.py)
 """
 
 from __future__ import annotations
@@ -62,15 +62,30 @@ EXCEL_OUTPUT_DIR = os.path.join(os.path.expanduser("~"), "Desktop", "KCH")
 
 def default_send_state_path() -> str:
     """일일 자동 메일 횟수·마지막 처리 시각 기록 JSON."""
-    return os.path.join(EXCEL_OUTPUT_DIR, ".gc_send_state.json")
+    try:
+        from gc_profiles import resolve_runtime_status_paths
+
+        return resolve_runtime_status_paths()["send_state"]
+    except Exception:
+        return os.path.join(EXCEL_OUTPUT_DIR, ".gc_send_state.json")
 
 
 def default_watch_status_json() -> str:
-    return os.path.join(EXCEL_OUTPUT_DIR, ".gc_watch_status.json")
+    try:
+        from gc_profiles import resolve_runtime_status_paths
+
+        return resolve_runtime_status_paths()["watch_status_json"]
+    except Exception:
+        return os.path.join(EXCEL_OUTPUT_DIR, ".gc_watch_status.json")
 
 
 def default_watch_status_txt() -> str:
-    return os.path.join(EXCEL_OUTPUT_DIR, "GC_감시_상태.txt")
+    try:
+        from gc_profiles import resolve_runtime_status_paths
+
+        return resolve_runtime_status_paths()["watch_status_txt"]
+    except Exception:
+        return os.path.join(EXCEL_OUTPUT_DIR, "GC_감시_상태.txt")
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +101,7 @@ AFTERNOON_START_HOUR = 12
 
 # watch: 순간 끊김(약한 신호) vs 사용자가 껐다 켠 재연결 구분(초)
 DEFAULT_HOTSPOT_RECONNECT_MIN_SEC = 45
-DEFAULT_GC1_HOTSPOT_RECONNECT_MIN_SEC = 90
+DEFAULT_GC1_HOTSPOT_RECONNECT_MIN_SEC = 1800  # 30분 — 순간 끊김·에이전트 재요청 쿨다운
 
 
 def hotspot_reconnect_min_sec(chemstation_mode: str = "auto") -> int:

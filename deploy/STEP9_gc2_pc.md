@@ -169,6 +169,9 @@ watch 가 한 번이라도 돌았으면 `Desktop\KCH\MMDDHHmm.txt` heartbeat ±5
 
 ## 9.8 — 파이프라인 dry-run (메일 없이)
 
+> **용어:** STEP9 의 "dry-run" = **SMTP 생략** (`--no-email`). ChemStation `acam`·Android 핫스팟은 **여전히 필요**.  
+> GC1 `AUTOCHRO_DRY_RUN` 과 무관. 회귀 스크립트 dry-run tier 표: `scripts/run_gc2_regression.ps1` 헤더 주석.
+
 ```powershell
 # Android 핫스팟 연결 후
 python gc_automation.py --force --no-email
@@ -177,6 +180,18 @@ python gc_automation.py --force --no-email
 **PASS:** ChemStation `sequence.acam_` → KCH xlsx 생성 (`Desktop\KCH`)
 
 GC3 PC면 `GC_INSTANCE=gc3`, `CHEMSTATION_MODE=chem32` 확인 후 동일.
+
+### 9.8b — 회귀 스크립트 (자동)
+
+```powershell
+# 전체 (9.6 + 9.7 + 9.8)
+powershell -File scripts\run_gc2_regression.ps1
+
+# ChemStation·핫스팟 없이 (9.6 설정 + 9.7 --verify 만)
+powershell -File scripts\run_gc2_regression.ps1 -DryRunOnly
+```
+
+검증 unittest: `python -m unittest test_gc2_regression_script -v`
 
 ---
 

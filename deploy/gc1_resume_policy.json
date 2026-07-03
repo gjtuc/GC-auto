@@ -1,0 +1,17 @@
+{
+  "_comment_for_llm": "PART6 Resume — .gc_autochro_job.json resume_from. validate: scripts/validate_gc1_resume_policy.py",
+  "schema_version": 1,
+  "design_ref": "deploy/GC1_RUNTIME_DESIGN_PART6_RETRY.md",
+  "rules": [
+    {
+      "resume_from": "Ω.A.L4.P4.03",
+      "description": "P0-P3 ok, run from P4.03 through P9",
+      "skip_phases": ["P0", "P1", "P2", "P3"]
+    },
+    {
+      "resume_from": "Ω.A.L4.P9.02",
+      "description": "P0-P8 ok, run P9 from P9.02",
+      "skip_phases": ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8"]
+    }
+  ]
+}

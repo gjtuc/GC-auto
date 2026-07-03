@@ -3444,7 +3444,8 @@ def _run_workflow_for_file_legacy(excel_path, opju_path=None, auto_archive=True,
 # ==========================================
 # 🚀 메인 실행부 (Workflow Controller)
 # ==========================================
-if __name__ == "__main__":
+def build_cli_parser() -> argparse.ArgumentParser:
+    """CLI 인자 파서 — unittest(T81) 및 ``__main__`` 공용."""
     parser = argparse.ArgumentParser(
         description="GC KCH 원본(메일) → 수율/전환율 계산 → Origin",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -3491,6 +3492,16 @@ if __name__ == "__main__":
         action="store_true",
         help="--watch 테스트용 — Wi-Fi SSID 검사 생략",
     )
+    return parser
+
+
+def cli_auto_archive(args: argparse.Namespace) -> bool:
+    """``--no-archive`` / ``--opju`` → ``auto_archive`` 인자 (G:·Origin 3~4단계)."""
+    return not args.no_archive and args.opju is None
+
+
+if __name__ == "__main__":
+    parser = build_cli_parser()
     args = parser.parse_args()
 
     print("=" * 60)
@@ -3505,7 +3516,7 @@ if __name__ == "__main__":
         run_data_pc_watch(
             SCRIPT_DIR,
             opju_path=args.opju,
-            auto_archive=not args.no_archive and args.opju is None,
+            auto_archive=cli_auto_archive(args),
             skip_wifi_check=args.no_wifi_check,
         )
         sys.exit(0)
@@ -3519,7 +3530,7 @@ if __name__ == "__main__":
             run_workflow_for_file(
                 excel_path,
                 opju_path=args.opju,
-                auto_archive=not args.no_archive and args.opju is None,
+                auto_archive=cli_auto_archive(args),
                 skip_origin=skip_origin,
             )
             print("-" * 60)
@@ -3544,7 +3555,7 @@ if __name__ == "__main__":
     if args.poll_once:
         result = process_new_gc_emails(
             opju_path=args.opju,
-            auto_archive=not args.no_archive and args.opju is None,
+            auto_archive=cli_auto_archive(args),
             skip_origin=skip_origin,
         )
         sys.exit(0 if result.workflow_count >= 0 else 1)
@@ -3553,7 +3564,7 @@ if __name__ == "__main__":
     while True:
         process_new_gc_emails(
             opju_path=args.opju,
-            auto_archive=not args.no_archive and args.opju is None,
+            auto_archive=cli_auto_archive(args),
             skip_origin=skip_origin,
         )
         print("-" * 60)

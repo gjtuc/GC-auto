@@ -33,8 +33,9 @@ gc_watch.py — --watch 핫스팟 감시 루프
 =============================================================================
 
   GC1:
-    · 핫스pot **세션당** PDF·엑셀·메일 1회 (쿨다운 없음)
-    · 순간 끊김 < 90초 → 동일 세션. 길게 껐다 켬 → 세션 1회 더
+    · 핫스pot **세션당** Cursor 에이전트 1회 (기본: 「동작해」→ OCR·학습 루프)
+    · 순간 끊김 < 30분 → 동일 세션. 길게 껐다 켬 → 세션 1회 더
+    · GC1_HOTSPOT_CURSOR_AGENT=0 이면 watch 가 직접 pipeline (레거시)
 
   GC2/GC3:
     · **핫스pot 재연결 불필요** — Wi-Fi 붙어 있는 동안 15초마다 poll
@@ -42,8 +43,20 @@ gc_watch.py — --watch 핫스팟 감시 루프
     · 쿨다운 중에도 엑셀 생성; SMTP 검증 성공 시에만 쿨다운 소모
     · 순간 끊김 < 45초 → 중복 pipeline 방지용 (메일 세션과 무관)
 
-[새 날짜 시퀀스 — GC2/GC3]
-  시료명 없으면 watch skip. force 시 --sample-name 지정.
+[새 날짜 시퀀스 — GC2/GC3 시료명·엑셀·메일 (GC1/Chem32 와 분리)]
+  처리 순서 (GC2 8860 acam 경로, Wi-Fi 연결·유지 중 15초 poll 공통):
+    1) 새 주입 — acam mtime 갱신(has_new_data_since_last_run). 같은 날짜에 주입만
+       추가돼도 처리 대상.
+    2) 시료 변경 — KCH에 해당 날짜 엑셀 없음(새 시료) 또는 RT(peak) 불일치 →
+       시료명 1회 사용자 지정 필요. watch는 감시 계속, need_sample_name 안내 유지.
+       엑셀·RT가 이미 맞으면 시료명 자동 매칭 후 진행.
+    3) pipeline — 엑셀 생성 (메일 쿨다운과 무관).
+    4) 메일 — AUTO_MAIL_COOLDOWN_HOURS(기본 1h) 슬롯 있을 때만 발송; 없으면
+       엑셀만 저장 후 pending 메일 재시도.
+
+  시료명 없으면 watch 가 pipeline 호출 안 함. force 시 --sample-name 지정.
+  GC1: 본 시료명 대기 로직 미적용(핫스pot 세션·Cursor 에이전트 규칙).
+  Chem32: 시료 폴더명·pipeline 자체 규칙(사전 check_sample_name 없음).
 """
 
 from __future__ import annotations
@@ -58,8 +71,12 @@ from typing import Any
 from gc_config import AppConfig, hotspot_reconnect_min_sec
 from gc_chem32 import find_active_sample_folder, resolve_chemstation_mode
 from gc_gc1 import find_active_pdf
-from gc_chemstation import find_sequence_folder
-from gc_kch import check_sample_name_before_processing
+from gc_chemstation import find_sequence_folder, get_sequence_date
+from gc_kch import (
+    check_sample_name_before_processing,
+    format_watch_sample_name_required_message,
+    resolve_watch_sample_name_alert,
+)
 from gc_pipeline import run_processing
 from gc_state import (
     gc1_unlimited_auto_send,
@@ -69,6 +86,7 @@ from gc_state import (
     mark_gc1_pdf_attempt_failed,
     record_processing_result,
     recover_stale_pending_email,
+    set_watch_need_sample_name,
     should_retry_gc1_pdf,
     try_pending_email_retry,
 )
@@ -122,6 +140,11 @@ class WatchRunner:
             self._started_at,
             chemstation_mode=config.chemstation_mode,
         )
+
+    def _runtime_dir(self) -> str:
+        from gc_profiles import gc_runtime_dir
+
+        return gc_runtime_dir(self.config.excel_output_dir)
 
     def run_forever(self) -> None:
         """Ctrl+C 또는 프로세스 종료까지 루프."""
@@ -210,7 +233,13 @@ class WatchRunner:
             wifi_ready=wifi_ready,
             **extra,
         )
-        if code == "error":
+        if code == "need_sample_name":
+            print("\n" + "=" * 60)
+            print("[시료명 필요] 새 주입 감지 — 사용자가 날짜·시료명 지정 필요")
+            print(message)
+            print("  (시료명 1회 지정 후 watch가 자동 엑셀·메일 처리)")
+            print("=" * 60 + "\n")
+        elif code == "error":
             self._schedule_error_recovery(message, **extra)
 
     def _schedule_error_recovery(self, message: str, **extra) -> None:
@@ -285,6 +314,22 @@ class WatchRunner:
             if self._pipeline_running:
                 self._publish("processing", "GC1 처리 진행 중 — 완료까지 대기")
                 return
+            if self.config.chemstation_mode == "gc1":
+                try:
+                    from gc1_runtime.layer0_hotspot_agent import (
+                        hotspot_cursor_agent_enabled,
+                        is_hotspot_session_in_flight,
+                    )
+                    if hotspot_cursor_agent_enabled() and is_hotspot_session_in_flight(
+                        self._runtime_dir()
+                    ):
+                        self._publish(
+                            "processing",
+                            "핫스팟 처리 실행 중 (Cursor 또는 OCR) — 완료까지 대기",
+                        )
+                        return
+                except ImportError:
+                    pass
             if gc1_unlimited_auto_send(self.config.chemstation_mode):
                 if self._gc1_has_pending_work():
                     print("\n[감지] GC1 새 CRM/PDF — 핫스팟 연결 유지 중 처리")
@@ -293,6 +338,8 @@ class WatchRunner:
             elif self._gc23_has_pending_work():
                 print("\n[감지] GC2/GC3 새 데이터 — 핫스팟 연결 유지 중 처리")
                 self._on_hotspot_connected(just_connected=False)
+                return
+            if self._publish_sample_name_hold_if_any():
                 return
             self._publish("wifi_ok", "핫스팟 연결 유지 중 — 새 데이터 있으면 자동 처리")
             return
@@ -360,6 +407,42 @@ class WatchRunner:
             self.config.data_path,
             self.config.chemstation_mode,
         )
+
+    def _hold_sample_name(
+        self,
+        message: str,
+        *,
+        seq_date: str,
+        sequence_folder: str,
+        reason: str,
+    ) -> None:
+        set_watch_need_sample_name(
+            self.watch_opts.send_state_file,
+            seq_date=seq_date,
+            sequence_folder=sequence_folder,
+            message=message,
+            reason=reason,
+        )
+        self._publish(
+            "need_sample_name",
+            message,
+            sequence_folder=sequence_folder,
+        )
+        print(f"[중단] {message}")
+
+    def _publish_sample_name_hold_if_any(self) -> bool:
+        """시료명 대기 중이면 need_sample_name 유지. True = 안내 표시됨."""
+        hold = resolve_watch_sample_name_alert(self.config, self.watch_opts.send_state_file)
+        if not hold:
+            return False
+        self._publish(
+            "need_sample_name",
+            hold["message"],
+            sequence_folder=hold.get("sequence_folder"),
+        )
+        if hold.get("new_injection_detected"):
+            print(f"\n[감지] {hold['message']}")
+        return True
 
     def _record_result(self, result) -> None:
         if not result.ok or not result.sequence_folder or result.latest_acam_mtime is None:
@@ -438,6 +521,47 @@ class WatchRunner:
             return
 
         if self.config.chemstation_mode == "gc1":
+            try:
+                from gc1_runtime.layer0_hotspot_agent import (
+                    dispatch_gc1_hotspot_session,
+                    hotspot_cursor_agent_enabled,
+                    is_hotspot_session_in_flight,
+                )
+            except ImportError:
+                hotspot_cursor_agent_enabled = lambda: False  # type: ignore[assignment,misc]
+                dispatch_gc1_hotspot_session = None  # type: ignore[assignment]
+                is_hotspot_session_in_flight = lambda _d: False  # type: ignore[assignment,misc]
+
+            if hotspot_cursor_agent_enabled() and dispatch_gc1_hotspot_session:
+                if is_hotspot_session_in_flight(self._runtime_dir()):
+                    self._publish(
+                        "processing",
+                        "핫스팟 처리 실행 중 (Cursor 또는 OCR) — 완료까지 대기",
+                    )
+                    return
+                ssid = get_connected_wifi_ssid() or self.config.required_ssid
+                action, msg = dispatch_gc1_hotspot_session(
+                    self._runtime_dir(),
+                    self.script_dir,
+                    ssid=ssid,
+                    just_connected=just_connected,
+                    chemstation_mode=self.config.chemstation_mode,
+                )
+                if action == "cursor_enqueued":
+                    self._publish("agent_requested", msg, wifi_ssid=ssid)
+                    print(f"[Cursor] {msg}")
+                    return
+                if action == "ocr_started":
+                    self._publish("processing", msg, wifi_ssid=ssid)
+                    print(f"[OCR] {msg}")
+                    return
+                if action in ("skip", "in_flight"):
+                    code = "processing" if action == "in_flight" else "wifi_ok"
+                    self._publish(code, msg, wifi_ssid=ssid)
+                    print(f"[안내] {msg}")
+                    return
+                # continue_legacy → 아래 기존 pipeline
+
             try:
                 from gc_autochro import ensure_gc1_pdf_exported, is_autochro_enabled
             except ImportError:
@@ -589,12 +713,18 @@ class WatchRunner:
 
         sample_block = check_sample_name_before_processing(sequence_folder, self.config)
         if sample_block:
-            self._publish(
-                "need_sample_name",
-                sample_block,
-                sequence_folder=sequence_folder,
+            seq_date = get_sequence_date(sequence_folder, self.config.sequence_date)
+            message = format_watch_sample_name_required_message(
+                seq_date,
+                reason="new_date",
+                new_injection_detected=True,
             )
-            print(f"[중단] {sample_block}")
+            self._hold_sample_name(
+                message,
+                seq_date=seq_date,
+                sequence_folder=sequence_folder,
+                reason="new_date",
+            )
             return
 
         self._publish(
@@ -616,9 +746,26 @@ class WatchRunner:
         else:
             reason = result.fail_reason or "처리 실패"
             code = "need_sample_name" if "시료" in reason else "error"
+            if code == "need_sample_name":
+                seq_date = get_sequence_date(sequence_folder, self.config.sequence_date)
+                rt_reason = "rt_mismatch" if "RT" in reason or "패턴" in reason else "new_date"
+                message = reason
+                if "시료명 1회 지정" not in reason:
+                    message = format_watch_sample_name_required_message(
+                        seq_date,
+                        reason=rt_reason,
+                        new_injection_detected=True,
+                    )
+                self._hold_sample_name(
+                    message,
+                    seq_date=seq_date,
+                    sequence_folder=sequence_folder,
+                    reason=rt_reason,
+                )
+                return
             self._publish(
                 code,
-                f"{reason} — 수동 실행 필요" if code == "need_sample_name" else f"{reason} — 핫스팟 재연결 후 재시도",
+                f"{reason} — 핫스팟 재연결 후 재시도",
                 sequence_folder=sequence_folder,
             )
 

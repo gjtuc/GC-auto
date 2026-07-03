@@ -14,6 +14,7 @@ from gc_gc1 import (  # noqa: E402
     _collect_gc1_cycles_from_pages,
     _merge_peak_continuation_pages,
     classify_gc1_injections,
+    get_compound_area,
     parse_gc1_pdf_path,
     parse_pdf_page,
     resolve_gc1_pdf_dir,
@@ -56,12 +57,17 @@ def main() -> None:
     print(f"PDF: {pdf_path}")
     print(f"Total injections: {len(analyses)}")
     print()
-    print(f"{'#':>3} {'H2 area':>12} {'CO area':>12} {'classification':>16}")
-    print("-" * 48)
+    print(f"{'#':>3} {'H2 area':>12} {'CO area':>12} {'CO2 area':>12} {'classification':>16}")
+    print("-" * 62)
     for item in analyses[:15]:
+        co2 = get_compound_area(
+            tcd_raw[item.injection - 1] if item.injection <= len(tcd_raw) else [],
+            "CO2",
+        )
         print(
             f"{item.injection:3d} {_fmt_area(item.h2_area):>12} "
-            f"{_fmt_area(item.co_area):>12} {item.classification:>16}"
+            f"{_fmt_area(item.co_area):>12} {_fmt_area(co2):>12} "
+            f"{item.classification:>16}"
         )
     if len(analyses) > 15:
         print(f"... ({len(analyses) - 15} more injections)")

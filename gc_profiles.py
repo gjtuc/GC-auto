@@ -28,7 +28,7 @@ gc_profiles.py — GC1 / GC2 / GC3 **장비 PC**별 출력 폴더·핫스팟·�
 
   | 장비 | env 경로                         | GC_INSTANCE | 핫스팟             |
   |------|----------------------------------|-------------|--------------------|
-  | GC1  | Desktop\\박은규\\gc_automation.env | gc1         | iPhone             |
+  | GC1  | Desktop\\박은규\\_GC자동화\\gc_automation.env | gc1         | iPhone             |
   | GC2  | Desktop\\KCH\\gc_automation.env    | gc2         | iptime / iptime 2 / iptime_5G |
   | GC3  | Desktop\\KCH\\gc_automation.env    | gc3         | iptime / iptime 2 / iptime_5G |
 
@@ -41,7 +41,7 @@ gc_profiles.py — GC1 / GC2 / GC3 **장비 PC**별 출력 폴더·핫스팟·�
 =============================================================================
 
   1) 환경변수 GC_INSTANCE / EXCEL_OUTPUT_DIR (env 로드 후)
-  2) Desktop\\박은규\\gc_automation.env 존재 → GC1 장비
+  2) Desktop\\박은규\\_GC자동화\\gc_automation.env (또는 루트 레거시) → GC1 장비
   3) Desktop\\KCH\\gc_automation.env 존재 → GC2 또는 GC3 (env의 GC_INSTANCE)
   4) PROFILE_DEFAULTS 기본값 (gc2 쪽)
 
@@ -65,6 +65,9 @@ DESKTOP = os.path.join(os.path.expanduser("~"), "Desktop")
 DEFAULT_GC1_OUTPUT = os.path.join(DESKTOP, "박은규")
 # GC2/GC3 **장비** PC 기본 출력. 「차헌 PC」= Desktop\.cursor 와 다름.
 DEFAULT_GC2_OUTPUT = EXCEL_OUTPUT_DIR
+
+# GC1 장비 PC: 실험 데이터(xlsx·pdf)와 자동화 파일 분리
+GC1_RUNTIME_SUBDIR_DEFAULT = "_GC자동화"
 
 PROFILE_DEFAULTS = {
     # gc1 — GC1 장비 PC (은규). Autochro PDF. 데이터 처리는 은규 PC.
@@ -125,11 +128,15 @@ def candidate_env_dirs(base_script_dir: str) -> List[str]:
         dirs.append(explicit)
 
     for folder_name in ("박은규", "KCH"):
-        # folder_name: 장비 PC 전용 Desktop 하위 폴더 (데이터 PC의 .cursor 아님)
         path = os.path.join(DESKTOP, folder_name)
-        env_path = os.path.join(path, "gc_automation.env")
-        if os.path.isfile(env_path):
-            dirs.append(path)
+        search_bases = [path]
+        if folder_name == "박은규":
+            search_bases.insert(0, os.path.join(path, gc_runtime_subdir_name()))
+        for base in search_bases:
+            env_path = os.path.join(base, "gc_automation.env")
+            if os.path.isfile(env_path):
+                dirs.append(path)
+                break
 
     dirs.extend([DEFAULT_GC1_OUTPUT, DEFAULT_GC2_OUTPUT, base_script_dir])
     return _dedupe_paths(dirs)
@@ -148,12 +155,18 @@ def _load_env_file(path: str) -> bool:
 def bootstrap_env(base_script_dir: str) -> tuple[str, Optional[str]]:
     """첫 번째 env 파일을 로드하고 출력 폴더 경로를 반환."""
     loaded_from: Optional[str] = None
-    for base in candidate_env_dirs(base_script_dir):
-        for name in (".env", "gc_automation.env"):
-            path = os.path.join(base, name)
-            if os.path.isfile(path):
-                _load_env_file(path)
-                loaded_from = path
+    for data_root in candidate_env_dirs(base_script_dir):
+        search_bases = [data_root]
+        if os.path.basename(data_root) == "박은규":
+            search_bases.insert(0, os.path.join(data_root, gc_runtime_subdir_name()))
+        for base in search_bases:
+            for name in (".env", "gc_automation.env"):
+                path = os.path.join(base, name)
+                if os.path.isfile(path):
+                    _load_env_file(path)
+                    loaded_from = path
+                    break
+            if loaded_from:
                 break
         if loaded_from:
             break
@@ -165,7 +178,7 @@ def resolve_excel_output_dir(base_script_dir: str, loaded_env_file: Optional[str
     if explicit:
         return os.path.normpath(os.path.expanduser(explicit))
     if loaded_env_file:
-        return os.path.dirname(os.path.abspath(loaded_env_file))
+        return _excel_root_from_env_path(loaded_env_file)
     instance = os.getenv("GC_INSTANCE", "").strip().lower()
     if instance == "gc1":
         return DEFAULT_GC1_OUTPUT
@@ -186,6 +199,258 @@ def resolve_gc_instance() -> str:
     if os.path.basename(resolve_excel_output_dir(script_dir())) == "박은규":
         return "gc1"
     return "gc2"
+
+
+def gc_runtime_subdir_name() -> str:
+    """GC1 자동화·watch·env 하위 폴더명 (env ``GC_RUNTIME_SUBDIR`` 로 변경 가능)."""
+    raw = os.getenv("GC_RUNTIME_SUBDIR", GC1_RUNTIME_SUBDIR_DEFAULT).strip()
+    return raw or GC1_RUNTIME_SUBDIR_DEFAULT
+
+
+def _excel_root_from_env_path(env_path: str) -> str:
+    """env 가 ``_GC자동화\\gc_automation.env`` 에 있어도 데이터 루트는 ``박은규``."""
+    parent = os.path.normpath(os.path.dirname(os.path.abspath(env_path)))
+    if os.path.basename(parent) == gc_runtime_subdir_name():
+        return os.path.dirname(parent)
+    return parent
+
+
+def gc_runtime_dir(excel_output_dir: str, *, gc_instance: str | None = None) -> str:
+    """
+    GC1: ``Desktop\\박은규\\_GC자동화`` — watch·env·로그·Cursor 연동.
+    GC2/GC3: ``excel_output_dir`` 그대로.
+    """
+    inst = (gc_instance or resolve_gc_instance()).strip().lower()
+    if inst != "gc1":
+        return os.path.normpath(excel_output_dir)
+    return os.path.normpath(os.path.join(excel_output_dir, gc_runtime_subdir_name()))
+
+
+def migrate_gc1_runtime_layout(excel_output_dir: str) -> int:
+    """GC1 자동화 파일을 ``_GC자동화`` 로 이동 (xlsx·pdf 는 루트 유지)."""
+    import glob
+    import shutil
+
+    if resolve_gc_instance() != "gc1":
+        return 0
+    data_root = os.path.normpath(excel_output_dir)
+    runtime = gc_runtime_dir(data_root, gc_instance="gc1")
+    os.makedirs(runtime, exist_ok=True)
+    moved = 0
+    for name in (
+        ".gc_send_state.json",
+        ".gc_watch_status.json",
+        ".gc_watch.pid",
+        "GC_감시_상태.txt",
+        "GC_오류_최근.txt",
+        "gc_automation.env",
+        "gc_run_log.txt",
+        "machine_profile.json",
+        ".gc_error_handler_run.log",
+        ".gc_error_handler_state.json",
+        ".gc_error_log.jsonl",
+        ".gc_error_pending.json",
+        ".gc_hotspot_agent_state.json",
+        ".gc_hotspot_agent_pending.json",
+        ".gc_hotspot_agent_run.log",
+        ".gc_watch_activity.log",
+        "gc_wifi_autoconnect.log",
+    ):
+        src = os.path.join(data_root, name)
+        dst = os.path.join(runtime, name)
+        if not os.path.isfile(src):
+            continue
+        if os.path.isfile(dst):
+            try:
+                os.remove(src)
+                moved += 1
+            except OSError:
+                pass
+            continue
+        try:
+            shutil.move(src, dst)
+            moved += 1
+        except OSError:
+            pass
+    for pattern in ("GC_대기_*.txt", "GC_중지_*.txt", "[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9].txt"):
+        for src in glob.glob(os.path.join(data_root, pattern)):
+            dst = os.path.join(runtime, os.path.basename(src))
+            if os.path.isfile(dst):
+                try:
+                    os.remove(src)
+                    moved += 1
+                except OSError:
+                    pass
+            elif os.path.isfile(src):
+                try:
+                    shutil.move(src, dst)
+                    moved += 1
+                except OSError:
+                    pass
+    for name in os.listdir(data_root):
+        if name.startswith("GC1_") and name.lower().endswith(".bat"):
+            src = os.path.join(data_root, name)
+            dst = os.path.join(runtime, name)
+            if not os.path.isfile(src):
+                continue
+            if os.path.isfile(dst):
+                try:
+                    os.remove(src)
+                    moved += 1
+                except OSError:
+                    pass
+            else:
+                try:
+                    shutil.move(src, dst)
+                    moved += 1
+                except OSError:
+                    pass
+    sys_dir = os.path.join(data_root, "_system")
+    if os.path.isdir(sys_dir) and not os.path.isdir(os.path.join(runtime, "_system")):
+        try:
+            shutil.move(sys_dir, os.path.join(runtime, "_system"))
+            moved += 1
+        except OSError:
+            pass
+    for extra_name in ("GC1_baseline_chemstation-gc-automation.zip", "GC2_Cursor_핸드오프.md"):
+        src = os.path.join(data_root, extra_name)
+        dst = os.path.join(runtime, extra_name)
+        if os.path.isfile(src):
+            if os.path.isfile(dst):
+                try:
+                    os.remove(src)
+                    moved += 1
+                except OSError:
+                    pass
+            else:
+                try:
+                    shutil.move(src, dst)
+                    moved += 1
+                except OSError:
+                    pass
+    moved += _migrate_gc1_stray_desktop_kch(runtime)
+    moved += _migrate_gc1_stray_desktop_cursor(runtime)
+    return moved
+
+
+def _desktop_kch_dir() -> str:
+    return os.path.normpath(os.path.join(os.path.expanduser("~"), "Desktop", "KCH"))
+
+
+def _desktop_cursor_dir() -> str:
+    return os.path.normpath(os.path.join(os.path.expanduser("~"), "Desktop", ".cursor"))
+
+
+def _merge_or_move_file(src: str, dst: str) -> bool:
+    """GC1: 바탕화면 KCH 잔여 로그 등을 ``_GC자동화`` 로 합침."""
+    import shutil
+
+    if not os.path.isfile(src):
+        return False
+    if os.path.normcase(os.path.abspath(src)) == os.path.normcase(os.path.abspath(dst)):
+        return False
+    if os.path.isfile(dst):
+        try:
+            with open(dst, "a", encoding="utf-8", errors="replace") as out_f:
+                out_f.write("\n")
+                with open(src, encoding="utf-8", errors="replace") as in_f:
+                    out_f.write(in_f.read())
+            os.remove(src)
+            return True
+        except OSError:
+            return False
+    try:
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.move(src, dst)
+        return True
+    except OSError:
+        return False
+
+
+def _migrate_gc1_stray_desktop_kch(runtime: str) -> int:
+    """
+  GC1 PC에만: ``Desktop\\KCH`` 는 GC2/GC3용이라 은규가 보면 혼란.
+  env 미로드 등으로 생긴 로그·잔여 파일을 ``_GC자동화`` 로 옮기고 빈 폴더 삭제.
+    """
+    return _migrate_gc1_stray_desktop_folder(_desktop_kch_dir(), runtime)
+
+
+def _migrate_gc1_stray_desktop_cursor(runtime: str) -> int:
+    """
+    GC1 PC: ``Desktop\\.cursor`` 는 데이터 PC(은규/차헌)용.
+    실수로 복사된 env·촉매 반응 계산.py 등을 ``_GC자동화`` 로 옮기고 빈 폴더 삭제.
+    """
+    return _migrate_gc1_stray_desktop_folder(_desktop_cursor_dir(), runtime)
+
+
+def _migrate_gc1_stray_desktop_folder(src_dir: str, runtime: str) -> int:
+    """GC1: 바탕화면 잔여 폴더(KCH·.cursor) 내용을 ``_GC자동화`` 로 합침."""
+    import shutil
+
+    src = os.path.normpath(src_dir)
+    runtime = os.path.normpath(runtime)
+    if not os.path.isdir(src):
+        return 0
+    if os.path.normcase(os.path.abspath(src)) == os.path.normcase(os.path.abspath(runtime)):
+        return 0
+    moved = 0
+    try:
+        names = list(os.listdir(src))
+    except OSError:
+        return 0
+    for name in names:
+        src_path = os.path.join(src, name)
+        dst_path = os.path.join(runtime, name)
+        if os.path.isdir(src_path):
+            if os.path.isdir(dst_path):
+                for sub in os.listdir(src_path):
+                    sub_src = os.path.join(src_path, sub)
+                    sub_dst = os.path.join(dst_path, sub)
+                    if os.path.isfile(sub_src) and _merge_or_move_file(sub_src, sub_dst):
+                        moved += 1
+                    elif os.path.isdir(sub_src) and not os.path.exists(sub_dst):
+                        try:
+                            shutil.move(sub_src, sub_dst)
+                            moved += 1
+                        except OSError:
+                            pass
+                try:
+                    if not os.listdir(src_path):
+                        os.rmdir(src_path)
+                except OSError:
+                    pass
+            else:
+                try:
+                    shutil.move(src_path, dst_path)
+                    moved += 1
+                except OSError:
+                    pass
+            continue
+        if os.path.isfile(src_path):
+            if os.path.isfile(dst_path) and name == "gc_automation.env":
+                alt = os.path.join(runtime, "gc_automation.env.desktop_cursor")
+                if _merge_or_move_file(src_path, alt):
+                    moved += 1
+            elif os.path.isfile(dst_path) and name == "machine_profile.json":
+                alt = os.path.join(runtime, "machine_profile.data_pc.json")
+                if _merge_or_move_file(src_path, alt):
+                    moved += 1
+            elif _merge_or_move_file(src_path, dst_path):
+                moved += 1
+    try:
+        if not os.listdir(src):
+            os.rmdir(src)
+            moved += 1
+    except OSError:
+        pass
+    return moved
+
+
+def resolve_runtime_status_paths() -> dict[str, str]:
+    """Env 로드 후 watch/status 경로 (GC1은 ``_GC자동화``)."""
+    base = script_dir()
+    output_dir, _ = bootstrap_env(base)
+    return paths_for_output_dir(output_dir)
 
 
 def resolve_required_hotspot(default: str = REQUIRED_HOTSPOT_SSID) -> str:
@@ -232,12 +497,17 @@ def resolve_profile(base_script_dir: Optional[str] = None) -> ResolvedProfile:
     )
 
 
-def paths_for_output_dir(output_dir: str) -> dict[str, str]:
+def paths_for_output_dir(output_dir: str, *, gc_instance: str | None = None) -> dict[str, str]:
+    inst = gc_instance or resolve_gc_instance()
+    runtime = gc_runtime_dir(output_dir, gc_instance=inst)
+    os.makedirs(runtime, exist_ok=True)
     return {
-        "send_state": os.path.join(output_dir, ".gc_send_state.json"),
-        "watch_status_json": os.path.join(output_dir, ".gc_watch_status.json"),
-        "watch_status_txt": os.path.join(output_dir, "GC_감시_상태.txt"),
-        "watch_pid": os.path.join(output_dir, ".gc_watch.pid"),
+        "data_root": os.path.normpath(output_dir),
+        "runtime_dir": runtime,
+        "send_state": os.path.join(runtime, ".gc_send_state.json"),
+        "watch_status_json": os.path.join(runtime, ".gc_watch_status.json"),
+        "watch_status_txt": os.path.join(runtime, "GC_감시_상태.txt"),
+        "watch_pid": os.path.join(runtime, ".gc_watch.pid"),
     }
 
 
@@ -247,9 +517,12 @@ def print_output_dir_for_bat() -> None:
 
 
 def print_profile_summary(profile: ResolvedProfile) -> None:
+    runtime = gc_runtime_dir(profile.excel_output_dir, gc_instance=profile.gc_instance)
     print("[GC 프로필]")
     print(f"  인스턴스      : {profile.gc_instance}")
-    print(f"  출력 폴더      : {profile.excel_output_dir}")
+    print(f"  데이터 폴더    : {profile.excel_output_dir}")
+    if runtime != profile.excel_output_dir:
+        print(f"  자동화 폴더    : {runtime}")
     print(f"  env 파일       : {profile.env_file or '(없음)'}")
     print(f"  핫스팟 SSID    : {format_required_ssids_label(profile.required_ssid)}")
     print(f"  ChemStation 모드: {profile.chemstation_mode}")

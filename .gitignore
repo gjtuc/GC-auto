@@ -40,3 +40,7 @@ Desktop.ini
 # Cursor auto-sync log (hook)
 .cursor/hooks/auto_git_sync.log
 .cursor/hooks/session_start_git.log
+.cursor/hooks/agent_queue_stop.log
+.cursor/hooks/task_queue_continue.log
+.cursor/hooks/quit_cursor.log
+.cursor/hooks/_*.json

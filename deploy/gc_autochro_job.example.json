@@ -1,0 +1,45 @@
+{
+  "job_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "started_at": "2026-06-30T10:00:00+09:00",
+  "data_name": "20260630_DRE-01",
+  "pdf_path_planned": "C:\\Users\\User\\Desktop\\박은규\\20260630_DRE-01.pdf",
+  "prep_enabled": true,
+  "phase_current": "P4",
+  "atom_current": "Ω.A.L4.P4.03",
+  "resume_from": null,
+  "force": false,
+  "hancom_windows_seen": 1,
+  "atoms": {
+    "Ω.A.L4.P0.01": {
+      "status": "ok",
+      "attempt": 1,
+      "channel_used": "H",
+      "fail_code": null,
+      "probe_snapshot": {
+        "hancom_closed": 1
+      },
+      "started_at": "2026-06-30T10:00:01+09:00",
+      "ended_at": "2026-06-30T10:00:05+09:00"
+    },
+    "Ω.A.L4.P4.03": {
+      "status": "running",
+      "attempt": 2,
+      "channel_used": "H",
+      "fail_code": null,
+      "probe_snapshot": {
+        "tree_line": "20260630_DRE-01.1"
+      },
+      "started_at": "2026-06-30T10:02:10+09:00",
+      "ended_at": null
+    },
+    "Ω.A.L4.P9.14": {
+      "status": "pending",
+      "attempt": 0,
+      "channel_used": null,
+      "fail_code": null,
+      "probe_snapshot": {},
+      "started_at": null,
+      "ended_at": null
+    }
+  }
+}

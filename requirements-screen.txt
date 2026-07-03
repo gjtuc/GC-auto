@@ -1,0 +1,7 @@
+# GC1 화면 읽기(눈) — gc_screen_read.py 전용 (선택 설치)
+#   pip install -r requirements-screen.txt
+# Tesseract 엔진 별도: https://github.com/UB-Mannheim/tesseract/wiki
+#   한글: kor.traineddata (chi_sim 불필요)
+mss>=9.0.0
+Pillow>=10.0.0
+pytesseract>=0.3.10

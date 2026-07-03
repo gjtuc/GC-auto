@@ -71,6 +71,7 @@ from gc_chem32 import (
     resolve_chemstation_mode,
 )
 from gc_gc1 import (
+    build_gc1_excel_path_from_pdf,
     cleanup_superseded_gc1_files,
     find_active_pdf,
     get_latest_pdf_mtime,
@@ -79,10 +80,12 @@ from gc_gc1 import (
     summarize_assigned_compounds,
     write_gc1_excel,
 )
+from gc1_reaction_gate import classify_gc1_report
 from gc_kch import (
     build_output_filename,
     build_stacked_dataframe,
     determine_sample_name,
+    format_watch_sample_name_required_message,
     is_new_sequence_date,
     resolve_sample_name,
     write_chem32_excel,
@@ -228,9 +231,8 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
 
     sample_name, seq_date = determine_sample_name(cycle_peaks_list, sequence_folder, config)
     if not sample_name:
-        detail = "시료명 미지정 — --sample-name 필요"
-        if is_new_sequence_date(config.excel_output_dir, seq_date):
-            detail = f"새 날짜({seq_date}) 시퀀스 — 시료명 필수"
+        reason = "new_date" if is_new_sequence_date(config.excel_output_dir, seq_date) else "rt_mismatch"
+        detail = format_watch_sample_name_required_message(seq_date, reason=reason)
         return ProcessResult(
             ok=False,
             sequence_folder=sequence_folder,
@@ -308,7 +310,26 @@ def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:
     )
     analysis_gaps, gap_interval = detect_analysis_gaps(sample_folder)
     gap_injections = collect_reported_injections(sample_folder)
+    report_folder_count = len(gap_injections)
+    data_row_count = len(matched_labels)
     gap_email_lines = analysis_gaps_email_lines(analysis_gaps, gap_interval, gap_injections)
+    stats_lines = [
+        "",
+        "[데이터 대조]",
+        f"  Chem32 Report 주입 폴더: {report_folder_count}개",
+        f"  엑셀 적재(실주입): {data_row_count}개",
+    ]
+    if analysis_gaps:
+        stats_lines.append(f"  분석 중단(갭) 행: {len(analysis_gaps)}개")
+    if skipped:
+        stats_lines.append(f"  startup·미완료 제외: {skipped}개")
+    report_not_in_excel = report_folder_count - data_row_count
+    if report_not_in_excel > 0:
+        stats_lines.append(
+            f"  → {report_not_in_excel}개 Report 는 엑셀 미포함 "
+            "(TCD 미적분·FID 없음·피크수/RT 불일치 등)"
+        )
+    gap_email_lines = stats_lines + (gap_email_lines or [])
     # 엑셀 갭 행: 메일과 동일 갭이지만 삽입 위치는 matched_paths 기준 (전체 주입 # ≠ 엑셀 행 #)
     fid_cycles, tcd_cycles = insert_analysis_gap_markers(
         fid_cycles,
@@ -411,29 +432,61 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
     config.force True: CRM 변경 없어도 Autochro PDF 재생성 (개시 force·수동 --force).
     GC1_SKIP_AUTOCHRO_EXPORT: watch 가 export 직후 pipeline 만 돌릴 때 중복 방지.
     """
+    from gc1_runtime.layer3_run_closure import begin_gc1_run_session, close_gc1_run_session
+
+    begin_gc1_run_session(mode="gc1")
+    try:
+        result = _run_processing_gc1_body(config, script_dir)
+    except Exception as exc:
+        result = ProcessResult(ok=False, fail_reason=str(exc))
+    out_base = os.path.basename(result.output_path) if result.output_path else ""
+    close_gc1_run_session(
+        ok=result.ok,
+        fail_reason=result.fail_reason or "",
+        email_sent=bool(result.email_sent),
+        output_basename=out_base,
+        sample_name=result.sample_name or "",
+        pdf=os.path.basename(result.sequence_folder or "") if result.sequence_folder else "",
+    )
+    return result
+
+
+def _run_processing_gc1_body(config: AppConfig, script_dir: str) -> ProcessResult:
+    """
+    GC1 전체 pipeline body (closure wrapper 가 세션·저널 처리).
+    """
+    from gc1_runtime.layer3_run_closure import register_pipeline_phase
+
     try:
         from gc_autochro import ensure_gc1_pdf_exported, is_autochro_enabled
     except ImportError:
         is_autochro_enabled = lambda: False  # type: ignore
         ensure_gc1_pdf_exported = None  # type: ignore
 
+    exported_pdf: Optional[str] = None
     if is_autochro_enabled() and ensure_gc1_pdf_exported:
         skip_export = os.getenv("GC1_SKIP_AUTOCHRO_EXPORT", "").strip().lower() in ("1", "true", "yes")
         if skip_export and not config.force:
             print("[Autochro] PDF 내보내기 건너뜀 (watch에서 이미 실행됨)")
         else:
             # config.force → watch/개시 요청 시 Autochro PDF 항상 재내보내기
-            export_ok, _, export_msg = ensure_gc1_pdf_exported(
+            export_ok, export_pdf, export_msg = ensure_gc1_pdf_exported(
                 config.excel_output_dir,
                 config.send_state_file,
                 force=bool(config.force),
             )
+            exported_pdf = export_pdf
+            register_pipeline_phase("autochro_export", ok=export_ok, detail=export_msg or "")
             if not export_ok:
                 return ProcessResult(ok=False, fail_reason=f"Autochro PDF 내보내기 실패 — {export_msg}")
             if export_msg and export_msg not in ("CRM 변경 없음", "Autochro 자동화 비활성"):
                 print(f"[Autochro] {export_msg}")
 
-    pdf_path = find_active_pdf(config)
+    if exported_pdf and os.path.isfile(exported_pdf):
+        pdf_path = os.path.normpath(exported_pdf)
+        print(f"[안내] Autochro 방금보낸 PDF 사용: {os.path.basename(pdf_path)}")
+    else:
+        pdf_path = find_active_pdf(config)
     if not pdf_path:
         pdf_dir = config.excel_output_dir
         return ProcessResult(
@@ -448,21 +501,14 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
     except Exception as exc:
         return ProcessResult(ok=False, fail_reason=f"PDF 파싱 실패 — {exc}")
 
-    if not report.fid_cycles and not report.tcd_cycles:
-        if report.total_injections == 0:
-            fail_reason = "PDF 에서 FID/TCD 피크를 찾지 못함"
-        else:
-            fail_reason = (
-                "사전노이즈·환원·전환·첫 반응 제외 후 남은 데이터 없음 "
-                f"(제외: 사전노이즈 {report.skipped_pre_reduction_count}, "
-                f"환원 {report.skipped_reduction_count}, "
-                f"전환 {report.skipped_transition_count}, "
-                f"첫 반응 {report.skipped_first_reaction_count})"
-            )
+    gate = classify_gc1_report(report)
+    if not gate.can_write_excel:
+        if gate.availability.value == "reduction_stage":
+            print(f"\n[GC1] {gate.operator_hint}")
         return ProcessResult(
             ok=False,
             sequence_folder=pdf_path,
-            fail_reason=fail_reason,
+            fail_reason=gate.fail_reason,
         )
 
     default_name = report.default_sample_name or infer_sample_name_from_pdf(pdf_path, report.analysis_date)
@@ -494,7 +540,7 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
         )
     summarize_assigned_compounds(report)
 
-    output_path = build_output_filename(config.excel_output_dir, sample_name, analysis_date)
+    output_path = build_gc1_excel_path_from_pdf(config.excel_output_dir, pdf_path)
     latest_mtime = get_latest_pdf_mtime(pdf_path)
     total_peaks = sum(len(c) for c in report.fid_cycles) + sum(len(c) for c in report.tcd_cycles)
 
@@ -549,6 +595,11 @@ def run_processing_gc1(config: AppConfig, script_dir: str) -> ProcessResult:
         if surviving_pdf != pdf_path:
             print(f"[GC1] 반응 주입 더 많은 PDF 유지: {os.path.basename(surviving_pdf)}")
 
+        register_pipeline_phase(
+            "excel_email",
+            ok=True,
+            detail="mail" if email_sent else "excel_only",
+        )
         return ProcessResult(
             ok=True,
             email_sent=email_sent,
