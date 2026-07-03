@@ -185,6 +185,8 @@ python "$home\촉매 반응 계산.py" --no-archive
 |------|------|
 | `waiting_gdrive` 계속 | `machine_profile` 에 `uses_g_drive: false` 있는지 |
 | Origin 실패 (0.3초) | supervisor 가 `pythonw` 인지 — `o9_facade.py` stdin 가드 포함 여부 (`git pull`) |
+| **저장 없이 Origin 강제 종료** | `data_pc_origin/o3_session.py` 최신인지, `o3_ui_win32.ps1` 동반 복사 — [`docs/DATA_PC_ORIGIN_SAVE.md`](DATA_PC_ORIGIN_SAVE.md) |
+| Origin 저장 대화상자 멈춤 | 남은 대화상자 수동 [예] 후 supervisor 재시작 |
 | 메일 반복 처리 | `.processed_mail_ids.txt` · `force_done_log` 수정본 이식 여부 |
 | `ModuleNotFoundError: data_pc_runtime` | `port_eungyu_data_pc.ps1` 재실행 |
 

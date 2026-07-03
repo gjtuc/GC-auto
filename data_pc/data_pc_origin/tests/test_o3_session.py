@@ -9,6 +9,11 @@ from types import ModuleType, SimpleNamespace
 from data_pc_origin.o3_import import import_originpro, reset_originpro_cache
 from data_pc_origin.o3_plugins import DialogReadonlyPlugin, PluginRegistry, RetryOpenPlugin
 from data_pc_origin.o3_session import OriginSession, is_origin_gui_running, kill_stale_origin_gui
+from data_pc_origin.o3_session import (
+    OriginGuiBusyError,
+    ensure_origin_gui_clear_for_com,
+    wait_origin_gui_stopped,
+)
 
 
 def _fake_op() -> ModuleType:
@@ -78,12 +83,63 @@ class TestO3Session(unittest.TestCase):
             "data_pc_origin.o3_session.is_origin_gui_running",
             return_value=True,
         ):
-            with unittest.mock.patch("data_pc_origin.o3_session.subprocess.run") as run:
-                run.return_value = unittest.mock.Mock(returncode=0)
-                with unittest.mock.patch("data_pc_origin.o3_session.time.sleep"):
-                    n = kill_stale_origin_gui(allow_kill=True)
-                self.assertEqual(n, 2)
-                self.assertGreaterEqual(run.call_count, 2)
+            with unittest.mock.patch(
+                "data_pc_origin.o3_session._origin_has_unsaved_changes",
+                return_value=False,
+            ):
+                with unittest.mock.patch("data_pc_origin.o3_session.subprocess.run") as run:
+                    run.return_value = unittest.mock.Mock(returncode=0)
+                    with unittest.mock.patch("data_pc_origin.o3_session.time.sleep"):
+                        n = kill_stale_origin_gui(allow_kill=True)
+                    self.assertEqual(n, 2)
+                    self.assertGreaterEqual(run.call_count, 2)
+
+    def test_ensure_clear_when_stopped(self) -> None:
+        import unittest.mock
+
+        with unittest.mock.patch(
+            "data_pc_origin.o3_session.is_origin_gui_running",
+            return_value=False,
+        ):
+            self.assertTrue(ensure_origin_gui_clear_for_com())
+
+    def test_ensure_clear_raises_when_keep_gui(self) -> None:
+        import os
+        import unittest.mock
+
+        with unittest.mock.patch.dict(os.environ, {"DATA_PC_KEEP_ORIGIN_GUI": "1"}):
+            with unittest.mock.patch(
+                "data_pc_origin.o3_session.is_origin_gui_running",
+                return_value=True,
+            ):
+                with self.assertRaises(OriginGuiBusyError):
+                    ensure_origin_gui_clear_for_com(allow_kill=False)
+
+    def test_save_and_force_quit_when_stopped(self) -> None:
+        import unittest.mock
+
+        with unittest.mock.patch(
+            "data_pc_origin.o3_session.is_origin_gui_running",
+            return_value=False,
+        ):
+            from data_pc_origin.o3_session import save_and_force_quit_origin_gui
+
+            self.assertTrue(save_and_force_quit_origin_gui())
+
+    def test_wait_origin_stopped(self) -> None:
+        import unittest.mock
+
+        seq = iter([True, True, False])
+
+        def running() -> bool:
+            return next(seq, False)
+
+        with unittest.mock.patch(
+            "data_pc_origin.o3_session.is_origin_gui_running",
+            side_effect=running,
+        ):
+            with unittest.mock.patch("data_pc_origin.o3_session.time.sleep"):
+                self.assertTrue(wait_origin_gui_stopped(timeout_sec=5, poll_sec=0.1))
 
 
 class TestO3Plugins(unittest.TestCase):

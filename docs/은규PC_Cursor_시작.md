@@ -315,6 +315,9 @@ python "$env:USERPROFILE\gc-data-pc\촉매 반응 계산.py"
 
 **파이프라인:** 메일(IMAP) → 수율/전환율 계산 → 연구노트 실험 폴더 → Origin
 
+**Origin 저장:** COM 전 GUI 정리 시 저장 후에만 종료 — [`DATA_PC_ORIGIN_SAVE.md`](DATA_PC_ORIGIN_SAVE.md).  
+`git pull` 후 `data_pc_origin\` 폴더까지 `gc-data-pc\` 로 복사 (`port_eungyu_data_pc.ps1` 권장).
+
 실증·세부 확인은 **사용자가 직접** 함. 에이전트는 실행 + 결과 요약만.
 
 ### 11.2 기타 상황

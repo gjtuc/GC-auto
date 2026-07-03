@@ -2871,7 +2871,11 @@ def run_origin_only_for_inbox_excel(excel_path, mail_received_at=None):
 
 
 def _finalize_deferred_origin_batch(excel_entries):
-    """엑셀 배치 완료 후 — Origin 저장·종료 → 시료별 Origin 1회 → peer sync."""
+    """엑셀 배치 완료 후 — Origin 저장·종료 → 시료별 Origin 1회 → peer sync.
+
+    ``save_and_force_quit_origin_gui`` 는 디스크 저장 성공 후에만 taskkill 한다.
+    은규 PC·차헌 PC 공통 — ``docs/DATA_PC_ORIGIN_SAVE.md`` 참고.
+    """
     from data_pc_origin.o3_session import save_and_force_quit_origin_gui
 
     if not excel_entries:

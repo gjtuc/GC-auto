@@ -18,6 +18,9 @@
 | 3 | G: 실험 폴더 생성·갱신 |
 | 4 | Origin `.opju` 워크시트 열 추가 |
 
+**Origin 저장:** 파이프라인이 COM 전에 사용자 Origin 을 정리할 때 **저장 후에만** 종료한다.  
+→ [`docs/DATA_PC_ORIGIN_SAVE.md`](../docs/DATA_PC_ORIGIN_SAVE.md) (차헌·은규 공통, `data_pc_origin/` 동기화 필수)
+
 ---
 
 ## 권장 설치 위치

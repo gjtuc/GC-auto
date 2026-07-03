@@ -37,6 +37,7 @@ cd C:\Users\User\chemstation-gc-automation
 git pull
 
 Copy-Item -LiteralPath "data_pc\촉매 반응 계산.py" -Destination "$env:USERPROFILE\Desktop\.cursor\" -Force
+Copy-Item -Recurse -Force "data_pc\data_pc_origin" "$env:USERPROFILE\Desktop\.cursor\"
 Copy-Item "data_pc\gc_automation.env.example" -Destination "$env:USERPROFILE\Desktop\.cursor\gc_automation.env.template" -Force
 ```
 
