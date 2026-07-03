@@ -36,10 +36,11 @@ class GateAction(str, Enum):
 @dataclass(frozen=True)
 class GateConfig:
     required_hotspot: str = "iptime,iptime 2,iptime_5G"
-    cooldown_sec: int = 3600
+    cooldown_sec: int = 600
     gdrive_retry_sec: int = 900
     skip_wifi_check: bool = False
     check_imap_tcp: bool = False
+    check_gdrive: bool = True
     pipeline_locked: bool = False
 
 
@@ -117,10 +118,16 @@ class GateEvaluator:
                 detail="lock held",
             )
 
-        # L2-3.5 — G: 없으면 파이프라인 시작 안 함 (gdrive_retry_pending 은 L2-4에서 대기)
-        gdrive_ok = self.gdrive.check().available
+        # L2-3.5 — G: 가용성 (차헌 PC · SecuYouSB)
+        # [LLM] check_gdrive=False (은규 PC uses_g_drive:false) 이면 이 단계 전체 생략.
+        #       은규는 이더넷 상시 + 연구노트 로컬 → 15초 IMAP 폴링만 (게이트 없음).
+        #       상세: data_pc_runtime/layer1_profile.py resolve_check_gdrive()
+        if config.check_gdrive:
+            gdrive_ok = self.gdrive.check().available
+        else:
+            gdrive_ok = True
         state = self.store.load_state()
-        if not gdrive_ok and not state.gdrive_retry_pending:
+        if config.check_gdrive and not gdrive_ok and not state.gdrive_retry_pending:
             return self._wait(
                 "waiting_gdrive",
                 "G: 실험데이터 경로 없음 - SecuYouSB 로그인 대기",
@@ -130,10 +137,11 @@ class GateEvaluator:
             )
 
         # L2-4
+        gdrive_for_cooldown = gdrive_ok if config.check_gdrive else True
         remaining = self.store.cooldown_remaining_sec(
             cooldown_sec=config.cooldown_sec,
             gdrive_retry_sec=config.gdrive_retry_sec,
-            gdrive_available=gdrive_ok,
+            gdrive_available=gdrive_for_cooldown,
         )
         if remaining > 0:
             if state.gdrive_retry_pending:
@@ -152,10 +160,15 @@ class GateEvaluator:
             )
 
         # L2-5
+        ready_msg = (
+            "메일 확인 → 계산 → G: → Origin (자동)"
+            if config.check_gdrive
+            else "메일 확인 → 계산 → 연구노트 → Origin (자동)"
+        )
         return GateVerdict(
             action=GateAction.RUN,
             status_code="ready",
-            message="메일 확인 → 계산 → G: → Origin (자동)",
+            message=ready_msg,
             wifi_ssid=ssid,
             wifi_ready=wifi_ready,
             cooldown_remaining_sec=0,

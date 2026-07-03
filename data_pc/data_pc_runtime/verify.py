@@ -36,12 +36,16 @@ def _run_unit_tests() -> bool:
 
 def _run_live_probes() -> bool:
     from data_pc_runtime.layer0_probes import GDriveProbe, WifiProbe, parse_required_ssids
+    from data_pc_runtime.layer1_profile import resolve_check_gdrive
     from data_pc_runtime.layer1_state import RuntimePaths, StateStore
     from data_pc_runtime.layer2_gates import GateConfig, GateEvaluator
 
     script_dir = str(_ROOT)
     paths = RuntimePaths(script_dir)
     allowed = parse_required_ssids("iptime,iptime 2,iptime_5G")
+
+    check_gdrive = resolve_check_gdrive(script_dir)
+    print(f"[live] check_gdrive={check_gdrive} (machine_profile uses_g_drive / env)")
 
     wifi = WifiProbe()
     w = wifi.check(allowed)
@@ -51,7 +55,8 @@ def _run_live_probes() -> bool:
     print(f"[live] G: available={g.available} root={g.root} detail={g.detail}")
 
     ev = GateEvaluator(paths, wifi=wifi, gdrive=GDriveProbe(g.root))
-    verdict = ev.evaluate(GateConfig())
+    gate_cfg = GateConfig(skip_wifi_check=not check_gdrive, check_gdrive=check_gdrive)
+    verdict = ev.evaluate(gate_cfg)
     print(
         f"[live] Gate action={verdict.action.value} "
         f"code={verdict.status_code} remaining={verdict.cooldown_remaining_sec}s"

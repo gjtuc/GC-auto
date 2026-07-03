@@ -141,6 +141,21 @@ class TestL2Gates(unittest.TestCase):
             self.assertEqual(v.action, GateAction.WAIT)
             self.assertEqual(v.status_code, "waiting_gdrive")
 
+    def test_skip_gdrive_gate_when_check_gdrive_false(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = RuntimePaths(tmp, storage_subdir="KCH")
+            os.makedirs(paths.storage_dir)
+
+            class _GoneGDrive:
+                def check(self):
+                    return GDriveProbeResult(False, "G:", "not visible")
+
+            ev = GateEvaluator(paths, gdrive=_GoneGDrive())
+            v = ev.evaluate(GateConfig(skip_wifi_check=True, check_gdrive=False))
+            self.assertEqual(v.action, GateAction.RUN)
+            self.assertEqual(v.status_code, "ready")
+            self.assertIn("연구노트", v.message)
+
 
 class TestL2Lock(unittest.TestCase):
     def test_exclusive_lock(self):
