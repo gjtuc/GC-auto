@@ -88,12 +88,20 @@ def load_gate_config(script_dir: str) -> GateConfig:
         except (TypeError, ValueError):
             return default
 
+    def _mail_cooldown_sec() -> int:
+        raw_min = os.getenv("DATA_PC_AUTO_MAIL_COOLDOWN_MINUTES", "").strip()
+        if raw_min:
+            try:
+                return max(0, int(raw_min)) * 60
+            except (TypeError, ValueError):
+                pass
+        return max(0, _int("DATA_PC_AUTO_MAIL_COOLDOWN_HOURS", 1)) * 3600
+
     required = (
         os.getenv("REQUIRED_HOTSPOT", "").strip()
         or os.getenv("REQUIRED_HOTSPOT_SSID", "").strip()
         or "iptime,iptime 2,iptime_5G"
     )
-    hours = _int("DATA_PC_AUTO_MAIL_COOLDOWN_HOURS", 1)
     require_wifi = os.getenv("DATA_PC_REQUIRE_WIFI", "").strip().lower() in (
         "1",
         "true",
@@ -106,8 +114,8 @@ def load_gate_config(script_dir: str) -> GateConfig:
     )
     return GateConfig(
         required_hotspot=required,
-        cooldown_sec=max(0, hours) * 3600,
-        gdrive_retry_sec=_int("DATA_PC_GDRIVE_RETRY_SEC", 900),
+        cooldown_sec=_mail_cooldown_sec(),
+        gdrive_retry_sec=_int("DATA_PC_GDRIVE_RETRY_SEC", 180),
         skip_wifi_check=explicit_skip or not require_wifi,
         check_imap_tcp=False,
     )
@@ -116,12 +124,14 @@ def load_gate_config(script_dir: str) -> GateConfig:
 def load_calc_pipeline(script_dir: str) -> PipelineCallback:
     """촉매 반응 계산.py 의 process_new_gc_emails 로드."""
     import importlib.util
+    import sys
 
     calc_path = os.path.join(script_dir, "촉매 반응 계산.py")
     spec = importlib.util.spec_from_file_location("gc_calc_runtime_job", calc_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"스크립트 로드 실패: {calc_path}")
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = mod
     spec.loader.exec_module(mod)
     fn = getattr(mod, "process_new_gc_emails", None)
     if not callable(fn):
