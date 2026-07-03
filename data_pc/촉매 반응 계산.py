@@ -2988,16 +2988,18 @@ def _run_parallel_gc_jobs(
             print("       [경고] 워크플로 실패 — 같은 시료 메일은 재시도 가능")
 
     if defer_origin and excel_entries:
-        for entry in excel_entries:
-            identity_str = entry["identity_str"]
-            for mk in mail_keys_by_identity.get(identity_str, set()):
-                overrides[mk] = True
-
         origin_ok = _finalize_deferred_origin_batch(excel_entries)
         for entry in excel_entries:
             identity_str = entry["identity_str"]
-            if origin_ok.get(identity_str):
+            ok = bool(origin_ok.get(identity_str))
+            for mk in mail_keys_by_identity.get(identity_str, set()):
+                overrides[mk] = ok
+            if ok:
                 workflow_count += 1
+            elif not ok:
+                print(
+                    f"       [경고] Origin 미반영 — 메일 재시도 유지 ({identity_str})"
+                )
 
     return workflow_count, gdrive_retry_needed, overrides
 

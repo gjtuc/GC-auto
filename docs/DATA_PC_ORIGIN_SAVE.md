@@ -131,6 +131,7 @@ print('gui:', is_origin_gui_running())
 | 저장 대화상자에서 멈춤 | supervisor 재시작 후 재시도; 남은 대화상자는 수동 [예] |
 | COM attach 실패 | headless Origin64 — 로그에 `headless 인스턴스 종료` 있는지 |
 | 파이프라인은 옛 코드 | `data_pc_runtime` supervisor 재시작 (`--restart`) |
+| **G: 잠금 후 엑셀만 갱신·Origin 안 됨** | supervisor `waiting_gdrive` 해제 후에도 `workflows=0` — Origin 실패 시 메일 재시도 (`--force-mail`) |
 
 ---
 
