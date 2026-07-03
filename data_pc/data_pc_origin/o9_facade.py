@@ -21,9 +21,9 @@ from data_pc_origin.o3_session import (
     OriginGuiBusyError,
     ensure_origin_gui_clear_for_com,
     is_origin_gui_running,
-    kill_stale_origin_gui,
     origin_com_poll_sec,
     origin_com_timeout_sec,
+    save_and_force_quit_origin_gui,
 )
 from data_pc_origin.o8_context import build_context
 from data_pc_origin.o8_job import SampleJobResult, run_sample_job
@@ -130,14 +130,20 @@ def _run_sample_job_with_watchdog(
         now = time.time()
         elapsed = now - started
         if elapsed > timeout:
+            # 예전: kill_stale_origin_gui 만 호출 → 미저장 강제 종료.
+            # 지금: save_and_force_quit_origin_gui (docs/DATA_PC_ORIGIN_SAVE.md)
             origin_log(
-                f"COM 타임아웃 ({int(timeout)}s) — Origin GUI 정리 후 중단",
+                f"COM 타임아웃 ({int(timeout)}s) — Origin 저장·종료 후 중단",
                 log_fn=log_fn,
             )
-            kill_stale_origin_gui(
-                allow_kill=True,
-                log=lambda msg: origin_log(msg.replace("[Origin] ", ""), log_fn=log_fn),
-            )
+            try:
+                save_and_force_quit_origin_gui(
+                    log=lambda msg: origin_log(
+                        msg.replace("[Origin] ", ""), log_fn=log_fn
+                    ),
+                )
+            except OriginGuiBusyError as exc:
+                origin_log(f"timeout cleanup: {exc}", log_fn=log_fn)
             raise OriginComTimeoutError(
                 f"Origin COM 작업이 {int(timeout)}초 내에 완료되지 않았습니다"
             )
