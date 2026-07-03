@@ -15,14 +15,17 @@ PARENT = os.path.dirname(ROOT)
 if PARENT not in sys.path:
     sys.path.insert(0, PARENT)
 
+from data_pc_runtime.layer0_probes import GDriveProbe  # noqa: E402
 from data_pc_runtime.layer1_state import RuntimePaths, RuntimeStatus, StateStore  # noqa: E402
-from data_pc_runtime.layer2_gates import GateConfig  # noqa: E402
+from data_pc_runtime.layer2_gates import GateConfig, GateEvaluator  # noqa: E402
 from data_pc_runtime.layer3_job import JobConfig, JobResult, JobRunner  # noqa: E402
 from data_pc_runtime.layer4_supervisor import (  # noqa: E402
     Supervisor,
     SupervisorConfig,
     ensure_supervisor_once,
     is_supervisor_healthy,
+    restart_supervisor,
+    stop_supervisor,
 )
 
 
@@ -75,7 +78,9 @@ class TestL4Supervisor(unittest.TestCase):
                 return type("R", (), {"workflow_count": 0, "gdrive_retry_needed": False})()
 
             gate = GateConfig(skip_wifi_check=True, cooldown_sec=0)
-            job = JobRunner(paths, pipe, store=StateStore(paths))
+            store = StateStore(paths)
+            evaluator = GateEvaluator(paths, gdrive=GDriveProbe(root=tmp), store=store)
+            job = JobRunner(paths, pipe, store=store, evaluator=evaluator)
             sup = Supervisor(
                 tmp,
                 pipeline=pipe,
@@ -112,6 +117,21 @@ class TestL4Supervisor(unittest.TestCase):
                     started = ensure_supervisor_once(tmp)
             self.assertTrue(started)
             sp.assert_called_once()
+
+    def test_restart_stops_then_spawns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch(
+                "data_pc_runtime.layer4_supervisor.stop_supervisor",
+                return_value=True,
+            ) as stop:
+                with patch(
+                    "data_pc_runtime.layer4_supervisor.spawn_supervisor",
+                    return_value=True,
+                ) as spawn:
+                    ok = restart_supervisor(tmp)
+            self.assertTrue(ok)
+            stop.assert_called_once_with(tmp)
+            spawn.assert_called_once_with(tmp)
 
 
 if __name__ == "__main__":

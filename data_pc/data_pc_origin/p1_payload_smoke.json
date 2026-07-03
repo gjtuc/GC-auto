@@ -1,0 +1,7 @@
+{
+  "mapping_cols": 6,
+  "skipped": [
+    "CH4 Conversion (%)",
+    "C2H6 (%)"
+  ]
+}

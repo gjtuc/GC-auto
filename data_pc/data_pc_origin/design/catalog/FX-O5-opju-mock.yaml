@@ -1,0 +1,61 @@
+# O5 worksheet stub — L8 FX (mock originpro, live 금지)
+# 촉매 ORIGIN_MAPPING 8키 ↔ DRM .opju 전형 구조
+
+books:
+  - name: Book1
+    lname: DRM Data
+    sheets:
+      - name: H2yield
+        expect_kw: H2 yield
+        df_col: H2 Yield (%)
+      - name: CO2conv
+        expect_kw: CO2 conversion
+        df_col: CO2 Conversion (%)
+      - name: CH4conv
+        expect_kw: CH4 conversion
+        df_col: CH4 Conversion (%)
+      - name: H2rate
+        expect_kw: H2 rate
+        df_col: H2 Rate
+      - name: CO2rate
+        expect_kw: CO2 rate
+        df_col: CO2 Rate
+      - name: CH4rate
+        expect_kw: CH4 rate
+        df_col: CH4 Rate
+      - name: H2sel
+        expect_kw: H2 selectivity
+        df_col: H2 Selectivity
+      - name: CO2sel
+        expect_kw: CO2 selectivity
+        df_col: CO2 Selectivity
+
+  - name: BookEmpty
+    lname: ""
+    sheets: []
+
+miss_matrix:
+  - id: C1
+    kw: H2 yield
+    search: Book1 H2yield DRM Data
+    expect: MATCH
+  - id: C2
+    kw: H2 yield
+    search: Book1 H2 DRM Data
+    expect: MISS
+  - id: C3
+    kw: H2 yield
+    search: Book1 H2 yield DRM Data
+    expect: MATCH
+  - id: C4
+    kw: CO2 conversion
+    search: Book1 H2yield DRM Data
+    expect: MISS
+  - id: C5
+    kw: H2 yield
+    search: "   "
+    expect: MISS
+
+partial_df_cols:
+  - H2 Yield (%)
+  - CO2 Conversion (%)

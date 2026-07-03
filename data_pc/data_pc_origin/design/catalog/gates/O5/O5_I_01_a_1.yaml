@@ -1,0 +1,31 @@
+gate: O5-I-01-a-1
+layer: L4
+parent: O5-I-01
+rollup: [O5-L2-I01, O5-L1-I, O5]
+depends: [O4-R-01-a-1]
+module: data_pc_origin.o5_iterate
+symbol: iter_pages_w
+assert: "mock_pages.assert_called_with('w')"
+
+quarks:
+  Q1:
+    role: PRE
+    leptons:
+      - { id: Q1-L1, kind: DEP, requires: [O4-R-01-a-1] }
+      - { id: Q1-L2, kind: T, expr: "hasattr(op, 'pages')" }
+      - { id: Q1-L3, kind: F, fixture: FX-O5-opju-mock.op }
+  Q2:
+    role: EXEC
+    leptons:
+      - { id: Q2-L1, kind: C, expr: "gen = iter_pages_w(op)" }
+      - { id: Q2-L2, kind: C, expr: "list(gen)" }
+  Q3:
+    role: POST
+    leptons:
+      - { id: Q3-L1, kind: CALL, expr: "pages.call_args == (('w',),)" }
+
+fixtures:
+  FA:
+    bits:
+      - { id: B1, tag: op.pages_arg, type: str, value: w }
+      - { id: B2, tag: call_count, type: int, value: 1 }

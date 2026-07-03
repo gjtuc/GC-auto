@@ -1,0 +1,11 @@
+{
+  "opju_only_ok": true,
+  "opju_only_sheets": 8,
+  "calc_only_ok": true,
+  "calc_only_no_stage4": true,
+  "full_plan": [
+    2,
+    3,
+    4
+  ]
+}

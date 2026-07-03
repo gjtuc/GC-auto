@@ -1,0 +1,6 @@
+{
+  "fixture_loaded": true,
+  "full_archive_ok": true,
+  "sheets_updated": 8,
+  "catalyst_script": "tests/fixtures/catalyst_mock_module.py"
+}

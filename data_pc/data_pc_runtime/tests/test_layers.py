@@ -16,6 +16,7 @@ if ROOT not in sys.path:
 
 from data_pc_runtime.layer0_probes import (  # noqa: E402
     GDriveProbe,
+    GDriveProbeResult,
     WifiProbe,
     WifiProbeKind,
     parse_required_ssids,
@@ -125,6 +126,20 @@ class TestL2Gates(unittest.TestCase):
             v = ev.evaluate(GateConfig(skip_wifi_check=True))
             self.assertEqual(v.action, GateAction.RUN)
             self.assertEqual(v.status_code, "ready")
+
+    def test_gdrive_blocks_when_unavailable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = RuntimePaths(tmp, storage_subdir="KCH")
+            os.makedirs(paths.storage_dir)
+
+            class _GoneGDrive:
+                def check(self):
+                    return GDriveProbeResult(False, "G:", "not visible")
+
+            ev = GateEvaluator(paths, gdrive=_GoneGDrive())
+            v = ev.evaluate(GateConfig(skip_wifi_check=True))
+            self.assertEqual(v.action, GateAction.WAIT)
+            self.assertEqual(v.status_code, "waiting_gdrive")
 
 
 class TestL2Lock(unittest.TestCase):

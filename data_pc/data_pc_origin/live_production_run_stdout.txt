@@ -1,0 +1,83 @@
+IMAP fetch: 20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.xlsx → C:\Users\user\Desktop\.cursor\KCH\inbox\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.xlsx
+
+[2단계] KCH 원본 계산 중: 20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.xlsx
+ ✅ 엑셀 계산 완료: 20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3_GC3_DRE_계산완료.xlsx
+    검토용 사본: KCH\processed\
+ 📊 Feed ppm 기준: 파일명 1.5% 기준 DRE (C2H6 1.5%, CO2 3%)
+ 🏷️ Origin 시료명: 20260620 DRE(1.5)@600°C 600CNi5_Ce5_Al2O3
+ 📁 실험 폴더명: 20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3 (DRE)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ 🚨 [장비/데이터 상태 점검] 엑셀 처리 중 특이사항이 감지되었습니다!
+   - ⚠️ [분석 공백] Cycle 107~108 미수집 (2사이클, GC3 분석 중단 구간)
+   - ⚠️ [검출 어긋남] Cycle 106에서 'H2' 피크가 설정 범위에서 0.1분 벗어난 위치(0.842분)에서 검출되었습니다!
+   - ⚠️ [분석 공백] Cycle 99~100 미수집 (2사이클, GC3 분석 중단 구간)
+   - 🚨 [교차검증] Cycle 106: C2H6 전환율이 H2 수율보다 40%p 이상 큼. 파일명 1.5% 기준 DRE (C2H6 1.5%, CO2 3%) — 반응물 농도(%) 오기재 가능성.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+[3단계] G: 기존 실험 폴더 갱신 (DRE)
+  폴더: 20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3
+  → G:\연구소\실험\실험데이터\촉매 반응\DRE 반응(C2H6)\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.xlsx
+
+[4단계] Origin 워크시트 — Comments: '20260620 DRE(1.5)@600°C 600CNi5_Ce5_Al2O3'
+  → 워크시트 6개 · 161행 반영
+ ✅ Origin 저장 완료: G:\연구소\실험\실험데이터\촉매 반응\DRE 반응(C2H6)\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.opju
+
+ ✅ 전체 완료 — G: 실험 폴더 및 Origin 반영
+    G:\연구소\실험\실험데이터\촉매 반응\DRE 반응(C2H6)\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.xlsx
+{
+  "status": "ok",
+  "mode": "live",
+  "prep": {
+    "ready": true,
+    "reason": "ready",
+    "stack": "imap_full_native_origin",
+    "origin_pipeline": true,
+    "skip_origin": false,
+    "full_e2e_ready": true,
+    "imap_ready": true,
+    "email_masked": "ki***@naver.com",
+    "g_drive_ok": true,
+    "originpro_import_ok": true
+  },
+  "imap": {
+    "status": "ok",
+    "workflow_ok": true,
+    "row_count": 161,
+    "sheets_updated": 6,
+    "save_path": "G:\\연구소\\실험\\실험데이터\\촉매 반응\\DRE 반응(C2H6)\\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3\\20260620 DRE(1.5) 600C Ni5_Ce5_Al2O3.opju",
+    "save_path_exists": true,
+    "mode": "full_archive"
+  },
+  "validation": {
+    "ok": true,
+    "checks": [
+      "status_ok",
+      "workflow_ok",
+      "row_count>=100",
+      "sheets>=6",
+      "save_path_set",
+      "save_path_exists",
+      "mode_ok"
+    ],
+    "failures": []
+  },
+  "artifact": "C:\\Users\\user\\Desktop\\.cursor\\data_pc_origin\\live_production_run_result.json",
+  "run_validation": {
+    "ok": true,
+    "checks": [
+      "no_secrets",
+      "mode=live",
+      "status_ok",
+      "workflow_ok",
+      "row_count>=100",
+      "sheets>=6",
+      "save_path_set",
+      "save_path_exists",
+      "mode_ok",
+      "validation_ok",
+      "status=ok"
+    ],
+    "failures": []
+  }
+}
