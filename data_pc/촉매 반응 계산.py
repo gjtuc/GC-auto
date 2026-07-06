@@ -109,8 +109,9 @@ class PipelineRunResult(NamedTuple):
 [시료명 이중 규칙 — DRM / DRE / DRME 공통]
   generate_experiment_basename() → G: 폴더·파일명 (유연, Windows 금지문자 제거)
     · (x) = Origin 과 동일 — 주반응물 feed 농도(%)
-    예: 20260615 DRE(1.5)@600 Ni20-Al2O3
-        20260613 DRM(5)@650C Ni10-Al2O3 촉매 0.25g
+    예: 20260615 DRE(1.5%)@600C Ni20-Al2O3_DRM 장비
+        20260613 DRM(5)@650C Ni10-Al2O3 촉매 0.25g_OCM 장비
+    · KCH 압축형(0706DRE(1.5)600…) 자동 정규화
   generate_sample_name() → Origin Comments (엄격, °C·슬래시·CVD 규칙)
     · 괄호 (x) = 주반응물 feed 농도(%): 파일명에서 추출 → 화공 양론으로 ppm 산출
       DRME x% → C2H6·CH4 각 x%, CO2 3x%   DRE x% → C2H6 x%, CO2 2x%   DRM x% → CH4·CO2 각 x%
@@ -122,8 +123,9 @@ class PipelineRunResult(NamedTuple):
     · 파일명에 농도 없으면 USER SETTINGS 기본 ppm (fallback)
     · 촉매 무게(0.25g 등)는 Origin Comments 에 넣지 않음 — DRE/DRME/DRM 공통
       (G: 폴더명에는 DRM 등에서 "촉매 0.25g" 유지)
-    예: 20260615 DRE(1.5)@600°C Ni20/Al2O3
-        20260613 DRM(5)@650°C Ni10/Al2O3
+    예: 20260615 DRE(1.5%)@600°C Ni20/Al2O3_DRM 장비
+        20260613 DRM(5)@650°C Ni10/Al2O3_OCM 장비
+        20260706 DRE(1.5%)@600°C Ni_CVD(0.1g,8h)/Ni5/Ce5/Al2O3_OCM 장비
         (X) 20260613 DRM(5)@650°C Ni10/Al2O3/0.25g  ← 구형, 사용 안 함
 
 [G: 실험 폴더 생성 규칙 (3단계)]
@@ -769,13 +771,81 @@ def _strip_duplicate_conc_prefix(sample_part, conc):
     )
 
 
+_CVD_PLACEHOLDER = "@@CVD@@"
+
+
+def _protect_cvd_underscore(s):
+    return re.sub(r"([A-Za-z]+)_CVD\(", rf"\1{_CVD_PLACEHOLDER}(", s)
+
+
+def _restore_cvd_underscore(s):
+    return s.replace(_CVD_PLACEHOLDER, "_CVD")
+
+
+def _apply_cvd_parentheses(s):
+    """Ni(0.1g,8h) → Ni_CVD(0.1g,8h). 기존 Ni_CVD(...) 는 그대로."""
+
+    def fix_cvd(m):
+        if m.group(1).upper() == "CVD":
+            return m.group(0)
+        val1, val2 = m.group(2).strip(), m.group(3).strip()
+        if val1 and not val1.endswith("g") and "h" not in val1:
+            val1 += "g"
+        return f"{m.group(1)}_CVD({val1},{val2})"
+
+    return re.sub(r"([A-Za-z]+)\s*\(([^,]+),\s*([^)]+)\)", fix_cvd, s)
+
+
+def _incomplete_cvd_deposition(raw):
+    """Ni(0.1) / Ni_CVD(0.1) 처럼 g·시간(쉼표) 없는 CVD 조건."""
+    work = raw or ""
+    for m in re.finditer(r"([A-Za-z]+)_CVD\(([^)]*)\)", work):
+        if "," not in m.group(2).strip():
+            return True
+    for m in re.finditer(r"(?<![_/])([A-Za-z]+)\(([^)]*)\)", work):
+        metal, inner = m.group(1), m.group(2).strip()
+        if metal.upper() == "CVD":
+            continue
+        if "," in inner:
+            continue
+        if re.match(r"^\d", inner) or inner.lower().endswith("g"):
+            return True
+    return False
+
+
 def _format_origin_sample_part(raw):
-    """Origin Comments 촉매부 — 성분 구분 `_`·`-` 를 `/` 로 (G: 폴더명은 하이픈 유지)."""
+    """Origin Comments 촉매부 — Ni(0.1g,8h)→Ni_CVD(…), 성분 구분 `/`."""
     s = (raw or "").strip(" _-")
     if not s:
         return ""
+    s = _protect_cvd_underscore(s)
+    s = _apply_cvd_parentheses(s)
+    s = _protect_cvd_underscore(s)
     s = s.replace("_", "/").replace("-", "/")
-    return re.sub(r"\s+", " ", s).strip()
+    return re.sub(r"\s+", " ", _restore_cvd_underscore(s)).strip()
+
+
+def _format_folder_catalyst(catalyst_part):
+    """G: 폴더명 촉매부 — Origin CVD·슬래시 규칙 후 하이픈."""
+    origin = _format_origin_sample_part(_strip_catalyst_mass(catalyst_part))
+    return origin.replace("/", "-")
+
+
+def _folder_conc_label(conc):
+    label = str(conc).rstrip("%")
+    return f"{label}%"
+
+
+def _strip_equipment_suffix(name):
+    return re.sub(r"_(?:DRM|OCM) 장비$", "", (name or "").rstrip()).strip()
+
+
+def _append_equipment_suffix(folder, equipment):
+    folder = _strip_equipment_suffix(folder)
+    suffix = _origin_equipment_suffix(equipment)
+    if not suffix:
+        return folder
+    return folder + suffix
 
 
 def _origin_sample_name_issues(date, reaction, conc, temp, sample_part, equipment):
@@ -817,12 +887,14 @@ def generate_sample_name(filename, equipment=None):
         reaction = reaction.upper()
         conc = _extract_concentration(name)
         sample_part = _strip_duplicate_conc_prefix(
-            _format_origin_sample_part(
-                _strip_catalyst_mass(catalyst).replace("-", "/")
-            ),
+            _format_origin_sample_part(_strip_catalyst_mass(catalyst)),
             conc,
         )
         issues = _origin_sample_name_issues(date, reaction, conc, temp, sample_part, equipment)
+        if _incomplete_cvd_deposition(sample_part):
+            issues.append(
+                "CVD 조건이 불완전합니다 — Ni(0.1g,8h) 형식으로 질량(g)과 시간(h)을 함께 적어 주세요."
+            )
         if issues:
             q = "Origin Comments 생성을 위해 확인이 필요합니다:\n- " + "\n- ".join(issues)
             return None, warnings, True, q
@@ -846,6 +918,10 @@ def generate_sample_name(filename, equipment=None):
     )
 
     issues = _origin_sample_name_issues(date, reaction, conc, temp, sample_part, equipment)
+    if _incomplete_cvd_deposition(sample_part):
+        issues.append(
+            "CVD 조건이 불완전합니다 — Ni(0.1g,8h) 형식으로 질량(g)과 시간(h)을 함께 적어 주세요."
+        )
     if issues:
         q = "Origin Comments 생성을 위해 확인이 필요합니다:\n- " + "\n- ".join(issues)
         return None, warnings, True, q
@@ -911,6 +987,7 @@ def _canonicalize_experiment_stem(name):
     """
     KCH/메일 파일명 잡음 정리 — G: 폴더·parallel peer 키 일관성.
     예) 20260630 260630 DRE(1.5)600C Ni5-Al2O3 → 20260630 DRE(1.5)@600 Ni5-Al2O3
+        20260706 0706DRE(1.5)600Ni_CVD(0.1)-… → 20260706 DRE(1.5)@600 Ni_CVD(0.1)-…
     """
     work = (name or "").strip()
     date, _rest = _parse_origin_date(work)
@@ -918,8 +995,18 @@ def _canonicalize_experiment_stem(name):
         return work
     rest = work[len(date) :].strip()
     yy_mm_dd = date[2:]
+    mmdd = date[4:]
     if rest.startswith(yy_mm_dd):
         rest = rest[len(yy_mm_dd) :].strip()
+    elif rest.startswith(mmdd):
+        rest = rest[len(mmdd) :].strip()
+    rest = re.sub(
+        r"^(DRE|DRM|DRME)\(([^)]+)\)(\d{3,4})(?=[A-Za-z_]|$)",
+        r"\1(\2)@\3 ",
+        rest,
+        count=1,
+        flags=re.I,
+    )
     rest = re.sub(
         r"^(DRE|DRM|DRME)\(([^)]+)\)(\d{3,4})C?\b",
         r"\1(\2)@\3",
@@ -1314,50 +1401,76 @@ def _find_opju_in_folder(folder_path, preferred_stem):
 def generate_experiment_basename(filename):
     """
     G: 실험 폴더·파일 stem — DRM / DRE / DRME 공통.
-    Origin Comments와 (x) 농도 규칙은 동일, 표기만 다름 (폴더: °C 없음, / → 하이픈).
+    Origin Comments와 (x) 농도·CVD 규칙은 동일, 표기만 다름 (폴더: @600C, / → 하이픈, 끝 장비 접미사).
 
     촉매 무게: G: 폴더명에는 유지 (DRM → "촉매 0.25g").
     Origin Comments(generate_sample_name)에는 무게를 넣지 않음 — 두 함수 결과가 다를 수 있음.
 
-      폴더: 20260615 DRE(1.5)@600 Ni20-Al2O3
-            20260613 DRM(5)@650C Ni10-Al2O3 촉매 0.25g
-      Origin: 20260615 DRE(1.5)@600°C Ni20/Al2O3
-              20260613 DRM(5)@650°C Ni10/Al2O3
+      폴더: 20260615 DRE(1.5%)@600C Ni20-Al2O3_DRM 장비
+            20260613 DRM(5)@650C Ni10-Al2O3 촉매 0.25g_OCM 장비
+      Origin: 20260615 DRE(1.5%)@600°C Ni20/Al2O3_DRM 장비
+              20260613 DRM(5)@650°C Ni10/Al2O3_OCM 장비
 
     입력 파일명이 규칙과 달라도 유연하게 해석해 폴더명만 만듭니다.
     """
     name = _normalize_input_basename(filename)
-    folder = _build_experiment_basename(name, filename)
-    return _sanitize_folder_name(folder)
+    equipment = equipment_from_output_file(filename)
+    folder = _build_experiment_basename(name, filename, equipment=equipment)
+    return _sanitize_folder_name(_append_equipment_suffix(folder, equipment))
 
-def _build_experiment_basename(name, filename):
+def _build_experiment_basename(name, filename, equipment=None):
+    well_formed = re.match(
+        r"^(\d{8})\s+(DRE|DRM|DRME)\(([^)]+)\)@(\d+)C?\s+(.+)$",
+        _strip_equipment_suffix(re.sub(r"°C", "", name).strip()),
+        re.I,
+    )
+    if well_formed:
+        date, reaction, conc, temp, catalyst = well_formed.groups()
+        reaction = reaction.upper()
+        cat_folder = _format_folder_catalyst(catalyst)
+        if reaction == "DRM":
+            mass = re.search(r"(\d+\.?\d*)\s*g", catalyst, re.I)
+            if mass:
+                return (
+                    f"{date} DRM({_folder_conc_label(conc)})@{temp}C "
+                    f"{cat_folder} 촉매 {mass.group(0).strip()}"
+                )
+            return f"{date} DRM({_folder_conc_label(conc)})@{temp}C {cat_folder}"
+        if reaction == "DRME":
+            return f"{date} DRME({_folder_conc_label(conc)}) {cat_folder}"
+        return f"{date} DRE({_folder_conc_label(conc)})@{temp}C {cat_folder}"
+
     if re.match(r'^\d{8}\s+(DRE\s*\(|DRME\s*\(|DRM\s*\()', name, re.I):
-        return re.sub(r'°C', '', name).strip()
+        return _strip_equipment_suffix(re.sub(r'°C', '', name).strip())
 
     kch = re.match(r'^(\d{8})\s+(.+?)\s+(DRE|DRM|DRME)@(\d+)\s*$', name, re.I)
     if kch:
         date, catalyst, reaction, temp = kch.groups()
         reaction, catalyst = reaction.upper(), catalyst.strip()
         conc = _extract_concentration(name) or _default_concentration(reaction)
+        cat_folder = _format_folder_catalyst(catalyst)
         if reaction == "DRM":
             # G: 폴더명 — 촉매 무게 유지 (Origin Comments 와 별도 규칙)
             mass = re.search(r'(\d+\.?\d*)\s*g\s*$', catalyst, re.I)
             if mass:
-                cat_name = catalyst[:mass.start()].strip()
-                return f"{date} DRM({conc})@{temp}C {cat_name} 촉매 {mass.group(0).strip()}"
-            return f"{date} DRM({conc})@{temp}C {catalyst}"
+                return (
+                    f"{date} DRM({_folder_conc_label(conc)})@{temp}C "
+                    f"{cat_folder} 촉매 {mass.group(0).strip()}"
+                )
+            return f"{date} DRM({_folder_conc_label(conc)})@{temp}C {cat_folder}"
         if reaction == "DRME":
-            return f"{date} DRME({conc}%) {catalyst}"
-        return f"{date} DRE({conc})@{temp} {catalyst}"
+            return f"{date} DRME({_folder_conc_label(conc)}) {cat_folder}"
+        return f"{date} DRE({_folder_conc_label(conc)})@{temp}C {cat_folder}"
 
     drme = re.match(r'^(\d{8})\s+DRME\s+(\d+\.?\d*)\s*%\s*(.+)$', name, re.I)
     if drme:
-        return f"{drme.group(1)} DRME({drme.group(2)}%) {drme.group(3).strip()}"
+        cat_folder = _format_folder_catalyst(drme.group(3).strip())
+        return f"{drme.group(1)} DRME({_folder_conc_label(drme.group(2))}) {cat_folder}"
 
-    sn_result = generate_sample_name(filename)
+    sn_result = generate_sample_name(filename, equipment=equipment)
     sample = sn_result[0] if isinstance(sn_result, tuple) else sn_result
     if not sample:
-        return re.sub(r"°C", "", name).replace("/", "-").strip()
+        return _strip_equipment_suffix(re.sub(r"°C", "", name).replace("/", "-").strip())
     head = re.match(
         r"^(\d{8})\s+(DRE|DRM|DRME)\(([^)]+)\)@(\d+)°C\s*(.+?)(?:_DRM 장비|_OCM 장비)?$",
         sample,
@@ -1365,18 +1478,21 @@ def _build_experiment_basename(name, filename):
     if head:
         date, reaction, conc, temp, cat = head.groups()
         reaction = reaction.upper()
+        cat_folder = cat.replace('/', '-')
         if reaction == "DRM":
             # Origin 시료명에는 무게 없음 → 폴더명용 무게는 원본 KCH 파일명에서 복원
             mass_m = re.search(r'(\d+\.?\d*)\s*g', name, re.I)
-            cat_folder = cat.replace('/', '-')
             if mass_m:
-                return f"{date} DRM({conc})@{temp}C {cat_folder} 촉매 {mass_m.group(0).strip()}"
-            return f"{date} DRM({conc})@{temp}C {cat_folder}"
+                return (
+                    f"{date} DRM({_folder_conc_label(conc)})@{temp}C "
+                    f"{cat_folder} 촉매 {mass_m.group(0).strip()}"
+                )
+            return f"{date} DRM({_folder_conc_label(conc)})@{temp}C {cat_folder}"
         if reaction == "DRME":
-            return f"{date} DRME({conc}%) {cat.replace('/', '-')}"
-        return f"{date} DRE({conc})@{temp} {cat.replace('/', '-')}"
+            return f"{date} DRME({_folder_conc_label(conc)}) {cat_folder}"
+        return f"{date} DRE({_folder_conc_label(conc)})@{temp}C {cat_folder}"
 
-    return re.sub(r'°C', '', sample).replace('/', '-').strip()
+    return _strip_equipment_suffix(re.sub(r'°C', '', sample).replace('/', '-').strip())
 
 def reaction_type_from_output_file(saved_excel):
     base = os.path.basename(saved_excel)
@@ -1712,6 +1828,12 @@ def sync_parallel_peer_origins(
     )
     if not peers:
         return
+    try:
+        from data_pc_origin.o3_session import ensure_origin_stopped_after_job
+
+        ensure_origin_stopped_after_job(log=print)
+    except Exception as exc:
+        print(f"  [경고] peer sync Origin 준비: {exc}")
     df_origin = _df_columns_for_origin(df_final)
     if df_origin.empty:
         return
@@ -2876,7 +2998,7 @@ def _finalize_deferred_origin_batch(excel_entries):
     ``save_and_force_quit_origin_gui`` 는 디스크 저장 성공 후에만 taskkill 한다.
     은규 PC·차헌 PC 공통 — ``docs/DATA_PC_ORIGIN_SAVE.md`` 참고.
     """
-    from data_pc_origin.o3_session import save_and_force_quit_origin_gui
+    from data_pc_origin.o3_session import ensure_origin_stopped_after_job, save_and_force_quit_origin_gui
 
     if not excel_entries:
         return {}
@@ -2884,7 +3006,7 @@ def _finalize_deferred_origin_batch(excel_entries):
         f"\n[4단계] 엑셀 반영 완료 — Origin 배치 ({len(excel_entries)}건, 시료별 1회)"
     )
     try:
-        save_and_force_quit_origin_gui(log=print)
+        ensure_origin_stopped_after_job(log=print)
     except Exception as exc:
         print(f"❌ [4단계] Origin 준비 실패: {exc}")
         return {e["identity_str"]: False for e in excel_entries}
@@ -2899,7 +3021,7 @@ def _finalize_deferred_origin_batch(excel_entries):
         )
         origin_ok[identity_str] = ok
         try:
-            save_and_force_quit_origin_gui(log=print)
+            ensure_origin_stopped_after_job(log=print)
         except Exception as exc:
             print(f"  [경고] Origin 시료 간 정리: {exc}")
 
