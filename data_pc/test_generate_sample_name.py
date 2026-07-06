@@ -35,7 +35,7 @@ class TestGenerateSampleName(unittest.TestCase):
         self.assertFalse(needs)
         self.assertEqual(
             name,
-            "20260525 DRE(1.5%)@600°C Ni(0.1g, 8h)/Ni5/Ce5/Al2O3_DRM 장비",
+            "20260525 DRE(1.5%)@600°C Ni_CVD(0.1g,8h)/Ni5/Ce5/Al2O3_DRM 장비",
         )
         self.assertEqual(warns, [])
         self.assertEqual(q, "")
@@ -71,6 +71,27 @@ class TestGenerateSampleName(unittest.TestCase):
         self.assertIsNone(name)
         self.assertIn("장비", q)
 
+    def test_gc2_mail_hyphen_catalyst_to_slash(self):
+        name, _, needs, _ = self._parse(
+            "20260701 DRE(1.5%)@600C Ni5-Ce5La0.25-Al2O3 (citric acid).xlsx",
+            equipment="GC2",
+        )
+        self.assertFalse(needs)
+        self.assertEqual(
+            name,
+            "20260701 DRE(1.5%)@600°C Ni5/Ce5La0.25/Al2O3 (citric acid)_DRM 장비",
+        )
+        self.assertTrue(name.endswith("_DRM 장비"))
+
+    def test_gc3_mail_hyphen_catalyst_to_slash(self):
+        name, _, needs, _ = self._parse(
+            "20260630 260630 DRE(1.5)600C Ni5-Al2O3.xlsx",
+            equipment="GC3",
+        )
+        self.assertFalse(needs)
+        self.assertIn("Ni5/Al2O3", name)
+        self.assertTrue(name.endswith("_OCM 장비"))
+
     def test_equipment_from_output_file(self):
         self.assertEqual(
             self.mod.equipment_from_output_file(r"G:\a_GC2_DRE_계산완료.xlsx"),
@@ -79,6 +100,37 @@ class TestGenerateSampleName(unittest.TestCase):
         self.assertEqual(
             self.mod.equipment_from_output_file(r"G:\a_GC3_DRME_계산완료.xlsx"),
             "GC3",
+        )
+
+    def test_compressed_kch_stem_gc3(self):
+        name, _, needs, q = self._parse(
+            "20260706 0706DRE(1.5)600Ni_CVD(0.1)-Ni5-Ce5-Al2O3.xlsx",
+            equipment="GC3",
+        )
+        self.assertTrue(needs)
+        self.assertIsNone(name)
+        self.assertIn("CVD", q)
+
+    def test_compressed_kch_with_full_cvd(self):
+        name, _, needs, _ = self._parse(
+            "20260706 0706DRE(1.5)600Ni(0.1g,8h)-Ni5-Ce5-Al2O3.xlsx",
+            equipment="GC3",
+        )
+        self.assertFalse(needs)
+        self.assertEqual(
+            name,
+            "20260706 DRE(1.5%)@600°C Ni_CVD(0.1g,8h)/Ni5/Ce5/Al2O3_OCM 장비",
+        )
+
+    def test_experiment_basename_includes_equipment_suffix(self):
+        saved = (
+            "20260706 DRE(1.5)@600 Ni(0.1g,8h)-Ni5-Ce5-Al2O3"
+            "_GC3_DRE_계산완료.xlsx"
+        )
+        base = self.mod.generate_experiment_basename(saved)
+        self.assertEqual(
+            base,
+            "20260706 DRE(1.5%)@600C Ni_CVD(0.1g,8h)-Ni5-Ce5-Al2O3_OCM 장비",
         )
 
 
