@@ -1,6 +1,6 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-07-09 23:52:23 | HEAD: `ddf351d` | Merge pull request #5 from gjtuc/feat/data-pc-origin
+> Updated: 2026-07-10 00:15:52 | HEAD: `cf9fbb7` | sync: registry GC8860 pull
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
@@ -9,7 +9,7 @@
 | `DESKTOP-BFMLJ9J` | data_pc | - @ - | `-` | DESKTOP-BFMLJ9J\user @ 2026-06-25T13:09:09+09:00 | `b8db047` | [WARN] need pull |
 | `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\User @ 2026-07-02T00:21:27+09:00 | `f21dd44` | DESKTOP-MBGSSME\은규 @ 2026-07-01T19:50:13+09:00 | `43419e8` | [WARN] need pull |
 | `DESKTOP-XXXXXXX` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
-| `GC8860` | gc2_pc | GC8860\차헌 @ 2026-07-02T20:21:20+09:00 | `82f907c` | GC8860\차헌 @ 2026-07-09T23:52:22+09:00 | `ddf351d` | [OK] latest |
+| `GC8860` | gc2_pc | GC8860\차헌 @ 2026-07-02T20:21:20+09:00 | `82f907c` | GC8860\차헌 @ 2026-07-10T00:15:52+09:00 | `cf9fbb7` | [OK] latest |
 
 ## Commands
 - Start work: `gc_git_pull.bat`
