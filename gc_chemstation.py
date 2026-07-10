@@ -76,18 +76,128 @@ def _child_float(element, local_name: str, default=None):
 # ---------------------------------------------------------------------------
 # 시퀀스 / 주입 폴더
 # ---------------------------------------------------------------------------
+#
+# 레이아웃 (둘 다 지원):
+#   (A) 기존 flat
+#       Data\20251221 sequence 2026-07-01 10-00-07\F-....D\sequence.acam_
+#   (B) 중첩 wrapper
+#       Data\20260710DRM(...)\20251221 sequence 2026-07-10 ...\F-....D\sequence.acam_
+#
+
+
+def _is_injection_dir_name(name: str) -> bool:
+    """F- 로 시작하고 .d 로 끝나는 ChemStation 주입 폴더명."""
+    lower = name.lower()
+    return lower.endswith(".d") and name.upper().startswith("F-")
+
+
+def list_direct_injection_folders(folder_path: str) -> List[str]:
+    """한 폴더의 직계 자식 중 F-*.D 만 (정렬 없음)."""
+    injections: List[str] = []
+    try:
+        for entry in os.scandir(folder_path):
+            if entry.is_dir() and _is_injection_dir_name(entry.name):
+                injections.append(entry.path)
+    except OSError:
+        return []
+    return injections
+
+
+def resolve_sequence_work_folder(sequence_folder_path: str) -> str:
+    """
+    실제 F-*.D 가 있는 시퀀스 작업 폴더로 해석.
+
+    - flat: 인자 경로에 주입이 있으면 그대로
+    - nested: 인자(wrapper) 바로 아래 자식 중 주입이 있는 폴더를 선택
+    - 없으면 인자 경로 그대로 (호출측에서 주입 없음 처리)
+    """
+    if not sequence_folder_path or not os.path.isdir(sequence_folder_path):
+        return sequence_folder_path
+
+    if list_direct_injection_folders(sequence_folder_path):
+        return sequence_folder_path
+
+    nested: List[str] = []
+    try:
+        for entry in os.scandir(sequence_folder_path):
+            if not entry.is_dir():
+                continue
+            if list_direct_injection_folders(entry.path):
+                nested.append(entry.path)
+    except OSError:
+        return sequence_folder_path
+
+    if not nested:
+        return sequence_folder_path
+    if len(nested) == 1:
+        return nested[0]
+
+    def _nested_score(path: str) -> float:
+        latest = None
+        for inj in list_direct_injection_folders(path):
+            acam = find_sequence_acam_file(inj)
+            if not acam:
+                continue
+            mtime = os.path.getmtime(acam)
+            if latest is None or mtime > latest:
+                latest = mtime
+        return latest if latest is not None else os.path.getmtime(path)
+
+    return max(nested, key=_nested_score)
+
+
+def _sequence_activity_mtime(folder_path: str) -> float:
+    """시퀀스(또는 wrapper)의 최신 활동 시각 — acam mtime 우선."""
+    work = resolve_sequence_work_folder(folder_path)
+    latest = None
+    for inj in list_direct_injection_folders(work):
+        acam = find_sequence_acam_file(inj)
+        if not acam:
+            continue
+        mtime = os.path.getmtime(acam)
+        if latest is None or mtime > latest:
+            latest = mtime
+    if latest is not None:
+        return latest
+    try:
+        return os.path.getmtime(folder_path)
+    except OSError:
+        return 0.0
+
+
+def _finalize_sequence_folder(chosen: str, *, label: str) -> str:
+    """중첩이면 작업 폴더로 풀어 안내 후 반환."""
+    resolved = resolve_sequence_work_folder(chosen)
+    if os.path.normcase(os.path.abspath(resolved)) != os.path.normcase(os.path.abspath(chosen)):
+        print(f"[안내] {label}: {chosen}")
+        print(f"[안내] 중첩 시퀀스 해석 → {resolved}")
+    else:
+        print(f"[안내] {label}: {resolved}")
+    return resolved
 
 
 def get_latest_sequence_folder(base_path: str) -> Optional[str]:
-    """Data 아래 수정 시각이 가장 최근인 시퀀스 하위 폴더."""
+    """
+    Data 아래 가장 최근 시퀀스 폴더.
+
+    주입(acam)이 있는 flat/중첩 후보를 우선하고, 최신 acam mtime 기준.
+    """
     try:
         subfolders = [entry.path for entry in os.scandir(base_path) if entry.is_dir()]
-        if not subfolders:
-            return None
-        return max(subfolders, key=os.path.getmtime)
     except OSError as exc:
         print(f"[오류] 최신 시퀀스 폴더 검색 실패: {exc}")
         return None
+    if not subfolders:
+        return None
+
+    with_data = [
+        path
+        for path in subfolders
+        if list_direct_injection_folders(resolve_sequence_work_folder(path))
+    ]
+    pool = with_data or subfolders
+    chosen = max(pool, key=_sequence_activity_mtime)
+    return resolve_sequence_work_folder(chosen)
 
 
 def find_sequence_folder(
@@ -99,9 +209,11 @@ def find_sequence_folder(
     처리 대상 시퀀스 폴더 결정.
 
     우선순위:
-      1) --sequence-folder 절대 경로
+      1) --sequence-folder 절대 경로 (중첩 wrapper 도 허용 → 작업 폴더로 해석)
       2) --sequence-date 가 폴더명 또는 수정일과 매칭
       3) base_path 아래 최신 폴더 (--watch 기본)
+
+    flat·중첩 레이아웃 모두 실제 F-*.D 가 있는 작업 폴더를 반환.
     """
     if sequence_folder:
         try:
@@ -109,8 +221,7 @@ def find_sequence_folder(
         except InvalidSequenceFolderError as exc:
             print(f"[오류] {exc}")
             return None
-        print(f"[안내] 지정된 시퀀스 폴더: {safe_folder}")
-        return safe_folder
+        return _finalize_sequence_folder(safe_folder, label="지정된 시퀀스 폴더")
 
     if not sequence_date:
         latest = get_latest_sequence_folder(base_path)
@@ -124,9 +235,10 @@ def find_sequence_folder(
             candidates.append(entry.path)
 
     if candidates:
-        chosen = max(candidates, key=os.path.getmtime)
-        print(f"[안내] 날짜({sequence_date}) 포함 시퀀스: {chosen}")
-        return chosen
+        chosen = max(candidates, key=_sequence_activity_mtime)
+        return _finalize_sequence_folder(
+            chosen, label=f"날짜({sequence_date}) 포함 시퀀스"
+        )
 
     try:
         target_date = datetime.strptime(sequence_date, "%Y%m%d").date()
@@ -142,9 +254,10 @@ def find_sequence_folder(
             candidates.append(entry.path)
 
     if candidates:
-        chosen = max(candidates, key=os.path.getmtime)
-        print(f"[안내] 수정일({target_date}) 기준 시퀀스: {chosen}")
-        return chosen
+        chosen = max(candidates, key=_sequence_activity_mtime)
+        return _finalize_sequence_folder(
+            chosen, label=f"수정일({target_date}) 기준 시퀀스"
+        )
 
     print(f"[오류] 날짜 {sequence_date} 시퀀스를 찾을 수 없습니다.")
     return None
@@ -185,17 +298,11 @@ def find_injection_folders(sequence_folder_path: str) -> List[str]:
     """
     시퀀스 내 주입(.D) 폴더를 주입 시각 순으로 반환.
 
+    flat·중첩 wrapper 모두 resolve_sequence_work_folder 후
     F- 로 시작하고 .d 로 끝나는 폴더만 (method.M 등 제외).
     """
-    injections = []
-    for entry in os.scandir(sequence_folder_path):
-        if not entry.is_dir():
-            continue
-        if not entry.name.lower().endswith(".d"):
-            continue
-        if not entry.name.upper().startswith("F-"):
-            continue
-        injections.append(entry.path)
+    work = resolve_sequence_work_folder(sequence_folder_path)
+    injections = list_direct_injection_folders(work)
     return sorted(injections, key=_injection_sort_key)
 
 

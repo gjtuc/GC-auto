@@ -84,6 +84,7 @@ from gc_state import (
     has_new_data_since_last_run,
     load_send_state,
     mark_gc1_pdf_attempt_failed,
+    pending_email_retry_due,
     record_processing_result,
     recover_stale_pending_email,
     set_watch_need_sample_name,
