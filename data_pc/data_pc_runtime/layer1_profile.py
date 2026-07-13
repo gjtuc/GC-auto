@@ -77,6 +77,74 @@ def _env_bool(name: str) -> bool | None:
     return None
 
 
+def _load_script_env(script_dir: str) -> None:
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    path = os.path.join(script_dir, "gc_automation.env")
+    if os.path.isfile(path):
+        load_dotenv(path, override=False)
+
+
+def is_watch_enabled(script_dir: str) -> bool:
+    """
+    차헌 PC 수동 모드 등 — supervisor(watch) 자동 기동 여부.
+
+    False 이면 로그인·ensure 스케줄러가 있어도 pythonw supervisor 는 즉시 종료.
+    """
+    _load_script_env(script_dir)
+    env_val = _env_bool("DATA_PC_WATCH_ENABLED")
+    if env_val is not None:
+        return env_val
+    prof = load_machine_profile(script_dir)
+    runtime = prof.get("runtime")
+    if isinstance(runtime, dict):
+        if runtime.get("mode") == "manual":
+            return False
+        if runtime.get("watch_enabled") is False:
+            return False
+    return True
+
+
+def is_heartbeat_enabled(script_dir: str) -> bool:
+    """watch 가 꺼져 있으면 heartbeat 도 끔."""
+    if not is_watch_enabled(script_dir):
+        return False
+    _load_script_env(script_dir)
+    env_val = _env_bool("DATA_PC_HEARTBEAT_ENABLED")
+    if env_val is not None:
+        return env_val
+    prof = load_machine_profile(script_dir)
+    runtime = prof.get("runtime")
+    if isinstance(runtime, dict) and runtime.get("heartbeat_enabled") is False:
+        return False
+    return True
+
+
+def publish_manual_only_status(
+    script_dir: str,
+    message: str = "수동 모드 — watch·heartbeat 비활성. 「gc 작업해줘」 등으로 수동 실행.",
+) -> None:
+    from data_pc_runtime.layer1_state import RuntimePaths, RuntimeStatus, StateStore, _now_str
+
+    paths = RuntimePaths(script_dir)
+    os.makedirs(paths.storage_dir, exist_ok=True)
+    store = StateStore(paths)
+    now = _now_str()
+    store.save_status(
+        RuntimeStatus(
+            alive=False,
+            status_code="manual_only",
+            message=message,
+            pid=0,
+            started_at=now,
+            updated_at=now,
+            last_heartbeat="",
+        )
+    )
+
+
 def resolve_check_gdrive(script_dir: str) -> bool:
     """
   G: 가용성 게이트(L2-3.5) 사용 여부.

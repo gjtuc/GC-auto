@@ -13,6 +13,17 @@ if not exist "%GC_HOME%\촉매 반응 계산.py" (
     pause
     exit /b 1
 )
+findstr /B /C:"DATA_PC_WATCH_ENABLED=0" "%GC_HOME%\gc_automation.env" >nul 2>&1
+if not errorlevel 1 (
+    echo.
+    echo [skip] DATA_PC_WATCH_ENABLED=0 — watch autostart not registered.
+    echo        Manual: python "%GC_HOME%\촉매 반응 계산.py"
+    echo        Remove tasks: deploy\gc_data_pc_uninstall_autostart_chaheon.bat
+    echo.
+    pause
+    exit /b 0
+)
+
 if not exist "%GC_HOME%\data_pc_watch.py" (
     copy /Y "%DEPLOY%..\data_pc\data_pc_watch.py" "%GC_HOME%\data_pc_watch.py" >nul
 )

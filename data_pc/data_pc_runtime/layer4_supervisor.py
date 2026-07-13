@@ -15,6 +15,7 @@ L4 — Supervisor: **프로세스 1개**로 감시 루프 + Job 호출.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -26,6 +27,12 @@ from datetime import datetime
 from data_pc_runtime.layer0_probes import ImapReachabilityProbe, PidProbe
 from data_pc_runtime.layer1_state import RuntimePaths, RuntimeStatus, StateStore
 from data_pc_runtime.layer2_gates import GateConfig
+from data_pc_runtime.layer2_lock import PipelineLock
+from data_pc_runtime.layer1_profile import (
+    is_heartbeat_enabled,
+    is_watch_enabled,
+    publish_manual_only_status,
+)
 from data_pc_runtime.layer3_job import (
     JobConfig,
     JobRunner,
@@ -49,6 +56,8 @@ class SupervisorConfig:
     boot_mail_check: bool = True
     boot_network_wait_sec: int = 90
     heartbeat_stale_sec: int = 180
+    ensure_max_recoveries: int = 3
+    ensure_recovery_window_sec: int = 900
 
 
 def _env_int(name: str, default: int, minimum: int = 0) -> int:
@@ -80,6 +89,10 @@ def load_supervisor_config(script_dir: str) -> SupervisorConfig:
         boot_mail_check=_env_bool("DATA_PC_BOOT_MAIL_CHECK", True),
         boot_network_wait_sec=_env_int("DATA_PC_BOOT_NETWORK_WAIT_SEC", 90, minimum=10),
         heartbeat_stale_sec=_env_int("DATA_PC_WATCH_HEARTBEAT_STALE_SEC", 180, minimum=60),
+        ensure_max_recoveries=_env_int("DATA_PC_ENSURE_MAX_RECOVERIES", 3, minimum=1),
+        ensure_recovery_window_sec=_env_int(
+            "DATA_PC_ENSURE_RECOVERY_WINDOW_SEC", 900, minimum=60
+        ),
     )
 
 
@@ -114,6 +127,10 @@ def is_supervisor_healthy(
 
 def spawn_supervisor(script_dir: str) -> bool:
     """S5: 숨김 pythonw 로 supervisor 1개만 기동."""
+    if not is_watch_enabled(script_dir):
+        publish_manual_only_status(script_dir)
+        _log("[supervisor] spawn skipped — DATA_PC_WATCH_ENABLED=0 (manual mode)")
+        return False
     pythonw = _pythonw_executable()
     cmd = [
         pythonw,
@@ -189,19 +206,126 @@ def restart_supervisor(script_dir: str) -> bool:
     """기동 중인 supervisor 종료 후 새 pythonw 프로세스로 재기동."""
     _log(f"[restart] supervisor 재시작 script_dir={script_dir}")
     stop_supervisor(script_dir)
+    if not is_watch_enabled(script_dir):
+        publish_manual_only_status(script_dir)
+        _log("[restart] watch disabled — stopped only, no respawn")
+        return False
+    paths = RuntimePaths(script_dir)
+    if PipelineLock(paths.pipeline_lock)._clear_stale():
+        _log("[restart] stale pipeline lock 제거")
     time.sleep(0.5)
     return spawn_supervisor(script_dir)
 
 
+def _ensure_recovery_json(paths: RuntimePaths) -> str:
+    return os.path.join(paths.storage_dir, ".data_pc_runtime_ensure_recovery.json")
+
+
+def _load_ensure_recovery_times(paths: RuntimePaths) -> list[float]:
+    path = _ensure_recovery_json(paths)
+    if not os.path.isfile(path):
+        return []
+    try:
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        raw = data.get("recovery_times") or []
+        return [float(x) for x in raw]
+    except (OSError, TypeError, ValueError):
+        return []
+
+
+def _save_ensure_recovery_times(paths: RuntimePaths, times: list[float]) -> None:
+    os.makedirs(paths.storage_dir, exist_ok=True)
+    path = _ensure_recovery_json(paths)
+    payload = {"recovery_times": times}
+    tmp = f"{path}.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh)
+    os.replace(tmp, path)
+
+
+def _prune_recovery_times(times: list[float], *, window_sec: int) -> list[float]:
+    cutoff = time.time() - window_sec
+    return [t for t in times if t >= cutoff]
+
+
+def _clear_ensure_recovery(paths: RuntimePaths) -> None:
+    path = _ensure_recovery_json(paths)
+    if os.path.isfile(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+def _ensure_recovery_cap_exceeded(paths: RuntimePaths, cfg: SupervisorConfig) -> bool:
+    times = _prune_recovery_times(
+        _load_ensure_recovery_times(paths),
+        window_sec=cfg.ensure_recovery_window_sec,
+    )
+    return len(times) >= cfg.ensure_max_recoveries
+
+
+def _record_ensure_recovery(paths: RuntimePaths, cfg: SupervisorConfig) -> None:
+    times = _prune_recovery_times(
+        _load_ensure_recovery_times(paths),
+        window_sec=cfg.ensure_recovery_window_sec,
+    )
+    times.append(time.time())
+    _save_ensure_recovery_times(paths, times)
+
+
+def _is_stale_supervisor(
+    status: RuntimeStatus,
+    *,
+    stale_sec: int,
+) -> bool:
+    """PID 살아있음 + heartbeat stale → ensure 시 kill 대상."""
+    pid = int(status.pid or 0)
+    if pid <= 0 or not PidProbe.alive(pid):
+        return False
+    hb = _parse_heartbeat_epoch(status)
+    if hb is None:
+        return True
+    return (time.time() - hb) > stale_sec
+
+
 def ensure_supervisor_once(script_dir: str) -> bool:
     """Ensure 작업 스케줄러 진입 — 살아있으면 False, 기동했으면 True."""
+    if not is_watch_enabled(script_dir):
+        publish_manual_only_status(script_dir)
+        _log("[ensure] watch disabled — skip spawn")
+        return False
     paths = RuntimePaths(script_dir)
     cfg = load_supervisor_config(script_dir)
     if is_supervisor_healthy(paths, stale_sec=cfg.heartbeat_stale_sec):
+        _clear_ensure_recovery(paths)
         _log("[ensure] supervisor already healthy")
         return False
-    _log("[ensure] supervisor missing or stale — spawning")
-    return spawn_supervisor(script_dir)
+
+    store = StateStore(paths)
+    status = store.load_status()
+
+    if _is_stale_supervisor(status, stale_sec=cfg.heartbeat_stale_sec):
+        _log(f"[ensure] stale supervisor pid={status.pid} — stop then spawn")
+        stop_supervisor(script_dir)
+        time.sleep(0.5)
+    elif int(status.pid or 0) > 0 and not PidProbe.alive(int(status.pid)):
+        _log("[ensure] dead pid in status — spawn only")
+    else:
+        _log("[ensure] supervisor missing — spawning")
+
+    if _ensure_recovery_cap_exceeded(paths, cfg):
+        _log(
+            "[ensure] ENSURE_RECOVERY_CAP — skip spawn "
+            f"(max={cfg.ensure_max_recoveries} in {cfg.ensure_recovery_window_sec}s)"
+        )
+        return False
+
+    if spawn_supervisor(script_dir):
+        _record_ensure_recovery(paths, cfg)
+        return True
+    return False
 
 
 class Supervisor:
@@ -255,6 +379,12 @@ class Supervisor:
                         reason="메일 확인 → 계산 → G: → Origin (자동)",
                     )
                 )
+                try:
+                    from data_pc_runtime.git_sync_hook import maybe_run_git_sync
+
+                    maybe_run_git_sync(self.script_dir)
+                except Exception as exc:
+                    _log(f"[git_sync] hook error (ignored): {exc}")
                 self._stop.wait(self.sup_cfg.poll_sec)
         except KeyboardInterrupt:
             _log("[supervisor] KeyboardInterrupt")
@@ -267,6 +397,12 @@ class Supervisor:
         self.job.run_once(
             JobConfig(gate=self.gate, reason="supervisor-tick"),
         )
+        try:
+            from data_pc_runtime.git_sync_hook import maybe_run_git_sync
+
+            maybe_run_git_sync(self.script_dir)
+        except Exception as exc:
+            _log(f"[git_sync] hook error (ignored): {exc}")
 
     def _boot_mail_job(self) -> None:
         if not self._wait_imap(self.sup_cfg.boot_network_wait_sec):
@@ -299,6 +435,8 @@ class Supervisor:
         return False
 
     def _heartbeat_worker(self) -> None:
+        if not is_heartbeat_enabled(self.script_dir):
+            return
         while not self._stop.wait(self._hb_interval):
             status = self.store.load_status()
             status.alive = True
@@ -321,6 +459,10 @@ class Supervisor:
 
 
 def run_supervisor(script_dir: str) -> None:
+    if not is_watch_enabled(script_dir):
+        publish_manual_only_status(script_dir)
+        _log("[supervisor] watch disabled — exit without loop")
+        return
     Supervisor(script_dir).run_forever()
 
 
@@ -355,10 +497,15 @@ def cli_main(argv: list[str] | None = None) -> int:
 
     if args.restart:
         ok = restart_supervisor(args.script_dir)
-        return 0 if ok else 1
+        return 0 if ok else (0 if not is_watch_enabled(args.script_dir) else 1)
 
     if args.ensure_once:
         ensure_supervisor_once(args.script_dir)
+        return 0
+
+    if not is_watch_enabled(args.script_dir):
+        publish_manual_only_status(args.script_dir)
+        _log("[supervisor] watch disabled — manual pipeline only")
         return 0
 
     run_supervisor(args.script_dir)
