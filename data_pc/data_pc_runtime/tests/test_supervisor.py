@@ -111,12 +111,72 @@ class TestL4Supervisor(unittest.TestCase):
                 return_value=False,
             ):
                 with patch(
-                    "data_pc_runtime.layer4_supervisor.spawn_supervisor",
-                    return_value=True,
-                ) as sp:
-                    started = ensure_supervisor_once(tmp)
+                    "data_pc_runtime.layer4_supervisor._is_stale_supervisor",
+                    return_value=False,
+                ):
+                    with patch(
+                        "data_pc_runtime.layer4_supervisor.spawn_supervisor",
+                        return_value=True,
+                    ) as sp:
+                        started = ensure_supervisor_once(tmp)
             self.assertTrue(started)
             sp.assert_called_once()
+
+    def test_ensure_stops_stale_before_spawn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = RuntimePaths(tmp, "KCH")
+            os.makedirs(paths.storage_dir)
+            StateStore(paths).save_status(
+                RuntimeStatus(
+                    alive=True,
+                    pid=os.getpid(),
+                    last_heartbeat="2020-01-01 00:00:00",
+                )
+            )
+            with patch(
+                "data_pc_runtime.layer4_supervisor.is_supervisor_healthy",
+                return_value=False,
+            ):
+                with patch(
+                    "data_pc_runtime.layer4_supervisor.stop_supervisor",
+                    return_value=True,
+                ) as stop:
+                    with patch(
+                        "data_pc_runtime.layer4_supervisor.spawn_supervisor",
+                        return_value=True,
+                    ) as spawn:
+                        started = ensure_supervisor_once(tmp)
+            self.assertTrue(started)
+            stop.assert_called_once_with(tmp)
+            spawn.assert_called_once_with(tmp)
+
+    def test_ensure_recovery_cap_skips_spawn(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = RuntimePaths(tmp, "KCH")
+            os.makedirs(paths.storage_dir)
+            cfg = SupervisorConfig(
+                ensure_max_recoveries=2,
+                ensure_recovery_window_sec=900,
+            )
+            now = time.time()
+            with patch(
+                "data_pc_runtime.layer4_supervisor.load_supervisor_config",
+                return_value=cfg,
+            ):
+                with patch(
+                    "data_pc_runtime.layer4_supervisor.is_supervisor_healthy",
+                    return_value=False,
+                ):
+                    with patch(
+                        "data_pc_runtime.layer4_supervisor._load_ensure_recovery_times",
+                        return_value=[now - 60, now - 30],
+                    ):
+                        with patch(
+                            "data_pc_runtime.layer4_supervisor.spawn_supervisor",
+                        ) as spawn:
+                            started = ensure_supervisor_once(tmp)
+            self.assertFalse(started)
+            spawn.assert_not_called()
 
     def test_restart_stops_then_spawns(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -132,6 +192,24 @@ class TestL4Supervisor(unittest.TestCase):
             self.assertTrue(ok)
             stop.assert_called_once_with(tmp)
             spawn.assert_called_once_with(tmp)
+
+    def test_ensure_skips_when_watch_disabled(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = RuntimePaths(tmp, "KCH")
+            os.makedirs(paths.storage_dir)
+            with patch(
+                "data_pc_runtime.layer4_supervisor.is_watch_enabled",
+                return_value=False,
+            ):
+                with patch(
+                    "data_pc_runtime.layer4_supervisor.spawn_supervisor",
+                ) as spawn:
+                    started = ensure_supervisor_once(tmp)
+            self.assertFalse(started)
+            spawn.assert_not_called()
+            status = StateStore(paths).load_status()
+            self.assertEqual(status.status_code, "manual_only")
+            self.assertFalse(status.alive)
 
 
 if __name__ == "__main__":
