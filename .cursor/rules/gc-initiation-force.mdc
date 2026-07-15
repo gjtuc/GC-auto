@@ -23,14 +23,30 @@ alwaysApply: true
 `.cursor/rules/eungyu-pc-initiation.mdc` 적용 — `촉매 반응 계산.py` 실행.  
 `gc_automation.py` 는 **장비 PC 전용**, 은규 PC에서 실행 금지.
 
-1. 사용자 메시지가 개시 문구면 **다른 작업보다 우선** force 실행 (**장비 PC만**).
+### GC2 공유 (차완 / 차헌) — GC8860
+
+한 GC2를 두 사용자가 씀. 수신 메일:
+
+| 사용자 | 말 | MAIL_TO |
+|--------|-----|---------|
+| 차완 | `차완` | `yangcw0103@kier.re.kr` |
+| 차헌 | `차헌` | `kimcha0809@naver.com` |
+
+1. 사용자가 **「차완」또는「차헌」만** → `--user-message` 로 작업자 전환 (force 없음). watch도 즉시 그 메일 사용.
+2. 개시 문구에 작업자가 있으면 (`차완 진행`, `차헌 작업해줘`) → 그대로 `--user-message` force.
+3. 개시만 있고 작업자 없음 (`진행`, `작업해줘`) → `--user-message` 실행 후 **exit 3** 이면 **force 하지 말고** 「차완인가요, 차헌인가요?」한 번만 묻는다. 답을 받으면 `차완 진행` / `차헌 진행` 으로 재실행.
+4. 되묻기 전에 추측으로 메일을 보내지 말 것.
+
+### 공통 (장비 PC)
+
+1. 사용자 메시지가 개시 문구면 **다른 작업보다 우선** force 실행 (**장비 PC만**). GC2는 위 공유 규칙 적용.
 2. GC1(박은규 env): repo에서 아래 실행 (핫스팟·Autochro·엑셀·메일, force 규칙).
    ```bat
    cd %USERPROFILE%\chemstation-gc-automation
    python gc_automation.py --user-message "<사용자 원문>"
    ```
    또는 바탕화면 `GC1_동작해줘.bat` (동일하게 `--request` → force).
-3. exit 0 → 완료 보고만. exit 1 → watch/heartbeat 수리. exit 2 → 개시 아님, 일반 대화 계속.
+3. exit 0 → 완료 보고만. exit 1 → watch/heartbeat 수리. exit 2 → 개시 아님, 일반 대화 계속. **exit 3 (GC2)** → 작업자(차완/차헌) 질문.
 4. 개시 요청에 **시료 지정**이 있으면: `gc_동작해줘.bat --sample-name "..."` 또는 메시지에 `sample-name=...` 줄 추가.
 
 ## force 시 GC1

@@ -5,11 +5,13 @@ gc_mailer.py — 네이버 SMTP 메일 발송 (장비 PC → 데이터 PC)
 [PC·메일 흐름]  docs/PC_NAMING.md
   장비 PC gc_automation.py 가 KCH 원본 xlsx 를 **데이터 PC** 로 보냄.
     GC1 장비 PC → MAIL_TO = **은규 PC** 네이버
-    GC2/GC3 장비 PC → MAIL_TO = **차헌 PC** 네이버 (kimcha0809)
+    GC2/GC3 장비 PC → 기본 차헌(kimcha0809); GC2 공유 시
+      MAIL_TO_CHAWAN / MAIL_TO_CHAHEON + .gc_operator.json (차완/차헌)
 
 [설정]  gc_automation.env (장비 PC의 Desktop\\박은규 또는 KCH)
   NAVER_EMAIL, NAVER_APP_PASSWORD — 발송 계정 (장비 PC 또는 공용)
   MAIL_TO — 수신 = 상대방 **데이터 PC** 주소
+  GC2 공유: MAIL_TO_CHAWAN / MAIL_TO_CHAHEON + .gc_operator.json (gc_operator.py)
 
 [호출 경로]
   gc_pipeline._try_auto_email() — force / GC1 은 쿨다운·슬롯 검사 생략
@@ -62,14 +64,34 @@ def load_dotenv_files(script_dir: str, excel_output_dir: str) -> bool:
 
 
 def get_smtp_credentials(script_dir: str, excel_output_dir: str) -> Tuple[Optional[str], Optional[str], str]:
-    """(sender, app_password, recipient)"""
+    """(sender, app_password, recipient)
+
+    GC2 공유 모드(MAIL_TO_CHAWAN·CHAHEON 설정)면 .gc_operator.json 작업자로 수신처 결정.
+    작업자 미지정이면 recipient="" — 호출측이 발송 중단.
+    """
     if not load_dotenv_files(script_dir, excel_output_dir):
         return None, None, TARGET_EMAIL
 
     sender = os.getenv("NAVER_EMAIL", "").strip()
     app_password = os.getenv("NAVER_APP_PASSWORD", "").strip()
-    recipient = os.getenv("MAIL_TO", TARGET_EMAIL).strip() or TARGET_EMAIL
-    return sender, app_password, recipient
+    fallback = os.getenv("MAIL_TO", TARGET_EMAIL).strip() or TARGET_EMAIL
+
+    from gc_operator import dual_operator_mail_enabled, resolve_recipient
+
+    if dual_operator_mail_enabled():
+        recipient, operator = resolve_recipient(excel_output_dir, fallback)
+        if not recipient:
+            print(
+                "[오류] GC2 작업자 미지정 — Cursor에서 「차완」또는「차헌」을 먼저 말하세요"
+            )
+            return sender, app_password, ""
+        try:
+            print(f"[안내] GC2 작업자 메일 → {operator}: {recipient}")
+        except UnicodeEncodeError:
+            print(f"[info] GC2 operator mail -> {operator}: {recipient}")
+        return sender, app_password, recipient
+
+    return sender, app_password, fallback
 
 
 def generate_email_body(
@@ -203,6 +225,9 @@ def send_email_via_smtp(
         env_hint = os.path.join(gc_runtime_dir(excel_output_dir), "gc_automation.env")
         print("\n[오류] 메일 설정 없음 — gc_automation.env 또는 .env 를 만드세요.")
         print(f"       경로 예: {env_hint}")
+        return False
+    if not recipient:
+        print("\n[오류] 수신 주소 없음 — GC2 작업자(차완/차헌) 미지정")
         return False
 
     subject = f"[{seq_date}] {sample_name} GC 분석 결과"

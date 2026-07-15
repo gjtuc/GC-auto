@@ -25,8 +25,10 @@ gc_request.py — 사용자 개시 요청 판별 (--user-message / --request)
 =============================================================================
 
   0 … force + 바탕화면 MMDDHHmm ±5분 OK  → Cursor 추가 작업 불필요
+      (GC2: 「차완」「차헌」작업자 전환만 해도 0)
   1 … force 했지만 heartbeat FAIL        → watch 재시작 등 수리
   2 … 개시 문구 아님                     → 일반 Cursor 대화
+  3 … GC2 공유: 작업자(차완/차헌) 미지정 → Cursor가 한 번 더 질문
 """
 
 from __future__ import annotations

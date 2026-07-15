@@ -68,6 +68,7 @@ import os
 import sys
 import time
 from dataclasses import replace
+from typing import Optional
 
 from gc_console import setup_console_encoding
 
@@ -103,9 +104,10 @@ from gc_wifi import check_runtime_gate
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Cursor / --user-message 종료 코드 (다른 PC 스크립트에서도 동일하게 사용)
-EXIT_OK = 0              # 개시 문구 → force 완료 + heartbeat ±5분 OK
+EXIT_OK = 0              # 개시 문구 → force 완료 + heartbeat ±5분 OK / 작업자 전환 OK
 EXIT_NEED_REPAIR = 1     # force 했지만 heartbeat FAIL → watch 등 수리 필요
 EXIT_NOT_INITIATION = 2  # 개시 문구 아님 → 일반 Cursor 작업
+EXIT_NEED_OPERATOR = 3   # GC2 공유: 차완/차헌 미지정 → Cursor가 한 번 더 질문
 
 
 def apply_env_overrides(
@@ -334,18 +336,63 @@ def verify_system_health() -> int:
     return EXIT_OK if check.ok else EXIT_NEED_REPAIR
 
 
+def _apply_gc2_operator_from_message(text: str, excel_output_dir: str) -> Optional[str]:
+    """메시지에 차완/차헌이 있으면 저장하고 operator id 반환."""
+    from gc_mailer import load_dotenv_files
+    from gc_operator import (
+        extract_operator_from_message,
+        mail_for_operator,
+        operator_label,
+        save_operator,
+    )
+
+    load_dotenv_files(SCRIPT_DIR, excel_output_dir)
+    op = extract_operator_from_message(text)
+    if not op:
+        return None
+    save_operator(excel_output_dir, op)
+    mail = mail_for_operator(op)
+    print(f"[안내] GC2 작업자 → {operator_label(op)} (MAIL_TO={mail})")
+    print("       watch·force 메일이 이 주소로 발송됩니다.")
+    return op
+
+
 def handle_user_message(text: str, config: AppConfig) -> int:
     """
     Cursor가 호출하는 진입점.
 
     순서가 중요합니다:
+      0) GC2: 「차완」「차헌」만 → 작업자 전환 (force 없음)
       1) 개시 문구인지 판별 (gc_request.message_is_initiation)
+      1b) GC2 공유: 개시인데 작업자 없으면 EXIT_NEED_OPERATOR(3)
       2) force 우선 (submit_force_request)
       3) heartbeat ±5분만 검증 — OK면 Cursor 추가 작업 금지
     """
+    from gc_mailer import load_dotenv_files
+    from gc_operator import (
+        ASK_OPERATOR_MESSAGE,
+        dual_operator_mail_enabled,
+        message_is_operator_only,
+    )
+
+    load_dotenv_files(SCRIPT_DIR, config.excel_output_dir)
+    dual = dual_operator_mail_enabled()
+
+    if dual and message_is_operator_only(text) and not message_is_initiation(text):
+        _apply_gc2_operator_from_message(text, config.excel_output_dir)
+        print("[완료] 작업자 전환만 수행 — force 없음")
+        return EXIT_OK
+
     if not message_is_initiation(text):
         print("[안내] 개시 문구 아님 — Cursor가 일반 작업 진행")
         return EXIT_NOT_INITIATION
+
+    if dual:
+        op = _apply_gc2_operator_from_message(text, config.excel_output_dir)
+        if not op:
+            print("[질문] " + ASK_OPERATOR_MESSAGE.replace("\n", "\n[질문] "))
+            print("[대기] 작업자 확인 후 「차완 진행」또는「차헌 진행」으로 다시 요청")
+            return EXIT_NEED_OPERATOR
 
     request = parse_message_as_request(text)
     trigger = request.trigger_line if request else text.strip()

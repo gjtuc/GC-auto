@@ -7,7 +7,10 @@
 | 이름 | 담당 GC | 역할 |
 |------|---------|------|
 | **은규** | GC1 | GC1 사용자 |
-| **차헌** | GC2, GC3 | GC2/GC3 사용자 |
+| **차헌** | GC2, GC3 | GC2/GC3 사용자 (메일 `kimcha0809@naver.com`) |
+| **차완** | GC2 (공유) | GC2 장비 PC 공동 사용 (메일 `yangcw0103@kier.re.kr`) |
+
+GC2는 차헌·차완이 **같은 장비 PC**를 씀. Cursor「차완」「차헌」으로 작업자 전환 → `gc_operator.py` / `.gc_operator.json`.
 
 ## PC 종류 (4종)
 
