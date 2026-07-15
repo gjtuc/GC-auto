@@ -109,7 +109,9 @@ def hotspot_reconnect_min_sec(chemstation_mode: str = "auto") -> int:
     핫스pot 재연결 최소 간격(초).
     이보다 짧게 끊겼다 붙으면 '순간 끊김' — 동일 세션, 재처리·재발송 안 함.
     """
-    if chemstation_mode == "gc1":
+    from gc_identity import is_autochro_mode
+
+    if is_autochro_mode(chemstation_mode):
         raw = os.getenv("GC1_HOTSPOT_RECONNECT_MIN_SEC", "").strip()
         default = DEFAULT_GC1_HOTSPOT_RECONNECT_MIN_SEC
     else:

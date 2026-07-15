@@ -1,7 +1,7 @@
 # GC-auto (chemstation-gc-automation)
 
 > **통합 GitHub:** https://github.com/gjtuc/GC-auto  
-> GC1·GC2·GC3 **장비 PC 코드** + **데이터 PC 계산** + 문서를 **한 repo**에 모읍니다.
+> GC4(구 GC1)·GC2·GC3 **장비 PC 코드** + **데이터 PC 계산** + 문서를 **한 repo**에 모읍니다.
 
 ---
 
@@ -23,20 +23,21 @@ clone → `docs/은규PC_Cursor_시작.md` Phase 1부터 순서대로.
 ```
 GitHub GC-auto (클라우드 — 모든 코드·문서)
         │
-        ├── GC1 장비 PC (은규)     gc_automation.py — Autochro→PDF→메일
-        ├── GC2/GC3 장비 PC (차헌) gc_automation.py — ChemStation→메일
-        ├── 은규 PC                data_pc/촉매 반응 계산.py — 메일→G:→Origin
+        ├── GC4 장비 PC (은규, 구 GC1)  gc_automation.py — Autochro→PDF→메일
+        ├── GC2/GC3 장비 PC (차헌·차완) gc_automation.py — ChemStation→메일
+        ├── 은규 PC                data_pc/촉매 반응 계산.py — 메일→연구노트→Origin
         └── 차헌 PC                data_pc/촉매 반응 계산.py — 메일→G:→Origin
 ```
 
 | PC | `machine_profile` / env | 실행 | 비고 |
 |----|-------------------------|------|------|
-| GC1 장비 PC | `Desktop\박은규\gc_automation.env` | repo `gc_automation.py --watch` | **Autochro→PDF** (ChemStation 아님) |
+| **GC4** 장비 PC (구 GC1) | `Desktop\박은규\gc_automation.env` | repo `gc_automation.py --watch` | **Autochro→PDF** (ChemStation 아님) |
 | GC2/GC3 장비 PC | `Desktop\KCH\gc_automation.env` | repo `gc_automation.py --watch` | ChemStation acam / Chem32 Report |
-| 은규 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` | IMAP **수신** (장비 env 와 별개) |
+| 은규 PC | `gc-data-pc\` 또는 `Desktop\.cursor\` | `data_pc/촉매 반응 계산.py` | IMAP **수신** (장비 env 와 별개) |
 | 차헌 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` | 동일 |
 
-**비밀번호·machine_profile.json 실본은 Git에 없음** — 템플릿만 repo.
+**비밀번호·machine_profile.json 실본은 Git에 없음** — 템플릿만 repo.  
+**PC 명칭:** [`docs/PC_NAMING.md`](docs/PC_NAMING.md) — GC4=자리 이동(이름만), 앞으로의 GC1=새 장비용.
 
 ---
 

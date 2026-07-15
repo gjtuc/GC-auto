@@ -6,18 +6,18 @@ gc_pipeline.py — 시퀀스 1건 처리 파이프라인 (엑셀 + 메일)
 [PC 명칭]  docs/PC_NAMING.md
 =============================================================================
 
-  본 모듈은 **장비 PC** (GC1 / GC2 / GC3 장비 PC) 전용.
+  본 모듈은 **장비 PC** (GC4 구GC1 / GC2 / GC3 장비 PC) 전용.
   은규 PC·차헌 PC에서의 수율/전환율 계산은 data_pc/촉매 반응 계산.py — 여기 **없음**.
 
 =============================================================================
 [chemstation_mode 분기]
 =============================================================================
 
-  gc1     … GC1 **장비** PC — 은규 Autochro PDF (run_processing_gc1)
-  8860    … GC2 **장비** PC — 차헌 ChemStation acam
-  chem32  … GC3 **장비** PC — 차헌 Report.txt
+  gc1|gc4 … **GC4** 장비 PC (구 GC1) — 은규 Autochro PDF (run_processing_gc1)
+  8860    … GC2 **장비** PC — ChemStation acam
+  chem32  … GC3 **장비** PC — Report.txt
 
-  mode 는 gc_profiles.resolve_profile() + env.
+  mode 는 gc_profiles.resolve_profile() + env. 동의어: gc_identity.py
 
 =============================================================================
 [진입점]  run_processing(config, script_dir)
@@ -99,6 +99,7 @@ from gc_chemstation import (
     parse_sequence_acam,
 )
 from gc_config import AppConfig
+from gc_identity import is_autochro_mode
 from gc_mailer import generate_email_body, send_email_via_smtp
 from gc_sanitize import sanitize_seq_date
 from gc_state import can_auto_send_for_mode, gc1_unlimited_auto_send
@@ -171,7 +172,7 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
         config: AppConfig (data_path, detector, sample_name 등)
         script_dir: gc_automation.py 가 있는 폴더 (.env 탐색용)
     """
-    if config.chemstation_mode == "gc1":
+    if is_autochro_mode(config.chemstation_mode):
         return run_processing_gc1(config, script_dir)
 
     mode = resolve_chemstation_mode(config.data_path, config.chemstation_mode)

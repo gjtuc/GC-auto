@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-gc_profiles.py — GC1 / GC2 / GC3 **장비 PC**별 출력 폴더·핫스팟·모드
+gc_profiles.py — GC4(구 GC1) / GC2 / GC3 **장비 PC**별 출력 폴더·핫스팟·모드
 
 =============================================================================
 [PC 명칭 — 오해 금지]  docs/PC_NAMING.md
@@ -11,16 +11,19 @@ gc_profiles.py — GC1 / GC2 / GC3 **장비 PC**별 출력 폴더·핫스팟·�
 
   | 연구원 | 장비 PC (본 모듈)        | 데이터 PC (별도)     |
   |--------|--------------------------|----------------------|
-  | 은규   | GC1 장비 PC              | 은규 PC              |
+  | 은규   | **GC4** 장비 PC (구 GC1) | 은규 PC              |
   | 차헌   | GC2/GC3 장비 PC          | 차헌 PC              |
 
+  **이름만 변경:** Autochro 장비는 자리 이동으로 GC1→GC4. PC·파이프라인 동일.
+  코드 토큰 ``gc1``/``gc4`` 동의어 — ``gc_identity.py``.
+
   **폴더 이름만으로 PC 종류를 구분합니다 (machine_profile 과 무관):**
-    Desktop\\박은규\\  → GC1 **장비** (은규 PC 아님)
+    Desktop\\박은규\\  → GC4 **장비** (은규 PC 아님)  ※코드 id 레거시 gc1
     Desktop\\KCH\\     → GC2/GC3 **장비** (차헌 PC 아님)
     Desktop\\.cursor\\ → 은규 PC 또는 차헌 PC (촉매 반응 계산.py)
 
   같은 물리 PC에 박은규·KCH 폴더가 둘 다 있으면 **env 탐색 순서**에 따라
-  gc1/gc2가 달라질 수 있으므로, 장비 PC에는 해당 인스턴스 env 하나만 두세요.
+  gc4/gc2가 달라질 수 있으므로, 장비 PC에는 해당 인스턴스 env 하나만 두세요.
 
 =============================================================================
 [env 경로 요약]
@@ -28,11 +31,11 @@ gc_profiles.py — GC1 / GC2 / GC3 **장비 PC**별 출력 폴더·핫스팟·�
 
   | 장비 | env 경로                         | GC_INSTANCE | 핫스팟             |
   |------|----------------------------------|-------------|--------------------|
-  | GC1  | Desktop\\박은규\\_GC자동화\\gc_automation.env | gc1         | iPhone             |
+  | GC4  | Desktop\\박은규\\_GC자동화\\gc_automation.env | gc4 (또는 레거시 gc1) | iPhone |
   | GC2  | Desktop\\KCH\\gc_automation.env    | gc2         | iptime / iptime 2 / iptime_5G |
   | GC3  | Desktop\\KCH\\gc_automation.env    | gc3         | iptime / iptime 2 / iptime_5G |
 
-  GC1 → gc_autochro + gc_gc1 (PDF)
+  GC4 → gc_autochro + gc_gc1 (PDF)  ※모듈 파일명 유지
   GC2 → gc_chemstation (8860 acam)
   GC3 → gc_chem32 (Report.txt)
 
@@ -41,7 +44,7 @@ gc_profiles.py — GC1 / GC2 / GC3 **장비 PC**별 출력 폴더·핫스팟·�
 =============================================================================
 
   1) 환경변수 GC_INSTANCE / EXCEL_OUTPUT_DIR (env 로드 후)
-  2) Desktop\\박은규\\_GC자동화\\gc_automation.env (또는 루트 레거시) → GC1 장비
+  2) Desktop\\박은규\\_GC자동화\\gc_automation.env (또는 루트 레거시) → GC4 장비
   3) Desktop\\KCH\\gc_automation.env 존재 → GC2 또는 GC3 (env의 GC_INSTANCE)
   4) PROFILE_DEFAULTS 기본값 (gc2 쪽)
 
@@ -58,24 +61,32 @@ from dataclasses import dataclass
 from typing import Iterable, List, Optional
 
 from gc_config import DEFAULT_CHEMSTATION_DATA, DEFAULT_GC3_DATA, EXCEL_OUTPUT_DIR, REQUIRED_HOTSPOT_SSID
+from gc_identity import (
+    AUTOCHRO_CANONICAL_CODE,
+    is_autochro_instance,
+    is_autochro_mode,
+)
 from gc_wifi import format_required_ssids_label
 
 DESKTOP = os.path.join(os.path.expanduser("~"), "Desktop")
-# GC1 **장비** PC 기본 출력 (Autochro PDF·xlsx). 「은규 PC」= Desktop\.cursor 와 다름.
+# GC4 **장비** PC 기본 출력 (Autochro PDF·xlsx). 「은규 PC」= Desktop\.cursor 와 다름.
 DEFAULT_GC1_OUTPUT = os.path.join(DESKTOP, "박은규")
 # GC2/GC3 **장비** PC 기본 출력. 「차헌 PC」= Desktop\.cursor 와 다름.
 DEFAULT_GC2_OUTPUT = EXCEL_OUTPUT_DIR
 
-# GC1 장비 PC: 실험 데이터(xlsx·pdf)와 자동화 파일 분리
+# GC4 장비 PC: 실험 데이터(xlsx·pdf)와 자동화 파일 분리 (폴더명 레거시 유지)
 GC1_RUNTIME_SUBDIR_DEFAULT = "_GC자동화"
 
+_AUTOCHRO_PROFILE = {
+    "output_dir": DEFAULT_GC1_OUTPUT,
+    "hotspot": "iPhone",
+    "chemstation_mode": "gc1",  # 파이프라인 분기용 레거시 코드; env 는 gc4 권장
+}
+
 PROFILE_DEFAULTS = {
-    # gc1 — GC1 장비 PC (은규). Autochro PDF. 데이터 처리는 은규 PC.
-    "gc1": {
-        "output_dir": DEFAULT_GC1_OUTPUT,
-        "hotspot": "iPhone",
-        "chemstation_mode": "gc1",
-    },
+    # gc1 / gc4 — GC4 장비 PC (은규 Autochro). 구칭 GC1. 데이터 처리는 은규 PC.
+    "gc1": dict(_AUTOCHRO_PROFILE),
+    "gc4": dict(_AUTOCHRO_PROFILE),
     # gc2 — GC2 장비 PC (차헌). acam. 계산·Origin은 차헌 PC.
     "gc2": {
         "output_dir": DEFAULT_GC2_OUTPUT,
@@ -180,29 +191,30 @@ def resolve_excel_output_dir(base_script_dir: str, loaded_env_file: Optional[str
     if loaded_env_file:
         return _excel_root_from_env_path(loaded_env_file)
     instance = os.getenv("GC_INSTANCE", "").strip().lower()
-    if instance == "gc1":
+    if is_autochro_instance(instance):
         return DEFAULT_GC1_OUTPUT
     return DEFAULT_GC2_OUTPUT
 
 
 def resolve_gc_instance() -> str:
-    """GC_INSTANCE 미설정 시 출력 폴더 basename 으로 gc1/gc2 추정.
+    """GC_INSTANCE 미설정 시 출력 폴더 basename 으로 gc4/gc2 추정.
 
-    basename 이 '박은규' 이면 GC1 **장비** PC. 'KCH' 이면 GC2/GC3 **장비** PC.
+    basename 이 '박은규' 이면 GC4 **장비** PC (구 GC1). 'KCH' 이면 GC2/GC3.
+    env ``gc1`` 도 유효(레거시). 신규는 ``gc4`` 권장.
   """
     instance = os.getenv("GC_INSTANCE", "").strip().lower()
     if instance in PROFILE_DEFAULTS:
         return instance
     output_dir = os.getenv("EXCEL_OUTPUT_DIR", "").strip()
     if output_dir.replace("\\", "/").endswith("/박은규") or output_dir.endswith("박은규"):
-        return "gc1"
+        return "gc4"
     if os.path.basename(resolve_excel_output_dir(script_dir())) == "박은규":
-        return "gc1"
+        return "gc4"
     return "gc2"
 
 
 def gc_runtime_subdir_name() -> str:
-    """GC1 자동화·watch·env 하위 폴더명 (env ``GC_RUNTIME_SUBDIR`` 로 변경 가능)."""
+    """GC4 자동화·watch·env 하위 폴더명 (env ``GC_RUNTIME_SUBDIR`` 로 변경 가능)."""
     raw = os.getenv("GC_RUNTIME_SUBDIR", GC1_RUNTIME_SUBDIR_DEFAULT).strip()
     return raw or GC1_RUNTIME_SUBDIR_DEFAULT
 
@@ -217,24 +229,24 @@ def _excel_root_from_env_path(env_path: str) -> str:
 
 def gc_runtime_dir(excel_output_dir: str, *, gc_instance: str | None = None) -> str:
     """
-    GC1: ``Desktop\\박은규\\_GC자동화`` — watch·env·로그·Cursor 연동.
+    GC4: ``Desktop\\박은규\\_GC자동화`` — watch·env·로그·Cursor 연동.
     GC2/GC3: ``excel_output_dir`` 그대로.
     """
     inst = (gc_instance or resolve_gc_instance()).strip().lower()
-    if inst != "gc1":
+    if not is_autochro_instance(inst):
         return os.path.normpath(excel_output_dir)
     return os.path.normpath(os.path.join(excel_output_dir, gc_runtime_subdir_name()))
 
 
 def migrate_gc1_runtime_layout(excel_output_dir: str) -> int:
-    """GC1 자동화 파일을 ``_GC자동화`` 로 이동 (xlsx·pdf 는 루트 유지)."""
+    """GC4(구 GC1) 자동화 파일을 ``_GC자동화`` 로 이동 (xlsx·pdf 는 루트 유지)."""
     import glob
     import shutil
 
-    if resolve_gc_instance() != "gc1":
+    if not is_autochro_instance(resolve_gc_instance()):
         return 0
     data_root = os.path.normpath(excel_output_dir)
-    runtime = gc_runtime_dir(data_root, gc_instance="gc1")
+    runtime = gc_runtime_dir(data_root, gc_instance=AUTOCHRO_CANONICAL_CODE)
     os.makedirs(runtime, exist_ok=True)
     moved = 0
     for name in (
@@ -447,7 +459,7 @@ def _migrate_gc1_stray_desktop_folder(src_dir: str, runtime: str) -> int:
 
 
 def resolve_runtime_status_paths() -> dict[str, str]:
-    """Env 로드 후 watch/status 경로 (GC1은 ``_GC자동화``)."""
+    """Env 로드 후 watch/status 경로 (GC4는 ``_GC자동화``)."""
     base = script_dir()
     output_dir, _ = bootstrap_env(base)
     return paths_for_output_dir(output_dir)
@@ -464,7 +476,7 @@ def resolve_required_hotspot(default: str = REQUIRED_HOTSPOT_SSID) -> str:
 
 def resolve_chemstation_mode(default: str = "auto") -> str:
     env_mode = os.getenv("CHEMSTATION_MODE", "").strip().lower()
-    if env_mode in ("chem32", "8860", "auto", "gc1"):
+    if env_mode in ("chem32", "8860", "auto") or is_autochro_mode(env_mode):
         return env_mode
     instance = resolve_gc_instance()
     if instance in PROFILE_DEFAULTS:
@@ -517,9 +529,16 @@ def print_output_dir_for_bat() -> None:
 
 
 def print_profile_summary(profile: ResolvedProfile) -> None:
+    from gc_identity import display_name_for_instance, is_autochro_instance
+
     runtime = gc_runtime_dir(profile.excel_output_dir, gc_instance=profile.gc_instance)
+    display = display_name_for_instance(profile.gc_instance)
     print("[GC 프로필]")
-    print(f"  인스턴스      : {profile.gc_instance}")
+    print(f"  인스턴스      : {profile.gc_instance}", end="")
+    if is_autochro_instance(profile.gc_instance):
+        print(f"  ({display} 장비 PC, 구 GC1)")
+    else:
+        print()
     print(f"  데이터 폴더    : {profile.excel_output_dir}")
     if runtime != profile.excel_output_dir:
         print(f"  자동화 폴더    : {runtime}")

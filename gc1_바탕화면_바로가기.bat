@@ -1,6 +1,8 @@
 @echo off
 chcp 949 >nul
 setlocal
+REM GC4 장비 PC (구 GC1) — Desktop\박은규\_GC자동화 바로가기
+REM docs/PC_NAMING.md · 동일 PC·Autochro, 이름만 GC4
 set "GC_ROOT=%~dp0"
 set "GC_OUT=%USERPROFILE%\Desktop\박은규"
 set "GC_RUNTIME=%GC_OUT%\_GC자동화"
@@ -14,13 +16,15 @@ set "GC_PROJ=%USERPROFILE%\chemstation-gc-automation"
 echo @echo off
 echo chcp 949 ^>nul
 echo call "%GC_PROJ%\gc_동작해줘.bat" %%*
-)>"%GC_RUNTIME%\GC1_동작해줘.bat"
+)>"%GC_RUNTIME%\GC4_동작해줘.bat"
+copy /Y "%GC_RUNTIME%\GC4_동작해줘.bat" "%GC_RUNTIME%\GC1_동작해줘.bat" >nul
 
 (
 echo @echo off
 echo chcp 949 ^>nul
 echo call "%GC_PROJ%\gc_start_watch.bat"
-)>"%GC_RUNTIME%\GC1_감시시작.bat"
+)>"%GC_RUNTIME%\GC4_감시시작.bat"
+copy /Y "%GC_RUNTIME%\GC4_감시시작.bat" "%GC_RUNTIME%\GC1_감시시작.bat" >nul
 
 (
 echo @echo off
@@ -28,7 +32,8 @@ echo chcp 949 ^>nul
 echo cd /d "%GC_PROJ%"
 echo python gc_automation.py --verify
 echo if errorlevel 1 pause
-)>"%GC_RUNTIME%\GC1_상태확인.bat"
+)>"%GC_RUNTIME%\GC4_상태확인.bat"
+copy /Y "%GC_RUNTIME%\GC4_상태확인.bat" "%GC_RUNTIME%\GC1_상태확인.bat" >nul
 
 (
 echo @echo off
@@ -36,16 +41,18 @@ echo chcp 949 ^>nul
 echo cd /d "%GC_PROJ%"
 echo python gc1_analyze_pdf.py %%*
 echo if errorlevel 1 pause
-)>"%GC_RUNTIME%\GC1_PDF분석.bat"
+)>"%GC_RUNTIME%\GC4_PDF분석.bat"
+copy /Y "%GC_RUNTIME%\GC4_PDF분석.bat" "%GC_RUNTIME%\GC1_PDF분석.bat" >nul
 
 (
 echo @echo off
 echo chcp 949 ^>nul
 echo cd /d "%GC_PROJ%"
-echo echo [GC1] Autochro 데이터 갱신 + PDF 저장
+echo echo [GC4] Autochro 데이터 갱신 + PDF 저장
 echo python gc_autochro.py --export --force
 echo if errorlevel 1 pause
-)>"%GC_RUNTIME%\GC1_데이터갱신.bat"
+)>"%GC_RUNTIME%\GC4_데이터갱신.bat"
+copy /Y "%GC_RUNTIME%\GC4_데이터갱신.bat" "%GC_RUNTIME%\GC1_데이터갱신.bat" >nul
 
-echo [완료] Desktop\박은규\_GC자동화 바로가기 5개 생성 ^(데이터 xlsx·pdf 는 박은규 루트^)
+echo [완료] Desktop\박은규\_GC자동화 — GC4_* 바로가기 + 레거시 GC1_* 복사
 echo        프로젝트: %GC_PROJ%

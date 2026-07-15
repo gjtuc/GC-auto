@@ -58,12 +58,13 @@ def get_desktop_dir() -> str:
     GC1: ``박은규\\_GC자동화`` (자동화 전용 — 데이터 xlsx·pdf 와 분리).
     GC2/GC3: Windows 사용자 바탕화면 (OneDrive 등 포함).
     """
+    from gc_identity import is_autochro_instance
     from gc_profiles import gc_runtime_dir, resolve_gc_instance
 
     instance = os.getenv("GC_INSTANCE", "").strip().lower() or resolve_gc_instance()
     excel_out = os.getenv("EXCEL_OUTPUT_DIR", "").strip()
-    if instance == "gc1" and excel_out:
-        return gc_runtime_dir(excel_out, gc_instance="gc1")
+    if is_autochro_instance(instance) and excel_out:
+        return gc_runtime_dir(excel_out, gc_instance=instance)
     if sys.platform == "win32":
         try:
             import ctypes

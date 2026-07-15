@@ -72,8 +72,12 @@ def is_data_pc_role(role: Optional[str]) -> bool:
 
 
 def is_gc_equipment_role(role: Optional[str]) -> bool:
-    """gc1_pc / gc2_pc / gc3_pc — 장비 PC."""
-    return role in ("gc1_pc", "gc2_pc", "gc3_pc")
+    """gc1_pc / gc4_pc (Autochro=GC4) / gc2_pc / gc3_pc — 장비 PC."""
+    from gc_identity import is_autochro_equipment_role
+
+    if is_autochro_equipment_role(role):
+        return True
+    return role in ("gc2_pc", "gc3_pc")
 
 
 def detect_machine_role(
@@ -156,13 +160,17 @@ def has_gc1_machine_profile(*, home: str | None = None) -> bool:
 
 
 def is_gc1_instance(instance: str) -> bool:
-    """Ω.A.B.IDENT.04.CMP.instance."""
-    return instance.strip().lower() == "gc1"
+    """Ω.A.B.IDENT.04 — Autochro 장비 (표기 GC4, 코드 gc1|gc4)."""
+    from gc_identity import is_autochro_instance
+
+    return is_autochro_instance(instance)
 
 
 def is_gc1_chemstation_mode(mode: str) -> bool:
-    """Ω.A.B.IDENT.08.CMP.chemstation_mode."""
-    return mode.strip().lower() == "gc1"
+    """Ω.A.B.IDENT.08 — Autochro 모드 (표기 GC4, 코드 gc1|gc4)."""
+    from gc_identity import is_autochro_mode
+
+    return is_autochro_mode(mode)
 
 
 def read_resolved_profile(

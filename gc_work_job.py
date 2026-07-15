@@ -25,6 +25,7 @@ import os
 from datetime import datetime
 from typing import Any, Optional
 
+from gc_identity import is_autochro_mode
 from gc_state import (
     clear_pending_email_retry,
     get_pending_email_retry,
@@ -227,7 +228,7 @@ def resume_start_step(job: dict, send_email: bool) -> Optional[str]:
     if interrupted and last_step in STEP_ORDER:
         return last_step
     if interrupted:
-        if job.get("pipeline_mode") == "gc1" and not steps.get("prepare"):
+        if is_autochro_mode(str(job.get("pipeline_mode") or "")) and not steps.get("prepare"):
             return "prepare"
         if not steps.get("excel") or not excel_step_ok(job):
             return "excel"
@@ -238,7 +239,7 @@ def resume_start_step(job: dict, send_email: bool) -> Optional[str]:
     if send_email and steps.get("excel") and excel_step_ok(job) and not steps.get("mail"):
         return "mail"
 
-    if job.get("pipeline_mode") == "gc1" and not steps.get("prepare"):
+    if is_autochro_mode(str(job.get("pipeline_mode") or "")) and not steps.get("prepare"):
         return "prepare"
     if not steps.get("excel") or not excel_step_ok(job):
         return "excel"
@@ -347,7 +348,7 @@ def apply_processing_result_to_job(
     """
     excel_dir = os.path.dirname(state_path) if state_path else ""
     crm_mtime = None
-    if chemstation_mode == "gc1":
+    if is_autochro_mode(chemstation_mode):
         from gc_state import resolve_gc1_crm_mtime
 
         crm_mtime = resolve_gc1_crm_mtime(excel_dir)

@@ -71,6 +71,7 @@ from typing import Any
 from gc_config import AppConfig, hotspot_reconnect_min_sec
 from gc_chem32 import find_active_sample_folder, resolve_chemstation_mode
 from gc_gc1 import find_active_pdf
+from gc_identity import is_autochro_mode
 from gc_chemstation import find_sequence_folder, get_sequence_date
 from gc_kch import (
     check_sample_name_before_processing,
@@ -315,7 +316,7 @@ class WatchRunner:
             if self._pipeline_running:
                 self._publish("processing", "GC1 처리 진행 중 — 완료까지 대기")
                 return
-            if self.config.chemstation_mode == "gc1":
+            if is_autochro_mode(self.config.chemstation_mode):
                 try:
                     from gc1_runtime.layer0_hotspot_agent import (
                         hotspot_cursor_agent_enabled,
@@ -517,11 +518,11 @@ class WatchRunner:
                 last_action=retry_summary,
             )
 
-        if not os.path.isdir(self.config.data_path) and self.config.chemstation_mode != "gc1":
+        if not os.path.isdir(self.config.data_path) and not is_autochro_mode(self.config.chemstation_mode):
             print(f"[오류] Data 경로 없음: {self.config.data_path}")
             return
 
-        if self.config.chemstation_mode == "gc1":
+        if is_autochro_mode(self.config.chemstation_mode):
             try:
                 from gc1_runtime.layer0_hotspot_agent import (
                     dispatch_gc1_hotspot_session,

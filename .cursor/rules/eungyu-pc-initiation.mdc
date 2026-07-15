@@ -56,7 +56,7 @@ python -c "from data_pc.data_pc_request import message_is_initiation; print(mess
 ## 개시 시 에이전트 동작 (우선순위 최상)
 
 1. **다른 작업보다 우선** (설명·코드 수정보다 먼저)
-2. `gc_automation.py` **실행 금지** (GC1 **장비** PC 전용)
+2. `gc_automation.py` **실행 금지** (**GC4** **장비** PC 전용, 구 GC1)
 3. (선택) `git pull` — sessionStart hook 이후 최신본 확인
 4. **캐시 환경** (gc-data-pc에 `__pycache__` 생기지 않게):
    ```powershell
@@ -96,7 +96,7 @@ python -c "from data_pc.data_pc_request import message_is_initiation; print(mess
 | PC | 개시 시 실행 |
 |----|----------------|
 | **은규 PC** (본 규칙) | `gc-data-pc\촉매 반응 계산.py` |
-| GC1 **장비** PC | `gc_automation.py --user-message` (force) |
+| **GC4** **장비** PC (구 GC1) | `gc_automation.py --user-message` (force) |
 
 `gc-data-pc` 가 있으면 **본 규칙이 우선**. 장비 PC force 규칙 적용 금지.
 

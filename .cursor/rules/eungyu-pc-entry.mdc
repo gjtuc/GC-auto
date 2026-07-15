@@ -29,13 +29,13 @@ alwaysApply: true
 3. 문서 **§2 진행 상태 판별**로 어디까지 됐는지 확인
 4. 첫 미완료 **Phase**부터 순서대로 실행 (터미널·파일·검증)
 5. 실험 경로 — `PEG\machine_profile.json` **연구노트** (G: **금지**)
-6. 이 PC에서 **`gc_automation.py` 실행·설정 금지** (GC1 **장비** PC 전용)
+6. 이 PC에서 **`gc_automation.py` 실행·설정 금지** (**GC4** **장비** PC 전용, 구 GC1)
 7. 수정 후 **git commit + push** (동기화 기본)
 
 ## 정체성 (한 줄)
 
-**은규 PC** = GC1 장비가 보낸 KCH 메일 → `gc-data-pc\촉매 반응 계산.py` → 연구노트 → Origin  
-**GC1 장비 PC** = Autochro PDF → `Desktop\박은규\` → 메일 발송 — **별도 PC**
+**은규 PC** = **GC4** 장비가 보낸 KCH 메일 → `gc-data-pc\촉매 반응 계산.py` → 연구노트 → Origin  
+**GC4 장비 PC** (구 GC1) = Autochro PDF → `Desktop\박은규\` → 메일 발송 — **별도 PC**
 
 ## 운영 경로 (LLM)
 

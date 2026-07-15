@@ -12,9 +12,11 @@ gc_automation.py — ChemStation / GC1 자동 정리 (CLI 진입점)
   은규 PC·차헌 PC에서는 data_pc/촉매 반응 계산.py 를 실행하세요.
 
   PC 명칭: docs/PC_NAMING.md
-    · GC1 장비 PC (은규)  → Desktop\\박은규\\_GC자동화\\gc_automation.env (데이터 xlsx·pdf 는 박은규 루트)
-    · GC2/GC3 장비 PC (차헌) → Desktop\\KCH\\gc_automation.env
-    · 은규 PC / 차헌 PC → Desktop\\.cursor\\ (본 스크립트 실행 금지)
+  · GC1 장비 PC (은규)  → **표기 GC4** Desktop\\박은규\\_GC자동화\\gc_automation.env
+    · GC2/GC3 장비 PC (차헌·차완) → Desktop\\KCH\\gc_automation.env
+    · 은규 PC / 차헌 PC → Desktop\\.cursor\\ 또는 gc-data-pc (본 스크립트 실행 금지)
+
+  명칭: docs/PC_NAMING.md · Autochro 동의어 gc1≡gc4: gc_identity.py
 
   clone → 해당 장비 PC의 env 유지 → git pull 로 코드만 갱신
   가이드: docs/CODEBASE_GUIDE.md
@@ -82,6 +84,7 @@ from gc_config import (
     REQUIRED_HOTSPOT_SSID,
     AppConfig,
 )
+from gc_identity import is_autochro_instance, is_autochro_mode
 from gc_profiles import paths_for_output_dir, print_profile_summary, resolve_data_path, resolve_profile
 from gc_sanitize import InvalidSampleNameError, InvalidSequenceFolderError, sanitize_sample_name, validate_sequence_folder
 from gc_force_auth import require_force_auth
@@ -120,7 +123,7 @@ def apply_env_overrides(
     load_dotenv_files(script_dir, config.excel_output_dir)
     if chemstation_mode_cli == "auto":
         env_mode = os.getenv("CHEMSTATION_MODE", "").strip().lower()
-        if env_mode in ("chem32", "8860", "auto", "gc1"):
+        if env_mode in ("chem32", "8860", "auto") or is_autochro_mode(env_mode):
             config = replace(config, chemstation_mode=env_mode)
     env_sample = os.getenv("SAMPLE_NAME", "").strip()
     if env_sample and not config.sample_name:
@@ -189,7 +192,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--chemstation-mode",
         default="auto",
-        choices=["auto", "8860", "chem32", "gc1"],
+        choices=["auto", "8860", "chem32", "gc1", "gc4"],
         help="auto=프로필/경로로 판별, gc1=GC1 PDF, chem32=GC3, 8860=GC2",
     )
     parser.add_argument("--sequence-folder", default=None)
@@ -316,7 +319,7 @@ def run_force_once(config: AppConfig, script_dir: str) -> None:
 def submit_force_request(config: AppConfig, script_dir: str, trigger_text: str) -> None:
     """[1단계] force — watch 와 무관하게 이 프로세스에서 즉시 pipeline 실행."""
     print(f"[1/2] force 실행 — '{trigger_text}' (watch 독립, 핫스팟·메일 쿨다운 무시)")
-    if not os.path.isdir(config.data_path) and config.chemstation_mode != "gc1":
+    if not os.path.isdir(config.data_path) and not is_autochro_mode(config.chemstation_mode):
         print(f"[오류] Data 경로 없음: {config.data_path}")
         return
     os.makedirs(config.excel_output_dir, exist_ok=True)
@@ -423,7 +426,7 @@ def main() -> None:
     from gc_profiles import bootstrap_env, gc_runtime_dir, migrate_gc1_runtime_layout, resolve_gc_instance
 
     data_root, _ = bootstrap_env(SCRIPT_DIR)
-    if resolve_gc_instance() == "gc1":
+    if is_autochro_instance(resolve_gc_instance()):
         moved = migrate_gc1_runtime_layout(data_root)
         if moved:
             bootstrap_env(SCRIPT_DIR)
@@ -473,7 +476,7 @@ def main() -> None:
         submit_force_request(force_config_from(config), SCRIPT_DIR, trigger)
         sys.exit(verify_system_health())
 
-    if not os.path.isdir(config.data_path) and config.chemstation_mode != "gc1":
+    if not os.path.isdir(config.data_path) and not is_autochro_mode(config.chemstation_mode):
         print(f"[오류] Data 경로 없음: {config.data_path}")
         return
 

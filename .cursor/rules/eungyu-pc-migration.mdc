@@ -110,7 +110,7 @@ python -m data_pc_runtime --restart --script-dir $env:USERPROFILE\gc-data-pc
 
 | 금지 | 이유 |
 |------|------|
-| `gc_automation.py` 실행·수정 | GC1 **장비** PC 전용 |
+| `gc_automation.py` 실행·수정 | **GC4** **장비** PC 전용 (구 GC1) |
 | 차헌 G: 경로를 은규 profile에 복사 | 은규는 **연구노트** 로컬 |
 | `machine_profile.json` Git commit | 로컬 전용 (.gitignore) |
 | 차헌 PC `Desktop\.cursor\` 덮어쓰기 | 다른 PC |

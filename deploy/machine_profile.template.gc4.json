@@ -1,7 +1,7 @@
 {
   "role": "gc4_pc",
   "label": "은규 — GC4 장비 PC (템플릿, 구 GC1)",
-  "description": "GC4 Autochro→PDF→엑셀→메일. env=Desktop\\박은규. 레거시 파일명 template.gc1.json 유지.",
+  "description": "GC4 Autochro→PDF→엑셀→메일. env=Desktop\\박은규. 자리 이동으로 구칭 GC1.",
   "gc_assignment": {
     "equipment": "GC4",
     "operator": "은규",
@@ -23,9 +23,10 @@
     "env_file": "C:\\Users\\User\\Desktop\\박은규\\gc_automation.env"
   },
   "notes": {
-    "pc_naming": "GC4 **장비** PC (구 GC1). 권장 템플릿: machine_profile.template.gc4.json. role=gc1_pc 동의어.",
+    "pc_naming": "이 파일은 GC4 **장비** PC용 (구 GC1). 「은규 PC」= Desktop\\.cursor 또는 gc-data-pc (role=data_pc) 와 다름.",
     "not_this_pc": "촉매 반응 계산.py·Origin·G: 는 은규 PC에서 실행 — 본 PC에서는 gc_automation.py 만",
     "setup": "이 파일을 복사 → Desktop\\박은규\\machine_profile.json 작성 후 identifiers 채우기",
+    "legacy_role": "role=gc1_pc 도 동의어로 인식 (gc_identity)",
     "best_id": "smbios_uuid 또는 machine_guid",
     "doc": "docs/PC_NAMING.md"
   }

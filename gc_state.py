@@ -208,19 +208,23 @@ def is_slot_available(state: dict, today_str: str, slot: str) -> bool:
 
 
 def session_based_auto_send(mode: str) -> bool:
-    """GC1 만 슬롯·쿨다운 없음."""
-    return mode == "gc1"
+    """GC4(구 GC1 Autochro) 만 슬롯·쿨다운 없음."""
+    from gc_identity import is_autochro_mode
+
+    return is_autochro_mode(mode)
 
 
 def uses_mail_cooldown(mode: str) -> bool:
     """GC2/GC3 자동 메일 — 쿨다운 슬롯(기본 1시간). 핫스pot 세션과 무관."""
-    if mode == "gc1":
+    from gc_identity import is_autochro_mode
+
+    if is_autochro_mode(mode):
         return False
     return mode in ("8860", "chem32", "auto")
 
 
 def gc1_unlimited_auto_send(mode: str) -> bool:
-    """session_based_auto_send 와 동일 (GC1 호환 별칭)."""
+    """session_based_auto_send 와 동일 (GC4/구 GC1 Autochro 호환 별칭)."""
     return session_based_auto_send(mode)
 
 
@@ -667,8 +671,10 @@ def recover_stale_pending_email(state_path: str, excel_output_dir: str) -> bool:
 
 def has_new_data_since_last_run(state_path: str, sequence_folder: str, data_path: str = "", mode: str = "auto") -> bool:
     """마지막 처리 이후 새 Report(acam/PDF) 데이터가 있는지."""
+    from gc_identity import is_autochro_mode
+
     state = load_send_state(state_path)
-    if mode == "gc1":
+    if is_autochro_mode(mode):
         from gc_gc1 import get_latest_pdf_mtime
 
         latest_mtime = get_latest_pdf_mtime(sequence_folder)
