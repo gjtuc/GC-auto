@@ -1,15 +1,15 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-07-15 22:07:49 | HEAD: `70c67ca` | auto: sync GC8860 @ 2026-07-15 22:07:44
+> Updated: 2026-07-16 12:54:36 | HEAD: `3788e35` | Rename Autochro lab equipment label GC1 to GC4.
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
 | PC | role | last push (who @ when) | push | last pull (who @ when) | pull | status |
 |----|------|-------------------------|------|-------------------------|------|--------|
 | `DESKTOP-BFMLJ9J` | data_pc | - @ - | `-` | DESKTOP-BFMLJ9J\user @ 2026-06-25T13:09:09+09:00 | `b8db047` | [WARN] need pull |
-| `DESKTOP-MBGSSME` | gc1_pc | DESKTOP-MBGSSME\User @ 2026-07-02T00:21:27+09:00 | `f21dd44` | DESKTOP-MBGSSME\은규 @ 2026-07-01T19:50:13+09:00 | `43419e8` | [WARN] need pull |
+| `DESKTOP-MBGSSME` | gc4_pc | DESKTOP-MBGSSME\User @ 2026-07-02T00:21:27+09:00 | `f21dd44` | DESKTOP-MBGSSME\은규 @ 2026-07-01T19:50:13+09:00 | `43419e8` | [WARN] need pull |
 | `DESKTOP-XXXXXXX` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
-| `GC8860` | gc2_pc | GC8860\차헌 @ 2026-07-15T22:07:49+09:00 | `70c67ca` | GC8860\차헌 @ 2026-07-14T10:15:37+09:00 | `5e2ad2d` | [WARN] need pull |
+| `GC8860` | gc2_pc | GC8860\차헌 @ 2026-07-15T22:07:49+09:00 | `70c67ca` | GC8860\차헌 @ 2026-07-16T12:54:36+09:00 | `3788e35` | [OK] latest |
 
 ## Commands
 - Start work: `gc_git_pull.bat`
