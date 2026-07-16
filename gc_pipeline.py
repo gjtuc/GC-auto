@@ -232,7 +232,13 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
 
     sample_name, seq_date = determine_sample_name(cycle_peaks_list, sequence_folder, config)
     if not sample_name:
-        reason = "new_date" if is_new_sequence_date(config.excel_output_dir, seq_date) else "rt_mismatch"
+        reason = (
+            "new_date"
+            if is_new_sequence_date(
+                config.excel_output_dir, seq_date, state_path=config.send_state_file
+            )
+            else "rt_mismatch"
+        )
         detail = format_watch_sample_name_required_message(seq_date, reason=reason)
         return ProcessResult(
             ok=False,

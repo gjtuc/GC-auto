@@ -48,7 +48,16 @@ class TestGcSanitize(unittest.TestCase):
             path = build_safe_output_filename(tmp, 'Ni10-Al2O3', '20260617')
             self.assertEqual(
                 os.path.normpath(path),
-                os.path.normpath(os.path.join(tmp, '20260617 Ni10-Al2O3.xlsx')),
+                os.path.normpath(os.path.join(tmp, 'Ni10-Al2O3.xlsx')),
+            )
+            path2 = build_safe_output_filename(
+                tmp, '20260705 dre(1.5)@600C fe2ni5/al2o3', '20260716'
+            )
+            self.assertEqual(
+                os.path.normpath(path2),
+                os.path.normpath(
+                    os.path.join(tmp, '20260705 dre(1.5)@600C fe2ni5-al2o3.xlsx')
+                ),
             )
             with self.assertRaises(InvalidSampleNameError):
                 build_safe_output_filename(tmp, '', '20260617')

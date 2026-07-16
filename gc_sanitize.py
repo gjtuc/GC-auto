@@ -82,8 +82,10 @@ def validate_sequence_folder(sequence_folder: str, data_path: str) -> str:
     return folder
 
 
-def build_safe_output_filename(excel_output_dir: str, sample_name: str, seq_date: str) -> str:
+def build_safe_output_filename(excel_output_dir: str, sample_name: str, seq_date: str = "") -> str:
+    """엑셀 파일명 = 시료명만 (날짜 접두 없음). ``seq_date`` 는 검증만 하고 경로에 쓰지 않음."""
     safe_name = sanitize_sample_name(sample_name)
-    safe_date = sanitize_seq_date(seq_date)
-    path = os.path.join(excel_output_dir, f'{safe_date} {safe_name}.xlsx')
+    if seq_date and str(seq_date).strip():
+        sanitize_seq_date(seq_date)
+    path = os.path.join(excel_output_dir, f"{safe_name}.xlsx")
     return ensure_path_under_dir(excel_output_dir, path)

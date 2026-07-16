@@ -4,9 +4,12 @@ gc_kch.py — KCH 엑셀 생성 및 시료 이름 결정
 
 [시료 이름 규칙]
   1) KCH 기존 엑셀 RT 지문과 일치 → 시료명 자동 재사용
-  2) --sample-name 지정 → 그 이름 사용
+  2) --sample-name / SAMPLE_NAME 지정 → 그 이름 사용
   3) 수동 실행(allow_prompt) → 터미널에서 입력
   4) 그 외(특히 --watch) → 처리 중단
+
+  엑셀 파일명 = 시료명만 (``시료명.xlsx``). 분석일 접두는 붙이지 않음.
+  Windows 불가 문자만 제거, ``/`` → ``-``.
 
   ★ 새 날짜(YYYYMMDD) 시퀀스가 처음 생기면 시료명을 반드시 받아야 엑셀·메일까지 진행됩니다.
     자동 감시는 시료명을 물어볼 수 없으므로, 사용자가 --sample-name 으로 수동 실행해야 합니다.
@@ -36,14 +39,18 @@ from gc_chemstation import get_sequence_date, rt_patterns_match
 from gc_sanitize import InvalidSampleNameError, build_safe_output_filename, sanitize_sample_name
 
 
-def is_new_sequence_date(excel_output_dir: str, seq_date: str) -> bool:
+def is_new_sequence_date(
+    excel_output_dir: str,
+    seq_date: str,
+    state_path: Optional[str] = None,
+) -> bool:
     """
     해당 날짜 KCH 엑셀이 아직 없으면 True.
 
     실무상 「새 날짜」= 시료가 바뀐 새 시퀀스 → watch 가 시료명 1회 입력을 요청.
     같은 날짜·같은 RT 패턴의 추가 주입은 기존 엑셀·시료명으로 자동 처리.
     """
-    return len(list_excel_files_for_date(excel_output_dir, seq_date)) == 0
+    return len(list_excel_files_for_date(excel_output_dir, seq_date, state_path=state_path)) == 0
 
 
 def format_watch_sample_name_required_message(
@@ -77,7 +84,7 @@ def check_sample_name_before_processing(sequence_folder: str, config: AppConfig)
     acam 파싱 전 빠른 검사 — **시료가 바뀐 경우** 시료명 없으면 pipeline 진입 차단.
 
     차단 조건 (GC2 8860 watch 전용, GC1·Chem32 는 각자 pipeline 규칙):
-      · KCH 에 ``{seq_date} *.xlsx`` 가 없음 → 새 시료, 시료명 필수
+      · 해당 시퀀스 날짜에 연결된 KCH 엑셀이 없음 → 새 시료, 시료명 필수
       · (pipeline 단계) RT 불일치 → 시료명 필수
 
   통과 (None):
@@ -94,7 +101,9 @@ def check_sample_name_before_processing(sequence_folder: str, config: AppConfig)
     if config.sample_name:
         return None
 
-    if not is_new_sequence_date(config.excel_output_dir, seq_date):
+    if not is_new_sequence_date(
+        config.excel_output_dir, seq_date, state_path=config.send_state_file
+    ):
         return None
 
     if config.allow_prompt:
@@ -167,7 +176,9 @@ def resolve_watch_sample_name_alert(
 
     state = load_send_state(state_path)
     pending = get_watch_need_sample_name(state)
-    new_date = is_new_sequence_date(config.excel_output_dir, seq_date)
+    new_date = is_new_sequence_date(
+        config.excel_output_dir, seq_date, state_path=state_path
+    )
 
     if not new_date and not pending:
         return None
@@ -202,23 +213,52 @@ def resolve_watch_sample_name_alert(
     }
 
 
-def list_excel_files_for_date(excel_output_dir: str, seq_date: str) -> List[str]:
-    """KCH 폴더에서 `{YYYYMMDD} *.xlsx` 목록 (최신순)."""
+def list_excel_files_for_date(
+    excel_output_dir: str,
+    seq_date: str,
+    state_path: Optional[str] = None,
+) -> List[str]:
+    """해당 시퀀스 날짜에 연결된 KCH 엑셀 목록 (최신순).
+
+    · 레거시: ``{YYYYMMDD} *.xlsx``
+    · 현재: send_state 의 시료명 → ``{시료명}.xlsx``
+    """
+    found: List[str] = []
     pattern = os.path.join(excel_output_dir, f"{seq_date} *.xlsx")
-    return sorted(
-        [path for path in glob.glob(pattern) if not os.path.basename(path).startswith("~$")],
-        key=os.path.getmtime,
-        reverse=True,
+    found.extend(
+        path for path in glob.glob(pattern) if not os.path.basename(path).startswith("~$")
     )
+    if state_path:
+        from gc_state import get_seq_sample_name
+
+        persisted = get_seq_sample_name(state_path, seq_date)
+        if persisted:
+            try:
+                safe = sanitize_sample_name(persisted)
+            except InvalidSampleNameError:
+                safe = ""
+            if safe:
+                candidate = os.path.join(excel_output_dir, f"{safe}.xlsx")
+                if os.path.isfile(candidate) and candidate not in found:
+                    found.append(candidate)
+    return sorted(found, key=os.path.getmtime, reverse=True)
 
 
-def parse_sample_name_from_excel(excel_path: str, seq_date: str) -> Optional[str]:
-    """`20260613 Ni10-Al2O3....xlsx` → 시료 이름 부분."""
-    filename = os.path.basename(excel_path).replace(".xlsx", "")
-    prefix = f"{seq_date} "
-    if filename.startswith(prefix):
-        return filename[len(prefix) :]
-    return None
+def parse_sample_name_from_excel(excel_path: str, seq_date: str = "") -> Optional[str]:
+    """엑셀 stem → 시료명. 레거시 ``YYYYMMDD 시료`` 또는 시료명만."""
+    filename = os.path.basename(excel_path)
+    if filename.lower().endswith(".xlsx"):
+        filename = filename[:-5]
+    if not filename or filename.startswith("~$"):
+        return None
+    if seq_date:
+        prefix = f"{seq_date} "
+        if filename.startswith(prefix):
+            return filename[len(prefix) :]
+    parts = filename.split(" ", 1)
+    if len(parts) == 2 and len(parts[0]) == 8 and parts[0].isdigit():
+        return parts[1]
+    return filename
 
 
 def extract_cycles_from_dataframe(df: pd.DataFrame) -> List[List[dict]]:
@@ -284,10 +324,13 @@ def find_matching_sample_name(
     cycle_peaks_list: List[List[dict]],
     seq_date: str,
     excel_output_dir: str,
+    state_path: Optional[str] = None,
 ) -> Optional[str]:
     """KCH 기존 파일 RT 지문과 일치하는 시료명."""
     current_fp = cycle_fingerprint(cycle_peaks_list)
-    for excel_path in list_excel_files_for_date(excel_output_dir, seq_date):
+    for excel_path in list_excel_files_for_date(
+        excel_output_dir, seq_date, state_path=state_path
+    ):
         sample_name = parse_sample_name_from_excel(excel_path, seq_date)
         if not sample_name:
             continue
@@ -330,15 +373,23 @@ def determine_sample_name(
     config: AppConfig,
 ) -> Tuple[Optional[str], str]:
     """
-    시료명과 엑셀 날짜 접두사 결정.
+    시료명과 시퀀스 날짜 결정. 엑셀 파일명은 시료명만 사용 (날짜 접두 없음).
 
     Returns:
         (sample_name, seq_date) — sample_name 이 None 이면 처리 불가
     """
     seq_date = get_sequence_date(sequence_folder_path, config.sequence_date)
-    existing_files = list_excel_files_for_date(config.excel_output_dir, seq_date)
+    state_path = config.send_state_file
+    existing_files = list_excel_files_for_date(
+        config.excel_output_dir, seq_date, state_path=state_path
+    )
 
-    matched = find_matching_sample_name(cycle_peaks_list, seq_date, config.excel_output_dir)
+    matched = find_matching_sample_name(
+        cycle_peaks_list,
+        seq_date,
+        config.excel_output_dir,
+        state_path=state_path,
+    )
     if matched:
         return matched, seq_date
 
@@ -356,7 +407,7 @@ def determine_sample_name(
 
     from gc_state import get_seq_sample_name
 
-    persisted = get_seq_sample_name(config.send_state_file, seq_date)
+    persisted = get_seq_sample_name(state_path, seq_date)
     if persisted:
         print(f"\n[안내] 이전에 지정한 시료명 재사용 → '{persisted}'")
         return persisted, seq_date
@@ -364,7 +415,7 @@ def determine_sample_name(
     if config.allow_prompt:
         return prompt_sample_name(seq_date, bool(existing_files)), seq_date
 
-    if is_new_sequence_date(config.excel_output_dir, seq_date):
+    if is_new_sequence_date(config.excel_output_dir, seq_date, state_path=state_path):
         print(f"\n[오류] 새 날짜({seq_date}) 시퀀스 — 시료명을 반드시 지정해야 합니다.")
     else:
         print(

@@ -13,7 +13,7 @@ gc_chemstation.py — ChemStation Data 폴더 탐색 및 sequence.acam_ 파싱
   Report.txt 는 사용하지 않습니다.
 
   Data 루트: gc_config.DEFAULT_CHEMSTATION_DATA (보통 Public\\Documents\\ChemStation\\1\\Data)
-  출력: Desktop\\KCH\\YYYYMMDD 시료.xlsx → gc_mailer → 차헌 PC 메일
+  출력: Desktop\\KCH\\시료명.xlsx → gc_mailer → 차헌 PC 메일
 """
 
 from __future__ import annotations
