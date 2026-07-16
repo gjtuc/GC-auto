@@ -1,0 +1,44 @@
+{
+  "role": "data_pc",
+  "label": "차완 PC (템플릿)",
+  "description": "GC2 KCH xlsx를 Downloads에 넣고 가공. IMAP 없음. Desktop\\kier\\촉매 반응 결과 → Origin 폴더 체인.",
+  "gc_assignment": {
+    "equipment": "GC2",
+    "operator": "차완",
+    "note": "GC2 장비 PC(GC8860)와 별개 물리 PC. 메일 수신 없음."
+  },
+  "recorded_at": "YYYY-MM-DD",
+  "identifiers": {
+    "computer_name": "DESKTOP-N89C874",
+    "windows_user": "User",
+    "smbios_uuid": "Get-CimInstance Win32_ComputerSystemProduct | Select UUID",
+    "machine_guid": "HKLM\\SOFTWARE\\Microsoft\\Cryptography MachineGuid",
+    "cpu": "CPU 모델 (선택)"
+  },
+  "uses_g_drive": false,
+  "experiment_data_root": "C:\\Users\\User\\Desktop\\kier\\촉매 반응 결과",
+  "reaction_roots": {
+    "DRE": "C:\\Users\\User\\Desktop\\kier\\촉매 반응 결과\\DRE",
+    "DRM": "C:\\Users\\User\\Desktop\\kier\\촉매 반응 결과\\DRM",
+    "DRME": "C:\\Users\\User\\Desktop\\kier\\촉매 반응 결과\\DRME"
+  },
+  "paths": {
+    "repo": "C:\\Users\\User\\chemstation-gc-automation",
+    "script_dir": "C:\\Users\\User\\gc-data-pc-chawan",
+    "kch_dir": "C:\\Users\\User\\gc-data-pc-chawan\\KCH",
+    "env_file": "C:\\Users\\User\\gc-data-pc-chawan\\gc_automation.env",
+    "downloads_inbox": "C:\\Users\\User\\Downloads",
+    "origin_seed_dre": "C:\\Users\\User\\Downloads\\20260706 DRE(1.5%)@600C Ni_CVD(0.1)-Ni5-Ce5-Al2O3.opju"
+  },
+  "runtime": {
+    "mode": "manual_downloads",
+    "mail_enabled": false,
+    "watch_enabled": false,
+    "input_rule": "Downloads 가장 최근 .xlsx 1개"
+  },
+  "notes": {
+    "pc_naming": "차완 PC (role=data_pc). GC2 **장비** PC(GC8860)와 별개.",
+    "origin_chain": "1) reaction_roots 비어 있을 때 origin_seed_dre 로 첫 폴더 2) 이후 DRE 최신 폴더 복사",
+    "doc": "docs/차완PC_Cursor_시작.md"
+  }
+}

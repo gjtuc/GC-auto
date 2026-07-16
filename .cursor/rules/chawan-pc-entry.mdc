@@ -1,0 +1,37 @@
+---
+description: 차완 PC 세션 — 「차완 PC야」「GC 작업해줘」→ Downloads xlsx 파이프라인
+alwaysApply: false
+---
+
+# 차완 PC (데이터 PC) — Cursor 진입
+
+## 트리거
+
+- 「차완 PC」「차완 PC야」「GC 작업해줘」「작업해줘」 (차완 PC 맥락)
+- `gc-data-pc-chawan\KCH\machine_profile.json` · operator=차완
+
+## 즉시 할 일
+
+1. **`docs/차완PC_Cursor_시작.md`** 읽기
+2. `git pull` (chemstation-gc-automation)
+3. Downloads **최신 GC xlsx** 확인
+4. **`python scripts/run_gc_chawan.py`** 실행 (되묻지 말고)
+
+## 정체성
+
+**차완 PC** = Downloads xlsx → 계산 → `Desktop\kier\촉매 반응 결과` → Origin  
+**GC8860** = ChemStation 장비 PC — **별도 PC**, `gc_automation.py`
+
+## 경로
+
+| 항목 | 경로 |
+|------|------|
+| script_dir | `%USERPROFILE%\gc-data-pc-chawan\` |
+| DRE | `%USERPROFILE%\Desktop\kier\촉매 반응 결과\DRE` |
+| Origin 시드 | `paths.origin_seed_dre` in machine_profile |
+
+## 금지
+
+- `gc_automation.py` 실행 (장비 PC)
+- G: / SecuYouSB 설정
+- IMAP / 메일 env commit

@@ -1,0 +1,38 @@
+{
+  "role": "data_pc",
+  "label": "차완 PC (참고)",
+  "description": "Downloads xlsx → GC2 계산 → Desktop\\kier\\촉매 반응 결과 → Origin. IMAP 없음.",
+  "recorded_at": "2026-07-16",
+  "identifiers": {
+    "computer_name": "DESKTOP-N89C874",
+    "windows_user": "User",
+    "smbios_uuid": "032E02B4-0499-05EB-3D06-570700080009",
+    "machine_guid": "401c0cf1-98ac-42b8-9467-06af872621c9",
+    "cpu": "Intel(R) Core(TM) i5-9400F CPU @ 2.90GHz"
+  },
+  "uses_g_drive": false,
+  "experiment_data_root": "C:\\Users\\User\\Desktop\\kier\\촉매 반응 결과",
+  "reaction_roots": {
+    "DRE": "C:\\Users\\User\\Desktop\\kier\\촉매 반응 결과\\DRE",
+    "DRM": "C:\\Users\\User\\Desktop\\kier\\촉매 반응 결과\\DRM",
+    "DRME": "C:\\Users\\User\\Desktop\\kier\\촉매 반응 결과\\DRME"
+  },
+  "paths": {
+    "script_dir": "C:\\Users\\User\\gc-data-pc-chawan",
+    "kch_dir": "C:\\Users\\User\\gc-data-pc-chawan\\KCH",
+    "downloads_inbox": "C:\\Users\\User\\Downloads",
+    "origin_seed_dre": "C:\\Users\\User\\Downloads\\20260706 DRE(1.5%)@600C Ni_CVD(0.1)-Ni5-Ce5-Al2O3.opju"
+  },
+  "runtime": {
+    "mode": "manual_downloads",
+    "mail_enabled": false,
+    "watch_enabled": false,
+    "input_rule": "Downloads 가장 최근 .xlsx 1개"
+  },
+  "notes": {
+    "pc_naming": "차완 PC (role=data_pc). GC8860 **장비** PC와 별개.",
+    "gc2_equipment_pc": "GC2 장비 PC — GC8860, 차헌·차완 공동 사용",
+    "origin_chain": "Downloads 초안 opju 1회 시드 → 이후 DRE 최신 폴더 복사 반복",
+    "doc": "docs/차완PC_Cursor_시작.md"
+  }
+}

@@ -20,9 +20,11 @@
 |------|---------|------|
 | **은규** | **GC4** (구 GC1) | Autochro 장비 사용자 |
 | **차헌** | GC2, GC3 | GC2/GC3 사용자 (메일 `kimcha0809@naver.com`) |
-| **차완** | GC2 (공유) | GC2 장비 PC 공동 사용 (메일 `yangcw0103@kier.re.kr`) |
+| **차완** | GC2 (공유) | GC2 장비 PC 공동 사용 (메일 `yangcw0103@kier.re.kr`) · **차완 PC** = 별도 데이터 PC |
 
 GC2는 차헌·차완이 **같은 장비 PC**를 씀. Cursor「차완」「차헌」으로 작업자 전환 → `gc_operator.py` / `.gc_operator.json`.
+
+**차완 PC** (`DESKTOP-N89C874`) = GC8860과 **별개** 업무 PC. Downloads xlsx → `Desktop\kier\촉매 반응 결과` → Origin. [`docs/차완PC_Cursor_시작.md`](차완PC_Cursor_시작.md)
 
 ## PC 종류 (4종)
 
@@ -32,6 +34,7 @@ GC2는 차헌·차완이 **같은 장비 PC**를 씀. Cursor「차완」「차�
 | **은규 PC** | 은규 | 업무·계산·Origin | `gc-data-pc\` 또는 `Desktop\.cursor\` | `촉매 반응 계산.py` |
 | **GC2/GC3 장비 PC** | 차헌·차완 | ChemStation 옆 장비 | `Desktop\KCH\gc_automation.env` | `gc_automation.py` |
 | **차헌 PC** | 차헌 | 업무·계산·Origin | `Desktop\.cursor\gc_automation.env` | `촉매 반응 계산.py` |
+| **차완 PC** | 차완 | 업무·계산·Origin (KIER) | `gc-data-pc-chawan\` | `scripts/run_gc_chawan.py` |
 
 ## 오해 금지
 
@@ -53,6 +56,7 @@ GC2는 차헌·차완이 **같은 장비 PC**를 씀. Cursor「차완」「차�
 | GC2/GC3 장비 PC | `gc2_pc` / `gc3_pc` | `deploy/machine_profile.template.gc2.json` |
 | GC8860 (GC2 장비) | `gc2_pc` | `deploy/machine_profile.reference.gc8860.json` |
 | 차헌 PC | `data_pc` | `deploy/machine_profile.reference.chaheon.json` · env: `deploy/gc_automation.env.chaheon.example` |
+| **차완 PC** | `data_pc` | `deploy/machine_profile.reference.chawan.json` · `deploy/machine_profile.template.chawan_data_pc.json` |
 
 ## EXPECTED_PCS (GitHub sync)
 
@@ -62,11 +66,13 @@ GC2는 차헌·차완이 **같은 장비 PC**를 씀. Cursor「차완」「차�
 | `(은규 PC COMPUTERNAME)` | 은규 PC |
 | `GC8860` | 차헌 — GC2/GC3 장비 PC |
 | `DESKTOP-BFMLJ9J` | 차헌 PC |
+| `DESKTOP-N89C874` | **차완 PC** (Downloads → kier) |
 
 ## 파이프라인 한 줄
 
 - **장비 PC** → KCH 원본 엑셀 → 메일 **발송** (수신: 본인 **데이터 PC**)
-- **은규 PC** / **차헌 PC** → 메일 **수신** → 계산 → G: → Origin
+- **은규 PC** / **차헌 PC** → 메일 **수신** → 계산 → G: 또는 연구노트 → Origin
+- **차완 PC** → Downloads xlsx → 계산 → `kier\촉매 반응 결과` → Origin
 
 **GitHub:** 코드 수정 후 자동 push — [`GIT_AUTO_SYNC.md`](GIT_AUTO_SYNC.md)
 

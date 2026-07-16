@@ -7,10 +7,10 @@
 
 ## 1. 왜 폴더 위치가 PC마다 다른가
 
-| 요구 | 은규 PC | 차헌 PC |
-|------|---------|---------|
-| 바탕화면 정리 | 바탕화면에 폴더 안 보이게 | 기존 `Desktop\.cursor` 유지 가능 |
-| 사용자 혼동 방지 | `gc-data-pc` 이름으로 목적 명확 | — |
+| 요구 | 은규 PC | 차헌 PC | 차완 PC |
+|------|---------|---------|---------|
+| 바탕화면 정리 | 바탕화면에 폴더 안 보이게 | 기존 `Desktop\.cursor` 유지 가능 | `gc-data-pc-chawan` |
+| 사용자 혼동 방지 | `gc-data-pc` 이름으로 목적 명확 | — | Downloads·kier 경로 문서화 |
 | Python 캐시·임시 | `%USERPROFILE%\.cursor\gc-python-cache` 등 | 동일 |
 | Cursor IDE | `.cursor\` 루트는 IDE 설정 — **gc-* 하위만** GC 부가 파일 |
 
@@ -22,6 +22,7 @@
 |----|--------------------------|-------------------|
 | **은규 PC** | `C:\Users\User\gc-data-pc\` | `PEG\` (Park Eungyu Gyu) |
 | **차헌 PC** | `C:\Users\User\Desktop\.cursor\` | `KCH\` (Kim Chaheon) |
+| **차완 PC** | `C:\Users\User\gc-data-pc-chawan\` | `KCH\` (processed·profile) |
 
 **script_dir** = `촉매 반응 계산.py` + `gc_automation.env` 가 있는 폴더.  
 스크립트는 `SCRIPT_DIR = os.path.dirname(__file__)` 로 자동 인식.

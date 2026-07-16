@@ -18,6 +18,12 @@ clone → `docs/은규PC_Cursor_시작.md` Phase 1부터 순서대로.
 
 ---
 
+## 차완 PC — Cursor 처음 오셨나요?
+
+**「차완 PC야」「GC 작업해줘」** → [`docs/차완PC_Cursor_시작.md`](docs/차완PC_Cursor_시작.md) · [`scripts/run_gc_chawan.py`](scripts/run_gc_chawan.py)
+
+---
+
 ## 전체 그림
 
 ```
@@ -26,7 +32,8 @@ GitHub GC-auto (클라우드 — 모든 코드·문서)
         ├── GC4 장비 PC (은규, 구 GC1)  gc_automation.py — Autochro→PDF→메일
         ├── GC2/GC3 장비 PC (차헌·차완) gc_automation.py — ChemStation→메일
         ├── 은규 PC                data_pc/촉매 반응 계산.py — 메일→연구노트→Origin
-        └── 차헌 PC                data_pc/촉매 반응 계산.py — 메일→G:→Origin
+        ├── 차헌 PC                data_pc/촉매 반응 계산.py — 메일→G:→Origin
+        └── 차완 PC                scripts/run_gc_chawan.py — Downloads→kier→Origin
 ```
 
 | PC | `machine_profile` / env | 실행 | 비고 |
@@ -35,6 +42,7 @@ GitHub GC-auto (클라우드 — 모든 코드·문서)
 | GC2/GC3 장비 PC | `Desktop\KCH\gc_automation.env` | repo `gc_automation.py --watch` | ChemStation acam / Chem32 Report |
 | 은규 PC | `gc-data-pc\` 또는 `Desktop\.cursor\` | `data_pc/촉매 반응 계산.py` | IMAP **수신** (장비 env 와 별개) |
 | 차헌 PC | `Desktop\.cursor\gc_automation.env` | `data_pc/촉매 반응 계산.py` | 동일 |
+| **차완 PC** | `gc-data-pc-chawan\` (메일 없음) | `scripts/run_gc_chawan.py` | Downloads xlsx |
 
 **비밀번호·machine_profile.json 실본은 Git에 없음** — 템플릿만 repo.  
 **PC 명칭:** [`docs/PC_NAMING.md`](docs/PC_NAMING.md) — GC4=자리 이동(이름만), 앞으로의 GC1=새 장비용.

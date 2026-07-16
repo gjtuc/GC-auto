@@ -4,7 +4,7 @@
     "gc4_pc": "GC4 장비 PC (은규, 구 GC1) — gc_automation.py, Desktop\\박은규",
     "gc1_pc": "레거시 동의어 → gc4_pc (Autochro). 신규 작성 시 gc4_pc 사용",
     "gc2_pc": "GC2/GC3 장비 PC (차헌·차완) — gc_automation.py, Desktop\\KCH",
-    "data_pc": "은규 PC 또는 차헌 PC — 촉매 반응 계산.py"
+    "data_pc": "은규 PC · 차헌 PC · 차완 PC — 촉매 반응 계산.py 또는 scripts/run_gc_chawan.py"
   },
   "pcs": [
     {
@@ -34,6 +34,13 @@
       "role": "data_pc",
       "operator": "차헌",
       "note": "촉매 반응 계산.py, Desktop\\.cursor\\. deploy/machine_profile.reference.chaheon.json"
+    },
+    {
+      "pc_id": "DESKTOP-N89C874",
+      "label": "차완 PC",
+      "role": "data_pc",
+      "operator": "차완",
+      "note": "Downloads xlsx, gc-data-pc-chawan, kier\\촉매 반응 결과. scripts/run_gc_chawan.py. IMAP 없음."
     }
   ]
 }
