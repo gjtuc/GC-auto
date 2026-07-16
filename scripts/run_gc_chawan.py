@@ -1,17 +1,26 @@
 # -*- coding: utf-8 -*-
-"""차완 PC GC 작업: Downloads 최신 xlsx -> 계산 -> kier 폴더 체인 -> Origin.
+"""차완 PC GC 작업: Downloads xlsx -> 계산 -> kier 폴더 체인 -> Origin.
 
-Repo: scripts/run_gc_chawan.py
-운영: python scripts/run_gc_chawan.py  (chemstation-gc-automation 루트에서)
+파일 선택 (GC 작업 지시 시):
+  - Downloads *.xlsx 중 GC 형식
+  - 수정 시각이 **현재 기준 3시간 이내**
+  - 그중 **가장 최근** 1개
+  - 없으면 exit 3 (사용자에게 파일 확인 요청)
+  - 브라우저 중복: ``파일 (1).xlsx`` 허용
+  - GC2용: 파일명 끝 ``_DRM 장비`` ``_OCM 장비`` 등 **장비 표시 제거** 후 처리
+
+수동 지정: ``python scripts/run_gc_chawan.py --file "C:\\...\\file.xlsx"``
 """
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import json
 import os
 import re
 import shutil
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -30,6 +39,15 @@ ORIGIN_MAPPING = {
 }
 
 SKIP_XLSX = re.compile(r"계산완료|Raman|특허|KIPRIS|~\$", re.I)
+# GC2 실험 KCH xlsx — 반응 키워드 (파일명 또는 시트)
+GC_REACTION = re.compile(r"\b(DRE|DRM|DRME)\b", re.I)
+# 다운로드 중복: "sample (1).xlsx"
+DOWNLOAD_DUP = re.compile(r"\s*\(\d+\)$")
+# GC2 장비 PC가 붙이는 접미사: _DRM 장비, _OCM 장비, _DRE 장비 …
+EQUIPMENT_TAG = re.compile(r"_(?:DRM|DRE|DRME|OCM)\s*장비\s*$", re.I)
+
+FRESH_HOURS = 3
+EXIT_NEED_FILE = 3
 
 
 def resolve_paths() -> tuple[Path, Path, Path]:
@@ -72,12 +90,84 @@ def load_catalyst(script_dir: Path):
     return mod
 
 
-def latest_gc_xlsx(downloads: Path) -> Path | None:
-    files = [
-        p for p in downloads.glob("*.xlsx")
-        if p.is_file() and not SKIP_XLSX.search(p.name)
-    ]
-    return max(files, key=lambda p: p.stat().st_mtime) if files else None
+def normalize_gc_stem(stem: str) -> str:
+    """브라우저 (1) 접미사·장비 표시(_DRM 장비 등) 제거."""
+    s = DOWNLOAD_DUP.sub("", stem.strip())
+    s = EQUIPMENT_TAG.sub("", s)
+    return s.strip()
+
+
+def is_gc_xlsx_candidate(path: Path) -> bool:
+    if not path.is_file() or path.suffix.lower() != ".xlsx":
+        return False
+    if SKIP_XLSX.search(path.name):
+        return False
+    stem = normalize_gc_stem(path.stem)
+    if GC_REACTION.search(stem):
+        return True
+    # 파일명에 반응 없어도 KCH 시트 형식이면 허용
+    try:
+        import pandas as pd
+
+        xls = pd.ExcelFile(path)
+        for sn in xls.sheet_names[:3]:
+            df = pd.read_excel(xls, sheet_name=sn, nrows=5)
+            if df.empty:
+                continue
+            cols = {str(c).strip() for c in df.columns}
+            if "Time" in cols and ("Area" in cols or "#" in cols):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def list_download_candidates(downloads: Path) -> list[Path]:
+    return sorted(
+        [p for p in downloads.glob("*.xlsx") if is_gc_xlsx_candidate(p)],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+
+def select_fresh_xlsx(
+    downloads: Path,
+    *,
+    now: datetime | None = None,
+    fresh_hours: float = FRESH_HOURS,
+) -> tuple[Path | None, list[Path], list[Path]]:
+    """(선택 파일, 3h 이내 목록, 전체 GC 후보 목록)."""
+    now = now or datetime.now()
+    cutoff = now - timedelta(hours=fresh_hours)
+    all_cands = list_download_candidates(downloads)
+    fresh = [p for p in all_cands if datetime.fromtimestamp(p.stat().st_mtime) >= cutoff]
+    if not fresh:
+        return None, fresh, all_cands
+    return max(fresh, key=lambda p: p.stat().st_mtime), fresh, all_cands
+
+
+def stage_normalized_xlsx(source: Path, work_dir: Path) -> Path:
+    """정규화된 파일명으로 inbox 스테이징 (계산·폴더명에 장비 접미사 미반영)."""
+    work_dir.mkdir(parents=True, exist_ok=True)
+    clean_stem = normalize_gc_stem(source.stem)
+    dest = work_dir / f"{clean_stem}{source.suffix}"
+    shutil.copy2(source, dest)
+    return dest
+
+
+def format_mtime(path: Path) -> str:
+    return datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def report_no_fresh_file(all_cands: list[Path], fresh_hours: float) -> None:
+    print(f"Downloads에 최근 {fresh_hours:g}시간 이내 수정된 GC xlsx 가 없습니다.")
+    print("어떤 파일로 작업할지 알려 주세요. (예: --file \"C:\\Users\\User\\Downloads\\....xlsx\")")
+    if all_cands:
+        print("\n[Downloads GC xlsx 목록 — 수정 시각]")
+        for p in all_cands[:15]:
+            print(f"  - {p.name}  ({format_mtime(p)})")
+    else:
+        print("\n[Downloads] GC 형식 xlsx 후보 없음")
 
 
 def norm_key(text: str) -> str:
@@ -201,12 +291,47 @@ def update_origin(opju: Path, df, sample_name: str) -> int:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="차완 PC GC 작업")
+    parser.add_argument(
+        "--file",
+        help="Downloads 자동 선택 대신 지정 xlsx (3시간 초과 파일은 사용자 확인 후)",
+    )
+    parser.add_argument(
+        "--fresh-hours",
+        type=float,
+        default=FRESH_HOURS,
+        help=f"Downloads 자동 선택 시 수정 시각 허용 범위 (기본 {FRESH_HOURS}h)",
+    )
+    args = parser.parse_args()
+
     script_dir, profile_path, downloads = resolve_paths()
     profile = load_profile(profile_path)
-    xlsx = latest_gc_xlsx(downloads)
-    if not xlsx:
-        print("Downloads에 GC xlsx 없음")
-        return 1
+
+    if args.file:
+        xlsx_raw = Path(args.file)
+        if not xlsx_raw.is_file():
+            print(f"파일 없음: {xlsx_raw}")
+            return 1
+        if not is_gc_xlsx_candidate(xlsx_raw):
+            print(f"GC xlsx 형식이 아님: {xlsx_raw.name}")
+            return 1
+        print(f"[수동] 지정 파일: {xlsx_raw.name}")
+    else:
+        xlsx_raw, fresh, all_cands = select_fresh_xlsx(
+            downloads, fresh_hours=args.fresh_hours
+        )
+        if xlsx_raw is None:
+            report_no_fresh_file(all_cands, args.fresh_hours)
+            return EXIT_NEED_FILE
+        print(
+            f"[자동] {args.fresh_hours:g}h 이내 {len(fresh)}개 중 최신: "
+            f"{xlsx_raw.name} ({format_mtime(xlsx_raw)})"
+        )
+
+    staging = script_dir / "KCH" / "inbox"
+    xlsx = stage_normalized_xlsx(xlsx_raw, staging)
+    if xlsx.stem != normalize_gc_stem(xlsx_raw.stem):
+        print(f"     정규화 파일명: {xlsx.name}  (원본: {xlsx_raw.name})")
 
     mod = load_catalyst(script_dir)
     print("=" * 60)
@@ -225,7 +350,10 @@ def main() -> int:
     eq = mod.equipment_from_output_file(saved_excel)
     sample_result = mod.generate_sample_name(str(xlsx), equipment=eq)
     sample_name = sample_result[0] if isinstance(sample_result, tuple) else sample_result
+    # Origin Comments 에도 장비 접미사 제거 (GC2 전용)
+    sample_name = EQUIPMENT_TAG.sub("", sample_name).strip()
     experiment_base = mod.generate_experiment_basename(str(xlsx))
+    experiment_base = normalize_gc_stem(experiment_base)
     reaction = mod.reaction_type_from_output_file(saved_excel)
 
     print(f"장비: {eq} | 반응: {reaction}")

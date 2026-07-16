@@ -70,10 +70,31 @@ C:\Users\User\Downloads\20260706 DRE(1.5%)@600C Ni_CVD(0.1)-Ni5-Ce5-Al2O3.opju
 
 ## 4. 일상 실행
 
+**파일 선택 (자동):**
+
+| 조건 | 내용 |
+|------|------|
+| 위치 | `%USERPROFILE%\Downloads\*.xlsx` |
+| 형식 | GC2 KCH xlsx (DRE/DRM/DRME, Time·Area 시트) |
+| 시간 | **현재 시각 기준 3시간 이내** 수정된 것만 |
+| 선택 | 조건 충족 파일 중 **가장 최근** 1개 |
+| 없을 때 | **사용자에게 어떤 파일로 할지 확인** (자동 진행 안 함) |
+
+**파일명 정규화:**
+
+- 브라우저 중복: `sample (1).xlsx`, `sample (2).xlsx` → `(1)` 제거 후 처리
+- GC2 장비 접미사: `_DRM 장비`, `_OCM 장비` 등 **제거** 후 폴더·Origin 이름 생성
+
 ```powershell
 cd $env:USERPROFILE\chemstation-gc-automation
 git pull
 python scripts\run_gc_chawan.py
+```
+
+수동 지정 (3시간 초과·확인 후):
+
+```powershell
+python scripts\run_gc_chawan.py --file "C:\Users\User\Downloads\....xlsx"
 ```
 
 또는 Cursor: **「GC 작업해줘」**

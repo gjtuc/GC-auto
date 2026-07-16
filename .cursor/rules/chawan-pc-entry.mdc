@@ -14,8 +14,19 @@ alwaysApply: false
 
 1. **`docs/차완PC_Cursor_시작.md`** 읽기
 2. `git pull` (chemstation-gc-automation)
-3. Downloads **최신 GC xlsx** 확인
-4. **`python scripts/run_gc_chawan.py`** 실행 (되묻지 말고)
+3. Downloads — **3시간 이내** GC xlsx 자동 선택 규칙 적용
+4. **`python scripts/run_gc_chawan.py`** 실행
+
+### Downloads 파일 선택 (GC 작업 지시 시)
+
+- GC2 KCH **xlsx** 형식만
+- **현재 시각 − 3시간** 이내 수정된 파일만 후보
+- 후보 중 **mtime 최신** 1개
+- **3시간 이내 파일 없음** → 사용자에게 **어떤 파일로 할지 확인** (exit 3, 자동 진행 금지)
+- `파일 (1).xlsx` 등 브라우저 중복 접미사 허용 → `(1)` 제거 후 처리
+- 파일명 `_DRM 장비`, `_OCM 장비` 등 **장비 표시 제거** 후 폴더·Origin 이름 생성
+
+수동: `python scripts/run_gc_chawan.py --file "경로\xxx.xlsx"`
 
 ## 정체성
 
