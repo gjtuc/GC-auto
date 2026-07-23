@@ -133,6 +133,16 @@ class TestGenerateSampleName(unittest.TestCase):
             "20260706 DRE(1.5%)@600C Ni_CVD(0.1g,8h)-Ni5-Ce5-Al2O3_OCM 장비",
         )
 
+    def test_experiment_basename_drme_includes_temperature(self):
+        saved = (
+            "20260723 DRME(1.5)@600C Ni_CVD(0.1)-Ni5"
+            "_GC3_DRME_계산완료.xlsx"
+        )
+        base = self.mod.generate_experiment_basename(saved)
+        self.assertIn("@600C", base)
+        self.assertTrue(base.startswith("20260723 DRME(1.5%)@600C "))
+        self.assertTrue(base.endswith("_OCM 장비"))
+
 
 if __name__ == "__main__":
     unittest.main()
