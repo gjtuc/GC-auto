@@ -1436,12 +1436,14 @@ def _build_experiment_basename(name, filename, equipment=None):
                     f"{cat_folder} 촉매 {mass.group(0).strip()}"
                 )
             return f"{date} DRM({_folder_conc_label(conc)})@{temp}C {cat_folder}"
-        if reaction == "DRME":
-            return f"{date} DRME({_folder_conc_label(conc)}) {cat_folder}"
-        return f"{date} DRE({_folder_conc_label(conc)})@{temp}C {cat_folder}"
+        # DRE / DRME — 농도·온도 모두 폴더명에 포함
+        return f"{date} {reaction}({_folder_conc_label(conc)})@{temp}C {cat_folder}"
 
     if re.match(r'^\d{8}\s+(DRE\s*\(|DRME\s*\(|DRM\s*\()', name, re.I):
-        return _strip_equipment_suffix(re.sub(r'°C', '', name).strip())
+        # 이미 정규화된 폴더형 — @온도가 있을 때만 그대로 사용 (없으면 아래로 복원)
+        stripped = _strip_equipment_suffix(re.sub(r"°C", "", name).strip())
+        if re.search(r"\)@\d+C?\b", stripped, re.I):
+            return stripped
 
     kch = re.match(r'^(\d{8})\s+(.+?)\s+(DRE|DRM|DRME)@(\d+)\s*$', name, re.I)
     if kch:
@@ -1458,14 +1460,18 @@ def _build_experiment_basename(name, filename, equipment=None):
                     f"{cat_folder} 촉매 {mass.group(0).strip()}"
                 )
             return f"{date} DRM({_folder_conc_label(conc)})@{temp}C {cat_folder}"
-        if reaction == "DRME":
-            return f"{date} DRME({_folder_conc_label(conc)}) {cat_folder}"
-        return f"{date} DRE({_folder_conc_label(conc)})@{temp}C {cat_folder}"
+        # DRE / DRME — 농도·온도 모두 폴더명에 포함
+        return f"{date} {reaction}({_folder_conc_label(conc)})@{temp}C {cat_folder}"
 
     drme = re.match(r'^(\d{8})\s+DRME\s+(\d+\.?\d*)\s*%\s*(.+)$', name, re.I)
     if drme:
-        cat_folder = _format_folder_catalyst(drme.group(3).strip())
-        return f"{drme.group(1)} DRME({_folder_conc_label(drme.group(2))}) {cat_folder}"
+        temp, _ = _parse_origin_temperature(name)
+        if temp:
+            cat_folder = _format_folder_catalyst(drme.group(3).strip())
+            return (
+                f"{drme.group(1)} DRME({_folder_conc_label(drme.group(2))})"
+                f"@{temp}C {cat_folder}"
+            )
 
     sn_result = generate_sample_name(filename, equipment=equipment)
     sample = sn_result[0] if isinstance(sn_result, tuple) else sn_result
@@ -1488,9 +1494,8 @@ def _build_experiment_basename(name, filename, equipment=None):
                     f"{cat_folder} 촉매 {mass_m.group(0).strip()}"
                 )
             return f"{date} DRM({_folder_conc_label(conc)})@{temp}C {cat_folder}"
-        if reaction == "DRME":
-            return f"{date} DRME({_folder_conc_label(conc)}) {cat_folder}"
-        return f"{date} DRE({_folder_conc_label(conc)})@{temp}C {cat_folder}"
+        # DRE / DRME — 농도·온도 모두 폴더명에 포함
+        return f"{date} {reaction}({_folder_conc_label(conc)})@{temp}C {cat_folder}"
 
     return _strip_equipment_suffix(re.sub(r'°C', '', sample).replace('/', '-').strip())
 
