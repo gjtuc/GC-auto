@@ -7,6 +7,7 @@ from gc_sanitize import (
     InvalidSampleNameError,
     InvalidSequenceFolderError,
     build_safe_output_filename,
+    normalize_gc2_folder_sample_name,
     sanitize_sample_name,
     validate_sequence_folder,
 )
@@ -61,6 +62,12 @@ class TestGcSanitize(unittest.TestCase):
             )
             with self.assertRaises(InvalidSampleNameError):
                 build_safe_output_filename(tmp, '', '20260617')
+
+    def test_normalize_gc2_folder_sample_name(self):
+        self.assertEqual(
+            normalize_gc2_folder_sample_name('20260724DRE(1.5)600CNi5-Al2O3'),
+            '20260724 DRE(1.5%)@600C Ni5-Al2O3',
+        )
 
 
 if __name__ == '__main__':

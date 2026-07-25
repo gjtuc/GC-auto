@@ -2,17 +2,14 @@
 """
 gc_kch.py — KCH 엑셀 생성 및 시료 이름 결정
 
-[시료 이름 규칙]
-  1) KCH 기존 엑셀 RT 지문과 일치 → 시료명 자동 재사용
-  2) --sample-name / SAMPLE_NAME 지정 → 그 이름 사용
-  3) 수동 실행(allow_prompt) → 터미널에서 입력
-  4) 그 외(특히 --watch) → 처리 중단
+[시료 이름 규칙 — GC2 8860]
+  1) --sample-name 지정 → 최우선 (사용자 지정)
+  2) 대화형(allow_prompt) → Data 폴더 정규화명을 기본값으로 보여 주고 확인/수정
+     예: 20260724DRE(1.5)600CNi… → 20260724 DRE(1.5%)@600C Ni…
+  3) ``… sequence YYYY-MM-DD …`` 자동 폴더명 → 기본값 없음, 반드시 직접 입력
+  4) watch/force 무입력 → 기본 제안만 안내 후 대기 (자동 전송 안 함)
 
-  엑셀 파일명 = 시료명만 (``시료명.xlsx``). 분석일 접두는 붙이지 않음.
-  Windows 불가 문자만 제거, ``/`` → ``-``.
-
-  ★ 새 날짜(YYYYMMDD) 시퀀스가 처음 생기면 시료명을 반드시 받아야 엑셀·메일까지 진행됩니다.
-    자동 감시는 시료명을 물어볼 수 없으므로, 사용자가 --sample-name 으로 수동 실행해야 합니다.
+  엑셀 파일명 = 시료명만 (``시료명.xlsx``), 같은 이름이면 덮어쓰기.
 """
 
 from __future__ import annotations
@@ -58,75 +55,87 @@ def format_watch_sample_name_required_message(
     *,
     reason: str = "new_date",
     new_injection_detected: bool = False,
+    suggested_name: str = "",
 ) -> str:
     """
-    watch·바탕화면 heartbeat — 시료명은 사용자만 지정 (자동 생성·env 추측 금지).
+    watch·바탕화면 heartbeat — 시료명은 사용자 확인 후 지정.
+    suggested_name 이 있으면 폴더 정규화 기본값을 안내한다.
     """
     if new_injection_detected:
-        lead = "새 주입 감지됨 — 시료명을 입력해 주세요."
+        lead = "새 주입 감지됨 — 시료명을 확인해 주세요."
     else:
-        lead = "시료명 입력 대기 중"
+        lead = "시료명 확인 대기 중"
     if reason == "rt_mismatch":
         head = f"날짜 {seq_date} — KCH 기존 엑셀과 RT(peak) 패턴 불일치"
+    elif reason == "confirm_folder":
+        head = f"날짜 {seq_date} — Data 시료 폴더 기본명 확인 필요"
+    elif reason == "auto_sequence":
+        head = f"날짜 {seq_date} — 자동 시퀀스 폴더(이름 미지정) → 시료명 필수"
     else:
         head = f"새 날짜({seq_date}) 시퀀스"
+    suggest_line = ""
+    if suggested_name:
+        suggest_line = f"\n  기본 제안: {suggested_name}"
     return (
         f"{lead}\n"
-        f"  {head} (watch는 감시 중 · 시료명은 자동으로 만들지 않음)\n"
-        f"  시료명 1회 지정 후 같은 날짜·RT 패턴은 watch가 자동 엑셀·메일 처리\n"
-        f"  Cursor 또는: gc_동작해줘.bat --sample-name \"<직접입력>\" "
+        f"  {head} (진행 시마다 시료명 확인 · 자동 전송 전 사용자 확인){suggest_line}\n"
+        f"  Cursor 또는: gc_동작해줘.bat --sample-name \"{suggested_name or '<직접입력>'}\" "
         f"--sequence-date {seq_date}"
     )
 
 
 def check_sample_name_before_processing(sequence_folder: str, config: AppConfig) -> Optional[str]:
     """
-    acam 파싱 전 빠른 검사 — **시료가 바뀐 경우** 시료명 없으면 pipeline 진입 차단.
+    acam 파싱 전 빠른 검사 — GC2 watch 시료명 확인.
 
-    차단 조건 (GC2 8860 watch 전용, GC1·Chem32 는 각자 pipeline 규칙):
-      · 해당 시퀀스 날짜에 연결된 KCH 엑셀이 없음 → 새 시료, 시료명 필수
-      · (pipeline 단계) RT 불일치 → 시료명 필수
+    통과 (None):
+      · config.sample_name 지정
+      · allow_prompt (대화형)
+      · 폴더 정규화명과 같은 KCH 엑셀이 이미 있음 (같은 실험 덮어쓰기 계속)
 
-  통과 (None):
-      · config.sample_name 지정됨
-      · 해당 날짜 엑셀 있음 → RT 자동 매칭 시도 (같은 날짜 추가 주입 포함)
-      · allow_prompt (대화형 — watch 에서는 보통 False)
-
-    Returns:
-        None 이면 계속 진행 가능
-        str 이면 시료명 필수 — watch 가 need_sample_name 안내
+    그 외 → 시료명 확인 메시지 (suggested_name 포함)
     """
-    seq_date = get_sequence_date(sequence_folder, config.sequence_date)
+    from gc_chemstation import get_sample_seq_date, suggest_sample_name_from_folder
 
     if config.sample_name:
         return None
-
-    if not is_new_sequence_date(
-        config.excel_output_dir, seq_date, state_path=config.send_state_file
-    ):
-        return None
-
     if config.allow_prompt:
         return None
 
-    return format_watch_sample_name_required_message(seq_date, reason="new_date")
+    seq_date = get_sample_seq_date(sequence_folder, config.sequence_date)
+    suggested = suggest_sample_name_from_folder(sequence_folder)
+    if suggested:
+        try:
+            existing = build_output_filename(config.excel_output_dir, suggested, seq_date)
+        except InvalidSampleNameError:
+            existing = ""
+        if existing and os.path.isfile(existing):
+            return None
+        return format_watch_sample_name_required_message(
+            seq_date,
+            reason="confirm_folder",
+            suggested_name=suggested,
+        )
+
+    return format_watch_sample_name_required_message(
+        seq_date,
+        reason="auto_sequence",
+        suggested_name="",
+    )
 
 
 def resolve_active_sequence_folder(config: AppConfig) -> Optional[str]:
     """GC2/GC3 watch 가 보는 활성 시퀀스·시료 폴더."""
     from gc_chem32 import find_active_sample_folder, resolve_chemstation_mode
-    from gc_chemstation import find_sequence_folder
+    from gc_chemstation import find_active_sample_folder_8860
 
     if not os.path.isdir(config.data_path):
         return None
     mode = resolve_chemstation_mode(config.data_path, config.chemstation_mode)
     if mode == "chem32":
         return find_active_sample_folder(config.data_path, config.sequence_folder)
-    return find_sequence_folder(
-        config.data_path,
-        config.sequence_date,
-        config.sequence_folder,
-    )
+    # GC2: 최신 F- 주입이 들어 있는 **시료** 폴더 (시퀀스 내부가 아님)
+    return find_active_sample_folder_8860(config.data_path, config.sequence_folder)
 
 
 def resolve_watch_sample_name_alert(
@@ -349,22 +358,87 @@ def find_matching_sample_name(
     return None
 
 
-def prompt_sample_name(seq_date: str, has_existing_files: bool) -> str:
-    """대화형 터미널에서 시료명 입력 (수동 실행 전용)."""
-    if has_existing_files:
+def prompt_sample_name(
+    seq_date: str,
+    has_existing_files: bool,
+    default_name: str = "",
+) -> str:
+    """대화형 터미널에서 시료명 입력. default_name 있으면 Enter 로 수락."""
+    if has_existing_files and not default_name:
         print(f"\n[주의] KCH 기존 엑셀과 앞 {COMPARE_CYCLES}주입 RT 패턴 불일치 → 다른 시료")
+    elif default_name:
+        print(f"\n[안내] 날짜 {seq_date} — Data 폴더 기본 시료명 확인")
+        print(f"       기본값: {default_name}")
+        print("       Enter = 이 이름 사용 / 다른 이름 입력 = 수정 (사용자 지정 우선)")
     else:
-        print(f"\n[안내] 날짜 {seq_date} KCH 엑셀 없음 → 새 시료 이름 필요")
-    print("       (--sample-name 또는 --force 실행 시 CLI로 지정 가능)")
+        print(f"\n[안내] 날짜 {seq_date} — 자동 시퀀스 폴더(시료명 미지정) → 직접 입력 필요")
+        print("       예: 20260724 DRE(1.5%)@600C Ni5-Al2O3")
+    print("       (--sample-name 으로도 지정 가능)")
     while True:
-        new_name = input("=> 시료 이름: ").strip()
+        prompt = "=> 시료 이름"
+        if default_name:
+            prompt += f" [{default_name}]"
+        prompt += ": "
+        new_name = input(prompt).strip()
         if not new_name:
-            print("[오류] 시료 이름은 비워둘 수 없습니다.")
-            continue
+            if default_name:
+                new_name = default_name
+            else:
+                print("[오류] 시료 이름은 비워둘 수 없습니다.")
+                continue
         try:
             return sanitize_sample_name(new_name)
         except InvalidSampleNameError as exc:
             print(f"[오류] {exc}")
+
+
+def determine_sample_name_8860(
+    sample_folder: str,
+    config: AppConfig,
+) -> Tuple[Optional[str], str]:
+    """
+    GC2 시료 폴더 기준 이름 결정.
+
+    · CLI ``--sample-name`` 최우선
+    · 그 외 진행마다 확인: 새 스타일 폴더는 정규화명을 기본값으로 제안
+    · ``… sequence …`` 자동명은 기본값 없음 (필수 입력)
+    """
+    from gc_chemstation import get_sample_seq_date, suggest_sample_name_from_folder
+
+    seq_date = get_sample_seq_date(sample_folder, config.sequence_date)
+    suggested = suggest_sample_name_from_folder(sample_folder)
+
+    if config.sample_name:
+        try:
+            safe_name = sanitize_sample_name(config.sample_name)
+        except InvalidSampleNameError as exc:
+            print(f"\n[오류] {exc}")
+            return None, seq_date
+        print(f"\n[안내] 사용자 지정 시료명 '{safe_name}' 사용")
+        return safe_name, seq_date
+
+    if config.allow_prompt:
+        return (
+            prompt_sample_name(seq_date, has_existing_files=False, default_name=suggested or ""),
+            seq_date,
+        )
+
+    reason = "confirm_folder" if suggested else "auto_sequence"
+    print(
+        f"\n[오류] 시료명 확인 필요 — "
+        f"{'기본 제안: ' + suggested if suggested else '폴더가 자동 시퀀스명이라 직접 지정 필요'}"
+    )
+    print(
+        f'       예: python gc_automation.py --sample-name '
+        f'"{suggested or "YYYYMMDD DRE(x.x%)@xxxC 시료"}" --force'
+    )
+    detail = format_watch_sample_name_required_message(
+        seq_date,
+        reason=reason,
+        suggested_name=suggested or "",
+    )
+    print(detail)
+    return None, seq_date
 
 
 def determine_sample_name(
@@ -413,7 +487,10 @@ def determine_sample_name(
         return persisted, seq_date
 
     if config.allow_prompt:
-        return prompt_sample_name(seq_date, bool(existing_files)), seq_date
+        from gc_chemstation import suggest_sample_name_from_folder
+
+        default_name = suggest_sample_name_from_folder(sequence_folder_path) or ""
+        return prompt_sample_name(seq_date, bool(existing_files), default_name=default_name), seq_date
 
     if is_new_sequence_date(config.excel_output_dir, seq_date, state_path=state_path):
         print(f"\n[오류] 새 날짜({seq_date}) 시퀀스 — 시료명을 반드시 지정해야 합니다.")

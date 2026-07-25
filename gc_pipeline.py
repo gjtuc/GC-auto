@@ -84,19 +84,18 @@ from gc1_reaction_gate import classify_gc1_report
 from gc_kch import (
     build_output_filename,
     build_stacked_dataframe,
-    determine_sample_name,
+    determine_sample_name_8860,
     format_watch_sample_name_required_message,
-    is_new_sequence_date,
     resolve_sample_name,
     write_chem32_excel,
 )
 from gc_chemstation import (
-    drop_first_cycle_if_startup_noise,
-    find_injection_folders,
-    find_sequence_acam_file,
-    find_sequence_folder,
+    build_merged_acam_cycles,
+    detect_analysis_gaps_acam,
+    find_active_sample_folder_8860,
+    find_8860_sequence_folders,
     get_latest_injection_acam_mtime,
-    parse_sequence_acam,
+    suggest_sample_name_from_folder,
 )
 from gc_config import AppConfig
 from gc_identity import is_autochro_mode
@@ -179,83 +178,54 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
     if mode == "chem32":
         return run_processing_chem32(config, script_dir)
 
-    sequence_folder = find_sequence_folder(
-        config.data_path,
-        config.sequence_date,
-        config.sequence_folder,
-    )
-    if not sequence_folder:
+    # GC2: Data\{시료}\ {시퀀스…}\F-*.D — 최신 F- 기준 시료 폴더, 시퀀스 병합+갭
+    sample_folder = find_active_sample_folder_8860(config.data_path, config.sequence_folder)
+    if not sample_folder:
         return ProcessResult(ok=False, fail_reason="시퀀스 폴더 없음")
 
-
-    injection_folders = find_injection_folders(sequence_folder)
-    if not injection_folders:
-        print("[경고] F-... .D 주입 폴더가 없습니다.")
-        return ProcessResult(ok=False, sequence_folder=sequence_folder, fail_reason="주입 폴더 없음")
-
-    print(f"[안내] 주입 폴더 {len(injection_folders)}개 (시간순)")
-
-    cycle_peaks_list: List[List[dict]] = []
-    injection_labels: List[str] = []
-    missing_acam: List[str] = []
-
-    for injection_path in injection_folders:
-        injection_name = os.path.basename(injection_path)
-        acam_path = find_sequence_acam_file(injection_path)
-        if not acam_path:
-            print(f"[경고] sequence.acam_ 없음: {injection_name}")
-            missing_acam.append(injection_name)
-            continue
-
-        peaks = parse_sequence_acam(acam_path, detector=config.detector)
-        if peaks:
-            cycle_peaks_list.append(peaks)
-            injection_labels.append(injection_name)
-            print(f"[진행] {injection_name}: 피크 {len(peaks)}개")
-        else:
-            print(f"[경고] 피크 없음: {injection_name}")
-
+    cycle_peaks_list, injection_labels, matched_paths, missing_acam, skipped_startup = (
+        build_merged_acam_cycles(sample_folder, detector=config.detector)
+    )
     if not cycle_peaks_list:
         print("\n[안내] 추출된 피크 데이터 없음.")
-        return ProcessResult(ok=False, sequence_folder=sequence_folder, fail_reason="피크 없음")
-
-
-    first_label = injection_labels[0] if injection_labels else None
-    cycle_peaks_list, skipped_first, skipped_first_info = drop_first_cycle_if_startup_noise(
-        cycle_peaks_list,
-        first_injection_label=first_label,
-    )
-
-    if not cycle_peaks_list:
-        print("\n[안내] 노이즈 제거 후 남은 주입 데이터 없음.")
-        return ProcessResult(ok=False, sequence_folder=sequence_folder, fail_reason="노이즈 제거 후 데이터 없음")
-
-    sample_name, seq_date = determine_sample_name(cycle_peaks_list, sequence_folder, config)
-    if not sample_name:
-        reason = (
-            "new_date"
-            if is_new_sequence_date(
-                config.excel_output_dir, seq_date, state_path=config.send_state_file
-            )
-            else "rt_mismatch"
-        )
-        detail = format_watch_sample_name_required_message(seq_date, reason=reason)
         return ProcessResult(
             ok=False,
-            sequence_folder=sequence_folder,
+            sequence_folder=sample_folder,
+            fail_reason="피크 없음",
+        )
+
+    sample_name, seq_date = determine_sample_name_8860(sample_folder, config)
+    if not sample_name:
+        suggested = suggest_sample_name_from_folder(sample_folder) or ""
+        reason = "confirm_folder" if suggested else "auto_sequence"
+        detail = format_watch_sample_name_required_message(
+            seq_date,
+            reason=reason,
+            suggested_name=suggested,
+        )
+        return ProcessResult(
+            ok=False,
+            sequence_folder=sample_folder,
             fail_reason=detail,
         )
 
     output_path = build_output_filename(config.excel_output_dir, sample_name, seq_date)
-    latest_mtime = get_latest_injection_acam_mtime(sequence_folder)
-
+    latest_mtime = get_latest_injection_acam_mtime(sample_folder)
+    analysis_gaps, gap_interval = detect_analysis_gaps_acam(sample_folder)
+    seq_count = len(find_8860_sequence_folders(sample_folder))
+    # 갭 마커 행은 피크 합계에서 제외
+    real_cycles = [c for c in cycle_peaks_list if not _is_gap_marker_cycle(c)]
+    injection_count = len(real_cycles)
 
     try:
         df = build_stacked_dataframe(cycle_peaks_list)
         df.to_excel(output_path, index=False, sheet_name="Sheet1")
-        total_peaks = sum(len(cycle) for cycle in cycle_peaks_list)
+        total_peaks = sum(len(cycle) for cycle in real_cycles)
         print(f"\n[성공] {output_path}")
-        print(f"       주입 {len(cycle_peaks_list)}개 / 피크 {total_peaks}개 / 행 {len(df)}")
+        print(
+            f"       시퀀스 {seq_count}개 병합 / 주입 {injection_count}개 "
+            f"/ 피크 {total_peaks}개 / 행 {len(df)} (덮어쓰기)"
+        )
 
         email_sent = False
         email_body = None
@@ -263,13 +233,22 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
             email_body = generate_email_body(
                 sample_name,
                 seq_date,
-                len(cycle_peaks_list),
+                injection_count,
                 total_peaks,
                 os.path.basename(output_path),
-                len(injection_folders),
-                skipped_first_info=skipped_first_info if skipped_first else None,
+                len(matched_paths),
+                skipped_first_info=None,
                 missing_acam=missing_acam or None,
             )
+            if skipped_startup:
+                email_body = (email_body or "") + "\n[안내] startup 노이즈 1주입 제외"
+            gap_lines = analysis_gaps_email_lines(
+                analysis_gaps,
+                gap_interval,
+                injections=None,
+            )
+            if gap_lines:
+                email_body = (email_body or "") + "\n" + "\n".join(gap_lines)
             email_sent = _try_auto_email(
                 config,
                 output_path,
@@ -289,7 +268,7 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
         return ProcessResult(
             ok=True,
             email_sent=email_sent,
-            sequence_folder=sequence_folder,
+            sequence_folder=sample_folder,
             latest_acam_mtime=latest_mtime,
             action_summary=action_summary,
             output_path=output_path,
@@ -300,10 +279,18 @@ def run_processing(config: AppConfig, script_dir: str) -> ProcessResult:
 
     except PermissionError:
         print(f"\n[오류] 엑셀 저장 실패 — 파일이 열려 있는지 확인: {output_path}")
-        return ProcessResult(ok=False, sequence_folder=sequence_folder, fail_reason="엑셀 PermissionError")
+        return ProcessResult(ok=False, sequence_folder=sample_folder, fail_reason="엑셀 PermissionError")
     except Exception as exc:
         print(f"\n[오류] 처리 중 오류: {exc}")
-        return ProcessResult(ok=False, sequence_folder=sequence_folder, fail_reason=str(exc))
+        return ProcessResult(ok=False, sequence_folder=sample_folder, fail_reason=str(exc))
+
+
+def _is_gap_marker_cycle(cycle: List[dict]) -> bool:
+    if not cycle:
+        return False
+    first = cycle[0]
+    sym = str(first.get("Symmetry", ""))
+    return str(first.get("#", "")) == "중단" or sym.startswith("GC_GAP:")
 
 
 def run_processing_chem32(config: AppConfig, script_dir: str) -> ProcessResult:

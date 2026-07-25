@@ -715,17 +715,22 @@ class WatchRunner:
 
         sample_block = check_sample_name_before_processing(sequence_folder, self.config)
         if sample_block:
-            seq_date = get_sequence_date(sequence_folder, self.config.sequence_date)
+            from gc_chemstation import get_sample_seq_date, suggest_sample_name_from_folder
+
+            seq_date = get_sample_seq_date(sequence_folder, self.config.sequence_date)
+            suggested = suggest_sample_name_from_folder(sequence_folder) or ""
+            reason = "confirm_folder" if suggested else "auto_sequence"
             message = format_watch_sample_name_required_message(
                 seq_date,
-                reason="new_date",
+                reason=reason,
                 new_injection_detected=True,
+                suggested_name=suggested,
             )
             self._hold_sample_name(
                 message,
                 seq_date=seq_date,
                 sequence_folder=sequence_folder,
-                reason="new_date",
+                reason=reason,
             )
             return
 

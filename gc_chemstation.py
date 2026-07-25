@@ -14,6 +14,13 @@ gc_chemstation.py — ChemStation Data 폴더 탐색 및 sequence.acam_ 파싱
 
   Data 루트: gc_config.DEFAULT_CHEMSTATION_DATA (보통 Public\\Documents\\ChemStation\\1\\Data)
   출력: Desktop\\KCH\\시료명.xlsx → gc_mailer → 차헌 PC 메일
+
+[GC2 시료 폴더 규칙]
+  · Data\\{시료폴더}\\{시퀀스…}\\F-YYYY-MM-DD-….D\\sequence.acam_
+  · 활성 시료 = 가장 최근 F- 주입 시각이 들어 있는 Data 직계 폴더
+  · 시료 폴더 안 시퀀스 여러 개 → 시간순 병합 + 분석 중단(갭) 행 (GC3와 동일 계약)
+  · 폴더명 정규화: 20260724DRE(1.5)600CNi… → 20260724 DRE(1.5%)@600C Ni…
+  · `… sequence YYYY-MM-DD …` 자동명은 시료명으로 쓰지 않음 (사용자 확인 필수)
 """
 
 from __future__ import annotations
@@ -21,12 +28,18 @@ from __future__ import annotations
 import glob
 import os
 import re
+import statistics
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from gc_config import RT_TOLERANCE
-from gc_sanitize import InvalidSequenceFolderError, validate_sequence_folder
+from gc_sanitize import (
+    InvalidSequenceFolderError,
+    is_chemstation_auto_sequence_name,
+    normalize_gc2_folder_sample_name,
+    validate_sequence_folder,
+)
 
 # F-2026-06-13-16-12-55-... 형식에서 주입 시각 추출 (정렬용)
 INJECTION_FOLDER_DT = re.compile(
@@ -306,6 +319,319 @@ def find_injection_folders(sequence_folder_path: str) -> List[str]:
     return sorted(injections, key=_injection_sort_key)
 
 
+def find_8860_sequence_folders(sample_folder: str) -> List[str]:
+    """
+    시료 폴더 아래 시퀀스 작업 폴더 목록 (F-*.D 보유).
+
+    - 시료 폴더에 주입이 직접 있으면 그 폴더 1개 (flat)
+    - 아니면 직계 자식 중 주입이 있는 폴더들 (중단 후 재시작 시 여러 개)
+    """
+    if not sample_folder or not os.path.isdir(sample_folder):
+        return []
+    if list_direct_injection_folders(sample_folder):
+        return [sample_folder]
+
+    sequences: List[str] = []
+    try:
+        for entry in os.scandir(sample_folder):
+            if not entry.is_dir():
+                continue
+            work = resolve_sequence_work_folder(entry.path)
+            if list_direct_injection_folders(work):
+                sequences.append(work)
+    except OSError:
+        return []
+    # 시퀀스 폴더명·활동 시각 순
+    return sorted(sequences, key=lambda path: (_sequence_activity_mtime(path), path))
+
+
+def collect_acam_injections(sample_folder: str) -> List[Tuple[str, str]]:
+    """시료 폴더 아래 모든 시퀀스의 (주입경로, 시퀀스경로) — F- 시각 순."""
+    items: List[Tuple[str, str]] = []
+    for sequence_path in find_8860_sequence_folders(sample_folder):
+        for injection_path in find_injection_folders(sequence_path):
+            if find_sequence_acam_file(injection_path):
+                items.append((injection_path, sequence_path))
+    return sorted(items, key=lambda item: _injection_sort_key(item[0]))
+
+
+def newest_injection_datetime(sample_folder: str) -> Optional[datetime]:
+    """시료 폴더 안 F-YYYY-MM-DD-HH-MM-SS 중 가장 늦은 시각."""
+    best: Optional[datetime] = None
+    for sequence_path in find_8860_sequence_folders(sample_folder):
+        for injection_path in find_injection_folders(sequence_path):
+            stamp = _injection_sort_key(injection_path)
+            if best is None or stamp > best:
+                best = stamp
+    return best
+
+
+def _is_8860_sample_candidate(folder_path: str) -> bool:
+    return bool(find_8860_sequence_folders(folder_path))
+
+
+def find_active_sample_folder_8860(
+    data_path: str,
+    sequence_folder: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Data 아래 활성 **시료** 폴더.
+
+    가장 최근 F- 주입 시각이 들어 있는 Data 직계 폴더를 고른다.
+    (시퀀스 내부 폴더가 아니라 실험 단위 wrapper)
+    """
+    if sequence_folder:
+        try:
+            safe = validate_sequence_folder(sequence_folder, data_path)
+        except InvalidSequenceFolderError as exc:
+            print(f"[오류] {exc}")
+            return None
+        parent = os.path.dirname(safe)
+        data_abs = os.path.normcase(os.path.abspath(data_path))
+        parent_abs = os.path.normcase(os.path.abspath(parent))
+        if parent_abs == data_abs:
+            return safe
+        if _is_8860_sample_candidate(parent):
+            return parent
+        if _is_8860_sample_candidate(safe):
+            return safe
+        return safe
+
+    try:
+        children = [entry.path for entry in os.scandir(data_path) if entry.is_dir()]
+    except OSError as exc:
+        print(f"[오류] 시료 폴더 검색 실패: {exc}")
+        return None
+
+    candidates = [path for path in children if _is_8860_sample_candidate(path)]
+    if not candidates:
+        print("[오류] Data 아래 주입(F-*.D)이 있는 시료 폴더가 없습니다.")
+        return None
+
+    def _score(path: str) -> Tuple[datetime, float]:
+        newest = newest_injection_datetime(path) or datetime.min
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            mtime = 0.0
+        return (newest, mtime)
+
+    chosen = max(candidates, key=_score)
+    print(f"[안내] 활성 시료 폴더: {chosen}")
+    print(f"       (최신 F- 주입: {newest_injection_datetime(chosen)})")
+    return chosen
+
+
+def suggest_sample_name_from_folder(sample_folder: str) -> Optional[str]:
+    """시료 폴더명 → 정규화 기본 시료명 (자동 시퀀스명이면 None)."""
+    return normalize_gc2_folder_sample_name(os.path.basename(sample_folder.rstrip("\\/")))
+
+
+def get_sample_seq_date(sample_folder: str, sequence_date: Optional[str] = None) -> str:
+    """엑셀·상태용 YYYYMMDD — 폴더 선두 날짜 또는 최신 F- 날짜."""
+    if sequence_date:
+        return sequence_date
+    name = os.path.basename(sample_folder.rstrip("\\/"))
+    if not is_chemstation_auto_sequence_name(name):
+        leading = re.match(r"^(20\d{6})", name)
+        if leading:
+            return leading.group(1)
+    newest = newest_injection_datetime(sample_folder)
+    if newest is not None:
+        return newest.strftime("%Y%m%d")
+    return get_sequence_date(sample_folder, None)
+
+
+def get_latest_injection_acam_mtime_under_sample(sample_folder: str) -> Optional[float]:
+    """시료 폴더(복수 시퀀스) 전체에서 최신 acam mtime."""
+    latest: Optional[float] = None
+    for injection_path, _seq in collect_acam_injections(sample_folder):
+        acam = find_sequence_acam_file(injection_path)
+        if not acam:
+            continue
+        mtime = os.path.getmtime(acam)
+        if latest is None or mtime > latest:
+            latest = mtime
+    return latest
+
+
+def _injection_timestamp_sec(injection_path: str) -> Optional[float]:
+    name = os.path.basename(injection_path)
+    match = INJECTION_FOLDER_DT.search(name)
+    if match:
+        return datetime(*map(int, match.groups())).timestamp()
+    try:
+        return os.path.getmtime(injection_path)
+    except OSError:
+        return None
+
+
+def detect_analysis_gaps_acam(sample_folder: str):
+    """
+    GC2 acam 주입 시각(F- 폴더명) 기준 분석 중단 갭 — GC3 계약과 동일 마커.
+    """
+    from gc_chem32 import AnalysisGap, estimate_missing_cycles_floor
+
+    injections = collect_acam_injections(sample_folder)
+    timed: List[Tuple[int, str, str, float]] = []
+    for index, (injection_path, sequence_path) in enumerate(injections):
+        stamp = _injection_timestamp_sec(injection_path)
+        if stamp is not None:
+            timed.append((index, injection_path, sequence_path, stamp))
+
+    if len(timed) < 2:
+        return [], None
+
+    deltas = [timed[i][3] - timed[i - 1][3] for i in range(1, len(timed)) if timed[i][3] > timed[i - 1][3]]
+    if not deltas:
+        return [], None
+    interval_sec = float(statistics.median(deltas))
+    if interval_sec <= 0:
+        return [], interval_sec
+
+    gaps = []
+    for pos in range(1, len(timed)):
+        prev_index, _prev_path, prev_seq, prev_stamp = timed[pos - 1]
+        curr_index, _curr_path, curr_seq, curr_stamp = timed[pos]
+        gap_sec = curr_stamp - prev_stamp
+        if gap_sec <= 0:
+            continue
+        missing, remainder = estimate_missing_cycles_floor(gap_sec, interval_sec)
+        if missing < 2:
+            continue
+        gaps.append(
+            AnalysisGap(
+                after_injection_index=prev_index,
+                before_injection_index=curr_index,
+                after_sequence=os.path.basename(prev_seq),
+                before_sequence=os.path.basename(curr_seq),
+                gap_sec=gap_sec,
+                interval_sec=interval_sec,
+                missing_cycles=missing,
+                remainder_sec=remainder,
+                after_last_at=datetime.fromtimestamp(prev_stamp),
+                before_first_at=datetime.fromtimestamp(curr_stamp),
+            )
+        )
+    return gaps, interval_sec
+
+
+def insert_analysis_gap_markers_acam(
+    cycles: List[List[dict]],
+    matched_injection_paths: List[str],
+    analysis_gaps,
+    all_injections: List[Tuple[str, str]],
+) -> List[List[dict]]:
+    """단일 Sheet1 사이클 목록에 GC3와 같은 중단 마커 행 삽입."""
+    from gc_chem32 import _gap_marker_excel_position, gap_marker_cycle
+
+    if not analysis_gaps or not matched_injection_paths:
+        return cycles
+
+    out = list(cycles)
+    pending: List[Tuple[int, List[dict]]] = []
+    for gap in analysis_gaps:
+        pos = _gap_marker_excel_position(gap, matched_injection_paths, all_injections)
+        if pos is None or pos < 0 or pos > len(out):
+            print(
+                f"[경고] 갭 행 삽입 생략 — 엑셀 위치 {pos} "
+                f"(갭 #{gap.after_injection_index + 1}→#{gap.before_injection_index + 1})"
+            )
+            continue
+        after_folder = os.path.basename(all_injections[gap.after_injection_index][0])
+        before_folder = os.path.basename(all_injections[gap.before_injection_index][0])
+        marker = gap_marker_cycle(
+            gap,
+            after_folder=after_folder,
+            before_folder=before_folder,
+        )
+        # GC2 컬럼에 Type 자리 맞춤
+        for row in marker:
+            row.setdefault(" Type", "")
+        pending.append((pos, marker))
+        print(
+            f"[안내] 엑셀 갭 행 삽입 위치 #{pos + 1} — "
+            f"약 {gap.missing_cycles}사이클 미수집 "
+            f"({after_folder}→{before_folder})"
+        )
+
+    for pos, marker in sorted(pending, key=lambda item: item[0], reverse=True):
+        out.insert(pos, marker)
+    return out
+
+
+def build_merged_acam_cycles(
+    sample_folder: str,
+    detector: str = "TCD",
+) -> Tuple[List[List[dict]], List[str], List[str], List[str], int]:
+    """
+    시료 폴더 아래 모든 시퀀스 acam → 시간순 사이클 1목록.
+
+    Returns:
+        (cycles, injection_labels, matched_paths, missing_acam, skipped_startup)
+    """
+    from gc_chem32 import log_analysis_gaps
+
+    all_injections = collect_acam_injections(sample_folder)
+    sequences = find_8860_sequence_folders(sample_folder)
+    print(
+        f"[안내] 시퀀스 {len(sequences)}개 / acam 주입 {len(all_injections)}개 "
+        f"(시료: {os.path.basename(sample_folder)})"
+    )
+
+    gaps, interval = detect_analysis_gaps_acam(sample_folder)
+    log_analysis_gaps(gaps, interval)
+
+    cycles: List[List[dict]] = []
+    labels: List[str] = []
+    matched_paths: List[str] = []
+    missing_acam: List[str] = []
+
+    # acam 없는 F- 도 안내
+    for sequence_path in sequences:
+        for injection_path in find_injection_folders(sequence_path):
+            if find_sequence_acam_file(injection_path):
+                continue
+            missing_acam.append(os.path.basename(injection_path))
+            print(f"[경고] sequence.acam_ 없음: {os.path.basename(injection_path)}")
+
+    for injection_path, _sequence_path in all_injections:
+        injection_name = os.path.basename(injection_path)
+        acam_path = find_sequence_acam_file(injection_path)
+        if not acam_path:
+            continue
+        peaks = parse_sequence_acam(acam_path, detector=detector)
+        if peaks:
+            cycles.append(peaks)
+            labels.append(injection_name)
+            matched_paths.append(injection_path)
+            print(f"[진행] {injection_name}: 피크 {len(peaks)}개")
+        else:
+            print(f"[경고] 피크 없음: {injection_name}")
+
+    skipped = 0
+    if cycles:
+        first_label = labels[0] if labels else None
+        cycles, skipped_first, _info = drop_first_cycle_if_startup_noise(
+            cycles,
+            first_injection_label=first_label,
+        )
+        if skipped_first:
+            skipped = 1
+            labels = labels[1:]
+            matched_paths = matched_paths[1:]
+
+    if cycles and gaps:
+        cycles = insert_analysis_gap_markers_acam(
+            cycles,
+            matched_paths,
+            gaps,
+            all_injections,
+        )
+
+    return cycles, labels, matched_paths, missing_acam, skipped
+
+
 def find_sequence_acam_file(injection_folder_path: str) -> Optional[str]:
     """한 주입 폴더에서 sequence.acam_ 파일 경로."""
     for filename in ACAM_FILENAMES:
@@ -318,7 +644,11 @@ def find_sequence_acam_file(injection_folder_path: str) -> Optional[str]:
 
 
 def get_latest_injection_acam_mtime(sequence_folder: str) -> Optional[float]:
-    """시퀀스 내 sequence.acam_ 중 가장 최근 수정 시각 (watch 새 데이터 판별)."""
+    """시퀀스·시료 폴더 내 sequence.acam_ 중 가장 최근 수정 시각 (watch 새 데이터 판별)."""
+    under = get_latest_injection_acam_mtime_under_sample(sequence_folder)
+    if under is not None:
+        return under
+    # flat 단일 시퀀스 폴백
     latest_mtime = None
     for injection_path in find_injection_folders(sequence_folder):
         acam_path = find_sequence_acam_file(injection_path)

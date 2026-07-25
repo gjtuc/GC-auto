@@ -4,10 +4,98 @@ from __future__ import annotations
 
 import os
 import re
+from typing import Optional
 
 _WIN_INVALID_CHARS = re.compile(r'[<>:"\\|?*\x00-\x1f]')
 _SEQ_DATE_RE = re.compile(r'^\d{8}$')
 MAX_SAMPLE_NAME_LEN = 120
+
+# ChemStation 자동 시퀀스 폴더명 — 사용자가 시료명을 안 정한 경우
+_AUTO_SEQUENCE_FOLDER_RE = re.compile(
+    r"sequence\s+\d{4}-\d{2}-\d{2}",
+    re.IGNORECASE,
+)
+# Data 압축형: 20260724DRE(1.5)600CNi5-Al2O3  /  20260724DRE(1.5%)@600CNi5-Al2O3
+_COMPACT_SAMPLE_FOLDER_RE = re.compile(
+    r"^(?P<date>20\d{6})"
+    r"(?P<rxn>DRE|DRM|DRME)"
+    r"\((?P<conc>[^)]+)\)"
+    r"@?"
+    r"(?P<temp>\d{3,4})C?"
+    r"(?P<rest>.*)$",
+    re.IGNORECASE,
+)
+# 이미 띄어쓴 형태: 20260724 DRE(1.5%)@600C Ni5-Al2O3
+_SPACED_SAMPLE_FOLDER_RE = re.compile(
+    r"^(?P<date>20\d{6})\s+"
+    r"(?P<rxn>DRE|DRM|DRME)"
+    r"\((?P<conc>[^)]+)\)"
+    r"(?:@(?P<temp>\d{3,4})C?)?"
+    r"(?P<rest>.*)$",
+    re.IGNORECASE,
+)
+
+
+def is_chemstation_auto_sequence_name(folder_name: str) -> bool:
+    """`20251221 sequence 2026-07-24 15-23-24` 처럼 자동 시퀀스명인지."""
+    name = (folder_name or "").strip()
+    if not name:
+        return False
+    return bool(_AUTO_SEQUENCE_FOLDER_RE.search(name))
+
+
+def normalize_gc2_folder_sample_name(folder_name: str) -> Optional[str]:
+    """
+    Data 시료 폴더명 → 엑셀 기본 시료명.
+
+    예: ``20260724DRE(1.5)600CNi5-Al2O3``
+      → ``20260724 DRE(1.5%)@600C Ni5-Al2O3``
+
+    자동 시퀀스명(``… sequence YYYY-MM-DD …``)이면 None (사용자 입력 필수).
+    """
+    name = (folder_name or "").strip()
+    if not name:
+        return None
+    if is_chemstation_auto_sequence_name(name):
+        return None
+
+    match = _SPACED_SAMPLE_FOLDER_RE.match(name)
+    if not match:
+        match = _COMPACT_SAMPLE_FOLDER_RE.match(re.sub(r"\s+", "", name))
+    if not match:
+        loose = re.match(
+            r"^(?P<date>20\d{6})\s+(?P<body>.+)$",
+            name,
+            re.IGNORECASE,
+        )
+        if not loose:
+            return None
+        body = loose.group("body").strip()
+        if not body or is_chemstation_auto_sequence_name(body):
+            return None
+        if not re.search(r"(DRE|DRM|DRME)", body, re.IGNORECASE):
+            return None
+        return f"{loose.group('date')} {body}".strip()
+
+    date = match.group("date")
+    rxn = match.group("rxn").upper()
+    conc = (match.group("conc") or "").strip()
+    if conc and not conc.endswith("%"):
+        conc = f"{conc}%"
+    temp = (match.groupdict().get("temp") or "").strip()
+    rest = (match.group("rest") or "").strip()
+    rest = re.sub(r"^[@\s_\-]+", "", rest)
+    if rest.upper().startswith("C") and len(rest) > 1 and not rest[1].isdigit():
+        # "@600 CNi…" 잔여 C 제거 (온도 C 가 rest 로 남은 경우)
+        if temp:
+            rest = rest[1:].lstrip()
+
+    core = f"{date} {rxn}({conc})"
+    if temp:
+        core = f"{core}@{temp}C"
+    if rest:
+        return f"{core} {rest}".strip()
+    return core
 
 
 class InvalidSampleNameError(ValueError):
