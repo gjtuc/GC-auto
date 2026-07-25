@@ -1,6 +1,6 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-07-25 13:39:45 | HEAD: `f640661` | Merge pull request #7 from gjtuc/fix/drme-g-folder-temperature
+> Updated: 2026-07-25 14:13:04 | HEAD: `ca559f5` | auto: sync GC8860 @ 2026-07-25 14:12:59
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
@@ -10,7 +10,7 @@
 | `DESKTOP-MBGSSME` | gc4_pc | DESKTOP-MBGSSME\User @ 2026-07-02T00:21:27+09:00 | `f21dd44` | DESKTOP-MBGSSME\은규 @ 2026-07-01T19:50:13+09:00 | `43419e8` | [WARN] need pull |
 | `DESKTOP-N89C874` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
 | `DESKTOP-XXXXXXX` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
-| `GC8860` | gc2_pc | GC8860\차헌 @ 2026-07-15T22:07:49+09:00 | `70c67ca` | GC8860\차헌 @ 2026-07-25T13:39:45+09:00 | `f640661` | [OK] latest |
+| `GC8860` | gc2_pc | GC8860\차헌 @ 2026-07-25T14:13:04+09:00 | `ca559f5` | GC8860\차헌 @ 2026-07-25T13:39:45+09:00 | `f640661` | [WARN] need pull |
 
 ## Commands
 - Start work: `gc_git_pull.bat`
