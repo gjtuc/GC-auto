@@ -20,12 +20,13 @@ from data_pc_origin.o3_session import (
     OriginComTimeoutError,
     OriginGuiBusyError,
     ensure_origin_gui_clear_for_com,
+    ensure_origin_stopped_after_job,
     is_origin_gui_running,
     origin_com_poll_sec,
     origin_com_timeout_sec,
     save_and_force_quit_origin_gui,
 )
-from data_pc_origin.o8_context import build_context
+from data_pc_origin.o8_context import build_context, dataframe_row_count
 from data_pc_origin.o8_job import SampleJobResult, run_sample_job
 from data_pc_origin.o8_save import resolve_save_path
 
@@ -76,6 +77,9 @@ def print_stage4_ux(
             printer(f" ✅ Origin 파일 업데이트 완료! 저장 위치: {save_path}")
     else:
         printer(" ⚠️ Origin에서 일치하는 데이터 시트를 하나도 찾지 못했습니다.")
+    for w in job.warnings:
+        if w.code in ("duplicate_origin_books", "origin_gap_write_verify", "WKS_MISS"):
+            printer(f"  ⚠️ [{w.code}] {w.detail}")
 
 
 def default_interactive_column_guard_confirm(
@@ -102,6 +106,27 @@ def _skip_equipment_day_guard_from_env() -> bool:
         "yes",
         "on",
     )
+
+
+def _is_transient_origin_com_error(exc: BaseException) -> bool:
+    msg = str(exc)
+    return "LT_set_var" in msg or "ApplicationBase" in msg
+
+
+def _origin_com_retry_attempts() -> int:
+    """COM 일시 오류(LT_set_var 등) 포함 총 시도 횟수. 기본 3."""
+    try:
+        return max(2, int(os.getenv("DATA_PC_ORIGIN_COM_RETRIES", "3")))
+    except ValueError:
+        return 3
+
+
+def _origin_com_retry_wait_sec() -> float:
+    """Origin 정리 후 COM 재시도 전 대기(초). 기본 5."""
+    try:
+        return max(0.0, float(os.getenv("DATA_PC_ORIGIN_COM_RETRY_WAIT_SEC", "5")))
+    except ValueError:
+        return 5.0
 
 
 def _run_sample_job_with_watchdog(
@@ -204,46 +229,95 @@ def update_from_dataframe(
         identity_key=identity_key,
         save_in_place=save_in_place,
     )
+    # region agent log
+    from data_pc_origin.agent_debug_log import agent_dbg
+
+    agent_dbg(
+        "H3",
+        "o9_facade.py:update_from_dataframe",
+        "origin_job_context",
+        {
+            "opju": opju_path,
+            "sample_head": (sample_name or "")[:100],
+            "identity_key": list(identity_key) if identity_key else None,
+            "row_count": dataframe_row_count(ctx.df),
+            "mapping_cols": list(ctx.mapping.keys()),
+        },
+    )
+    # endregion
     origin_log(f"job start opju={opju_path!r}", log_fn=log_fn)
-    try:
-        ensure_origin_gui_clear_for_com(
-            log=lambda msg: origin_log(msg.replace("[Origin] ", ""), log_fn=log_fn),
-        )
-    except OriginGuiBusyError as exc:
-        origin_log(f"blocked: {exc}", log_fn=log_fn)
-        _print(f"\n[4단계] Origin 건너뜀 — {exc}")
-        return OriginUpdateResult(
-            ok=False,
-            sheets_updated=0,
-            row_count=0,
-            warnings=(OriginWarning("origin_gui_busy", str(exc)),),
-            opju_path=opju_path,
-            sample_name=sample_name,
-        )
     probe = probe_opju_path(opju_path) if not skip_gate else None
     runner = job_runner if job_runner is not None else run_sample_job
-    try:
-        job = _run_sample_job_with_watchdog(
-            runner,
-            log_fn=log_fn,
-            ctx=ctx,
-            op=op,
-            opju_probe=probe,
-            skip_gate=skip_gate,
-            column_guard_confirm=confirm,
-            skip_equipment_day_guard=bool(skip_guard),
-        )
-    except OriginComTimeoutError as exc:
-        origin_log(f"timeout: {exc}", log_fn=log_fn)
-        _print(f"\n[4단계] Origin 실패 — {exc}")
-        return OriginUpdateResult(
-            ok=False,
-            sheets_updated=0,
-            row_count=0,
-            warnings=(OriginWarning("origin_com_timeout", str(exc)),),
-            opju_path=opju_path,
-            sample_name=sample_name,
-        )
+    job: SampleJobResult | None = None
+    last_exc: BaseException | None = None
+    attempts = _origin_com_retry_attempts()
+    wait_sec = _origin_com_retry_wait_sec()
+    for attempt in range(attempts):
+        try:
+            ensure_origin_gui_clear_for_com(
+                log=lambda msg: origin_log(
+                    msg.replace("[Origin] ", ""), log_fn=log_fn
+                ),
+            )
+        except OriginGuiBusyError as exc:
+            origin_log(f"blocked: {exc}", log_fn=log_fn)
+            _print(f"\n[4단계] Origin 건너뜀 — {exc}")
+            return OriginUpdateResult(
+                ok=False,
+                sheets_updated=0,
+                row_count=0,
+                warnings=(OriginWarning("origin_gui_busy", str(exc)),),
+                opju_path=opju_path,
+                sample_name=sample_name,
+            )
+        try:
+            job = _run_sample_job_with_watchdog(
+                runner,
+                log_fn=log_fn,
+                ctx=ctx,
+                op=op,
+                opju_probe=probe,
+                skip_gate=skip_gate,
+                column_guard_confirm=confirm,
+                skip_equipment_day_guard=bool(skip_guard),
+            )
+            last_exc = None
+            break
+        except BaseException as exc:
+            last_exc = exc
+            can_retry = attempt + 1 < attempts and _is_transient_origin_com_error(exc)
+            if can_retry:
+                origin_log(
+                    f"COM 일시 오류 — Origin 정리 후 {wait_sec:g}s 대기·재시도 "
+                    f"({attempt + 1}/{attempts - 1}): {exc}",
+                    log_fn=log_fn,
+                )
+                try:
+                    ensure_origin_stopped_after_job(
+                        log=lambda msg: origin_log(
+                            msg.replace("[Origin] ", ""), log_fn=log_fn
+                        ),
+                    )
+                except OriginGuiBusyError as busy_exc:
+                    origin_log(f"retry cleanup: {busy_exc}", log_fn=log_fn)
+                if wait_sec > 0:
+                    time.sleep(wait_sec)
+                continue
+            if isinstance(exc, OriginComTimeoutError):
+                origin_log(f"timeout: {exc}", log_fn=log_fn)
+                _print(f"\n[4단계] Origin 실패 — {exc}")
+                return OriginUpdateResult(
+                    ok=False,
+                    sheets_updated=0,
+                    row_count=0,
+                    warnings=(OriginWarning("origin_com_timeout", str(exc)),),
+                    opju_path=opju_path,
+                    sample_name=sample_name,
+                )
+            raise
+    if job is None:
+        assert last_exc is not None
+        raise last_exc
     if not job.ok and any(w.code == "equipment_day_guard" for w in job.warnings):
         for w in job.warnings:
             if w.code == "equipment_day_guard":
@@ -262,6 +336,20 @@ def update_from_dataframe(
         f"done sheets={job.updated_count} rows={job.row_count} ok={job.ok}",
         log_fn=log_fn,
     )
+    # region agent log
+    agent_dbg(
+        "H1",
+        "o9_facade.py:update_from_dataframe",
+        "origin_job_done",
+        {
+            "ok": job.ok,
+            "updated_count": job.updated_count,
+            "row_count": job.row_count,
+            "warnings": [w.code for w in job.warnings],
+            "col_idx": job.col_idx,
+        },
+    )
+    # endregion
     return OriginUpdateResult(
         ok=job.ok,
         sheets_updated=job.updated_count,

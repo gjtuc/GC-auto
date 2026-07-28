@@ -23,13 +23,42 @@ def keyword_in_text(text: str, keyword: str) -> bool:
 
 
 def find_worksheet_for_keyword(op: Any, keyword: str) -> Any | None:
-    """촉매 nested loop + break (L1710–1714)."""
+    """촉매 nested loop + break (L1710–1714) — 첫 매칭만."""
+    for wks in find_all_worksheets_for_keyword(op, keyword):
+        return wks
+    return None
+
+
+def find_all_worksheets_for_keyword(op: Any, keyword: str) -> List[Any]:
+    """동일 Long Name 복제 북 전부 (예: CO2conversion / CO2conversioA).
+
+    짧은 키워드(``CH4``, ``C2H6``)는 같은 북 안의 다른 시트 이름에도
+    부분 매칭될 수 있어, **북이 하나뿐이면 첫 시트만** 반환한다.
+    북이 여러 개이고 ``lname`` 이 같으면(복제 폴더) 그 북들의 매칭 시트를
+    모두 반환 — UI 에 동명 폴더가 둘일 때 한쪽만 갱신되는 문제를 막는다.
+    """
+    from data_pc_origin.o5_text import book_lname, book_name
+
+    matches: List[Tuple[Any, Any]] = []
     for book in iter_pages_w(op):
         for wks in book:
             search_str = compose_search_text(book, wks)
             if keyword_in_text(search_str, keyword):
-                return wks
-    return None
+                matches.append((book, wks))
+    if not matches:
+        return []
+
+    primary_book, primary_wks = matches[0]
+    book_ids = {id(b) for b, _ in matches}
+    if len(book_ids) == 1:
+        return [primary_wks]
+
+    def _book_key(book: Any) -> str:
+        ln = normalize_origin_key(book_lname(book))
+        return ln if ln else normalize_origin_key(book_name(book))
+
+    primary_key = _book_key(primary_book)
+    return [wks for book, wks in matches if _book_key(book) == primary_key]
 
 
 def resolve_worksheets(
@@ -37,7 +66,11 @@ def resolve_worksheets(
     mapping: Mapping[str, str],
     df: Any,
 ) -> Tuple[Dict[str, Any], List[str]]:
-    """mapping 순회 · df col 없으면 skip · (hits by origin kw, misses)."""
+    """mapping 순회 · df col 없으면 skip · (hits by origin kw, misses).
+
+    hits 값은 하위 호환을 위해 **첫 매칭 시트**만 담는다.
+    복제 시트 전부 쓰기는 ``run_writes`` + ``find_all_worksheets_for_keyword``.
+    """
     cols = set(getattr(df, "columns", df))
     hits: Dict[str, Any] = {}
     misses: List[str] = []
