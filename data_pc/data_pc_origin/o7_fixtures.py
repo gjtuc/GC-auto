@@ -9,14 +9,36 @@ WriteCall = Tuple[int, List[Any], str]
 
 
 class MockWriteWks:
-    """`from_list(col, values, comments=)` 호출 기록."""
+    """`from_list(col, values, comments=)` 호출 기록 · ``to_list`` 검증용."""
 
     def __init__(self, *, cols: int = 5) -> None:
         self.cols = cols
         self.writes: List[WriteCall] = []
+        self._columns: Dict[int, List[Any]] = {}
 
-    def from_list(self, col_idx: int, values: List[Any], *, comments: str = "") -> None:
+    def from_list(
+        self,
+        col_idx: int,
+        values: List[Any],
+        *,
+        comments: str = "",
+        start: int | None = None,
+    ) -> None:
         self.writes.append((col_idx, list(values), comments))
+        if start is None or start <= 1:
+            self._columns[col_idx] = list(values)
+            return
+        # Origin 1-based start — 기존 열에 구간 덮어쓰기
+        base = list(self._columns.get(col_idx, []))
+        need = start - 1 + len(values)
+        if len(base) < need:
+            base.extend([""] * (need - len(base)))
+        for i, v in enumerate(values):
+            base[start - 1 + i] = v
+        self._columns[col_idx] = base
+
+    def to_list(self, col_idx: int) -> List[Any]:
+        return list(self._columns.get(col_idx, []))
 
 
 def gc3_gap_series(length: int = 107) -> List[float]:

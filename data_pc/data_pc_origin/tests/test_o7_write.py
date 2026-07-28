@@ -27,6 +27,20 @@ class TestO7Write(unittest.TestCase):
         self.assertEqual(vals[100], "")
         self.assertNotEqual(vals[99], 0.0)
 
+    def test_verify_written_column_after_gap(self) -> None:
+        from data_pc_origin.o7_write import verify_written_column, write_column
+
+        wks = MockWriteWks()
+        series = [1.0, 2.0, float("nan"), float("nan"), 5.0, 6.0]
+        col, prepared, _ = write_column(wks, 0, series, SAMPLE_WRITE)
+        self.assertIsNone(verify_written_column(wks, col, prepared))
+        # 고의로 갭 이후 자르면 실패
+        wks._columns[0] = prepared[:4]
+        err = verify_written_column(wks, 0, prepared)
+        self.assertIsNotNone(err)
+        assert err is not None
+        self.assertIn("행 수 부족", err)
+
     def test_write_mapping_artifact(self) -> None:
         wks = MockWriteWks()
         df = fx_df_two_cols()

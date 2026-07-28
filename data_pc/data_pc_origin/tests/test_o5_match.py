@@ -4,8 +4,14 @@ import unittest
 from pathlib import Path
 
 from data_pc_origin.o0_mapping import DEFAULT_ORIGIN_MAPPING
-from data_pc_origin.o5_fixtures import fx_default_mapping_op, fx_opju_two_books, make_mock_op
+from data_pc_origin.o5_fixtures import (
+    MockBook,
+    fx_default_mapping_op,
+    fx_opju_two_books,
+    make_mock_op,
+)
 from data_pc_origin.o5_match import (
+    find_all_worksheets_for_keyword,
     find_worksheet_for_keyword,
     keyword_in_text,
     report_missing,
@@ -45,6 +51,21 @@ class TestO5Match(unittest.TestCase):
         hits, misses = resolve_worksheets(op, DEFAULT_ORIGIN_MAPPING, df)
         self.assertEqual(len(hits), 0)
         self.assertEqual(len(misses), 2)
+
+    def test_find_all_duplicate_lname_books(self) -> None:
+        """동명 lname 복제 북 → 둘 다 (한 북 안 부분매칭 과다 포착 방지와 구분)."""
+        primary = MockBook("CO2conversion", "CO2 conversion", ("Sheet1",))
+        dup = MockBook("CO2conversioA", "CO2 conversion", ("Sheet1",))
+        op = make_mock_op([primary, dup])
+        found = find_all_worksheets_for_keyword(op, "CO2 conversion")
+        self.assertEqual(len(found), 2)
+
+    def test_find_all_single_book_keeps_first_only(self) -> None:
+        """한 북에 여러 시트가 키워드에 걸려도 첫 시트만."""
+        op, _ = fx_opju_two_books()
+        found = find_all_worksheets_for_keyword(op, "CH4")
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].name, "CH4conversion")
 
     def test_report_wks_miss(self) -> None:
         warns = report_missing(["H2 yield"])
