@@ -16,6 +16,7 @@ from data_pc_origin.o0_equipment_day import EquipmentDayGuardResult
 from data_pc_origin.o0_types import OriginWarning
 from data_pc_origin.o6_guard import ColumnGuardConfirm
 from data_pc_origin.o1_opju_path import probe_opju_path
+from data_pc_origin.o3_import import reset_originpro_cache
 from data_pc_origin.o3_session import (
     OriginComTimeoutError,
     OriginGuiBusyError,
@@ -288,7 +289,7 @@ def update_from_dataframe(
             can_retry = attempt + 1 < attempts and _is_transient_origin_com_error(exc)
             if can_retry:
                 origin_log(
-                    f"COM 일시 오류 — Origin 정리 후 {wait_sec:g}s 대기·재시도 "
+                    f"COM 일시 오류 — Origin 정리·캐시 초기화 후 {wait_sec:g}s 대기·재시도 "
                     f"({attempt + 1}/{attempts - 1}): {exc}",
                     log_fn=log_fn,
                 )
@@ -300,6 +301,8 @@ def update_from_dataframe(
                     )
                 except OriginGuiBusyError as busy_exc:
                     origin_log(f"retry cleanup: {busy_exc}", log_fn=log_fn)
+                # 죽은 ApplicationBase 포인터를 재사용하면 LT_set_var 가 재시도마다 실패함
+                reset_originpro_cache()
                 if wait_sec > 0:
                     time.sleep(wait_sec)
                 continue

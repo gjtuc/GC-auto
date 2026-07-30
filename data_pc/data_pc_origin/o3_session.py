@@ -37,7 +37,7 @@ import time
 from types import ModuleType
 from typing import Callable, Optional
 
-from data_pc_origin.o3_import import import_originpro
+from data_pc_origin.o3_import import import_originpro, reset_originpro_cache
 from data_pc_origin.o3_plugins import PluginRegistry
 
 _LOGGER = logging.getLogger("data_pc_origin")
@@ -569,17 +569,50 @@ def save_and_force_quit_origin_gui(
     save_result = _try_origin_com_graceful_save(emit)
     still_running = is_origin_gui_running()
     if still_running:
-        if save_result.startswith("ok:") and not _origin_has_unsaved_changes():
+        unsaved = _origin_has_unsaved_changes()
+        saved_ok = save_result.startswith("ok:")
+        recovery_saved = save_result.startswith("ok:recovery")
+        if saved_ok and (recovery_saved or not unsaved):
             kill_stale_origin_gui(allow_kill=True, log=emit)
+            wait_origin_gui_stopped(timeout_sec=30.0)
         else:
             emit("[Origin] 저장 실패 — taskkill 생략 (작업 보호)")
             raise OriginGuiBusyError(
                 f"Origin 저장 실패 — 수동 저장 후 다시 시도 ({save_result})"
             )
+    if is_origin_gui_running():
+        emit("[Origin] 종료 잔존 — headless 정리 후 재시도")
+        _kill_headless_origin_orphans(log=emit)
+        kill_stale_origin_gui(allow_kill=True, log=emit)
     if not wait_origin_gui_stopped():
         raise OriginGuiBusyError("Origin GUI 종료 대기 시간 초과")
     emit("[Origin] Origin GUI 정리 완료")
+    # COM attach 직전 여유 — 직후 LT_set_var 일시 오류 완화
+    try:
+        cool = float(os.getenv("DATA_PC_ORIGIN_POST_QUIT_WAIT_SEC", "3"))
+    except ValueError:
+        cool = 3.0
+    if cool > 0:
+        time.sleep(cool)
     return True
+
+
+def ensure_origin_stopped_after_job(
+    *,
+    log: Callable[[str], None] | None = None,
+) -> bool:
+    """시료별 Origin 작업 직후 — GUI 저장·종료, headless 고아 정리, 종료 대기.
+
+    ``tasklist`` 타이밍으로 ``save_and_force_quit`` 가 ``skip_not_running`` 되더라도
+    COM이 띄운 Origin·headless 고아를 정리해 다음 시료 COM 오류를 줄인다.
+    """
+    emit = log or _LOGGER.info
+    if is_origin_gui_running():
+        save_and_force_quit_origin_gui(log=emit)
+    else:
+        _kill_headless_origin_orphans(log=emit)
+    wait_origin_gui_stopped()
+    return not is_origin_gui_running()
 
 
 def is_origin_gui_running() -> bool:
@@ -687,6 +720,11 @@ class OriginSession:
             try:
                 op.exit()
             finally:
-                set_oext(op, False)
+                try:
+                    set_oext(op, False)
+                except Exception:
+                    pass
                 self._op = None
+                # exit 후 캐시된 COM 핸들은 재사용 불가 — 다음 세션이 새로 attach
+                reset_originpro_cache()
         return False
