@@ -1,12 +1,12 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-09-15 16:41:05 | HEAD: `579a8e0` | sync: registry GC8860 push @ 2026-08-17 21:10:56
+> Updated: 2026-09-15 16:42:17 | HEAD: `03b7828` | auto: sync DESKTOP-BFMLJ9J @ 2026-09-15 16:39:12
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
 | PC | role | last push (who @ when) | push | last pull (who @ when) | pull | status |
 |----|------|-------------------------|------|-------------------------|------|--------|
-| `DESKTOP-BFMLJ9J` | data_pc | - @ - | `-` | DESKTOP-BFMLJ9J\user @ 2026-09-15T16:41:05+09:00 | `579a8e0` | [OK] latest |
+| `DESKTOP-BFMLJ9J` | data_pc | DESKTOP-BFMLJ9J\user @ 2026-09-15T16:42:16+09:00 | `03b7828` | DESKTOP-BFMLJ9J\user @ 2026-09-15T16:41:05+09:00 | `579a8e0` | [WARN] need pull |
 | `DESKTOP-MBGSSME` | gc4_pc | DESKTOP-MBGSSME\User @ 2026-07-02T00:21:27+09:00 | `f21dd44` | DESKTOP-MBGSSME\은규 @ 2026-07-01T19:50:13+09:00 | `43419e8` | [WARN] need pull |
 | `DESKTOP-N89C874` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
 | `DESKTOP-XXXXXXX` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
