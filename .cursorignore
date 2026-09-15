@@ -1,0 +1,9 @@
+**/venv/**
+**/.venv/**
+**/__pycache__/**
+**/.pytest_cache/**
+**/node_modules/**
+**/logs/**
+**/dist/**
+**/data/**
+**/.git/objects/**
