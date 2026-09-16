@@ -50,12 +50,18 @@ class OriginUpdateResult:
 
 
 def origin_log(message: str, *, log_fn: LogFn | None = None) -> str:
-    """O9-F-04 — `[Origin]` 접두 로그."""
+    """O9-F-04 — `[Origin]` 접두 로그. 파일 증거에도 남긴다."""
     line = f"{LOG_PREFIX} {message}"
     if log_fn is not None:
         log_fn(line)
     else:
         _LOGGER.info("%s", line)
+    try:
+        from gc_run_evidence import origin_step
+
+        origin_step("trace", True, detail=message)
+    except Exception:
+        pass
     return line
 
 
@@ -262,6 +268,19 @@ def update_from_dataframe(
             )
         except OriginGuiBusyError as exc:
             origin_log(f"blocked: {exc}", log_fn=log_fn)
+            try:
+                from gc_run_evidence import origin_step
+
+                origin_step(
+                    "gui_busy",
+                    False,
+                    sample=sample_name,
+                    opju=opju_path,
+                    detail=str(exc),
+                    exc=exc,
+                )
+            except Exception:
+                pass
             _print(f"\n[4단계] Origin 건너뜀 — {exc}")
             return OriginUpdateResult(
                 ok=False,
@@ -308,6 +327,20 @@ def update_from_dataframe(
                 continue
             if isinstance(exc, OriginComTimeoutError):
                 origin_log(f"timeout: {exc}", log_fn=log_fn)
+                try:
+                    from gc_run_evidence import origin_step
+
+                    origin_step(
+                        "timeout",
+                        False,
+                        sample=sample_name,
+                        opju=opju_path,
+                        detail=str(exc),
+                        attempt=attempt + 1,
+                        exc=exc,
+                    )
+                except Exception:
+                    pass
                 _print(f"\n[4단계] Origin 실패 — {exc}")
                 return OriginUpdateResult(
                     ok=False,
@@ -339,6 +372,23 @@ def update_from_dataframe(
         f"done sheets={job.updated_count} rows={job.row_count} ok={job.ok}",
         log_fn=log_fn,
     )
+    try:
+        from gc_run_evidence import origin_step
+
+        origin_step(
+            "job_done",
+            bool(job.ok),
+            sample=sample_name,
+            opju=opju_path,
+            detail=job.saved_path or "",
+            sheets=job.updated_count,
+            rows=job.row_count,
+            save_in_place=bool(save_in_place),
+            warning_codes=",".join(w.code for w in job.warnings),
+            saved_path=job.saved_path or "",
+        )
+    except Exception:
+        pass
     # region agent log
     agent_dbg(
         "H1",

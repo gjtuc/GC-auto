@@ -45,6 +45,30 @@ class EvidenceTests(unittest.TestCase):
         self.assertTrue(ev.latest_path().is_file())
         self.assertIsNone(ev.current_run_id())
 
+    def test_origin_step_keeps_sheet_and_traceback(self):
+        ev.begin_run("origin")
+        try:
+            raise OSError("opju save locked")
+        except OSError as exc:
+            ev.origin_step(
+                "save",
+                False,
+                sample="20260909 DRME.xlsx",
+                opju=r"G:\연구소\a.opju",
+                detail="저장 실패",
+                sheet="H2 yield",
+                col_idx=4,
+                exc=exc,
+            )
+        lines = ev.origin_jsonl_path().read_text(encoding="utf-8").strip().splitlines()
+        event = json.loads(lines[-1])
+        self.assertEqual(event["step"], "save")
+        self.assertFalse(event["ok"])
+        self.assertEqual(event["sheet"], "H2 yield")
+        self.assertEqual(event["col_idx"], 4)
+        self.assertIn("opju save locked", event["traceback"])
+        ev.close_run(False)
+
 
 if __name__ == "__main__":
     unittest.main()

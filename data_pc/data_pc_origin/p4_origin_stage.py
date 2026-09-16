@@ -76,6 +76,18 @@ def maybe_run_stage4(
             reason = STAGE4_SKIP_MSG
         else:
             reason = stage4_skip_reason(explicit=explicit, environ=environ)
+        try:
+            from gc_run_evidence import origin_step
+
+            origin_step(
+                "skip",
+                True,
+                sample=getattr(payload, "sample_name", "") or "",
+                opju=getattr(payload, "opju_path", "") or "",
+                detail=reason,
+            )
+        except Exception:
+            pass
         return Stage4Result(
             skipped=True,
             ok=True,

@@ -199,6 +199,19 @@ def _maybe_sync_parallel_peer_origins(
         )
     except Exception as exc:
         printer(f"  [경고] 병렬 Origin 동기화 실패: {exc}")
+        try:
+            from gc_run_evidence import origin_step
+
+            origin_step(
+                "peer_sync",
+                False,
+                sample=getattr(result.stage2.metadata, "sample_name", "") if result.stage2 else "",
+                opju=opju,
+                detail="병렬 동일반응 Origin 동기화 실패",
+                exc=exc,
+            )
+        except Exception:
+            pass
 
 
 def run_workflow_bridged(

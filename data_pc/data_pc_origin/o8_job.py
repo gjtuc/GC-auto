@@ -83,6 +83,21 @@ def run_writes(
         },
     )
     # endregion
+    try:
+        from gc_run_evidence import origin_step
+
+        origin_step(
+            "worksheets",
+            not misses,
+            sample=ctx.sample_name,
+            opju=ctx.opju_path,
+            detail="" if not misses else "시트 없음: " + ", ".join(str(m) for m in misses),
+            hit_count=len(hits),
+            miss_count=len(misses),
+            row_count=dataframe_row_count(ctx.df),
+        )
+    except Exception:
+        pass
     col_idx: Optional[int] = None
     updated = 0
     cols = set(getattr(ctx.df, "columns", []))
@@ -128,6 +143,20 @@ def run_writes(
                 warnings.append(
                     OriginWarning("equipment_day_guard", exc.guard.question)
                 )
+                try:
+                    from gc_run_evidence import origin_step
+
+                    origin_step(
+                        "column_guard",
+                        False,
+                        sample=ctx.sample_name,
+                        opju=ctx.opju_path,
+                        detail=exc.guard.question,
+                        sheet=origin_kw,
+                        exc=exc,
+                    )
+                except Exception:
+                    pass
                 return 0, None, warnings
             if col_idx is None:
                 col_idx = sheet_col
@@ -144,6 +173,21 @@ def run_writes(
                     )
                 )
             updated += 1
+            try:
+                from gc_run_evidence import origin_step
+
+                origin_step(
+                    "write",
+                    not verify_err,
+                    sample=ctx.sample_name,
+                    opju=ctx.opju_path,
+                    detail=verify_err or "열 기록",
+                    sheet=origin_kw,
+                    worksheet=str(getattr(wks, "name", "")),
+                    col_idx=sheet_col,
+                )
+            except Exception:
+                pass
             # region agent log
             agent_dbg(
                 "H1",
@@ -171,6 +215,21 @@ def run_writes(
         },
     )
     # endregion
+    try:
+        from gc_run_evidence import origin_step
+
+        origin_step(
+            "writes_done",
+            updated > 0,
+            sample=ctx.sample_name,
+            opju=ctx.opju_path,
+            detail="" if updated else "일치하는 시트에 기록되지 않음",
+            updated=updated,
+            col_idx=col_idx if col_idx is not None else -1,
+            warning_codes=",".join(w.code for w in warnings),
+        )
+    except Exception:
+        pass
     return updated, col_idx, warnings
 
 
@@ -191,6 +250,19 @@ def run_sample_job(
     if not skip_gate:
         verdict = require_origin_ready(opju_probe=probe, skip_origin=False, gate_fn=gate_fn)
         if verdict.code != "ready":
+            try:
+                from gc_run_evidence import origin_step
+
+                origin_step(
+                    "gate",
+                    False,
+                    sample=ctx.sample_name,
+                    opju=ctx.opju_path,
+                    detail=getattr(verdict, "detail", "") or verdict.code,
+                    gate=verdict.code,
+                )
+            except Exception:
+                pass
             return SampleJobResult(
                 updated_count=0,
                 row_count=dataframe_row_count(ctx.df),

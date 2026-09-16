@@ -34,6 +34,10 @@ def jsonl_path() -> Path:
     return evidence_dir() / "data_pc_run_evidence.jsonl"
 
 
+def origin_jsonl_path() -> Path:
+    return evidence_dir() / "data_pc_origin_evidence.jsonl"
+
+
 def latest_path() -> Path:
     return evidence_dir() / "data_pc_run_latest.txt"
 
@@ -167,6 +171,55 @@ def note_swallowed(where: str, exc: BaseException) -> None:
     )
 
 
+def origin_step(
+    step: str,
+    ok: bool,
+    *,
+    sample: str = "",
+    opju: str = "",
+    detail: str = "",
+    exc: BaseException | None = None,
+    **fields: Any,
+) -> None:
+    """Origin 단계 증거. 실패해도 파이프라인을 막지 않는다.
+
+    별도 파일 ``data_pc_origin_evidence.jsonl`` 과 실행 기록에 같이 남긴다.
+    """
+    global _FAIL_COUNT
+    if not ok and _RUN_ID:
+        _FAIL_COUNT += 1
+    event: dict[str, Any] = {
+        "ts": _now(),
+        "run_id": _RUN_ID or "none",
+        "event": "origin",
+        "stage": "origin",
+        "step": _redact(step)[:80],
+        "ok": bool(ok),
+        "sample": _redact(sample)[:300],
+        "opju": _redact(opju)[:500],
+        "detail": _redact(detail),
+    }
+    for key, value in fields.items():
+        if value is None:
+            continue
+        if isinstance(value, str):
+            event[key] = _redact(value)[:500]
+        elif isinstance(value, (int, float, bool)):
+            event[key] = value
+        else:
+            event[key] = _redact(str(value))[:500]
+    if exc is not None:
+        event["exc_type"] = type(exc).__name__
+        event["exc"] = _redact(str(exc))
+        event["traceback"] = _redact(traceback.format_exc())
+    _append(event)
+    try:
+        with origin_jsonl_path().open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(event, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
 def emit_calc(sample: str, warnings, *, ok: bool = True, detail: str = "") -> None:
     """계산 경고와 실패를 같은 실행 기록에 남긴다."""
     for message in warnings or []:
@@ -194,4 +247,5 @@ def close_run(ok: bool, *, detail: str = "") -> None:
         }
     )
     print(f"[증거] {jsonl_path()}")
+    print(f"[증거][Origin] {origin_jsonl_path()}")
     _RUN_ID = None
