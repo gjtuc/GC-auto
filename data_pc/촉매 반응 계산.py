@@ -2089,6 +2089,9 @@ def process_excel(input_file):
             df_gc1_fid = df
 
     if not eq:
+        from gc_run_evidence import emit_calc
+
+        emit_calc(os.path.basename(input_file), [], ok=False, detail="장비 판별 실패")
         return None, None, [], ""
     df_result = pd.DataFrame()
     all_warnings = []
@@ -2114,6 +2117,9 @@ def process_excel(input_file):
             "❌ [GC1] CALIB 미설정 — deploy/STEP7_gc1_calib.md Step 7.3 표준가스 실측 후 "
             "GC1_CALIB 입력 및 GC1_CALIB_READY=True 설정 필요"
         )
+        from gc_run_evidence import emit_calc
+
+        emit_calc(os.path.basename(input_file), all_warnings, ok=False, detail="GC1 CALIB 미설정")
         return None, None, all_warnings, ""
 
     # 파일명 농도(%) → 화공 양론 feed ppm (없으면 USER SETTINGS fallback)
@@ -2243,6 +2249,9 @@ def process_excel(input_file):
 
     df_final = pd.concat([df_p, df_result], axis=1)[cols]
     df_final.to_excel(out_name, index=True)
+    from gc_run_evidence import emit_calc
+
+    emit_calc(os.path.basename(input_file), all_warnings, ok=True)
     return df_final, out_name, all_warnings, feed_source_desc
 
 # ==========================================
@@ -3143,11 +3152,16 @@ def process_new_gc_emails(opju_path=None, auto_archive=True, skip_origin=None):
     · G: 불가 시 2단계까지 완료, 3~4단계 실패 → 메일 미처리(재시도 가능)
     · skip_origin / DATA_PC_SKIP_ORIGIN=1 → 4단계 Origin 생략 (엑셀·G: xlsx 까지)
     """
+    from gc_run_evidence import begin_run, close_run, record
+
+    begin_run("imap")
     skip_origin = _skip_origin_enabled(skip_origin)
     email_addr, app_password = _get_mail_credentials()
     if not email_addr or not app_password:
         print("\n[오류] 메일 계정 설정 없음 — 바탕화면 gc_automation.env 확인")
         print("       NAVER_EMAIL, NAVER_APP_PASSWORD 필요")
+        record("receive", False, detail="메일 계정 설정 없음")
+        close_run(False, detail="메일 계정 없음")
         return PipelineRunResult(0)
 
     os.makedirs(DATA_PC_INBOX_DIR, exist_ok=True)
@@ -3198,6 +3212,8 @@ def process_new_gc_emails(opju_path=None, auto_archive=True, skip_origin=None):
         )
         if not pending_all:
             print("\n       → 처리할 gc_automation 메일이 없습니다. (이미 처리됨 또는 미수신)")
+            record("receive", True, detail="처리할 메일 없음")
+            close_run(True, detail="처리할 메일 없음")
             return PipelineRunResult(0)
 
         print(f"       → 처리 순서: 오래된 메일부터 {len(pending_all)}건")
@@ -3247,20 +3263,31 @@ def process_new_gc_emails(opju_path=None, auto_archive=True, skip_origin=None):
             print(f"\n[1단계 완료] {read_count}건 메일 읽음 · 반영 실패로 G: 재시도 필요")
 
         if gdrive_retry_needed:
+            record("gdrive", False, detail="G: 잠금 — 3~4단계 보류, 메일 미처리 유지")
             print(
                 "       [G: 잠금] 3~4단계 보류 — watch 가 "
                 f"{int(os.getenv('DATA_PC_GDRIVE_RETRY_SEC', '180')) // 60}분마다 재시도 "
                 "(1시간 쿨다운 미적용, 미처리 메일 유지)"
             )
+        record(
+            "receive",
+            workflow_count > 0 or not gdrive_retry_needed,
+            detail=f"메일 읽음 {read_count} · 시료 반영 {workflow_count}",
+        )
+        close_run(not gdrive_retry_needed, detail=f"workflow={workflow_count}")
 
     except imaplib.IMAP4.error as exc:
         print(f"[오류] IMAP 인증/접속 실패: {exc}")
+        record("receive", False, detail="IMAP 인증/접속 실패", exc=exc)
+        close_run(False, detail="IMAP 실패")
         return PipelineRunResult(0)
     finally:
         try:
             mail.logout()
-        except Exception:
-            pass
+        except Exception as exc:
+            from gc_run_evidence import note_swallowed
+
+            note_swallowed("imap_logout", exc)
 
     return PipelineRunResult(workflow_count, gdrive_retry_needed)
 
@@ -3432,16 +3459,33 @@ def run_workflow_for_file(
     # P5/P6 workflow_bridge 위임 — 본 모듈을 catalyst_module 로 넘겨 계산·G:·Origin 구현 재사용.
     # _run_workflow_for_file_legacy 는 회귀·문서용 보존.
     from data_pc_origin.workflow_bridge import run_workflow_bridged
+    from gc_run_evidence import begin_run, close_run, current_run_id, record
 
-    return run_workflow_bridged(
-        excel_path,
-        opju_path=opju_path,
-        auto_archive=auto_archive,
-        skip_origin=skip_origin,
-        skip_peer_sync=skip_peer_sync,
-        catalyst_module=sys.modules[__name__],
-        mail_received_at=mail_received_at,
-    )
+    started_here = current_run_id() is None
+    begin_run("workflow")
+    sample = os.path.basename(excel_path or "")
+    ok = False
+    try:
+        ok = bool(
+            run_workflow_bridged(
+                excel_path,
+                opju_path=opju_path,
+                auto_archive=auto_archive,
+                skip_origin=skip_origin,
+                skip_peer_sync=skip_peer_sync,
+                catalyst_module=sys.modules[__name__],
+                mail_received_at=mail_received_at,
+            )
+        )
+    except Exception as exc:
+        record("workflow", False, sample=sample, exc=exc)
+        if started_here:
+            close_run(False, detail=sample)
+        raise
+    record("workflow", ok, sample=sample, detail="계산→G:→Origin")
+    if started_here:
+        close_run(ok, detail=sample)
+    return ok
 
 
 def _run_workflow_for_file_legacy(excel_path, opju_path=None, auto_archive=True, skip_origin=None, mail_received_at=None):

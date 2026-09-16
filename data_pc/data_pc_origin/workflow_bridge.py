@@ -284,6 +284,7 @@ def run_workflow_bridged_detailed(
         )
         return result.ok, result
     except Exception as exc:
+        _record_workflow_exception(path, exc)
         gdrive = getattr(catalyst_module, "GDriveUnavailableError", None)
         if gdrive is not None and isinstance(exc, gdrive):
             printer(catalyst_module._g_drive_unavailable_message())
@@ -317,9 +318,26 @@ def run_workflow_bridged_detailed(
         if originpro is not None:
             try:
                 originpro.exit()
-            except Exception:
-                pass
+            except Exception as exit_exc:
+                _record_workflow_exception(path, exit_exc, stage="origin_exit")
         return False, None
+
+
+def _record_workflow_exception(sample: str, exc: BaseException, *, stage: str = "") -> None:
+    """삼킨 예외의 traceback 을 실행 증거에 남긴다. 기록 실패로 파이프라인을 막지 않는다."""
+    try:
+        from gc_run_evidence import record
+
+        gdrive = type(exc).__name__ == "GDriveUnavailableError"
+        record(
+            "gdrive" if gdrive else (stage or "workflow"),
+            False,
+            sample=os.path.basename(sample or ""),
+            detail=type(exc).__name__,
+            exc=exc,
+        )
+    except Exception:
+        pass
 
 
 def catalyst_module_from_sys() -> Any | None:
