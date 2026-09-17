@@ -1,12 +1,12 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-09-17 13:17:11 | HEAD: `e31a395` | auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 13:16:55
+> Updated: 2026-09-17 13:32:14 | HEAD: `59d0d1b` | auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 13:31:49
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
 | PC | role | last push (who @ when) | push | last pull (who @ when) | pull | status |
 |----|------|-------------------------|------|-------------------------|------|--------|
-| `DESKTOP-BFMLJ9J` | data_pc | DESKTOP-BFMLJ9J\user @ 2026-09-17T13:17:11+09:00 | `e31a395` | DESKTOP-BFMLJ9J\user @ 2026-09-15T16:41:05+09:00 | `579a8e0` | [WARN] need pull |
+| `DESKTOP-BFMLJ9J` | data_pc | DESKTOP-BFMLJ9J\user @ 2026-09-17T13:32:14+09:00 | `59d0d1b` | DESKTOP-BFMLJ9J\user @ 2026-09-15T16:41:05+09:00 | `579a8e0` | [WARN] need pull |
 | `DESKTOP-MBGSSME` | gc4_pc | DESKTOP-MBGSSME\User @ 2026-07-02T00:21:27+09:00 | `f21dd44` | DESKTOP-MBGSSME\은규 @ 2026-07-01T19:50:13+09:00 | `43419e8` | [WARN] need pull |
 | `DESKTOP-N89C874` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
 | `DESKTOP-XXXXXXX` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
