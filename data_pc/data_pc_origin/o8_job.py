@@ -301,6 +301,50 @@ def run_sample_job(
         )
 
 
+def _block_duplicate_long_names(op: Any, ctx: SampleContext) -> SampleJobResult | None:
+    """같은 Long Name 이 둘 이상이면 저장하지 않고 중단. 메일은 미처리로 남는다."""
+    from data_pc_origin.o5_duplicate_books import duplicate_long_name_groups
+
+    groups = duplicate_long_name_groups(op)
+    if not groups:
+        return None
+    warnings: List[OriginWarning] = []
+    try:
+        from gc_run_evidence import origin_step
+    except Exception:
+        origin_step = None  # type: ignore
+    for lname, books in groups:
+        detail = "; ".join(f"{name} rows={rows}" for name, rows in books)
+        warnings.append(OriginWarning("duplicate_long_name", f"{lname}: {detail}"))
+        if origin_step is not None:
+            origin_step(
+                "duplicate_long_name",
+                False,
+                sample=ctx.sample_name,
+                opju=ctx.opju_path,
+                detail=detail,
+                sheet=lname,
+            )
+            for name, rows in books:
+                origin_step(
+                    "duplicate_book",
+                    False,
+                    sample=ctx.sample_name,
+                    opju=ctx.opju_path,
+                    detail=lname,
+                    sheet=name,
+                    rows=rows,
+                )
+    return SampleJobResult(
+        updated_count=0,
+        row_count=dataframe_row_count(ctx.df),
+        warnings=tuple(warnings),
+        col_idx=None,
+        ok=False,
+        saved_path=None,
+    )
+
+
 def _run_with_op(
     op: Any,
     ctx: SampleContext,
@@ -311,6 +355,9 @@ def _run_with_op(
     skip_equipment_day_guard: bool = False,
 ) -> SampleJobResult:
     open_project_with_retry(op, ctx.opju_path)  # type: ignore[arg-type]
+    blocked = _block_duplicate_long_names(op, ctx)
+    if blocked is not None:
+        return blocked
     updated, col_idx, warnings = run_writes(
         op,
         ctx,
