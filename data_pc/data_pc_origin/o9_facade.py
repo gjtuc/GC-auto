@@ -76,8 +76,8 @@ def print_stage4_ux(
     """O9-F-05 — 촉매 L1695–1733 UX."""
     dup = [w for w in job.warnings if w.code == "duplicate_long_name"]
     if dup:
-        printer("\n[4단계] Origin 반영 중단 — 같은 이름 워크북이 둘 이상입니다.")
-        printer("       어느 쪽이 화면에 보이는 시트인지 정하기 전에는 쓰지 않습니다.")
+        printer("\n[4단계] Origin 반영 중단 — 같은 이름 워크북의 행 수가 다릅니다.")
+        printer("       140행과 114행처럼 어느 쪽이 맞는 데이터인지 정하기 전에는 쓰지 않습니다.")
         printer("       메일은 미처리로 둡니다.")
         for w in dup:
             printer(f"  ⚠️ {w.detail}")

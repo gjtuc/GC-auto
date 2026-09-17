@@ -302,11 +302,18 @@ def run_sample_job(
 
 
 def _block_duplicate_long_names(op: Any, ctx: SampleContext) -> SampleJobResult | None:
-    """같은 Long Name 이 둘 이상이면 저장하지 않고 중단. 메일은 미처리로 남는다."""
-    from data_pc_origin.o5_duplicate_books import duplicate_long_name_groups
+    """행 수가 다른 동명 북만 저장하지 않고 중단. 메일은 미처리로 남는다.
 
-    groups = duplicate_long_name_groups(op)
+    행 수가 같으면 멈추지 않는다. ``run_writes`` 가 북시트 양쪽에 넣는다.
+    """
+    from data_pc_origin.o5_duplicate_books import (
+        duplicate_long_name_groups,
+        row_count_conflict_groups,
+    )
+
+    groups = row_count_conflict_groups(op)
     if not groups:
+        _note_same_row_duplicates(op, ctx, duplicate_long_name_groups(op))
         return None
     warnings: List[OriginWarning] = []
     try:
@@ -343,6 +350,30 @@ def _block_duplicate_long_names(op: Any, ctx: SampleContext) -> SampleJobResult 
         ok=False,
         saved_path=None,
     )
+
+
+def _note_same_row_duplicates(op: Any, ctx: SampleContext, groups: list) -> None:
+    """행 수가 같은 동명 북은 고르지 않고 양쪽 북시트에 쓴다는 증거."""
+    del op
+    if not groups:
+        return
+    try:
+        from gc_run_evidence import origin_step
+    except Exception:
+        return
+    for lname, books in groups:
+        counts = {rows for _name, rows in books}
+        if len(counts) != 1:
+            continue
+        detail = "; ".join(f"{name} rows={rows}" for name, rows in books)
+        origin_step(
+            "duplicate_long_name_same_rows",
+            True,
+            sample=ctx.sample_name,
+            opju=ctx.opju_path,
+            detail=detail,
+            sheet=lname,
+        )
 
 
 def _run_with_op(

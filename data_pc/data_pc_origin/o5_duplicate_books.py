@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""같은 Long Name 워크북이 둘 이상이면 Origin 쓰기를 막는다."""
+"""같은 Long Name 워크북의 행 수가 다르면 Origin 쓰기를 막는다.
+
+행 수가 같으면 막지 않는다. 북시트는 둘 다 남기고, 쓰기는 pages('w') 양쪽에 한다.
+그래프 pages('g') 는 여기 대상이 아니다.
+"""
 
 from __future__ import annotations
 
@@ -48,7 +52,7 @@ def book_data_rows(book: Any) -> int:
 def duplicate_long_name_groups(op: Any) -> list[tuple[str, list[tuple[str, int]]]]:
     """Long Name 이 비어 있지 않고 같은 북이 2개 이상인 그룹.
 
-    행 수가 같아도 자동으로 고르지 않는다. 화면에는 하나처럼 보이기 때문이다.
+    워크북만 본다. 그래프는 ``pages('g')`` 라서 여기 오지 않는다.
     반환: (long_name, [(short_name, rows), ...])
     """
     groups: dict[str, tuple[str, list[tuple[str, int]]]] = {}
@@ -66,3 +70,18 @@ def duplicate_long_name_groups(op: Any) -> list[tuple[str, list[tuple[str, int]]
             groups[key] = (lname, [])
         groups[key][1].append((name, rows))
     return [item for item in groups.values() if len(item[1]) >= 2]
+
+
+def row_count_conflict_groups(op: Any) -> list[tuple[str, list[tuple[str, int]]]]:
+    """같은 Long Name 인데 데이터 행 수가 다른 북만.
+
+    114행과 114행은 정상이다. 각 북의 그래프가 따로 있으므로 하나를 고르지 않고
+    양쪽 북시트에 쓴다. 140행과 114행처럼 행 수가 다르면 어느 쪽이 맞는
+    데이터인지 알 수 없어 쓰기를 멈춘다.
+    """
+    conflicts: list[tuple[str, list[tuple[str, int]]]] = []
+    for lname, books in duplicate_long_name_groups(op):
+        counts = {rows for _name, rows in books}
+        if len(counts) > 1:
+            conflicts.append((lname, books))
+    return conflicts
