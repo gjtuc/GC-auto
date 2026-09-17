@@ -2049,6 +2049,54 @@ def _gc1_calib_ready():
             return False
     return True
 
+
+def _sheet_role(name: str) -> str:
+    return str(name or "").strip().upper()
+
+
+def _coerce_time_sheet(df: pd.DataFrame) -> pd.DataFrame | None:
+    if df is None:
+        return None
+    work = df.copy()
+    work.columns = work.columns.astype(str).str.strip()
+    if "Time" not in work.columns:
+        return None
+    return work
+
+
+def _h2_in_window(df: pd.DataFrame, window: tuple[float, float]) -> bool:
+    times = pd.to_numeric(df["Time"], errors="coerce")
+    lo, hi = window
+    return bool(((times >= lo) & (times <= hi)).any())
+
+
+def _classify_named_fid_tcd(xls):
+    """FID/TCD 탭이면 이름으로 시트를 나누고, 장비는 TCD H2만으로 고른다.
+
+    GC1도 탭 이름이 FID/TCD라서 탭만으로 GC3를 고정하지 않는다.
+    반환:
+      None — 탭 쌍 없음. 기존 RT 스캔.
+      ("GC3"|"GC1", tcd_df, fid_df)
+      ("", None, None) — 탭은 있으나 TCD H2가 GC3/GC1 창에 없음. RT 스캔으로 넘기지 않음.
+    """
+    by_role = {}
+    for sn in xls.sheet_names:
+        role = _sheet_role(sn)
+        if role in ("FID", "TCD") and role not in by_role:
+            by_role[role] = sn
+    if "FID" not in by_role or "TCD" not in by_role:
+        return None
+    fid_df = _coerce_time_sheet(pd.read_excel(xls, sheet_name=by_role["FID"]))
+    tcd_df = _coerce_time_sheet(pd.read_excel(xls, sheet_name=by_role["TCD"]))
+    if fid_df is None or tcd_df is None:
+        return ("", None, None)
+    if _h2_in_window(tcd_df, GC3_TIME_TCD["H2"]):
+        return ("GC3", tcd_df, fid_df)
+    if _h2_in_window(tcd_df, GC1_TIME_TCD["H2"]):
+        return ("GC1", tcd_df, fid_df)
+    return ("", None, None)
+
+
 def process_excel(input_file):
     xls = pd.ExcelFile(input_file)
     eq = None
@@ -2058,35 +2106,47 @@ def process_excel(input_file):
 
     reaction_target = get_reaction_type_from_filename(input_file)
 
-    # 장비 자동 판별: 시트별 H2 RT 구간으로 GC2 → GC3 → GC1 순 검사.
-    # GC2 H2 ~0.5분, GC3 ~0.7분, GC1 ~2.0분 — 구간이 겹치지 않도록 설계됨.
-    # GC2: 단일 시트 → H2 매칭 시 break. GC3/GC1: FID+TCD 2시트 → break 없이 누적.
-    for sn in xls.sheet_names:
-        df = pd.read_excel(xls, sheet_name=sn)
-        if df.empty and len(df.columns) == 0:
-            continue
-        df.columns = df.columns.astype(str).str.strip()
-        if 'Time' not in df.columns:
-            continue
-        times = pd.to_numeric(df['Time'], errors='coerce')
-        if ((times >= GC2_TIME['H2'][0]) & (times <= GC2_TIME['H2'][1])).any():
-            eq = 'GC2'
-            df_gc2_raw = df
-            break
-        if ((times >= GC3_TIME_TCD['H2'][0]) & (times <= GC3_TIME_TCD['H2'][1])).any():
-            eq = 'GC3'
-            df_gc3_tcd = df
-        elif ((times >= GC1_TIME_TCD['H2'][0]) & (times <= GC1_TIME_TCD['H2'][1])).any():
-            eq = 'GC1'
-            df_gc1_tcd = df
-        elif ((times >= GC3_TIME_FID['CH4'][0]) & (times <= GC3_TIME_FID['C2H6'][1])).any() and not (
-            (times >= GC3_TIME_TCD['CO2'][0]) & (times <= GC3_TIME_TCD['CO2'][1])
-        ).any():
-            df_gc3_fid = df
-        elif ((times >= GC1_TIME_FID['CH4'][0]) & (times <= GC1_TIME_FID['C2H4'][1])).any():
-            if eq is None:
+    # FID/TCD 탭이 있으면 이름으로 시트를 고정한다. GC는 TCD H2만 본다.
+    # FID 시트의 이상 피크가 GC1 H2 창에 걸려도 시트를 버리지 않기 위함.
+    named = _classify_named_fid_tcd(xls)
+    if named is not None:
+        eq_named, tcd_df, fid_df = named
+        if eq_named == "GC3":
+            eq = "GC3"
+            df_gc3_tcd, df_gc3_fid = tcd_df, fid_df
+        elif eq_named == "GC1":
+            eq = "GC1"
+            df_gc1_tcd, df_gc1_fid = tcd_df, fid_df
+    else:
+        # 탭 이름이 없을 때만 RT 스캔. GC2는 단일 시트.
+        # GC2 H2 ~0.5분, GC3 ~0.7분, GC1 ~2.0분.
+        for sn in xls.sheet_names:
+            df = pd.read_excel(xls, sheet_name=sn)
+            if df.empty and len(df.columns) == 0:
+                continue
+            df.columns = df.columns.astype(str).str.strip()
+            if 'Time' not in df.columns:
+                continue
+            times = pd.to_numeric(df['Time'], errors='coerce')
+            if ((times >= GC2_TIME['H2'][0]) & (times <= GC2_TIME['H2'][1])).any():
+                eq = 'GC2'
+                df_gc2_raw = df
+                break
+            if ((times >= GC3_TIME_TCD['H2'][0]) & (times <= GC3_TIME_TCD['H2'][1])).any():
+                eq = 'GC3'
+                df_gc3_tcd = df
+            elif ((times >= GC1_TIME_TCD['H2'][0]) & (times <= GC1_TIME_TCD['H2'][1])).any():
                 eq = 'GC1'
-            df_gc1_fid = df
+                df_gc1_tcd = df
+            elif ((times >= GC3_TIME_FID['CH4'][0]) & (times <= GC3_TIME_FID['C2H6'][1])).any() and not (
+                (times >= GC3_TIME_TCD['CO2'][0]) & (times <= GC3_TIME_TCD['CO2'][1])
+            ).any():
+                df_gc3_fid = df
+            elif ((times >= GC1_TIME_FID['CH4'][0]) & (times <= GC1_TIME_FID['C2H4'][1])).any():
+                if eq is None:
+                    eq = 'GC1'
+                df_gc1_fid = df
+    xls.close()
 
     if not eq:
         from gc_run_evidence import emit_calc
