@@ -841,11 +841,12 @@ def _strip_equipment_suffix(name):
 
 
 def _append_equipment_suffix(folder, equipment):
-    folder = _strip_equipment_suffix(folder)
-    suffix = _origin_equipment_suffix(equipment)
-    if not suffix:
-        return folder
-    return folder + suffix
+    """예전에는 GC3→_OCM 장비, GC2/GC1→_DRM 장비를 붙였다.
+
+    2026-09-17 이후 새 이름에는 붙이지 않는다. 이미 붙은 폴더를 찾을 때만 접미사를 본다.
+    """
+    del equipment
+    return _strip_equipment_suffix(folder)
 
 
 def _origin_sample_name_issues(date, reaction, conc, temp, sample_part, equipment):
@@ -871,8 +872,9 @@ def generate_sample_name(filename, equipment=None):
     """
     Origin Comments 전용 — 토큰 파싱.
 
-    형식: {YYYYMMDD} {반응}({농도%})@{온도°C} {시료명}_{장비접미사}
-    장비 접미사: GC2/GC1 → _DRM 장비, GC3 → _OCM 장비 (equipment 인자).
+    형식: {YYYYMMDD} {반응}({농도%})@{온도°C} {시료명}
+    장비 접미사(_OCM 장비, _DRM 장비)는 새 Comments에 붙이지 않는다.
+    equipment 는 어느 GC 계산인지 확인할 때만 쓴다.
 
     Returns:
         (sample_name | None, warnings, needs_user_input, question)
@@ -899,9 +901,8 @@ def generate_sample_name(filename, equipment=None):
             q = "Origin Comments 생성을 위해 확인이 필요합니다:\n- " + "\n- ".join(issues)
             return None, warnings, True, q
         conc_label = f"{conc}%" if not str(conc).endswith("%") else conc
-        suffix = _origin_equipment_suffix(equipment)
         return (
-            f"{date} {reaction}({conc_label})@{temp}°C {sample_part}{suffix}",
+            f"{date} {reaction}({conc_label})@{temp}°C {sample_part}",
             warnings,
             False,
             "",
@@ -927,8 +928,7 @@ def generate_sample_name(filename, equipment=None):
         return None, warnings, True, q
 
     conc_label = f"{conc}%" if not str(conc).endswith("%") else conc
-    suffix = _origin_equipment_suffix(equipment)
-    sample_name = f"{date} {reaction}({conc_label})@{temp}°C {sample_part}{suffix}"
+    sample_name = f"{date} {reaction}({conc_label})@{temp}°C {sample_part}"
     return sample_name, warnings, False, ""
 
 def _format_catalyst_string(cat_str):
@@ -1533,13 +1533,28 @@ def _get_folder_file_stem(folder_path):
             return os.path.splitext(name)[0]
     return os.path.basename(folder_path)
 
+def _resolve_existing_experiment_dir(root, experiment_base):
+    """새 이름은 접미사 없음. 이미 `_OCM 장비`/`_DRM 장비` 폴더가 있으면 그 폴더를 쓴다."""
+    exact = os.path.join(root, experiment_base)
+    if os.path.isdir(exact):
+        return exact, experiment_base
+    for suffix in ("_OCM 장비", "_DRM 장비"):
+        legacy_name = experiment_base + suffix
+        legacy = os.path.join(root, legacy_name)
+        if os.path.isdir(legacy):
+            print(f"  기존 폴더 사용 (접미사 유지): {legacy_name}")
+            return legacy, legacy_name
+    return exact, experiment_base
+
+
 def setup_experiment_folder(source_excel, calculated_excel, reaction_type):
     """
     [3단계] G: 실험 폴더 생성.
 
     사용자 요구사항:
       · 반응별 REACTION_ROOTS 에서 폴더명(날짜…) 기준 최신 실험 폴더를 템플릿으로 복사
-      · 새 폴더명 = generate_experiment_basename() (Origin Comments 와 별도 규칙)
+      · 새 폴더명 = generate_experiment_basename() (장비 접미사 없음)
+      · 예전 폴더(..._OCM 장비, ..._DRM 장비)가 있으면 그 폴더를 갱신. 접미사 없는 복사본을 만들지 않음
       · 템플릿 .opju 에는 이전 시료 열이 누적 → 4단계에서 새 열 1개 추가
       · .pptx 이름 변경, 기존 .xlsx 삭제, 계산 xlsx 배치 (오류 검토용)
     """
@@ -1547,7 +1562,7 @@ def setup_experiment_folder(source_excel, calculated_excel, reaction_type):
     experiment_base = generate_experiment_basename(source_excel)
     identity_key = _experiment_identity_key(source_excel)
     root = REACTION_ROOTS[reaction_type]
-    dest_dir = os.path.join(root, experiment_base)
+    dest_dir, experiment_base = _resolve_existing_experiment_dir(root, experiment_base)
     archive_xlsx = os.path.join(dest_dir, f"{experiment_base}.xlsx")
 
     if os.path.exists(dest_dir):

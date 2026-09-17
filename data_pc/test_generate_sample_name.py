@@ -35,7 +35,7 @@ class TestGenerateSampleName(unittest.TestCase):
         self.assertFalse(needs)
         self.assertEqual(
             name,
-            "20260525 DRE(1.5%)@600°C Ni_CVD(0.1g,8h)/Ni5/Ce5/Al2O3_DRM 장비",
+            "20260525 DRE(1.5%)@600°C Ni_CVD(0.1g,8h)/Ni5/Ce5/Al2O3",
         )
         self.assertEqual(warns, [])
         self.assertEqual(q, "")
@@ -46,7 +46,8 @@ class TestGenerateSampleName(unittest.TestCase):
             equipment="GC3",
         )
         self.assertFalse(needs)
-        self.assertTrue(name.endswith("_OCM 장비"))
+        self.assertNotIn("_OCM 장비", name)
+        self.assertNotIn("_DRM 장비", name)
 
     def test_yy_year_expansion(self):
         name, _, needs, _ = self._parse(
@@ -79,9 +80,9 @@ class TestGenerateSampleName(unittest.TestCase):
         self.assertFalse(needs)
         self.assertEqual(
             name,
-            "20260701 DRE(1.5%)@600°C Ni5/Ce5La0.25/Al2O3 (citric acid)_DRM 장비",
+            "20260701 DRE(1.5%)@600°C Ni5/Ce5La0.25/Al2O3 (citric acid)",
         )
-        self.assertTrue(name.endswith("_DRM 장비"))
+        self.assertNotIn("_DRM 장비", name)
 
     def test_gc3_mail_hyphen_catalyst_to_slash(self):
         name, _, needs, _ = self._parse(
@@ -90,7 +91,7 @@ class TestGenerateSampleName(unittest.TestCase):
         )
         self.assertFalse(needs)
         self.assertIn("Ni5/Al2O3", name)
-        self.assertTrue(name.endswith("_OCM 장비"))
+        self.assertNotIn("_OCM 장비", name)
 
     def test_equipment_from_output_file(self):
         self.assertEqual(
@@ -119,10 +120,10 @@ class TestGenerateSampleName(unittest.TestCase):
         self.assertFalse(needs)
         self.assertEqual(
             name,
-            "20260706 DRE(1.5%)@600°C Ni_CVD(0.1g,8h)/Ni5/Ce5/Al2O3_OCM 장비",
+            "20260706 DRE(1.5%)@600°C Ni_CVD(0.1g,8h)/Ni5/Ce5/Al2O3",
         )
 
-    def test_experiment_basename_includes_equipment_suffix(self):
+    def test_experiment_basename_omits_equipment_suffix(self):
         saved = (
             "20260706 DRE(1.5)@600 Ni(0.1g,8h)-Ni5-Ce5-Al2O3"
             "_GC3_DRE_계산완료.xlsx"
@@ -130,7 +131,7 @@ class TestGenerateSampleName(unittest.TestCase):
         base = self.mod.generate_experiment_basename(saved)
         self.assertEqual(
             base,
-            "20260706 DRE(1.5%)@600C Ni_CVD(0.1g,8h)-Ni5-Ce5-Al2O3_OCM 장비",
+            "20260706 DRE(1.5%)@600C Ni_CVD(0.1g,8h)-Ni5-Ce5-Al2O3",
         )
 
     def test_experiment_basename_drme_includes_temperature(self):
@@ -141,7 +142,7 @@ class TestGenerateSampleName(unittest.TestCase):
         base = self.mod.generate_experiment_basename(saved)
         self.assertIn("@600C", base)
         self.assertTrue(base.startswith("20260723 DRME(1.5%)@600C "))
-        self.assertTrue(base.endswith("_OCM 장비"))
+        self.assertNotIn("_OCM 장비", base)
 
 
 if __name__ == "__main__":

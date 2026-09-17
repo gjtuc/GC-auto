@@ -49,8 +49,8 @@ def generate_sample_name(filename: str, equipment=None):
         (sample_name, warnings, needs_user_input, question)
     """
     eq = equipment or equipment_from_output_file(_MOCK_SAVED) or "GC2"
-    suffix = "_OCM 장비" if eq == "GC3" else "_DRM 장비"
-    name = f"20250601 DRE(1.5%)@600°C mock{suffix}"
+    del eq
+    name = "20250601 DRE(1.5%)@600°C mock"
     return name, [], False, ""
 
 
