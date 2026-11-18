@@ -34,8 +34,11 @@ alwaysApply: true
 | 시작, 진행, 실행, 동작, 동작해 | go, start, run |
 | 작업, 처리, 처리해, 보내, 돌려, 가자 | force, proceed, begin |
 | 해봐, 해줘, 해, 해보자 | launch |
+| **GC 작업해줘**, **gc 작업해줘** | 전체 체인 (`ORIGIN_GUI_위탁.md` §0-1) |
 
-예: `진행`, `시작`, `해봐`, `작업`, `돌려`, `go`
+예: `진행`, `시작`, `해봐`, `작업`, `돌려`, `go`, **`GC 작업해줘`**
+
+**「GC 작업해줘」** = 엑셀 자동 + Origin 확인·북·Plot·색 안내까지 이어서 진행.
 
 판별 (선택):
 ```powershell
@@ -59,7 +62,8 @@ python -c "from data_pc.data_pc_request import message_is_initiation; print(mess
    - `DATA_PC_SKIP_ORIGIN=1` (엑셀·폴더까지; Origin COM 끄기)  
    - 처리할 메일에 **시료 종류가 둘 이상** → **어느 시료인지 묻기**. Origin도 **시료 하나씩**  
    - Comments는 파일명과 다를 수 있음 → **확인 후** 북시트. 새 열은 왼쪽 Comments+파일명으로 **제안**  
-   - Plot 시 **Rescale 금지**. 새 열이면 전 성분 그래프. **색**: 시료마다 전 그래프 동일색·그래프 안 구분·노랑/형광/저채도/검정/흰색 금지 (`ORIGIN_GUI_위탁.md` §7-4)
+   - Plot 시 **Rescale 금지**. 새 열이면 전 성분 그래프. **색**: 시료 통일·그래프 안 구분·금지색 제외 후 **「바꾸고 싶으면 말해 주세요」** (`ORIGIN_GUI_위탁.md` §7-4)  
+   - 「GC 작업해줘」면 §0-1 전체를 시료 하나 단위로 이어서 진행
 1. **다른 작업보다 우선** (설명·코드 수정보다 먼저)
 2. `gc_automation.py` **실행 금지** (**GC4** **장비** PC 전용, 구 GC1)
 3. (선택) `git pull` — sessionStart hook 이후 최신본 확인
