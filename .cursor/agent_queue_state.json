@@ -1,6 +1,6 @@
 {
   "armed": false,
   "status": "complete",
-  "request_quit_cursor": true,
+  "request_quit_cursor": false,
   "updated": "2026-11-18T07:57:12.466898+00:00"
 }
