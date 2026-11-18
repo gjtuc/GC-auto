@@ -1,12 +1,12 @@
 # PC sync status (auto-generated - do not edit)
 
-> Updated: 2026-11-18 22:14:53 | HEAD: `59a1a06` | auto: sync DESKTOP-290TDT4 @ 2026-11-18 22:14:47
+> Updated: 2026-11-18 23:43:56 | HEAD: `6d1b70d` | sync: registry DESKTOP-290TDT4 push @ 2026-11-18 22:14:47
 
 ## Summary (see docs/SYNC_TRACKING.md for Korean)
 
 | PC | role | last push (who @ when) | push | last pull (who @ when) | pull | status |
 |----|------|-------------------------|------|-------------------------|------|--------|
-| `DESKTOP-290TDT4` | data_pc | DESKTOP-290TDT4\User @ 2026-11-18T22:14:53+09:00 | `59a1a06` | DESKTOP-290TDT4\User @ 2026-11-18T22:11:13+09:00 | `cf026cf` | [WARN] need pull |
+| `DESKTOP-290TDT4` | data_pc | DESKTOP-290TDT4\User @ 2026-11-18T22:14:53+09:00 | `59a1a06` | DESKTOP-290TDT4\User @ 2026-11-18T23:43:56+09:00 | `6d1b70d` | [OK] latest |
 | `DESKTOP-BFMLJ9J` | data_pc_retired | DESKTOP-BFMLJ9J\user @ 2026-09-17T14:28:03+09:00 | `f4f4028` | DESKTOP-BFMLJ9J\user @ 2026-09-15T16:41:05+09:00 | `579a8e0` | [WARN] need pull |
 | `DESKTOP-MBGSSME` | gc4_pc | DESKTOP-MBGSSME\User @ 2026-07-02T00:21:27+09:00 | `f21dd44` | DESKTOP-MBGSSME\은규 @ 2026-07-01T19:50:13+09:00 | `43419e8` | [WARN] need pull |
 | `DESKTOP-N89C874` | data_pc | - | - | - | - | [MISSING] run gc_git_pull.bat once |
