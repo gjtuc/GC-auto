@@ -222,6 +222,7 @@ def run_workflow_bridged(
     opju_path: str | None = None,
     auto_archive: bool = True,
     skip_origin: bool | None = None,
+    skip_peer_sync: bool = False,
     catalyst_module: Any,
     origin_runner: OriginRunner | None = None,
     environ: Mapping[str, str] | None = None,
@@ -234,6 +235,7 @@ def run_workflow_bridged(
         opju_path=opju_path,
         auto_archive=auto_archive,
         skip_origin=skip_origin,
+        skip_peer_sync=skip_peer_sync,
         catalyst_module=catalyst_module,
         origin_runner=origin_runner,
         environ=environ,
@@ -249,6 +251,7 @@ def run_workflow_bridged_detailed(
     opju_path: str | None = None,
     auto_archive: bool = True,
     skip_origin: bool | None = None,
+    skip_peer_sync: bool = False,
     catalyst_module: Any,
     origin_runner: OriginRunner | None = None,
     environ: Mapping[str, str] | None = None,
@@ -261,6 +264,7 @@ def run_workflow_bridged_detailed(
     `run_workflow_bridged` + `WorkflowResult` — live harness artifact용.
 
     `skip_origin`: None 이면 env, True/False 명시 override.
+    `skip_peer_sync`: True 이면 병렬 동일반응 Origin 동기화 생략 (배치 defer 시).
     반환 tuple[bool, WorkflowResult | None] — bool 은 watch·메일 루프 호환, Result 는 P층 테스트용.
     """
     ensure_import_path()
@@ -288,15 +292,16 @@ def run_workflow_bridged_detailed(
         if result.stage2 is not None:
             saved_excel = result.stage2.metadata.saved_excel
         print_workflow_outcome(result, printer=printer)
-        _maybe_sync_parallel_peer_origins(
-            catalyst_module,
-            result,
-            options,
-            mail_received_at=mail_received_at,
-            skip_origin=skip_origin,
-            environ=env,
-            printer=printer,
-        )
+        if not skip_peer_sync:
+            _maybe_sync_parallel_peer_origins(
+                catalyst_module,
+                result,
+                options,
+                mail_received_at=mail_received_at,
+                skip_origin=skip_origin,
+                environ=env,
+                printer=printer,
+            )
         return result.ok, result
     except Exception as exc:
         _record_workflow_exception(path, exc)
