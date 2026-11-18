@@ -17,6 +17,8 @@ alwaysApply: true
 
 **시료 단위:** Origin 작업은 **한 번에 시료 하나**. 미읽음 메일에 시료 종류가 여러 개면 **사용자에게 어느 시료인지 물은 뒤** 진행. `docs/ORIGIN_GUI_위탁.md` §5.
 
+**Plot:** 새 열 Plot 추가 시 **Rescale on Apply / 자동 Rescale 금지** (축 유지). 상세 `docs/ORIGIN_GUI_위탁.md` §4-2.
+
 ## 0. 2026-11-18 이후 — PE 폴더 · 템플릿 (우선)
 
 1. PE 하위 폴더 이름: `{반응}-{장비}` 예 `DRE-GC3`, `DRME-GC3`. 레거시 `Folder1`/A 쪽은 정리·삭제 대상.
