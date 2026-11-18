@@ -1,7 +1,8 @@
 # Origin PE 폴더 — 반응×장비 + 최신 opju 템플릿
 
 > 확인·수동 정리: 2026-11-18 (차헌 데이터 PC).  
-> 관련 규칙: `.cursor/rules/origin-book-not-graph.mdc`
+> 관련 규칙: `.cursor/rules/origin-book-not-graph.mdc`  
+> **잠정 운영:** 엑셀까지 자동 · Origin은 GUI — [`ORIGIN_GUI_위탁.md`](ORIGIN_GUI_위탁.md)
 
 ---
 
@@ -45,6 +46,9 @@
 ---
 
 ## 4. 4단계 — 쓰기 범위
+
+> 잠정: COM 4단계는 끄고 GUI로 붙인다. 실행은 `--no-origin` / `DATA_PC_SKIP_ORIGIN=1` — [`ORIGIN_GUI_위탁.md`](ORIGIN_GUI_위탁.md).  
+> 아래는 코드가 다시 켤 때를 위한 범위 설명이다.
 
 코드: `data_pc_origin/o0_pe_folder.py` → `o5_match` / `o5_duplicate_books` / `o8_job`
 

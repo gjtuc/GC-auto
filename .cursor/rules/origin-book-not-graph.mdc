@@ -9,6 +9,8 @@ alwaysApply: true
 
 가이드: `docs/ORIGIN_PE_FOLDER.md`. 코드: `o0_pe_folder.py`, `o5_match`/`o5_duplicate_books`의 `pe_folder`, `촉매 반응 계산.py`의 교차 템플릿.
 
+**잠정 (2026-11-19):** 엑셀·실험 폴더까지 `.py`, Origin 북시트·Plot은 **GUI**. COM 4단계 끄기 → `--no-origin` / `DATA_PC_SKIP_ORIGIN=1`. 상세 `docs/ORIGIN_GUI_위탁.md`.
+
 ## 0. 2026-11-18 이후 — PE 폴더 · 템플릿 (우선)
 
 1. PE 하위 폴더 이름: `{반응}-{장비}` 예 `DRE-GC3`, `DRME-GC3`. 레거시 `Folder1`/A 쪽은 정리·삭제 대상.
