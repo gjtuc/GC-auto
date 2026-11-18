@@ -13,6 +13,8 @@ alwaysApply: true
 
 **Comments:** 엑셀 파일명 ≠ Origin Comments일 수 있음 (GC ~40자 제한, 파일명 금지 문자). 붙이기 전 **Comments를 사용자 확인**. 틀리면 사용자가 Comments를 고쳐도 됨 — 파일명을 그대로 Comments에 쓰지 말 것.
 
+**새 열:** 기입할 열 **바로 왼쪽 Comments** 문체를 읽고, 엑셀 파일명 정보와 맞춰 Comments **제안** → 사용자 확인 후 기입. 상세 `docs/ORIGIN_GUI_위탁.md` §4-0.
+
 ## 0. 2026-11-18 이후 — PE 폴더 · 템플릿 (우선)
 
 1. PE 하위 폴더 이름: `{반응}-{장비}` 예 `DRE-GC3`, `DRME-GC3`. 레거시 `Folder1`/A 쪽은 정리·삭제 대상.
