@@ -82,8 +82,9 @@ class PipelineRunResult(NamedTuple):
 [사용자가 이 스크립트를 만든 목적]
   연구실 GC(Agilent) 분석 후 반복되는 수작업을 줄이기 위함:
   · KCH 원본 엑셀에서 Area → 수율/전환율 계산
-  · Origin .opju 워크시트에 시료 열 자동 추가
+  · Origin .opju 워크시트에 시료 열 자동 추가 (PE: 반응×장비 폴더만)
   · 실험 폴더(연구노트 또는 G:)에 .opju / .pptx / .xlsx 정리
+  · opju 템플릿 = 메일/최신 기준 전 반응 (docs/ORIGIN_PE_FOLDER.md)
 
 [전체 파이프라인 — 두 대 PC]
   GC2/GC3 장비 PC (차헌): ChemStation → gc_automation.py → KCH 원본.xlsx → SMTP → **차헌 PC**
@@ -1509,23 +1510,71 @@ def reaction_type_from_output_file(saved_excel):
     if "_GC1_DRE_" in base: return "DRE"
     return get_reaction_type_from_filename(saved_excel)
 
-def _find_latest_experiment_folder(reaction_type):
-    """반응 루트 아래 폴더명(문자열) 기준 max → 최신 실험 템플릿."""
-    _require_g_drive_access(reaction_type)
-    root = REACTION_ROOTS[reaction_type]
-    try:
-        folders = [
-            name for name in os.listdir(root)
-            if os.path.isdir(os.path.join(root, name))
-            and not name.startswith(".")
-            and not _is_likely_malformed_folder_name(name)
-        ]
-    except OSError as exc:
-        raise GDriveUnavailableError(_g_drive_unavailable_message()) from exc
-    if not folders:
-        raise FileNotFoundError(f"템플릿으로 쓸 실험 폴더 없음: {root}")
-    latest_name = max(folders)
-    return os.path.join(root, latest_name), latest_name
+def _iter_experiment_template_candidates():
+    """전 반응 루트의 실험 폴더(opju 있는 것만) — (score, folder_name, dir, reaction)."""
+    candidates = []
+    for reaction, root in REACTION_ROOTS.items():
+        if not root or not os.path.isdir(root):
+            continue
+        try:
+            names = os.listdir(root)
+        except OSError:
+            continue
+        for name in names:
+            if name.startswith(".") or _is_likely_malformed_folder_name(name):
+                continue
+            folder = os.path.join(root, name)
+            if not os.path.isdir(folder):
+                continue
+            if not _find_opju_in_folder(folder, name):
+                continue
+            identity = _experiment_identity_key(name)
+            mail_epoch = _mail_received_epoch(identity) if identity else None
+            # 메일 수신 시각 우선, 없으면 폴더명(날짜 접두) · opju mtime
+            opju = _find_opju_in_folder(folder, name)
+            try:
+                mtime = os.path.getmtime(opju) if opju else 0.0
+            except OSError:
+                mtime = 0.0
+            score = (float(mail_epoch) if mail_epoch is not None else 0.0, name, mtime)
+            candidates.append((score, name, folder, reaction))
+    return candidates
+
+
+def _find_latest_experiment_folder(reaction_type=None):
+    """메일·폴더명 기준 **전 반응**에서 최신 실험 폴더 → opju 템플릿.
+
+    같은 반응만 이어 쓰지 않는다. 직전이 DRME 이고 이번이 DRE 이면
+    DRME opju 를 복사한다 (한 파일에 DRE-GC3 / DRME-GC3 폴더를 둠).
+    ``reaction_type`` 은 G: 게이트 확인용(대상 루트 접근)이며, 템플릿 반응과
+    다를 수 있다.
+    """
+    if reaction_type:
+        _require_g_drive_access(reaction_type)
+    else:
+        for rt in REACTION_ROOTS:
+            try:
+                _require_g_drive_access(rt)
+                break
+            except Exception:
+                continue
+    candidates = _iter_experiment_template_candidates()
+    if not candidates:
+        hint = REACTION_ROOTS.get(reaction_type or "", "")
+        raise FileNotFoundError(f"템플릿으로 쓸 실험 폴더 없음 (전 반응 루트): {hint}")
+    # 같은 반응 후보가 있으면 동점 시 그쪽을 살짝 선호
+    def _sort_key(item):
+        score, name, _folder, reaction = item
+        same = 1 if reaction_type and reaction == reaction_type else 0
+        return (score[0], score[1], same, score[2])
+
+    _score, latest_name, latest_dir, template_reaction = max(candidates, key=_sort_key)
+    if reaction_type and template_reaction != reaction_type:
+        print(
+            f"  템플릿 반응 교차: {template_reaction} → {reaction_type} "
+            f"(메일/최신 opju 기준)"
+        )
+    return latest_dir, latest_name
 
 def _get_folder_file_stem(folder_path):
     for name in os.listdir(folder_path):
@@ -1552,10 +1601,12 @@ def setup_experiment_folder(source_excel, calculated_excel, reaction_type):
     [3단계] G: 실험 폴더 생성.
 
     사용자 요구사항:
-      · 반응별 REACTION_ROOTS 에서 폴더명(날짜…) 기준 최신 실험 폴더를 템플릿으로 복사
+      · **메일/최신 기준** 전 반응 루트에서 가장 최근 실험 폴더의 opju 를 템플릿으로 복사
+        (DRE→DRE 계보가 아니라, 직전이 DRME 면 DRME opju 를 DRE 폴더에 복사)
+      · 저장 위치는 이번 반응의 REACTION_ROOTS[reaction_type]
       · 새 폴더명 = generate_experiment_basename() (장비 접미사 없음)
       · 예전 폴더(..._OCM 장비, ..._DRM 장비)가 있으면 그 폴더를 갱신. 접미사 없는 복사본을 만들지 않음
-      · 템플릿 .opju 에는 이전 시료 열이 누적 → 4단계에서 새 열 1개 추가
+      · 템플릿 .opju 에는 이전 시료 열이 누적 → 4단계에서 해당 PE 폴더(DRE-GC3 등)에 새 열 1개 추가
       · .pptx 이름 변경, 기존 .xlsx 삭제, 계산 xlsx 배치 (오류 검토용)
     """
     _require_g_drive_access(reaction_type)
@@ -1591,7 +1642,7 @@ def setup_experiment_folder(source_excel, calculated_excel, reaction_type):
     template_stem = _get_folder_file_stem(template_dir)
 
     print(f"\n[3단계] G: 실험 폴더 생성 ({reaction_type})")
-    print(f"  템플릿 (폴더명 최신): {template_name}")
+    print(f"  템플릿 (메일/최신 opju): {template_name}")
     print(f"  새 폴더: {experiment_base}")
 
     try:
@@ -1870,6 +1921,7 @@ def sync_parallel_peer_origins(
                     sample_name,
                     save_in_place=True,
                     identity_key=identity_key,
+                    reaction_type=reaction_type,
                 )
             except Exception as exc:
                 print(f"  [경고] peer Origin 반영 실패 ({peer_base}): {exc}")
@@ -1892,6 +1944,8 @@ def sync_parallel_peer_origins(
                 peer_sample,
                 save_in_place=True,
                 identity_key=peer_id or peer_identity,
+                reaction_type=reaction_type,
+                source_excel=peer_xlsx,
             )
         except Exception as exc:
             print(f"  [경고] peer 역반영 실패 ({peer_base}): {exc}")
@@ -2377,16 +2431,36 @@ def _find_worksheet_column_for_sample(wks, sample_name, identity_key=None):
         skip_equipment_day_guard=True,
     )
 
-def update_origin(opju_path, df_data, sample_name, save_in_place=True, identity_key=None):
+def update_origin(
+    opju_path,
+    df_data,
+    sample_name,
+    save_in_place=True,
+    identity_key=None,
+    *,
+    pe_folder=None,
+    reaction_type=None,
+    equipment=None,
+    source_excel=None,
+):
     """
     [4단계] Origin .opju 워크시트에 계산 데이터 열 추가 (그래프 plot 은 사용자가 수동).
 
     · sample_name 은 generate_sample_name() 결과만 사용 (폴더명과 혼용 금지)
     · Comments 형식: 날짜 반응(농도)@온도°C 촉매 — 촉매 무게 없음 (DRE/DRME/DRM 공통)
+    · PE 폴더 ``DRE-GC3`` / ``DRME-GC3`` 등 반응×장비만 갱신 (source_excel 또는 인자로 판별)
     · ORIGIN_MAPPING → data_pc_origin (O0~O9) 위임
     · save_in_place=True: G: 아카이브 시 같은 .opju 에 덮어쓰기
     """
     from data_pc_origin.pipeline_bridge import run_origin_update
+
+    rt = reaction_type
+    eq = equipment
+    if source_excel:
+        if not rt:
+            rt = reaction_type_from_output_file(source_excel)
+        if not eq:
+            eq = equipment_from_output_file(source_excel)
 
     return run_origin_update(
         opju_path,
@@ -2394,6 +2468,9 @@ def update_origin(opju_path, df_data, sample_name, save_in_place=True, identity_
         sample_name,
         save_in_place=save_in_place,
         identity_key=identity_key,
+        pe_folder=pe_folder,
+        reaction_type=rt,
+        equipment=eq,
     )
 
 
@@ -3073,6 +3150,8 @@ def run_origin_only_for_inbox_excel(excel_path, mail_received_at=None):
             ctx["sample_name"],
             save_in_place=True,
             identity_key=ctx["identity_key"],
+            reaction_type=ctx["reaction_type"],
+            source_excel=excel_path,
         )
         ok = bool(result and getattr(result, "ok", False))
         return ok

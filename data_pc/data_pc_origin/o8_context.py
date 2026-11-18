@@ -19,6 +19,9 @@ class SampleContext:
     identity_key: IdentityKey | None
     mapping: Dict[str, str]
     save_in_place: bool = True
+    pe_folder: str = ""
+    reaction_type: str = ""
+    equipment: str = ""
 
 
 def build_context(
@@ -29,11 +32,24 @@ def build_context(
     identity_key: IdentityKey | None = None,
     mapping: Optional[Dict[str, str]] = None,
     save_in_place: bool = True,
+    pe_folder: str | None = None,
+    reaction_type: str | None = None,
+    equipment: str | None = None,
 ) -> SampleContext:
     """validate_mapping + df subset (O8-C-02)."""
+    from data_pc_origin.o0_pe_folder import resolve_pe_folder
+
     validated = validate_mapping(mapping)
     cols = set(getattr(df, "columns", []))
     subset, _skipped = mapping_for_df(cols, validated)
+    reaction = (reaction_type or "").strip()
+    equip = (equipment or "").strip()
+    folder = resolve_pe_folder(
+        pe_folder=pe_folder,
+        reaction_type=reaction,
+        equipment=equip,
+        sample_name=sample_name,
+    )
     return SampleContext(
         opju_path=opju_path,
         df=df,
@@ -41,6 +57,9 @@ def build_context(
         identity_key=identity_key,
         mapping=subset,
         save_in_place=save_in_place,
+        pe_folder=folder,
+        reaction_type=reaction,
+        equipment=equip,
     )
 
 

@@ -28,6 +28,10 @@ def run_origin_update(
     sample_name: str,
     save_in_place: bool = True,
     identity_key: IdentityKey = None,
+    *,
+    pe_folder: str | None = None,
+    reaction_type: str | None = None,
+    equipment: str | None = None,
 ) -> OriginUpdateResult:
     """
     촉매 `update_origin()` 대체 진입 — O9 facade 위임.
@@ -41,4 +45,7 @@ def run_origin_update(
         sample_name,
         save_in_place=save_in_place,
         identity_key=identity_key,
+        pe_folder=pe_folder,
+        reaction_type=reaction_type,
+        equipment=equipment,
     )

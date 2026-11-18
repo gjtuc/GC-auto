@@ -65,7 +65,8 @@ def run_writes(
     """O8-J-04/05 — resolve col once · per-mapping write."""
     from data_pc_origin.agent_debug_log import agent_dbg
 
-    hits, misses = resolve_worksheets(op, ctx.mapping, ctx.df)
+    pe_folder = getattr(ctx, "pe_folder", "") or ""
+    hits, misses = resolve_worksheets(op, ctx.mapping, ctx.df, pe_folder=pe_folder or None)
     warnings = list(report_missing(misses))
     # region agent log
     agent_dbg(
@@ -75,6 +76,7 @@ def run_writes(
         {
             "opju": ctx.opju_path,
             "sample_head": (ctx.sample_name or "")[:100],
+            "pe_folder": pe_folder,
             "row_count": dataframe_row_count(ctx.df),
             "df_cols": list(getattr(ctx.df, "columns", [])),
             "hits": list(hits.keys()),
@@ -110,7 +112,9 @@ def run_writes(
             continue
         # 복제 북(CO2conversion / CO2conversioA 등) 전부 — 첫 시트만 쓰면
         # Project Explorer 의 동명 폴더에 갭 이후 행이 비어 보일 수 있음.
-        wks_list = find_all_worksheets_for_keyword(op, origin_kw)
+        wks_list = find_all_worksheets_for_keyword(
+            op, origin_kw, pe_folder=pe_folder or None
+        )
         if not wks_list:
             continue
         if len(wks_list) > 1 and origin_kw not in seen_dup_kw:
@@ -311,9 +315,12 @@ def _block_duplicate_long_names(op: Any, ctx: SampleContext) -> SampleJobResult 
         row_count_conflict_groups,
     )
 
-    groups = row_count_conflict_groups(op)
+    pe_folder = getattr(ctx, "pe_folder", "") or None
+    groups = row_count_conflict_groups(op, pe_folder=pe_folder)
     if not groups:
-        _note_same_row_duplicates(op, ctx, duplicate_long_name_groups(op))
+        _note_same_row_duplicates(
+            op, ctx, duplicate_long_name_groups(op, pe_folder=pe_folder)
+        )
         return None
     warnings: List[OriginWarning] = []
     try:

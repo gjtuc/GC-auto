@@ -35,6 +35,8 @@ def bridge_kwargs_from_payload(payload: OriginJobPayload) -> dict[str, object]:
         "sample_name": payload.sample_name,
         "save_in_place": payload.save_in_place,
         "identity_key": payload.identity_key,
+        "reaction_type": getattr(payload, "reaction_type", "") or None,
+        "equipment": getattr(payload, "equipment", "") or None,
     }
 
 

@@ -49,17 +49,26 @@ def book_data_rows(book: Any) -> int:
     return best
 
 
-def duplicate_long_name_groups(op: Any) -> list[tuple[str, list[tuple[str, int]]]]:
+def duplicate_long_name_groups(
+    op: Any, *, pe_folder: str | None = None
+) -> list[tuple[str, list[tuple[str, int]]]]:
     """Long Name 이 비어 있지 않고 같은 북이 2개 이상인 그룹.
 
     워크북만 본다. 그래프는 ``pages('g')`` 라서 여기 오지 않는다.
+    ``pe_folder`` 가 있으면 그 PE 폴더 안만 묶는다
+    (``DRE-GC3`` 와 ``DRME-GC3`` 의 동명 Long Name 은 충돌이 아님).
     반환: (long_name, [(short_name, rows), ...])
     """
+    from data_pc_origin.o0_pe_folder import book_pe_path, path_in_pe_folder
+
+    folder = (pe_folder or "").strip()
     groups: dict[str, tuple[str, list[tuple[str, int]]]] = {}
     pages = getattr(op, "pages", None)
     if not callable(pages):
         return []
     for book in pages("w"):
+        if folder and not path_in_pe_folder(book_pe_path(op, book), folder):
+            continue
         lname = str(getattr(book, "lname", "") or "").strip()
         if not lname:
             continue
@@ -72,7 +81,9 @@ def duplicate_long_name_groups(op: Any) -> list[tuple[str, list[tuple[str, int]]
     return [item for item in groups.values() if len(item[1]) >= 2]
 
 
-def row_count_conflict_groups(op: Any) -> list[tuple[str, list[tuple[str, int]]]]:
+def row_count_conflict_groups(
+    op: Any, *, pe_folder: str | None = None
+) -> list[tuple[str, list[tuple[str, int]]]]:
     """같은 Long Name 인데 데이터 행 수가 다른 북만.
 
     114행과 114행은 정상이다. 각 북의 그래프가 따로 있으므로 하나를 고르지 않고
@@ -80,7 +91,7 @@ def row_count_conflict_groups(op: Any) -> list[tuple[str, list[tuple[str, int]]]
     데이터인지 알 수 없어 쓰기를 멈춘다.
     """
     conflicts: list[tuple[str, list[tuple[str, int]]]] = []
-    for lname, books in duplicate_long_name_groups(op):
+    for lname, books in duplicate_long_name_groups(op, pe_folder=pe_folder):
         counts = {rows for _name, rows in books}
         if len(counts) > 1:
             conflicts.append((lname, books))

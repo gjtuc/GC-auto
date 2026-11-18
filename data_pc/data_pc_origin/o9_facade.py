@@ -214,11 +214,15 @@ def update_from_dataframe(
     job_runner: Callable[..., SampleJobResult] | None = None,
     column_guard_confirm: ColumnGuardConfirm | None = None,
     skip_equipment_day_guard: bool | None = None,
+    pe_folder: str | None = None,
+    reaction_type: str | None = None,
+    equipment: str | None = None,
 ) -> OriginUpdateResult:
     """
     파이프라인 유일 진입 — O8 job 위임.
 
     시그니처: 촉매 `update_origin(opju_path, df_data, sample_name, …)` 와 동일 인자.
+    ``pe_folder`` / ``reaction_type``+``equipment`` → 반응×장비 PE 폴더만 쓰기.
     """
     _print = printer if printer is not None else print
     skip_guard = (
@@ -243,6 +247,9 @@ def update_from_dataframe(
         sample_name,
         identity_key=identity_key,
         save_in_place=save_in_place,
+        pe_folder=pe_folder,
+        reaction_type=reaction_type,
+        equipment=equipment,
     )
     # region agent log
     from data_pc_origin.agent_debug_log import agent_dbg
@@ -255,6 +262,7 @@ def update_from_dataframe(
             "opju": opju_path,
             "sample_head": (sample_name or "")[:100],
             "identity_key": list(identity_key) if identity_key else None,
+            "pe_folder": ctx.pe_folder,
             "row_count": dataframe_row_count(ctx.df),
             "mapping_cols": list(ctx.mapping.keys()),
         },

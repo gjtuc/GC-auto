@@ -44,6 +44,8 @@ def _default_origin_runner(payload) -> Any:
         payload.sample_name,
         save_in_place=payload.save_in_place,
         identity_key=payload.identity_key,
+        reaction_type=getattr(payload, "reaction_type", None) or None,
+        equipment=getattr(payload, "equipment", None) or None,
     )
 
 

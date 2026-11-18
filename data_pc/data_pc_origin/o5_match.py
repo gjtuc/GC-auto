@@ -22,25 +22,35 @@ def keyword_in_text(text: str, keyword: str) -> bool:
     return nk in nt
 
 
-def find_worksheet_for_keyword(op: Any, keyword: str) -> Any | None:
+def find_worksheet_for_keyword(
+    op: Any, keyword: str, *, pe_folder: str | None = None
+) -> Any | None:
     """촉매 nested loop + break (L1710–1714) — 첫 매칭만."""
-    for wks in find_all_worksheets_for_keyword(op, keyword):
+    for wks in find_all_worksheets_for_keyword(op, keyword, pe_folder=pe_folder):
         return wks
     return None
 
 
-def find_all_worksheets_for_keyword(op: Any, keyword: str) -> List[Any]:
+def find_all_worksheets_for_keyword(
+    op: Any, keyword: str, *, pe_folder: str | None = None
+) -> List[Any]:
     """동일 Long Name 복제 북 전부 (예: CO2conversion / CO2conversioA).
 
     짧은 키워드(``CH4``, ``C2H6``)는 같은 북 안의 다른 시트 이름에도
     부분 매칭될 수 있어, **북이 하나뿐이면 첫 시트만** 반환한다.
     북이 여러 개이고 ``lname`` 이 같으면(복제 폴더) 그 북들의 매칭 시트를
     모두 반환 — UI 에 동명 폴더가 둘일 때 한쪽만 갱신되는 문제를 막는다.
+
+    ``pe_folder`` (예: ``DRE-GC3``) 가 있으면 그 PE 폴더 안 북만 본다.
     """
+    from data_pc_origin.o0_pe_folder import book_pe_path, path_in_pe_folder
     from data_pc_origin.o5_text import book_lname, book_name
 
+    folder = (pe_folder or "").strip()
     matches: List[Tuple[Any, Any]] = []
     for book in iter_pages_w(op):
+        if folder and not path_in_pe_folder(book_pe_path(op, book), folder):
+            continue
         for wks in book:
             search_str = compose_search_text(book, wks)
             if keyword_in_text(search_str, keyword):
@@ -65,6 +75,8 @@ def resolve_worksheets(
     op: Any,
     mapping: Mapping[str, str],
     df: Any,
+    *,
+    pe_folder: str | None = None,
 ) -> Tuple[Dict[str, Any], List[str]]:
     """mapping 순회 · df col 없으면 skip · (hits by origin kw, misses).
 
@@ -77,7 +89,7 @@ def resolve_worksheets(
     for _df_col, origin_kw in mapping.items():
         if _df_col not in cols:
             continue
-        wks = find_worksheet_for_keyword(op, origin_kw)
+        wks = find_worksheet_for_keyword(op, origin_kw, pe_folder=pe_folder)
         if wks is not None:
             hits[origin_kw] = wks
         else:
