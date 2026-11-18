@@ -98,10 +98,12 @@ MAIL_TO=은규_네이버@naver.com
 DATA_PC_SKIP_WIFI_CHECK=1
 DATA_PC_WATCH_INTERVAL_SEC=15
 DATA_PC_AUTO_MAIL_COOLDOWN_MINUTES=10
-DATA_PC_SKIP_ORIGIN=0
+DATA_PC_SKIP_ORIGIN=1
 ```
 
-GC1 장비 PC `MAIL_TO` 가 위 `NAVER_EMAIL` 과 **같아야** 메일이 도착한다.
+`DATA_PC_SKIP_ORIGIN=1` — Origin COM 끄고 GUI 위탁 ([`ORIGIN_GUI_위탁.md`](ORIGIN_GUI_위탁.md)).
+
+GC4 장비 PC `MAIL_TO` 가 위 `NAVER_EMAIL` 과 **같아야** 메일이 도착한다.
 
 ### 3.2 `PEG\machine_profile.json`
 

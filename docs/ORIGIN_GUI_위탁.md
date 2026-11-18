@@ -55,7 +55,8 @@ DATA_PC_SKIP_ORIGIN=1
 
 로그에 `[4단계] Origin 건너뜀` 이 보이면 정상.
 
-은규 PC: `gc-data-pc\촉매 반응 계산.py` 동일. initiation(「진행」)을 Origin 없이 쓰려면 env에 `DATA_PC_SKIP_ORIGIN=1` 을 넣어 둔다.
+은규 PC: `gc-data-pc\촉매 반응 계산.py` 동일.  
+차헌 PC 로컬 env·은규 템플릿에는 **이미 `DATA_PC_SKIP_ORIGIN=1`** 반영 (2026-11-19). 은규 운영 `gc-data-pc\gc_automation.env` 는 이식/수동으로 맞출 것.
 
 ---
 

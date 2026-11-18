@@ -96,7 +96,7 @@ python -m data_pc_runtime --restart --script-dir "C:\Users\user\Desktop\.cursor"
 | `DATA_PC_KEEP_ORIGIN_GUI` | `0` | `1` = 사용자 Origin 절대 종료 안 함 (4단계 스킵) |
 | `DATA_PC_ORIGIN_RECOVERY_DIR` | `~/Documents/Origin Recovery/gc_automation` | 제목에 경로 없는 프로젝트 백업 |
 | `DATA_PC_ORIGIN_PER_MAIL` | `0` | `1` = 메일마다 즉시 Origin (배치 아님) |
-| `DATA_PC_SKIP_ORIGIN` | `0` | `1` = Origin 전체 생략 |
+| `DATA_PC_SKIP_ORIGIN` | `1` (잠정 GUI 위탁) | `1` = Origin 4단계 생략 · `0` = COM 다시 켜기 |
 
 `gc_automation.env` (script_dir) 에 설정.
 
