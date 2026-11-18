@@ -55,6 +55,7 @@ python -c "from data_pc.data_pc_request import message_is_initiation; print(mess
 
 ## 개시 시 에이전트 동작 (우선순위 최상)
 
+0. **Origin GUI 위탁** (`docs/ORIGIN_GUI_위탁.md`): 미읽음·처리할 메일에 **시료 종류가 둘 이상**이면 파이프라인을 한꺼번에 돌리지 말고 **어느 시료인지 한 번 묻는다**. Origin 붙이기도 **시료 하나씩**.
 1. **다른 작업보다 우선** (설명·코드 수정보다 먼저)
 2. `gc_automation.py` **실행 금지** (**GC4** **장비** PC 전용, 구 GC1)
 3. (선택) `git pull` — sessionStart hook 이후 최신본 확인
