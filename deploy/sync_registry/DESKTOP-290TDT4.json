@@ -1,0 +1,31 @@
+{
+    "pc_id":  "DESKTOP-290TDT4",
+    "label":  "DESKTOP-290TDT4",
+    "role":  "unknown",
+    "operator":  "User",
+    "identifiers":  {
+                        "smbios_uuid":  "9E71BA00-5600-BA0F-719E-00560FBA719E",
+                        "computer_name":  "DESKTOP-290TDT4",
+                        "machine_guid":  "641d2959-d7c6-44b5-b614-c73b617c77dc",
+                        "windows_user":  "User"
+                    },
+    "sync":  {
+                 "last_push_at":  "2026-11-18T16:57:20+09:00",
+                 "last_push_commit":  "2e40b90",
+                 "last_push_by":  "DESKTOP-290TDT4\\User",
+                 "last_pull_at":  null,
+                 "last_pull_commit":  null,
+                 "last_pull_by":  null,
+                 "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
+             },
+    "history":  [
+                    {
+                        "event":  "push",
+                        "at":  "2026-11-18T16:57:20+09:00",
+                        "commit":  "2e40b90",
+                        "subject":  "auto: sync DESKTOP-290TDT4 @ 2026-11-18 16:57:13",
+                        "by":  "DESKTOP-290TDT4\\User",
+                        "triggered_by":  "auto_git_sync"
+                    }
+                ]
+}
