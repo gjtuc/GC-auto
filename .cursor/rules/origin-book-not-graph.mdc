@@ -12,7 +12,8 @@ alwaysApply: true
 
 ## 위탁·주의 (2026-11-19) — 상세는 `ORIGIN_GUI_위탁.md`
 
-1. 엑셀·폴더까지 `.py` (`DATA_PC_SKIP_ORIGIN=1`). Origin 북시트·Plot은 **확인 후 GUI**. 일상 `update_origin` COM 끄기.
+1. 엑셀·폴더까지 `.py` (`DATA_PC_SKIP_ORIGIN=1`). Origin 북시트·Plot은 **확인 후 GUI**. 일상 `update_origin` COM 끄기.  
+   **COM 보조 후에도 GUI로 검증** (Comments·열 위치·Object Manager·선 색). COM 로그만으로 완료 보고 금지.
 2. 엑셀 열↔북 Long Name은 `o0_mapping`. 반응·장비는 PE `DRE-GC3`/`DRME-GC3`. 북시트만 (`pages("w")`).
 3. **Comments ≠ 파일명** 가능 (GC ~40자·금지 문자). 매번 사용자 확인. 사용자가 Comments 수정 가능. 파일명 기계 복사 금지.
 4. **새 열:** 기준 시료 열의 **바로 오른쪽**(빈 열 건너뛰고 멀리 넣지 말 것). 왼쪽 Comments 문체 + 파일명 → Comments **제안** 후 확인. **기존 열:** Comments 보여주고 유지/수정 확인.
