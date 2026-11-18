@@ -29,11 +29,11 @@
       "note": "ChemStation 8860, Desktop\\KCH, gc_automation.py. GC2 공유: 차완도 사용"
     },
     {
-      "pc_id": "DESKTOP-BFMLJ9J",
+      "pc_id": "DESKTOP-290TDT4",
       "label": "차헌 PC",
       "role": "data_pc",
       "operator": "차헌",
-      "note": "촉매 반응 계산.py, Desktop\\.cursor\\. deploy/machine_profile.reference.chaheon.json"
+      "note": "촉매 반응 계산.py, Desktop\\.cursor\\. 구 PC DESKTOP-BFMLJ9J 후속(구 디스크 E:). deploy/machine_profile.reference.chaheon.json"
     },
     {
       "pc_id": "DESKTOP-N89C874",

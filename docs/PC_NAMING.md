@@ -65,7 +65,7 @@ GC2는 차헌·차완이 **같은 장비 PC**를 씀. Cursor「차완」「차�
 | `DESKTOP-MBGSSME` | 은규 — **GC4** 장비 PC (구 GC1) |
 | `(은규 PC COMPUTERNAME)` | 은규 PC |
 | `GC8860` | 차헌 — GC2/GC3 장비 PC |
-| `DESKTOP-BFMLJ9J` | 차헌 PC |
+| `DESKTOP-290TDT4` | 차헌 PC (구 `DESKTOP-BFMLJ9J` 후속, 구 디스크 E:) |
 | `DESKTOP-N89C874` | **차완 PC** (Downloads → kier) |
 
 ## 파이프라인 한 줄

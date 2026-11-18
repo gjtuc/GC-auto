@@ -1,8 +1,8 @@
 {
     "pc_id":  "DESKTOP-290TDT4",
-    "label":  "DESKTOP-290TDT4",
-    "role":  "unknown",
-    "operator":  "User",
+    "label":  "차헌 PC",
+    "role":  "data_pc",
+    "operator":  "차헌",
     "identifiers":  {
                         "smbios_uuid":  "9E71BA00-5600-BA0F-719E-00560FBA719E",
                         "computer_name":  "DESKTOP-290TDT4",

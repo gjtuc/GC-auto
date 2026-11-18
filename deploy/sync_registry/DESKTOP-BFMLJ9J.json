@@ -1,111 +1,111 @@
 {
-    "pc_id":  "DESKTOP-BFMLJ9J",
-    "label":  "DESKTOP-BFMLJ9J",
-    "role":  "unknown",
-    "operator":  "user",
-    "identifiers":  {
-                        "smbios_uuid":  "21B87A06-5020-ECF1-197B-3497F6343042",
-                        "computer_name":  "DESKTOP-BFMLJ9J",
-                        "machine_guid":  "b4b91217-866e-454c-b791-65791162dffe",
-                        "windows_user":  "user"
-                    },
-    "sync":  {
-                 "last_push_at":  "2026-09-17T14:28:03+09:00",
-                 "last_push_commit":  "f4f4028",
-                 "last_push_by":  "DESKTOP-BFMLJ9J\\user",
-                 "last_pull_at":  "2026-09-15T16:41:05+09:00",
-                 "last_pull_commit":  "579a8e0",
-                 "last_pull_by":  "DESKTOP-BFMLJ9J\\user",
-                 "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
-             },
-    "history":  [
-                    {
-                        "event":  "push",
-                        "at":  "2026-09-17T14:28:03+09:00",
-                        "commit":  "f4f4028",
-                        "subject":  "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 14:27:21",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-09-17T13:33:56+09:00",
-                        "commit":  "9b1eaed",
-                        "subject":  "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 13:33:26",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-09-17T13:32:14+09:00",
-                        "commit":  "59d0d1b",
-                        "subject":  "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 13:31:49",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-09-17T13:17:11+09:00",
-                        "commit":  "e31a395",
-                        "subject":  "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 13:16:55",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-09-17T11:08:39+09:00",
-                        "commit":  "bafb37a",
-                        "subject":  "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 11:08:04",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-09-17T11:06:48+09:00",
-                        "commit":  "60911de",
-                        "subject":  "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 11:06:12",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-09-16T14:36:00+09:00",
-                        "commit":  "3cff49b",
-                        "subject":  "auto: sync DESKTOP-BFMLJ9J @ 2026-09-16 14:34:40",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-09-16T14:29:46+09:00",
-                        "commit":  "0ae1dc6",
-                        "subject":  "auto: sync DESKTOP-BFMLJ9J @ 2026-09-16 14:29:04",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-09-15T16:42:16+09:00",
-                        "commit":  "03b7828",
-                        "subject":  "auto: sync DESKTOP-BFMLJ9J @ 2026-09-15 16:39:12",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "auto_git_sync"
-                    },
-                    {
-                        "event":  "pull",
-                        "at":  "2026-09-15T16:41:05+09:00",
-                        "commit":  "579a8e0",
-                        "subject":  "sync: registry GC8860 push @ 2026-08-17 21:10:56",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "auto_git_sync:pre-commit"
-                    },
-                    {
-                        "event":  "pull",
-                        "at":  "2026-06-25T13:09:09+09:00",
-                        "commit":  "b8db047",
-                        "subject":  "GC3 遺꾩꽍 媛?쓣 李⑦뿄 PC 怨꾩궛源뚯? end-to-end ?곕룞",
-                        "by":  "DESKTOP-BFMLJ9J\\user",
-                        "triggered_by":  "cursor:manual-pull"
-                    }
-                ]
+    "pc_id": "DESKTOP-BFMLJ9J",
+    "label": "차헌 PC (폐기)",
+    "role": "data_pc_retired",
+    "operator": "차헌",
+    "identifiers": {
+        "smbios_uuid": "21B87A06-5020-ECF1-197B-3497F6343042",
+        "computer_name": "DESKTOP-BFMLJ9J",
+        "machine_guid": "b4b91217-866e-454c-b791-65791162dffe",
+        "windows_user": "user"
+    },
+    "sync": {
+        "last_push_at": "2026-09-17T14:28:03+09:00",
+        "last_push_commit": "f4f4028",
+        "last_push_by": "DESKTOP-BFMLJ9J\\user",
+        "last_pull_at": "2026-09-15T16:41:05+09:00",
+        "last_pull_commit": "579a8e0",
+        "last_pull_by": "DESKTOP-BFMLJ9J\\user",
+        "repo_remote": "https://github.com/gjtuc/GC-auto.git"
+    },
+    "history": [
+        {
+            "event": "push",
+            "at": "2026-09-17T14:28:03+09:00",
+            "commit": "f4f4028",
+            "subject": "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 14:27:21",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "auto_git_sync"
+        },
+        {
+            "event": "push",
+            "at": "2026-09-17T13:33:56+09:00",
+            "commit": "9b1eaed",
+            "subject": "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 13:33:26",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "auto_git_sync"
+        },
+        {
+            "event": "push",
+            "at": "2026-09-17T13:32:14+09:00",
+            "commit": "59d0d1b",
+            "subject": "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 13:31:49",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "auto_git_sync"
+        },
+        {
+            "event": "push",
+            "at": "2026-09-17T13:17:11+09:00",
+            "commit": "e31a395",
+            "subject": "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 13:16:55",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "auto_git_sync"
+        },
+        {
+            "event": "push",
+            "at": "2026-09-17T11:08:39+09:00",
+            "commit": "bafb37a",
+            "subject": "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 11:08:04",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "auto_git_sync"
+        },
+        {
+            "event": "push",
+            "at": "2026-09-17T11:06:48+09:00",
+            "commit": "60911de",
+            "subject": "auto: sync DESKTOP-BFMLJ9J @ 2026-09-17 11:06:12",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "auto_git_sync"
+        },
+        {
+            "event": "push",
+            "at": "2026-09-16T14:36:00+09:00",
+            "commit": "3cff49b",
+            "subject": "auto: sync DESKTOP-BFMLJ9J @ 2026-09-16 14:34:40",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "auto_git_sync"
+        },
+        {
+            "event": "push",
+            "at": "2026-09-16T14:29:46+09:00",
+            "commit": "0ae1dc6",
+            "subject": "auto: sync DESKTOP-BFMLJ9J @ 2026-09-16 14:29:04",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "auto_git_sync"
+        },
+        {
+            "event": "push",
+            "at": "2026-09-15T16:42:16+09:00",
+            "commit": "03b7828",
+            "subject": "auto: sync DESKTOP-BFMLJ9J @ 2026-09-15 16:39:12",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "auto_git_sync"
+        },
+        {
+            "event": "pull",
+            "at": "2026-09-15T16:41:05+09:00",
+            "commit": "579a8e0",
+            "subject": "sync: registry GC8860 push @ 2026-08-17 21:10:56",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "auto_git_sync:pre-commit"
+        },
+        {
+            "event": "pull",
+            "at": "2026-06-25T13:09:09+09:00",
+            "commit": "b8db047",
+            "subject": "GC3 遺꾩꽍 媛?쓣 李⑦뿄 PC 怨꾩궛源뚯? end-to-end ?곕룞",
+            "by": "DESKTOP-BFMLJ9J\\user",
+            "triggered_by": "cursor:manual-pull"
+        }
+    ]
 }

@@ -1,6 +1,6 @@
 # Step 9 — 차헌 GC2/GC3 장비 PC (git pull + 회귀 테스트)
 
-> **실행 위치:** **GC2/GC3 장비 PC** (ChemStation / Chem32 옆) — **차헌 PC(`DESKTOP-BFMLJ9J`) 아님**  
+> **실행 위치:** **GC2/GC3 장비 PC** (ChemStation / Chem32 옆) — **차헌 PC(`DESKTOP-290TDT4`, 구 BFMLJ9J) 아님**  
 > **목표:** GitHub `GC-auto` 최신본 받기 + GC2/GC3 `gc_automation.py` 기존과 동일 동작 확인  
 > **GC1 장비 PC(은규)에서 할 일:** repo push 후 이 문서·`EXPECTED_PCS.json` 전달
 
