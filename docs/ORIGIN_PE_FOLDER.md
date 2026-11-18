@@ -2,7 +2,7 @@
 
 > 확인·수동 정리: 2026-11-18 (차헌 데이터 PC).  
 > 관련 규칙: `.cursor/rules/origin-book-not-graph.mdc`  
-> **잠정 운영:** 엑셀까지 자동 · Origin은 GUI — [`ORIGIN_GUI_위탁.md`](ORIGIN_GUI_위탁.md)
+> **잠정 운영 (마스터):** 엑셀까지 자동 · Origin GUI 위탁·Comments·Plot·시료 단위 — [`ORIGIN_GUI_위탁.md`](ORIGIN_GUI_위탁.md)
 
 ---
 

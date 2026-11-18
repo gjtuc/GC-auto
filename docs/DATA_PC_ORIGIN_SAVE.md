@@ -1,7 +1,7 @@
 # 데이터 PC — Origin 저장 후 종료 (차헌 PC · 은규 PC)
 
 > **잠정:** Origin COM 4단계를 끄고 GUI에 위탁할 때는 이 문서의 kill/저장 경로가 거의 안 탄다.  
-> 운영: [`ORIGIN_GUI_위탁.md`](ORIGIN_GUI_위탁.md) (`DATA_PC_SKIP_ORIGIN=1`).
+> 운영 마스터(위탁·Comments·Plot·Rescale 금지·시료 단위): [`ORIGIN_GUI_위탁.md`](ORIGIN_GUI_위탁.md) (`DATA_PC_SKIP_ORIGIN=1`).
 
 > **문제:** 파이프라인이 Origin COM 작업 전에 GUI를 정리할 때, 저장 없이 `taskkill` 되거나 저장 대화상자에 멈춰 **미저장 .opju 가 날아감**.  
 > **해결:** `data_pc_origin/o3_session.py` 의 `save_and_force_quit_origin_gui()` — **디스크 저장 성공 후에만** 종료.

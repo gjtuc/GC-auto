@@ -1,157 +1,214 @@
 # Origin — 엑셀까지 자동, Origin은 GUI 위탁
 
-> 잠정 운영 방침 (2026-11-19, 차헌 데이터 PC 실증 후).  
-> 코드 기본값을 바꾸기 전에 **이 가이드대로** 돌린다.
+> **마스터 운영 가이드** (2026-11-19 차헌 데이터 PC 실증·합의).  
+> 에이전트·사람 모두 이 문서를 Origin 구간 기준으로 본다.
 
-관련: [`ORIGIN_PE_FOLDER.md`](ORIGIN_PE_FOLDER.md) · [`.cursor/rules/origin-book-not-graph.mdc`](../.cursor/rules/origin-book-not-graph.mdc) · [`DATA_PC_ORIGIN_SAVE.md`](DATA_PC_ORIGIN_SAVE.md)
+관련: [`ORIGIN_PE_FOLDER.md`](ORIGIN_PE_FOLDER.md) · [`.cursor/rules/origin-book-not-graph.mdc`](../.cursor/rules/origin-book-not-graph.mdc) · [`DATA_PC_ORIGIN_SAVE.md`](DATA_PC_ORIGIN_SAVE.md) · 매핑 `data_pc_origin/o0_mapping.py`
 
 ---
 
-## 1. 한 줄 방침
+## 0. 한 줄 요약
 
 | 구간 | 담당 |
 |------|------|
-| 메일 → 계산 → 엑셀 → 연구노트/G: 실험 폴더(xlsx·opju 템플릿 복사) | **`.py` 자동** |
-| Origin 북시트에 숫자·Comments 넣기 | **GUI** (복사·붙여넣기) |
-| 그래프에 곡선(Plot) 추가·정리 | **GUI** (원래도 코드가 Plot을 안 만듦) |
+| 메일 → 계산 → 엑셀 → G:/연구노트 실험 폴더 | **`.py`** (`DATA_PC_SKIP_ORIGIN=1`) |
+| 북시트 숫자·Comments · 그래프 Plot | **확인 후 GUI** (COM 일상 쓰기 금지) |
 
-**4단계 Origin COM 쓰기(`update_origin`)는 당분간 쓰지 않는다.**
+COM으로 Origin을 쓰다 **열 절단·행 밀림·축 깨짐·오삭제**가 반복되어 위탁으로 나눴다.
 
 ---
 
-## 2. 왜 이렇게 나누나
+## 1. 왜 COM을 일상에서 끄나 (실증)
 
-COM으로 북시트에 쓸 때와 GUI로 다룰 때 차이가 컸다 (2026-11-19 `COyieldAB` / `Graph19B` 실측).
-
-| 현상 | 의미 |
+| 현상 | 주의 |
 |------|------|
-| 짧은 `from_list` | 열 뒤쪽이 **잘릴** 수 있음 |
-| `start=` 행 번호 | 주석(1-based)과 실제 동작이 어긋날 수 있음 |
-| 시트에서 숫자만 지움 | 그래프 **Plot은 그대로** 남음 |
-| 열 자체를 삭제 | 그 열 Plot은 같이 사라짐 (COM `del_col`) |
-| Y축·잘못된 열(CM vs CN) | “그래프가 안 바뀐다”처럼 보이기 쉬움 |
+| 짧은 `from_list` | 열 길이가 리스트 끝으로 **잘림** |
+| `start=` | 문서(1-based)와 실제가 어긋날 수 있음 → 한 칸 밀림 |
+| 셀 Clear(숫자만 삭제) | 그래프 **Plot은 남음** (“지웠는데 131까지” 체감) |
+| `del_col`로 열 삭제 | 해당 Plot은 같이 사라지는 편 |
+| Plot 추가 + Rescale on Apply | **축 스케일 깨짐** |
+| 잘못된 열(CM vs CN)·Y축 잘림 | “그래프가 안 바뀐다”처럼 보임 |
 
-사람이 GUI로 붙이고, 곡선도 GUI로 관리하는 편이 지금 단계에선 안전하다.
+**주의:** Plot 추가는 COM `add_plot`으로도 되지만, 축·실수 위험 때문에 **기본은 GUI**. 에이전트가 보조할 때도 **Rescale 금지·축 복구** 필수.
 
 ---
 
-## 3. 자동 구간 — 어떻게 실행
-
-Origin만 건너뛰고, 메일·계산·엑셀·실험 폴더(xlsx)까지 돌린다.
+## 2. 자동 구간 (엑셀까지)
 
 ```powershell
-# 한 번 실행 (차헌: Desktop\.cursor 또는 repo data_pc)
 python "촉매 반응 계산.py" --no-origin
-
-# 또는 env (supervisor / 상시 watch 에도 적용)
-# gc_automation.env 에:
+# 또는 gc_automation.env:
 DATA_PC_SKIP_ORIGIN=1
 ```
 
-| 플래그·env | 하는 일 |
-|------------|---------|
-| `--no-origin` / `DATA_PC_SKIP_ORIGIN=1` | **4단계 Origin만** 생략. G:·연구노트 폴더·xlsx는 유지 |
-| `--no-archive` | G: 폴더·Origin **둘 다** 생략 (계산·엑셀만). 이번 위탁 방침의 기본은 아님 |
-
-로그에 `[4단계] Origin 건너뜀` 이 보이면 정상.
-
-은규 PC: `gc-data-pc\촉매 반응 계산.py` 동일.  
-차헌 PC 로컬 env·은규 템플릿에는 **이미 `DATA_PC_SKIP_ORIGIN=1`** 반영 (2026-11-19). 은규 운영 `gc-data-pc\gc_automation.env` 는 이식/수동으로 맞출 것.
-
----
-
-## 4. GUI 구간 — 체크리스트
-
-자동이 끝난 뒤 실험 폴더의 **계산 완료 xlsx**와 **opju**를 연다.
-
-### 4-0. Comments ≠ 엑셀 파일명 (반드시 확인)
-
-엑셀/메일 파일명과 Origin **Comments** 문자열이 **항상 같지는 않다.**
-
-| 이유 | 결과 |
+| 설정 | 의미 |
 |------|------|
-| GC 쪽 이름 **약 40글자 제한** | 파일명이 짧거나 잘림 |
-| Windows 파일명에 못 쓰는 문자 (`:`, `/`, `°` 등) | 엑셀 저장 시 치환·생략 |
+| `--no-origin` / `DATA_PC_SKIP_ORIGIN=1` | Origin 4단계만 생략 (폴더·xlsx 유지) |
+| `--no-archive` | 폴더·Origin 둘 다 생략 — 위탁 기본 아님 |
 
-그래서 GUI(또는 에이전트)는 **매번 Comments 후보를 사용자에게 확인**받은 뒤 진행한다.  
-Comments가 잘못 지어졌으면 **사용자가 Comments 문구를 고칠 수 있다** — 엑셀 파일명을 Comments에 기계적으로 복사하지 말 것.
+로그: `[4단계] Origin 건너뜀` → 정상.  
+차헌 `Desktop\.cursor\gc_automation.env`, 은규 템플릿에 `=1` 반영. 은규 운영 env는 로컬에서 맞출 것.
 
-확인할 것: (1) opju·PE (2) **Comments 최종 문구** (3) 기존 열 갱신 vs 새 열.
+**검증 쪼개기 예:** (1) env skip 인식 (2) inbox/profile (3) `--no-origin` 실행.
 
-**새 샘플 → 새 열**일 때 에이전트:
-
-1. 붙일 위치의 **바로 왼쪽 열 Comments**를 읽는다 (문체·접미사·CVD 표기 관례).
-2. 이번 **엑셀/메일 파일명**으로 날짜·반응·농도·촉매 정보를 파악한다 (40자·특수문자로 잘린 이름일 수 있음).
-3. 왼쪽 관례 + 파일명 정보를 합쳐 **이번 Comments 문구를 제안**하고, 사용자 확인 후에만 기입한다.  
-   기존 열 갱신이면 그 열 Comments를 보여 주고 유지·수정 여부를 묻는다.
-
-### 4-1. 북시트에 붙이기
-
-1. PE에서 반응×장비 폴더만 연다 (`DRME-GC3`, `DRE-GC3` …). → [`ORIGIN_PE_FOLDER.md`](ORIGIN_PE_FOLDER.md)
-2. **워크북(북시트)** 만 고친다. 그래프 창 Long Name에 숫자를 넣지 않는다.
-3. Comments가 **확인받은 시료명**인 열을 찾거나, 맨 뒤에 새 열을 만든다.
-4. xlsx의 해당 지표 열(CO Yield, H2 Yield …)을 복사해 북시트에 붙여넣는다.
-5. 같은 Long Name 북이 **같은 PE 폴더 안에** 둘 있으면(행 수 같을 때) **양쪽**에 같은 값을 넣는다. 행 수가 다르면 임의로 한쪽만 고르지 말고 멈춘다.
-
-### 4-2. 그래프
-
-1. 시트를 고쳤다고 곡선이 자동으로 생기지는 않을 수 있다. 새 열이면 Layer에 **Plot 추가**를 GUI로 한다.
-2. “최근 시료만 보고 싶다” → 시트에서 열을 비우기만 하면 **Plot 목록은 남는다**.  
-   Object Manager / Layer Contents에서 **해당 Plot을 제거**해야 그래프도 깔끔해진다.
-3. **Plot 추가 시 Rescale on Apply / 자동 Rescale 쓰지 말 것.** 축 스케일이 깨진다.  
-   새 곡선만 붙이고, 축은 기존 범위를 유지한다. (에이전트: `add_plot` 후 `ylim`/`xlim` 복구)
-4. 축을 **의도적으로** 바꿀 때만 사용자가 Rescale·수동 범위를 적용한다.
-
-### 4-3. 저장
-
-- opju는 **Ctrl+S** 로 저장한 뒤 닫는다.
-- 파이프라인이 Origin을 건드리지 않으므로, 미저장 상태로 두면 다음 자동 실행이 파일을 덮어쓰지 않는다 (템플릿 복사는 기존 폴더가 있으면 건너뜀).
+**짜잘:** 스크립트 끝 `메일 다시 확인 Enter/q` 는 비대화형에서 EOF → exit 1 날 수 있음 (본 작업 실패와 무관할 수 있음).
 
 ---
 
-## 5. 한 번에 시료 하나 · 여러 종류면 질문
+## 3. 구분 규칙 (확인 전에 이미 정해진 것)
+
+### 3-1. 엑셀 열 → 북시트 Long Name
+
+코드: `DEFAULT_ORIGIN_MAPPING` (`o0_mapping.py`)
+
+| 엑셀 | Origin 북 |
+|------|-----------|
+| C2H6 Conversion (%) | C2H6 conversion |
+| CH4 Conversion (%) | CH4 conversion |
+| CO2 Conversion (%) | CO2 conversion |
+| H2 Yield (%) | H2 yield |
+| CO Yield (%) | CO yield |
+| CH4 (%) | CH4 |
+| C2H4 (%) | C2H4 |
+| C2H6 (%) | C2H6 |
+
+엑셀에 없는 열은 그 북은 **스킵**. 숫자는 **그래프가 아니라 북시트**에만.
+
+### 3-2. 반응·장비 → opju / PE
+
+| 구분 | 규칙 |
+|------|------|
+| 실험 폴더·opju | G: 반응 루트(DRE/DRM/DRME) + 날짜 폴더 |
+| 한 opju 안 | PE `{반응}-{장비}` → `DRME-GC3`, `DRE-GC3` … |
+| 장비 | 파일명·메일 GC (예 `_GC3_`) |
+
+동명 Long Name(`CO yield`)이라도 **PE 폴더가 다르면 다른 북**. 상세 [`ORIGIN_PE_FOLDER.md`](ORIGIN_PE_FOLDER.md).
+
+---
+
+## 4. Comments — 반드시 사용자 확인
+
+### 4-1. 파일명 ≠ Comments (정상인 경우 많음)
+
+| 원인 | 결과 |
+|------|------|
+| GC 이름 **~40자 제한** | 파일명 잘림 |
+| 파일명 금지 문자 (`:`, `/`, `°` …) | 엑셀 저장 시 치환 |
+
+- 파일명을 Comments에 **기계 복사 금지**
+- 매번 **Comments 후보를 제안 → 사용자 OK**
+- 틀리면 **사용자가 Comments를 고쳐도 됨**
+
+### 4-2. 기존 열 갱신 vs 새 열
+
+| 경우 | 에이전트 |
+|------|----------|
+| **기존 열** (Comments에 이미 시료) | 그 Comments·열 번호를 보여 주고 유지/수정 확인 → 숫자만 반영 |
+| **새 샘플·새 열** | **바로 왼쪽 열 Comments** 문체 읽기 + 엑셀/메일 파일명 정보 → Comments **제안** → OK 후 기입 |
+
+확인할 세 가지: (1) opju·PE (2) Comments 최종 문구 (3) 기존 열 vs 새 열.
+
+---
+
+## 5. 한 번에 시료 하나
 
 | 규칙 | 내용 |
 |------|------|
-| **단위** | Origin 붙이기(확인→기입)는 **시료 하나씩**만 한다. 여러 시료를 한 턴에 연속 붙이지 않는다. |
-| **메일** | 미읽음(또는 이번에 처리할) 메일에 **시료 종류가 둘 이상**이면(날짜·반응·촉매가 다른 시료), 자동으로 전부 돌리지 말고 **사용자에게 어느 시료부터/어느 것만** 할지 물어본 뒤 진행한다. |
-| **같은 시료** | 동일 시료의 구버전 메일만 여러 통인 경우는 “최신 1건” 규칙으로 골라도 되지만, **서로 다른 시료**가 섞이면 반드시 질문. |
+| Origin 붙이기 | **시료 하나씩** (한 턴에 여러 시료 연속 금지) |
+| 메일 | 처리할 메일에 **시료 종류가 둘 이상**이면 목록 요약 후 **어느 시료인지 질문** |
+| 동일 시료 구버전만 여러 통 | 최신 1건 규칙은 OK. **다른 시료** 섞이면 질문 |
 
-에이전트 흐름 예: 메일 목록 요약(시료별 1줄) → 「어느 시료요?」 → 답 받은 시료만 엑셀·Comments 확인 → 북시트 반영.
-
-## 6. 에이전트·일상 개시와의 관계
-
-| PC | 「진행」「시작」 등 | 이 방침에서 |
-|----|-------------------|-------------|
-| 은규 / 차헌 데이터 PC | `촉매 반응 계산.py` | `DATA_PC_SKIP_ORIGIN=1` 이면 엑셀·폴더까지, Origin은 사람 |
-| GC4 장비 PC | `gc_automation.py` | **변경 없음** (PDF→엑셀→메일) |
-
-에이전트는 Origin COM으로 열을 쓰지 말고, 자동 구간 결과(xlsx 경로)만 안내한 뒤 GUI 체크리스트(§4)를 따르면 된다.  
-§5: 시료가 여러 종류면 **묻지 않고 6건을 한꺼번에 Origin까지 가지 않는다.**
+흐름: 메일 요약 → 「어느 시료?」 → Comments 확인 → 북시트 → (새 열이면) Plot → 저장.
 
 ---
 
-## 7. 나중에 코드로 되돌릴 때
+## 6. 북시트 붙이기 체크리스트
 
-다시 COM 4단계를 켜려면:
+1. PE `DRME-GC3` 등만 연다.
+2. 매핑된 **북시트**만 (그래프 Long Name에 숫자 넣지 않음).
+3. 확인받은 Comments 열 (또는 새 열).
+4. 계산완료 xlsx → 해당 지표 열 전체 행 복사/기입.
+5. 같은 PE·같은 Long Name 북이 둘이고 행 수 같으면 **양쪽**. 행 수 다르면 멈춤.
+6. **Ctrl+S** 저장.
 
-1. `DATA_PC_SKIP_ORIGIN` 제거 / `--no-origin` 없이 실행  
-2. `from_list` 절단·`start=` 보정을 코드에서 먼저 고친 뒤  
-3. Plot은 계속 수동(현행 주석과 동일)으로 두는 것을 권장  
-
-이 문서는 그전까지의 **운영 가이드**이다. 코드 기본값 변경 여부는 별도 작업.
+실측 예 (20261115): 기존 CN(col91) Comments 확인 후 6개 북 34→78행 갱신.
 
 ---
 
-## 8. 관련 명령 요약
+## 7. 그래프 Plot
+
+### 7-1. 규칙
+
+1. 새 열 → 해당 지표 그래프 Layer에 Plot 추가 (성분마다 그래프가 다름).
+2. 시트 Clear만 하면 Plot은 남음 → 정리 시 Object Manager에서 Plot 제거.
+3. **Rescale on Apply / 자동 Rescale 금지** — Plot만 추가, **축 유지**.  
+   에이전트 보조 시: `add_plot` 직전 `ylim`/`xlim` 저장 → 추가 후 **즉시 복구**. `layer.rescale()` 호출 금지.
+4. 축을 바꿀지는 **사용자 의도**일 때만.
+
+### 7-2. DRME-GC3 실습 대응 (AB 북 ↔ 그래프)
+
+| 북 | 그래프 (예) |
+|----|-------------|
+| COyieldAB | Graph19B (CO yield) |
+| H2yieldAB | Graph15B (H2 yield) |
+| C2H6conversiB | Graph1B (C2H6 conversion) |
+| CO2conversioB | Graph5B (CO2 conversion) |
+| CH4AB | Graph26B (CH4 %) |
+| C2H4AB | Graph27B (C2H4 %) |
+
+새 Comments 열이 **여러 북 col에 같이** 있으면, Plot도 **성분 그래프마다** 같은 열(예: `CO`)을 붙여야 한다. CO만 하고 끝내면 안 됨.
+
+### 7-3. 멀티 모니터
+
+에이전트 화면 클릭은 **주 모니터만** 본다. Origin이 다른 디스플레이에 있으면 주 모니터로 옮긴 뒤 GUI 실습. (같은 PC — 도구 제한일 뿐.)
+
+---
+
+## 8. 에이전트 동작 요약
+
+| 단계 | 할 일 |
+|------|--------|
+| 개시·메일 | 시료 종류 여러 개 → **질문**. 하나(또는 지정)만 진행 |
+| 자동 | `--no-origin` / env skip. `gc_automation.py`는 장비 PC만 |
+| Origin 전 | opju·PE·Comments·기존/새 열 **확인 요청** |
+| 새 열 Comments | 왼쪽 Comments + 파일명 → **제안** |
+| 북시트 | 확인 후 매핑대로 기입 (일상 COM `update_origin` 끄기) |
+| Plot | GUI 우선. 보조 시 **축 복구·Rescale 금지**. 전 성분 그래프 |
+| 저장 | 사용자 Ctrl+S 안내 |
+
+PC별 개시: 은규 → `eungyu-pc-initiation.mdc` (위탁·시료 질문 포함). GC4 장비는 변경 없음.
+
+---
+
+## 9. 주의사항 체크리스트 (짧게)
+
+- [ ] `DATA_PC_SKIP_ORIGIN=1` (일상)
+- [ ] 시료 여러 종류면 물어보기
+- [ ] Comments ≠ 파일명 가정; 항상 확인; 사용자 수정 가능
+- [ ] 새 열 → 왼쪽 Comments 참고해 제안
+- [ ] 엑셀↔북 매핑·PE 반응×장비 준수
+- [ ] 북시트만; 그래프에 숫자 직접 넣지 않음
+- [ ] Clear ≠ Plot 제거
+- [ ] Plot 시 **Rescale 금지**
+- [ ] 새 열 Plot은 **모든 해당 성분 그래프**
+- [ ] opju 저장
+- [ ] (에이전트) Origin GUI는 주 모니터
+
+---
+
+## 10. COM 4단계 재개 시 (나중)
+
+1. `from_list` 절단·`start=` 수정 후  
+2. `DATA_PC_SKIP_ORIGIN=0`  
+3. Plot은 계속 수동/`Rescale` 주의 권장  
+
+`workflow_bridge` 의 `skip_peer_sync` 인자는 촉매 스크립트와 맞춰 둘 것 (누락 시 TypeError).
+
+---
+
+## 11. 명령 요약
 
 ```powershell
-# 위탁 모드 (권장)
 python "촉매 반응 계산.py" --no-origin
-
-# 계산·엑셀만 (폴더 복사도 안 함)
-python "촉매 반응 계산.py" --no-archive
-
-# env
-set DATA_PC_SKIP_ORIGIN=1
+# env: DATA_PC_SKIP_ORIGIN=1
 ```
