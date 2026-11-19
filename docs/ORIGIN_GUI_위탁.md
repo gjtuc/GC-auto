@@ -16,8 +16,9 @@
 
 COM으로 Origin을 쓰다 **열 절단·행 밀림·축 깨짐·오삭제**가 반복되어 위탁으로 나눴다.
 
-**검증:** Origin 작업은 **GUI로 확인**한다 (시트 Comments·열 위치·그래프 Object Manager·선 색).  
-COM만 돌리고 “OK”라고 보고하지 말 것. 주 모니터에 Origin을 띄운 뒤 화면으로 확인.
+**검증:** Origin 작업은 **GUI로 확인**한다 (시트 Comments·**열 문자**·열 위치·그래프 Object Manager·선 색).  
+COM만 돌리고 “OK”라고 보고하지 말 것. 주 모니터에 Origin을 띄운 뒤 화면으로 확인.  
+열 문자(CM/CN/…)는 originpro 인덱스 변환으로 추측하지 말 것 (§4-3).
 
 ### 0-1. 트리거 — 「GC 작업해줘」
 
@@ -123,9 +124,37 @@ DATA_PC_SKIP_ORIGIN=1
 | **기존 열** (Comments에 이미 시료) | 그 Comments·열 번호를 보여 주고 유지/수정 확인 → 숫자만 반영 |
 | **새 샘플·새 열** | 기준 시료 열의 **바로 오른쪽**에 기입 (빈 열을 건너뛰고 멀리 두지 말 것). 왼쪽 Comments 문체 + 파일명 → Comments **제안** → OK 후 기입 |
 
-예: `20261115`가 col91이면 새 열은 **col92** (그 오른쪽). col93 등 빈 칸 너머에 넣으면 Plot·열 문자가 어긋난다.
+예: 기준 시료 Comments 열의 **바로 오른쪽**에 기입. 빈 칸 너머에 넣으면 Plot·열 문자가 어긋난다.
 
 확인할 세 가지: (1) opju·PE (2) Comments 최종 문구 (3) 기존 열 vs 새 열(위치=바로 오른쪽).
+
+### 4-3. 열 문자(CM/CN/CO) — originpro 인덱스 ≠ GUI (2026-11-19 실증)
+
+**금지:** `originpro` `to_list(i)` / `get_label(i)` 의 `i` 만으로 `A=1 → CM` 식 **글자 변환** 후 「CM에 있다」고 보고.
+
+| 구분 | 역할 |
+|------|------|
+| **GUI 열 문자** (사용자가 보는 CM/CN/CO) | 보고·삭제·「바로 오른쪽」기준. **진실** |
+| LabTalk `wks.colN.name$` / `comment$` | GUI와 같은 열 번호·문자로 맞음 (실증) |
+| `originpro` 열 인덱스 | 값·Comments 읽기/쓰기용. **같은 숫자라도 GUI 문자와 1칸 어긋날 수 있음** |
+
+실증 (`COyieldAB`, 20261119 opju):
+
+| GUI / LabTalk | Comments | originpro 인덱스 (참고) |
+|---------------|----------|-------------------------|
+| CM | 20261105 | 90 |
+| CN | 20261115 | 91 |
+| CO | 20261119 | 92 |
+
+에이전트가 `get_label(91)` → 20261115 를 보고 `91→CM` 으로 불러 **한 칸 왼쪽**으로 보고한 실수.  
+코드도 LT 삽입 시 `lt_col = col_idx + 1` (`o6_insert.py`) — 인덱스 체계가 GUI/LT와 다름을 이미 전제함.
+
+**보고·검증 절차:**
+
+1. Comments 문자열로 열을 찾는다 (날짜·시료).
+2. 열 문자는 **GUI 헤더** 또는 LabTalk `name$` / `comment$` 로 확인한다.
+3. 「CM에 있다」고 말하기 전에 시트 화면에서 해당 Comments 위 **글자**를 본다.
+4. 삭제·Plot도 **열 문자** 기준 (인덱스만으로 `del_col` 금지 — §7-1).
 
 ---
 
@@ -150,7 +179,8 @@ DATA_PC_SKIP_ORIGIN=1
 5. 같은 PE·같은 Long Name 북이 둘이고 행 수 같으면 **양쪽**. 행 수 다르면 멈춤.
 6. **Ctrl+S** 저장.
 
-실측 예 (20261115): 기존 CN(col91) Comments 확인 후 6개 북 34→78행 갱신.
+실측 예 (20261115): GUI **CN** Comments 확인 후 6개 북 행 갱신.  
+실측 예 (20261119): 새 열 GUI **CO** (CN=20261115 바로 오른쪽). 열 문자는 §4-3.
 
 ---
 
@@ -218,6 +248,7 @@ DATA_PC_SKIP_ORIGIN=1
 | 자동 | `--no-origin` / env skip. `gc_automation.py`는 장비 PC만 |
 | Origin 전 | opju·PE·Comments·기존/새 열 **확인 요청** |
 | 새 열 Comments | 왼쪽 Comments + 파일명 → **제안** |
+| 열 문자 | GUI/LabTalk `name$` (§4-3). originpro 인덱스→CM 변환 **금지** |
 | 북시트 | 확인 후 매핑대로 기입 (일상 COM `update_origin` 끄기) |
 | Plot | GUI 우선. 보조 시 **축 복구·Rescale 금지**. 전 성분 그래프·§7-4 색 |
 | 색 후 | **「바꾸고 싶으면 말해 주세요」** 필수 안내 |
@@ -234,6 +265,7 @@ PC별 개시: 은규 → `eungyu-pc-initiation.mdc` (위탁·시료 질문 포�
 - [ ] 시료 여러 종류면 물어보기
 - [ ] Comments ≠ 파일명 가정; 항상 확인; 사용자 수정 가능
 - [ ] 새 열 → **기준 열 바로 오른쪽** + 왼쪽 Comments 참고해 제안
+- [ ] 열 문자 = **GUI/LabTalk** (§4-3). originpro 인덱스만으로 CM/CN 보고 금지
 - [ ] 엑셀↔북 매핑·PE 반응×장비 준수
 - [ ] 북시트만; 그래프에 숫자 직접 넣지 않음
 - [ ] Clear ≠ Plot 제거
