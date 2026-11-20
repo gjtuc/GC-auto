@@ -12,13 +12,25 @@
 | 구간 | 담당 |
 |------|------|
 | 메일 → 계산 → 엑셀 → G:/연구노트 실험 폴더 | **`.py`** (`DATA_PC_SKIP_ORIGIN=1`) |
-| 북시트 숫자·Comments · 그래프 Plot | **확인 후 GUI** (COM 일상 쓰기 금지) |
+| 북시트 숫자·Comments · 그래프 Plot | **Origin 화면(GUI)으로 확인** (일상 `update_origin` COM 끄기) |
 
 COM으로 Origin을 쓰다 **열 절단·행 밀림·축 깨짐·오삭제**가 반복되어 위탁으로 나눴다.
 
-**검증:** Origin 작업은 **GUI로 확인**한다 (시트 Comments·**열 문자**·열 위치·그래프 Object Manager·선 색).  
-COM만 돌리고 “OK”라고 보고하지 말 것. 주 모니터에 Origin을 띄운 뒤 화면으로 확인.  
-열 문자(CM/CN/…)는 originpro 인덱스 변환으로 추측하지 말 것 (§4-3).
+### 0-0. 용어 — 「GUI」≠ Cursor Computer Use
+
+| 말 | 뜻 | GC 작업에서의 역할 |
+|----|-----|-------------------|
+| **`.py` / 파이프라인** | `촉매 반응 계산.py` 등 | 메일→계산→엑셀→G: 폴더. **여기까지가 자동 본체** |
+| **Origin GUI** | Origin **프로그램 화면** (시트·열 문자·Object Manager·그래프) | Origin 구간 **확인·조작의 기준**. 사람 눈 또는 에이전트가 화면을 보고 맞춤 |
+| **COM / originpro / LabTalk** | Origin을 코드로 읽고 쓰는 API | **보조**. 값 기입·Plot 추가 등. COM 로그만으로 “완료” 금지 |
+| **Computer Use** | Cursor의 **화면 캡처·클릭** 도구 | 에이전트가 Origin GUI를 **볼 때 쓰는 수단 중 하나**. GC 파이프라인 자체가 아님 |
+
+- 「Origin은 GUI로」= **Origin 창을 기준으로 검증·조작**하라는 뜻이지, “반드시 Computer Use로만 하라”가 아님.
+- Computer Use가 되면 스크린샷으로 열 문자·Comments·Plot을 확인한다.
+- Computer Use가 **막히면** (Cursor/Origin **관리자 실행**, sidecar 거부 등) → LabTalk `name$`/`comment$` + **사용자 화면 확인**으로 검증. “스크린샷 없이 COM만 OK”는 금지.
+- 열 문자(CM/CN/…)는 originpro 인덱스 변환으로 추측하지 말 것 (§4-3).
+
+**검증:** Origin 작업은 **Origin GUI 기준**으로 확인한다 (시트 Comments·**열 문자**·열 위치·그래프 Object Manager·선 색).
 
 ### 0-1. 트리거 — 「GC 작업해줘」
 
@@ -265,7 +277,8 @@ PC별 개시: 은규 → `eungyu-pc-initiation.mdc` (위탁·시료 질문 포�
 - [ ] 시료 여러 종류면 물어보기
 - [ ] Comments ≠ 파일명 가정; 항상 확인; 사용자 수정 가능
 - [ ] 새 열 → **기준 열 바로 오른쪽** + 왼쪽 Comments 참고해 제안
-- [ ] 열 문자 = **GUI/LabTalk** (§4-3). originpro 인덱스만으로 CM/CN 보고 금지
+- [ ] 열 문자 = **Origin GUI / LabTalk** (§4-3). originpro 인덱스만으로 CM/CN 보고 금지
+- [ ] 「GUI」≠ Computer Use (§0-0). Computer Use 불가면 LabTalk+사용자 화면
 - [ ] 엑셀↔북 매핑·PE 반응×장비 준수
 - [ ] 북시트만; 그래프에 숫자 직접 넣지 않음
 - [ ] Clear ≠ Plot 제거
