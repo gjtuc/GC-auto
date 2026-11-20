@@ -22,8 +22,8 @@
 
 | 경로 | 차헌 PC (참고) | 은규 PC에서 할 일 |
 |------|----------------|-------------------|
-| **스크립트·KCH** | `Desktop\.cursor\` | 동일 구조 권장 (`STEP6`) — **사용자명(`User`)만 다를 수 있음** |
-| **메일 env** | `Desktop\.cursor\gc_automation.env` | 은규 **본인** 네이버 IMAP 계정 |
+| **스크립트·KCH** | `{GC-auto}\data_pc\` (+ `KCH\`) | 은규는 `gc-data-pc\` (`DATA_PC_HOME_LAYOUT`) |
+| **메일 env** | `{GC-auto}\data_pc\gc_automation.env` | 은규 **본인** 네이버 IMAP (`gc-data-pc\`) |
 | **G: 실험 루트** | `촉매 반응 계산.py` 의 `REACTION_ROOTS` | **은규 PC 탐색기에서 확인 후 수정** (아래 §3) |
 | **G: 접근 판별** | `EXPERIMENT_DATA_ROOT` | 은규 환경에서 보이는 최상위 실험 폴더로 맞출 것 |
 | **Origin .opju** | G: 안 실험 폴더 | 은규가 쓰는 **템플릿 폴더** 기준 (차헌 폴더명과 다를 수 있음) |
@@ -34,7 +34,8 @@
 |----|-----------|
 | GC1 장비 (은규) | `Desktop\박은규\` |
 | GC2/GC3 장비 (차헌) | `Desktop\KCH\` |
-| 은규 PC / 차헌 PC | `Desktop\.cursor\KCH\inbox` — **장비 PC의 `KCH`와 다른 PC·다른 용도** |
+| 차헌 PC (데이터) | `{GC-auto}\data_pc\KCH\inbox` — **장비 PC `Desktop\KCH`와 다른 용도** |
+| 은규 PC (데이터) | `gc-data-pc\PEG\inbox` |
 
 ---
 
@@ -48,7 +49,7 @@
 
 ### 3.2 수정 위치
 
-운영본 **`Desktop\.cursor\촉매 반응 계산.py`** (repo `data_pc/` 복사본) 상단:
+은규 운영본 **`gc-data-pc\촉매 반응 계산.py`** (또는 로컬 오버라이드) 상단 — 차헌은 repo `data_pc\` 직접:
 
 ```python
 REACTION_ROOTS = {
@@ -67,15 +68,15 @@ EXPERIMENT_DATA_ROOT = r"G:\...\은규 환경에서 보이는 실험데이터 �
 
 ### 3.4 machine_profile에 메모 (권장)
 
-`Desktop\.cursor\KCH\machine_profile.json`:
+은규: `gc-data-pc\PEG\machine_profile.json` / 차헌: `data_pc\KCH\machine_profile.json`:
 
 ```json
 "paths": {
-  "script_dir": "C:\\Users\\...\\Desktop\\.cursor",
-  "reaction_roots_note": "DRE/DRM/DRME 실제 경로 — 촉매 반응 계산.py REACTION_ROOTS 와 동기화"
+  "script_dir": "D:\\\\.cursor\\\\repos\\\\GC-auto\\\\data_pc",
+  "reaction_roots_note": "DRE/DRM/DRME 실제 경로 — machine_profile 이 REACTION_ROOTS 보다 우선"
 },
 "notes": {
-  "g_drive_layout": "차헌 PC와 폴더 구조 다름. 2026-06-xx 탐색기 확인 경로: ..."
+  "g_drive_layout": "PC마다 폴더 구조 다름. 탐색기 확인 경로를 notes에 기록"
 }
 ```
 

@@ -9,7 +9,7 @@ machine_profile.json
 !deploy/machine_profile.template*.json
 !deploy/machine_profile.reference*.json
 
-# Runtime state (Desktop\KCH mirrors)
+# Runtime state (장비 PC Desktop\KCH mirrors 등)
 .gc_send_state.json
 .gc_watch_status.json
 GC_감시_상태.txt
@@ -17,11 +17,13 @@ GC_중지_*.txt
 MMDDHHmm.txt
 MMDDHHmm_screener.txt
 
-# data_pc runtime (if run from repo copy)
+# 차헌: script_dir = repo data_pc\ (로컬 데이터·비밀은 Git 제외)
 data_pc/KCH/inbox/*
 !data_pc/KCH/inbox/.gitkeep
 data_pc/KCH/processed/*
 !data_pc/KCH/processed/.gitkeep
+data_pc/KCH/.data_pc_*
+data_pc/KCH/**/*.tmp
 data_pc/gc_automation.env
 
 # Python

@@ -13,8 +13,8 @@ alwaysApply: true
 | 구분 | 규칙 |
 |------|------|
 | **은규 PC** | script_dir=`%USERPROFILE%\gc-data-pc\`. **`uses_g_drive: false`** — 실험=`Desktop\새 폴더\연구노트` |
-| **차헌 PC** | script_dir=`Desktop\.cursor\`. G: `REACTION_ROOTS` (repo 기본값이 차헌 쪽일 수 있음) |
-| **공통 금지** | 상대방 PC의 실험 폴더 경로를 확인 없이 코드에 박아 넣기 |
+| **차헌 PC** | script_dir=`{GC-auto}\data_pc\` (예: `D:\.cursor\repos\GC-auto\data_pc\`). KCH·env도 **repo 안**. G: `REACTION_ROOTS` |
+| **공통 금지** | 상대방 PC의 실험 폴더 경로를 확인 없이 코드에 박아 넣기 · repo 밖 `D:\.cursor\KCH` 등 **복제 운영 폴더** 신규 사용 |
 
 ## 에이전트가 할 일
 
@@ -26,7 +26,8 @@ alwaysApply: true
 
 ## 차헌 PC와 혼동하지 말 것
 
-- `Desktop\KCH\` (GC2 **장비** PC) ≠ `gc-data-pc\PEG\` (**은규** 데이터 PC) ≠ `Desktop\.cursor\KCH\` (**차헌** 데이터 PC)
+- `Desktop\KCH\` (GC2 **장비** PC) ≠ `gc-data-pc\PEG\` (**은규**) ≠ `{GC-auto}\data_pc\KCH\` (**차헌**, repo 안)
+- 레거시 `D:\.cursor\KCH` / `Desktop\.cursor\KCH` (repo 밖) → `data_pc\KCH` 로 이전 후 사용 중지 (`DATA_PC_HOME_LAYOUT.md`)
 - repo `REACTION_ROOTS` 기본 문자열 = **차헌 G: 예시** — 은규 PC에서는 **machine_profile 우선**
 
 상세: `docs/DATA_PC_PATHS.md`, `deploy/DATA_PC_HOME_LAYOUT.md`, `deploy/STEP6_data_pc_setup.md`

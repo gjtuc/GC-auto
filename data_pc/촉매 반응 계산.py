@@ -38,13 +38,13 @@ class PipelineRunResult(NamedTuple):
   data_pc/촉매 반응 계산.py  (통합 repo: https://github.com/gjtuc/GC-auto)
 
 [운영 설치 경로 — LLM/에이전트 필독]  deploy/DATA_PC_HOME_LAYOUT.md
-  이 파일(촉매 반응 계산.py)은 repo가 아니라 **사용자 PC 로컬**에 복사해 실행합니다.
-  SCRIPT_DIR = 이 .py 파일이 있는 폴더 (아래 둘 중 하나).
+  SCRIPT_DIR = 이 .py 파일이 있는 폴더.
 
-  | PC 종류   | 권장 운영 폴더 (script_dir)              | 바탕화면 노출 |
-  |-----------|------------------------------------------|---------------|
-  | 은규 PC   | %USERPROFILE%\\gc-data-pc\\              | 없음 (거슬리지 않음) |
-  | 차헌 PC   | %USERPROFILE%\\Desktop\\.cursor\\       | 있음 (기존 관례) |
+  | PC 종류   | 권장 운영 폴더 (script_dir)                         | 비고 |
+  |-----------|-----------------------------------------------------|------|
+  | 은규 PC   | %USERPROFILE%\\gc-data-pc\\                         | repo에서 복사 |
+  | 차헌 PC   | {GC-auto clone}\\data_pc\\ (예: D:\\.cursor\\repos\\GC-auto\\data_pc\\) | **repo 안** 직접 실행 |
+  | 차완 PC   | %USERPROFILE%\\gc-data-pc-chawan\\                  | 별도 문서 |
 
   ⚠ %USERPROFILE%\\.cursor\\gc-python-cache\\ — Python __pycache__ 전용 (runtime_paths.py)
   ⚠ %USERPROFILE%\\.cursor\\gc-runtime-temp\\ — 스크립트 임시 파일 (실험 데이터 아님)

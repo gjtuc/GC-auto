@@ -33,7 +33,7 @@ GC2는 차헌·차완이 **같은 장비 PC**를 씀. Cursor「차완」「차�
 | **GC4 장비 PC** (구 GC1) | 은규 | Autochro 옆 장비 | `Desktop\박은규\gc_automation.env` | `gc_automation.py` |
 | **은규 PC** | 은규 | 업무·계산·Origin | `gc-data-pc\` 또는 `Desktop\.cursor\` | `촉매 반응 계산.py` |
 | **GC2/GC3 장비 PC** | 차헌·차완 | ChemStation 옆 장비 | `Desktop\KCH\gc_automation.env` | `gc_automation.py` |
-| **차헌 PC** | 차헌 | 업무·계산·Origin | `Desktop\.cursor\gc_automation.env` | `촉매 반응 계산.py` |
+| **차헌 PC** | 차헌 | 업무·계산·Origin | `{GC-auto}\data_pc\gc_automation.env` | `data_pc\촉매 반응 계산.py` |
 | **차완 PC** | 차완 | 업무·계산·Origin (KIER) | `gc-data-pc-chawan\` | `scripts/run_gc_chawan.py` |
 
 ## 오해 금지
@@ -86,17 +86,18 @@ GC2는 차헌·차완이 **같은 장비 PC**를 씀. Cursor「차완」「차�
 |------|-----|------|
 | `Desktop\KCH\` | GC2/GC3 **장비** PC | gc_automation.py 출력 xlsx·watch 상태 |
 | `gc-data-pc\PEG\` | **은규 PC** (데이터) | inbox/processed, machine_profile — **PEG** = Park Eungyu Gyu |
-| `Desktop\.cursor\KCH\` | **차헌 PC** (데이터) | inbox/processed, machine_profile |
+| `{GC-auto}\data_pc\KCH\` | **차헌 PC** (데이터) | inbox/processed, machine_profile (**repo 안**, Git 제외) |
 
 은규 PC는 바탕화면 대신 `%USERPROFILE%\gc-data-pc\` 사용 (`deploy/DATA_PC_HOME_LAYOUT.md`).  
-장비 PC `Desktop\KCH` 와 데이터 PC `gc-data-pc\PEG`·`Desktop\.cursor\KCH` 는 **완전히 다른 PC·다른 스크립트**입니다.
+차헌은 **`repos\GC-auto\data_pc\`** 가 script_dir — repo 밖 `D:\.cursor\KCH` 복제는 레거시.  
+장비 PC `Desktop\KCH` 와 데이터 PC `gc-data-pc\PEG`·`data_pc\KCH` 는 **완전히 다른 PC·다른 스크립트**입니다.
 
 ### 2. `gc_automation.env` 도 두 종류
 
 | 경로 | 실행 스크립트 |
 |------|----------------|
 | `Desktop\박은규\` 또는 `Desktop\KCH\` | `gc_automation.py` (**장비**) |
-| `gc-data-pc\` (은규) 또는 `Desktop\.cursor\` (차헌) | `촉매 반응 계산.py` (**데이터 PC**) |
+| `gc-data-pc\` (은규) 또는 `{GC-auto}\data_pc\` (차헌) | `촉매 반응 계산.py` (**데이터 PC**) |
 
 `gc_profiles.candidate_env_dirs()` 는 **장비 쪽만** 탐색합니다 (`.cursor` 는 보지 않음).
 

@@ -77,7 +77,7 @@ DATA_PC_SKIP_ORIGIN=1
 | `--no-archive` | 폴더·Origin 둘 다 생략 — 위탁 기본 아님 |
 
 로그: `[4단계] Origin 건너뜀` → 정상.  
-차헌 `Desktop\.cursor\gc_automation.env`, 은규 템플릿에 `=1` 반영. 은규 운영 env는 로컬에서 맞출 것.
+차헌 `{GC-auto}\data_pc\gc_automation.env`, 은규 템플릿에 `=1` 반영. 은규 운영 env는 로컬에서 맞출 것.
 
 **검증 쪼개기 예:** (1) env skip 인식 (2) inbox/profile (3) `--no-origin` 실행.
 

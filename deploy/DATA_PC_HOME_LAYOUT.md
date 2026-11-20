@@ -1,7 +1,7 @@
 # 데이터 PC 운영 폴더 레이아웃 (LLM/에이전트 참고)
 
 > **목적:** `촉매 반응 계산.py` 가 **어느 로컬 폴더**에 설치되는지 PC별로 정리.  
-> 실험 데이터는 `gc-data-pc` / `Desktop\.cursor`, **부가 파일(캐시·임시)** 은 `%USERPROFILE%\.cursor\gc-*` 아래.
+> **부가 파일(캐시·임시)** 은 `%USERPROFILE%\.cursor\gc-*` 아래 (실험 데이터·코드와 분리).
 
 ---
 
@@ -9,10 +9,13 @@
 
 | 요구 | 은규 PC | 차헌 PC | 차완 PC |
 |------|---------|---------|---------|
-| 바탕화면 정리 | 바탕화면에 폴더 안 보이게 | 기존 `Desktop\.cursor` 유지 가능 | `gc-data-pc-chawan` |
-| 사용자 혼동 방지 | `gc-data-pc` 이름으로 목적 명확 | — | Downloads·kier 경로 문서화 |
-| Python 캐시·임시 | `%USERPROFILE%\.cursor\gc-python-cache` 등 | 동일 |
-| Cursor IDE | `.cursor\` 루트는 IDE 설정 — **gc-* 하위만** GC 부가 파일 |
+| 바탕화면 정리 | 바탕화면에 폴더 안 보이게 | **repo 안**에 모아 IDE/레거시 `.cursor` 잔여와 분리 | `gc-data-pc-chawan` |
+| 사용자 혼동 방지 | `gc-data-pc` 이름으로 목적 명확 | `repos\GC-auto\data_pc\` 한곳 | Downloads·kier 경로 문서화 |
+| Python 캐시·임시 | `%USERPROFILE%\.cursor\gc-python-cache` 등 | 동일 | 동일 |
+| Cursor IDE | `%USERPROFILE%\.cursor\` = IDE — GC 운영과 섞지 말 것 | 동일 | 동일 |
+
+**차헌 (2026-11 합의):** `D:\.cursor\KCH`, `D:\.cursor\data_pc_origin` 처럼 **repo 밖 복제본**을 두지 않는다.  
+코드·KCH·env 모두 **`GC-auto` clone 안 `data_pc\`** 로 정리. (`inbox`/`processed`/`env`/`machine_profile` 은 `.gitignore`)
 
 ---
 
@@ -20,12 +23,30 @@
 
 | PC | script_dir (절대경로 예) | storage (PEG/KCH) |
 |----|--------------------------|-------------------|
-| **은규 PC** | `C:\Users\User\gc-data-pc\` | `PEG\` (Park Eungyu Gyu) |
-| **차헌 PC** | `C:\Users\User\Desktop\.cursor\` | `KCH\` (Kim Chaheon) |
-| **차완 PC** | `C:\Users\User\gc-data-pc-chawan\` | `KCH\` (processed·profile) |
+| **은규 PC** | `%USERPROFILE%\gc-data-pc\` | `PEG\` (Park Eungyu Gyu) |
+| **차헌 PC** | `{GC-auto clone}\data_pc\` 예: `D:\.cursor\repos\GC-auto\data_pc\` | `KCH\` (Kim Chaheon) |
+| **차완 PC** | `%USERPROFILE%\gc-data-pc-chawan\` | `KCH\` (processed·profile) |
 
 **script_dir** = `촉매 반응 계산.py` + `gc_automation.env` 가 있는 폴더.  
 스크립트는 `SCRIPT_DIR = os.path.dirname(__file__)` 로 자동 인식.
+
+### 차헌 — repo 안 레이아웃 (목표)
+
+```
+D:\.cursor\repos\GC-auto\          ← git clone (코드)
+└── data_pc\                       ← script_dir
+    ├── 촉매 반응 계산.py
+    ├── runtime_paths.py
+    ├── data_pc_origin\            ← 패키지 (git)
+    ├── data_pc_runtime\           ← 패키지 (git)
+    ├── gc_automation.env          ← 로컬만 (.gitignore)
+    └── KCH\
+        ├── inbox\                 ← 로컬 (.gitignore)
+        ├── processed\             ← 로컬 (.gitignore)
+        └── machine_profile.json   ← 로컬 (.gitignore)
+```
+
+레거시 (정리 대상, 신규 사용 금지): `D:\.cursor\KCH`, `D:\.cursor\gc-home`, `D:\.cursor\data_pc_origin` (repo 밖 복사본).
 
 ---
 
@@ -33,17 +54,33 @@
 
 ```
 {script_dir}\
-├── 촉매 반응 계산.py       ← repo data_pc/ 에서 Copy-Item (git pull 후 갱신)
-├── runtime_paths.py        ← 위와 함께 복사 (__pycache__ 리다이렉트)
-├── gc_automation.env       ← 네이버 IMAP (Git 제외, .gitignore)
-└── PEG\  또는  KCH\        ← 연구원 이니셜 폴더 (둘 중 하나)
-    ├── inbox\              ← [1단계] 메일 첨부 xlsx
-    ├── processed\          ← [2단계] 계산 완료 사본
-    └── machine_profile.json← PC 식별 + reaction_roots (Git 제외)
+├── 촉매 반응 계산.py       ← 차헌: repo 안 파일 직접 실행 / 은규·차완: Copy-Item
+├── runtime_paths.py
+├── data_pc_origin\         ← (차헌 repo script_dir 에 이미 포함)
+├── data_pc_runtime\
+├── gc_automation.env       ← 네이버 IMAP (Git 제외)
+└── PEG\  또는  KCH\
+    ├── inbox\
+    ├── processed\
+    └── machine_profile.json
 
-%USERPROFILE%\.cursor\       ← [LLM] 실험과 무관한 부가 파일만 (IDE 설정과 gc-* 로 분리)
-├── gc-python-cache\        ← Python __pycache__ / .pyc (runtime_paths.py)
-└── gc-runtime-temp\        ← 스크립트 임시 파일 (필요 시)
+%USERPROFILE%\.cursor\gc-python-cache\   ← __pycache__
+%USERPROFILE%\.cursor\gc-runtime-temp\   ← 임시
+```
+
+### 차헌 — 레거시 → repo 이전 (한 번)
+
+```powershell
+$repo = "D:\.cursor\repos\GC-auto"   # 또는 이 PC의 GC-auto clone
+$dst  = Join-Path $repo "data_pc\KCH"
+New-Item -ItemType Directory -Path "$dst\inbox","$dst\processed" -Force | Out-Null
+# 데이터만 복사 (코드 패키지 루트 복제본은 복사하지 않음)
+Copy-Item -Force "D:\.cursor\KCH\machine_profile.json" "$dst\" -ErrorAction SilentlyContinue
+Copy-Item -Force "D:\.cursor\KCH\inbox\*" "$dst\inbox\" -ErrorAction SilentlyContinue
+Copy-Item -Force "D:\.cursor\KCH\processed\*" "$dst\processed\" -ErrorAction SilentlyContinue
+Copy-Item -Force "D:\.cursor\gc_automation.env" (Join-Path $repo "data_pc\gc_automation.env") -ErrorAction SilentlyContinue
+# 이후 실행: python "$repo\data_pc\촉매 반응 계산.py"
+# 확인 후 D:\.cursor\KCH · gc-home · 루트 data_pc_* 복제본 삭제 가능
 ```
 
 ### [LLM] 파일 역할
