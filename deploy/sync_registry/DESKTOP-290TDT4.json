@@ -10,8 +10,8 @@
                         "windows_user":  "User"
                     },
     "sync":  {
-                 "last_push_at":  "2026-11-19T14:28:21+09:00",
-                 "last_push_commit":  "a24bd7e",
+                 "last_push_at":  "2026-11-20T10:06:48+09:00",
+                 "last_push_commit":  "e674e51",
                  "last_push_by":  "DESKTOP-290TDT4\\User",
                  "last_pull_at":  "2026-11-19T01:16:13+09:00",
                  "last_pull_commit":  "480ef6e",
@@ -19,6 +19,14 @@
                  "repo_remote":  "https://github.com/gjtuc/GC-auto.git"
              },
     "history":  [
+                    {
+                        "event":  "push",
+                        "at":  "2026-11-20T10:06:48+09:00",
+                        "commit":  "e674e51",
+                        "subject":  "auto: sync DESKTOP-290TDT4 @ 2026-11-20 10:06:41",
+                        "by":  "DESKTOP-290TDT4\\User",
+                        "triggered_by":  "auto_git_sync"
+                    },
                     {
                         "event":  "push",
                         "at":  "2026-11-19T14:28:21+09:00",
@@ -170,14 +178,6 @@
                         "subject":  "sync: registry DESKTOP-290TDT4 push @ 2026-11-18 17:00:36",
                         "by":  "DESKTOP-290TDT4\\User",
                         "triggered_by":  "gc_git_pull.bat"
-                    },
-                    {
-                        "event":  "push",
-                        "at":  "2026-11-18T17:00:43+09:00",
-                        "commit":  "1a49c9b",
-                        "subject":  "auto: sync DESKTOP-290TDT4 @ 2026-11-18 17:00:36",
-                        "by":  "DESKTOP-290TDT4\\User",
-                        "triggered_by":  "auto_git_sync"
                     }
                 ]
 }
