@@ -23,6 +23,8 @@ alwaysApply: true
 3. 경로 불명이면 사용자(은규)에게 **DRE/DRM/DRME 각각 탐색기 경로**를 물어본 뒤 profile 수정
 4. 은규 전용 경로는 `deploy/machine_profile.eungyu.reference.json` 참고 (로컬 profile, Git 제외)
 5. **코드·문서 수정 후 git push** (팀 동기화 기본)
+6. **차헌 PC 실행:** `python D:\.cursor\repos\GC-auto\data_pc\촉매 반응 계산.py`  
+   (또는 이 PC의 GC-auto clone\data_pc\). **repo 밖** `D:\.cursor\KCH` / `Desktop\.cursor` 복제본을 script_dir로 쓰지 말 것.
 
 ## 차헌 PC와 혼동하지 말 것
 
